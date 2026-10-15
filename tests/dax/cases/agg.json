@@ -1,0 +1,17 @@
+{
+  "area": "agg",
+  "fixture": "tests/dax/fixtures",
+  "cases": [
+    {"id": "agg.product", "query": "EVALUATE ROW(\"p\", PRODUCT(Sales[Quantity]), \"px\", PRODUCTX(Product, Product[ListPrice]))", "source": "pending", "expected": null},
+    {"id": "agg.product.empty", "query": "EVALUATE ROW(\"p\", CALCULATE(PRODUCT(Sales[Quantity]), Product[Color] = \"Purple\"))", "source": "pending", "expected": null},
+    {"id": "agg.product.types", "query": "EVALUATE ROW(\"a\", PRODUCTX(FILTER(Product, Product[ProductKey] <= 3), Product[ProductKey]), \"b\", PRODUCT(Budget[Year]))", "source": "pending", "expected": null},
+    {"id": "agg.averagea", "query": "EVALUATE ROW(\"text\", AVERAGEA(Product[Color]), \"num\", AVERAGEA(Sales[Quantity]), \"date\", AVERAGEA(Sales[ShipDate]))", "source": "pending", "expected": null},
+    {"id": "agg.mina.maxa", "query": "EVALUATE ROW(\"mint\", MINA(Product[Color]), \"maxt\", MAXA(Product[Color]), \"mn\", MINA(Sales[Quantity]), \"mx\", MAXA(Sales[Quantity]))", "source": "pending", "expected": null},
+    {"id": "agg.mina.bool", "query": "EVALUATE ROW(\"mn\", MINA('Date'[IsWeekend]), \"mx\", MAXA('Date'[IsWeekend]), \"av\", AVERAGEA('Date'[IsWeekend]))", "source": "pending", "expected": null},
+    {"id": "agg.approxdc", "query": "EVALUATE ROW(\"a\", APPROXIMATEDISTINCTCOUNT(Sales[CustomerKey]), \"b\", DISTINCTCOUNT(Sales[CustomerKey]))", "source": "pending", "expected": null},
+    {"id": "agg.minmax.two", "query": "EVALUATE ROW(\"a\", MIN(3, 5), \"b\", MAX(3, 5), \"c\", MAX(\"a\", \"b\"), \"d\", MIN(BLANK(), 4))", "source": "pending", "expected": null},
+    {"id": "agg.minmax.text", "query": "EVALUATE ROW(\"a\", MIN(Product[Product]), \"b\", MAX(Product[Color]))", "source": "pending", "expected": null},
+    {"id": "agg.sum.text", "query": "EVALUATE ROW(\"a\", SUM(Product[Product]))", "source": "pending", "expected": null},
+    {"id": "agg.count.types", "query": "EVALUATE ROW(\"a\", COUNT(Product[Color]), \"b\", COUNTA(Product[Color]), \"c\", COUNTBLANK(Product[Color]), \"d\", COUNT('Date'[IsWeekend]), \"e\", COUNTA('Date'[IsWeekend]))", "source": "pending", "expected": null}
+  ]
+}

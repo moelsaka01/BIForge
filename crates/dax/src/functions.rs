@@ -33,7 +33,18 @@ pub const IMPLEMENTED: &[&str] = &[
 ];
 
 pub fn is_implemented(name: &str) -> bool {
-    IMPLEMENTED.contains(&name)
+    IMPLEMENTED.contains(&name) || MODULE_NAMES.iter().any(|n| n.contains(&name))
+}
+
+/// Names implemented by the tranche modules (each module owns its list).
+const MODULE_NAMES: &[&[&str]] = &[crate::fn_agg::NAMES, crate::fn_logic::NAMES, crate::fn_math::NAMES, crate::fn_text::NAMES, crate::fn_date::NAMES, crate::fn_table::NAMES];
+
+type ModuleFn = for<'a> fn(&'a Evaluator<'a>, &str, &'a [BExpr], &Env<'a>) -> Option<VResult<Val>>;
+const MODULES: &[ModuleFn] = &[crate::fn_agg::call, crate::fn_logic::call, crate::fn_math::call, crate::fn_text::call, crate::fn_date::call, crate::fn_table::call];
+
+/// Evaluates every argument to a scalar; an omitted argument (a gap in the list) is None.
+pub(crate) fn eval_args<'a>(ev: &'a Evaluator<'a>, args: &'a [BExpr], env: &Env<'a>) -> VResult<Vec<Option<Value>>> {
+    args.iter().map(|a| if a.is_missing() { Ok(None) } else { ev.scalar(a, env).map(Some) }).collect()
 }
 
 /// Bind-time checks of argument kinds.
@@ -46,7 +57,7 @@ pub fn check_args(name: &str, args: &[BExpr], span: Span) -> Result<(), Diagnost
         }
     };
     match name {
-        "SUM" | "COUNT" | "COUNTA" | "COUNTBLANK" | "AVERAGE" | "DISTINCTCOUNT" | "DISTINCTCOUNTNOBLANK" | "RELATED" | "EARLIER" | "EARLIEST" | "SELECTEDVALUE" | "HASONEVALUE" => need_col(0),
+        "SUM" | "AVERAGEA" | "MINA" | "MAXA" | "PRODUCT" | "APPROXIMATEDISTINCTCOUNT" | "HASONEFILTER" | "COUNT" | "COUNTA" | "COUNTBLANK" | "AVERAGE" | "DISTINCTCOUNT" | "DISTINCTCOUNTNOBLANK" | "RELATED" | "EARLIER" | "EARLIEST" | "SELECTEDVALUE" | "HASONEVALUE" => need_col(0),
         "MIN" | "MAX" if args.len() == 1 => need_col(0),
         "USERELATIONSHIP" | "CROSSFILTER" => {
             need_col(0)?;
@@ -112,15 +123,15 @@ pub fn row_level_columns(e: &BExpr) -> Vec<ColId> {
     out
 }
 
-fn err(code: ErrorCode, msg: impl Into<String>) -> EvalError {
+pub(crate) fn err(code: ErrorCode, msg: impl Into<String>) -> EvalError {
     EvalError::new(code, msg)
 }
 
-fn col_arg(name: &str, args: &[BExpr], i: usize) -> VResult<ColId> {
+pub(crate) fn col_arg(name: &str, args: &[BExpr], i: usize) -> VResult<ColId> {
     args.get(i).and_then(|a| a.col()).ok_or_else(|| err(ErrorCode::InvalidParameter, format!("The function {name} expects a column reference as argument number {}.", i + 1)))
 }
 
-fn as_count(n: usize) -> Value {
+pub(crate) fn as_count(n: usize) -> Value {
     if n == 0 {
         Value::Blank
     } else {
@@ -129,7 +140,7 @@ fn as_count(n: usize) -> Value {
 }
 
 /// Iterates the rows of a table value, giving the row-context environment for each.
-fn for_each_row<'a>(ev: &'a Evaluator<'a>, t: &TableVal, env: &Env<'a>, mut f: impl FnMut(usize, &Env<'a>) -> VResult<bool>) -> VResult<()> {
+pub(crate) fn for_each_row<'a>(ev: &'a Evaluator<'a>, t: &TableVal, env: &Env<'a>, mut f: impl FnMut(usize, &Env<'a>) -> VResult<bool>) -> VResult<()> {
     match t {
         TableVal::Base { table, rows } => {
             for (i, &r) in rows.iter().enumerate() {
@@ -151,22 +162,22 @@ fn for_each_row<'a>(ev: &'a Evaluator<'a>, t: &TableVal, env: &Env<'a>, mut f: i
 }
 
 /// Visible values of a column (blank row included when visible).
-fn column_values(ev: &Evaluator, c: ColId, env: &Env) -> Vec<Value> {
+pub(crate) fn column_values(ev: &Evaluator, c: ColId, env: &Env) -> Vec<Value> {
     let rows = ev.table_rows(&env.filter, c.table, true);
     rows.into_iter().map(|r| ev.data.value(c, r).clone()).collect()
 }
 
-fn distinct_values(ev: &Evaluator, c: ColId, env: &Env, with_blank_row: bool) -> Vec<Value> {
+pub(crate) fn distinct_values(ev: &Evaluator, c: ColId, env: &Env, with_blank_row: bool) -> Vec<Value> {
     let rows = ev.table_rows(&env.filter, c.table, with_blank_row);
     ev.distinct_combos(&[c], &rows).into_iter().map(|mut v| v.pop().unwrap()).collect()
 }
 
-fn col_table(ev: &Evaluator, cols: &[ColId], vals: Vec<Vec<Value>>) -> TableVal {
+pub(crate) fn col_table(ev: &Evaluator, cols: &[ColId], vals: Vec<Vec<Value>>) -> TableVal {
     TableVal::mat(cols.iter().map(|&c| TCol { name: ev.data.model.column(c).name.clone(), lineage: Some(c) }).collect(), vals)
 }
 
 /// Sums non-blank values with DAX addition (Integer stays Integer, Currency stays Currency).
-fn sum_values(name: &str, vals: impl Iterator<Item = Value>) -> VResult<Value> {
+pub(crate) fn sum_values(name: &str, vals: impl Iterator<Item = Value>) -> VResult<Value> {
     let mut acc = Value::Blank;
     for v in vals {
         match v {
@@ -179,7 +190,7 @@ fn sum_values(name: &str, vals: impl Iterator<Item = Value>) -> VResult<Value> {
     Ok(acc)
 }
 
-fn average_values(name: &str, vals: impl Iterator<Item = Value>) -> VResult<Value> {
+pub(crate) fn average_values(name: &str, vals: impl Iterator<Item = Value>) -> VResult<Value> {
     let mut n = 0usize;
     let mut s = 0f64;
     for v in vals {
@@ -195,7 +206,7 @@ fn average_values(name: &str, vals: impl Iterator<Item = Value>) -> VResult<Valu
     Ok(if n == 0 { Value::Blank } else { Value::Double(s / n as f64) })
 }
 
-fn extreme(vals: impl Iterator<Item = Value>, max: bool) -> VResult<Value> {
+pub(crate) fn extreme(vals: impl Iterator<Item = Value>, max: bool) -> VResult<Value> {
     let mut best: Option<Value> = None;
     for v in vals {
         if v.is_blank() {
@@ -528,11 +539,18 @@ pub fn call<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], whole: &'a
         }
         "SUMMARIZECOLUMNS" => t(summarize_columns(ev, args, env)?),
         "SUMMARIZE" => t(summarize(ev, args, env)?),
-        _ => Err(err(ErrorCode::NotImplemented, format!("The function {name} is not implemented in BIForge yet."))),
+        _ => {
+            for m in MODULES {
+                if let Some(r) = m(ev, name, args, env) {
+                    return r;
+                }
+            }
+            Err(err(ErrorCode::NotImplemented, format!("The function {name} is not implemented in BIForge yet.")))
+        }
     }
 }
 
-fn name_expr_pairs<'a>(ev: &'a Evaluator<'a>, args: &'a [BExpr], env: &Env<'a>, func: &str) -> VResult<Vec<(String, &'a BExpr)>> {
+pub(crate) fn name_expr_pairs<'a>(ev: &'a Evaluator<'a>, args: &'a [BExpr], env: &Env<'a>, func: &str) -> VResult<Vec<(String, &'a BExpr)>> {
     if args.len() % 2 != 0 {
         return Err(err(ErrorCode::MissingParameters, format!("{func} expects pairs of a column name and an expression.")));
     }
@@ -575,7 +593,7 @@ fn summarize_columns<'a>(ev: &'a Evaluator<'a>, args: &'a [BExpr], env: &Env<'a>
     let ctx = {
         // filter tables are evaluated and applied like CALCULATE filter arguments (no context transition)
         let plain = Env { filter: env.filter.clone(), rows: None, vars: env.vars.clone() };
-        ev.calculate_ctx(&filters, &plain)?
+        ev.calculate_ctx(&filters, &plain)?.with_shadow()
     };
     // group combinations: per table, existing combinations; then cross join
     let mut by_table: Vec<(usize, Vec<ColId>)> = Vec::new();
@@ -631,12 +649,18 @@ fn summarize_columns<'a>(ev: &'a Evaluator<'a>, args: &'a [BExpr], env: &Env<'a>
 fn summarize<'a>(ev: &'a Evaluator<'a>, args: &'a [BExpr], env: &Env<'a>) -> VResult<TableVal> {
     let src = ev.table(&args[0], env)?;
     let mut cols = Vec::new();
-    for a in &args[1..] {
+    let mut split = args.len();
+    for (n, a) in args.iter().enumerate().skip(1) {
         match a.col() {
             Some(c) => cols.push(c),
-            None => return Err(err(ErrorCode::NotImplemented, "SUMMARIZE with added columns (name, expression) is not implemented in BIForge yet; use ADDCOLUMNS(SUMMARIZE(...)) or SUMMARIZECOLUMNS.")),
+            None if matches!(&a.kind, BKind::Const(Value::Str(_))) => {
+                split = n;
+                break;
+            }
+            None => return Err(err(ErrorCode::InvalidParameter, "SUMMARIZE: group-by arguments must be column references; added columns come as name, expression pairs.")),
         }
     }
+    let pairs = name_expr_pairs(ev, &args[split..], env, "SUMMARIZE")?;
     let TableVal::Base { table, rows } = &src else {
         return Err(err(ErrorCode::NotImplemented, "SUMMARIZE over a computed table is not implemented in BIForge yet."));
     };
@@ -655,5 +679,25 @@ fn summarize<'a>(ev: &'a Evaluator<'a>, args: &'a [BExpr], env: &Env<'a>) -> VRe
             out.push(vals);
         }
     }
-    Ok(col_table(ev, &cols, out))
+    if pairs.is_empty() {
+        return Ok(col_table(ev, &cols, out));
+    }
+    // added columns: evaluated per group in the filter context of the group-by values
+    let g = ev.graph(&env.filter);
+    let group_cols: HashSet<ColId> = cols.iter().copied().collect();
+    let mut rows = Vec::with_capacity(out.len());
+    for mut vals in out {
+        let mut c2 = env.filter.remove_columns(ev.data, &g, &group_cols);
+        for (k, &c) in cols.iter().enumerate() {
+            c2 = c2.push(Filter::single(c, vals[k].key()));
+        }
+        let e2 = Env { filter: c2, rows: None, vars: env.vars.clone() };
+        for (_, x) in &pairs {
+            vals.push(ev.scalar(x, &e2)?);
+        }
+        rows.push(vals);
+    }
+    let mut tcols: Vec<TCol> = cols.iter().map(|&c| TCol { name: ev.data.model.column(c).name.clone(), lineage: Some(c) }).collect();
+    tcols.extend(pairs.iter().map(|(n, _)| TCol { name: n.clone(), lineage: None }));
+    Ok(TableVal::mat(tcols, rows))
 }

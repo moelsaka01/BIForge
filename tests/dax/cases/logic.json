@@ -1,0 +1,30 @@
+{
+  "area": "logic",
+  "fixture": "tests/dax/fixtures",
+  "cases": [
+    {"id": "logic.iferror", "query": "EVALUATE ROW(\"a\", IFERROR(\"a\" + 1, \"bad\"), \"b\", IFERROR(1 / 0, \"bad\"), \"c\", IFERROR(DIVIDE(1, 0), 0), \"d\", IFERROR(VALUE(\"x\"), -1))", "source": "pending", "expected": null},
+    {"id": "logic.iferror.types", "query": "EVALUATE ROW(\"a\", IFERROR(1, \"text\"), \"b\", IFERROR(1 / 0, 7))", "source": "pending", "expected": null},
+    {"id": "logic.iserror", "query": "EVALUATE ROW(\"a\", ISERROR(\"a\" + 1), \"b\", ISERROR(1 / 0), \"c\", ISERROR(SQRT(-1)), \"d\", ISERROR(BLANK()))", "source": "pending", "expected": null},
+    {"id": "logic.switch", "query": "EVALUATE ROW(\"a\", SWITCH(2, 1, \"a\", 2, \"b\", \"z\"), \"b\", SWITCH(9, 1, \"a\", \"z\"), \"c\", SWITCH(9, 1, \"a\"), \"d\", SWITCH(TRUE(), 5 > 10, \"big\", 5 > 1, \"mid\", \"small\"))", "source": "pending", "expected": null},
+    {"id": "logic.switch.blank", "query": "EVALUATE ROW(\"a\", SWITCH(BLANK(), 0, \"zero\", BLANK(), \"blank\", \"other\"), \"b\", SWITCH(0, BLANK(), \"blank\", 0, \"zero\", \"other\"))", "source": "pending", "expected": null},
+    {"id": "logic.switch.mixed", "query": "EVALUATE ROW(\"a\", SWITCH(\"1\", 1, \"num\", \"other\"))", "source": "pending", "expected": null},
+    {"id": "logic.if.types", "query": "EVALUATE ROW(\"a\", IF(TRUE(), 1, \"text\"), \"b\", IF(FALSE(), 1, 2.5), \"c\", IF(FALSE(), 1), \"d\", IF(BLANK(), 1, 2), \"e\", IF(1, \"yes\", \"no\"), \"f\", IF(\"true\", 1, 2))", "source": "pending", "expected": null},
+    {"id": "logic.if.eager", "query": "EVALUATE ROW(\"a\", IF.EAGER(TRUE(), 1, 2), \"b\", IF.EAGER(FALSE(), 1, 2))", "source": "pending", "expected": null},
+    {"id": "logic.bit", "query": "EVALUATE ROW(\"and\", BITAND(12, 10), \"or\", BITOR(12, 10), \"xor\", BITXOR(12, 10), \"l\", BITLSHIFT(1, 4), \"r\", BITRSHIFT(256, 4), \"neg\", BITLSHIFT(16, -2), \"blank\", BITAND(BLANK(), 1))", "source": "pending", "expected": null},
+    {"id": "logic.bit.big", "query": "EVALUATE ROW(\"a\", BITLSHIFT(1, 62), \"b\", BITLSHIFT(1, 63), \"c\", BITLSHIFT(1, 64), \"d\", BITAND(-1, 255))", "source": "pending", "expected": null},
+    {"id": "logic.istype", "query": "EVALUATE ROW(\"n1\", ISNUMBER(1), \"n2\", ISNUMBER(\"1\"), \"n3\", ISNUMBER(DATE(2024, 1, 1)), \"n4\", ISNUMBER(BLANK()), \"n5\", ISNUMBER(TRUE()), \"t1\", ISTEXT(\"a\"), \"t2\", ISTEXT(BLANK()), \"nt\", ISNONTEXT(BLANK()), \"lg\", ISLOGICAL(TRUE()), \"lg2\", ISLOGICAL(1))", "source": "pending", "expected": null},
+    {"id": "logic.evenodd", "query": "EVALUATE ROW(\"a\", ISEVEN(4), \"b\", ISODD(3), \"c\", ISEVEN(3.9), \"d\", ISEVEN(BLANK()), \"e\", ISODD(-3), \"f\", ISEVEN(\"4\"))", "source": "pending", "expected": null},
+    {"id": "logic.contains", "query": "EVALUATE ROW(\"a\", CONTAINS(Product, Product[Color], \"red\"), \"b\", CONTAINS(Product, Product[Color], \"Red\", Product[Category], \"Clothing\"), \"c\", CONTAINS(Product, Product[Color], \"Red\", Product[Category], \"Accessories\"), \"d\", CONTAINS(Product, Product[Color], BLANK()))", "source": "pending", "expected": null},
+    {"id": "logic.containsrow", "query": "EVALUATE ROW(\"a\", CONTAINSROW({1, 2, 3}, 2), \"b\", CONTAINSROW({1, 2}, 5), \"c\", CONTAINSROW({\"a\"}, \"A\"), \"d\", CONTAINSROW({0}, BLANK()), \"e\", CONTAINSROW({BLANK()}, BLANK()))", "source": "pending", "expected": null},
+    {"id": "logic.containsstring", "query": "EVALUATE ROW(\"a\", CONTAINSSTRING(\"Hello World\", \"WORLD\"), \"b\", CONTAINSSTRINGEXACT(\"Hello World\", \"WORLD\"), \"c\", CONTAINSSTRING(\"abc\", \"\"), \"d\", CONTAINSSTRING(BLANK(), \"a\"), \"e\", CONTAINSSTRING(\"abc\", BLANK()))", "source": "pending", "expected": null},
+    {"id": "logic.lookupvalue", "query": "EVALUATE ROW(\"a\", LOOKUPVALUE(Product[Product], Product[ProductKey], 3), \"b\", LOOKUPVALUE(Product[Product], Product[ProductKey], 99, \"none\"), \"c\", LOOKUPVALUE(Product[Product], Product[ProductKey], 99))", "source": "pending", "expected": null},
+    {"id": "logic.lookupvalue.multi", "query": "EVALUATE ROW(\"a\", LOOKUPVALUE(Product[Product], Product[Color], \"Red\"))", "source": "pending", "expected": null},
+    {"id": "logic.lookupvalue.same", "query": "EVALUATE ROW(\"a\", LOOKUPVALUE(Product[Category], Product[Color], \"Red\"))", "source": "pending", "expected": null},
+    {"id": "logic.lookupvalue.filter", "query": "EVALUATE ROW(\"a\", CALCULATE(LOOKUPVALUE(Product[Product], Product[ProductKey], 3), Product[Color] = \"Red\"))", "source": "pending", "expected": null},
+    {"id": "logic.lookupvalue.related", "query": "EVALUATE ROW(\"a\", LOOKUPVALUE(Customer[Customer], Customer[CustomerKey], 99))", "source": "pending", "expected": null},
+    {"id": "logic.hasonefilter", "query": "EVALUATE SUMMARIZECOLUMNS(Product[Category], \"one\", HASONEFILTER(Product[Category]), \"val\", HASONEVALUE(Product[Category]), \"color\", HASONEFILTER(Product[Color])) ORDER BY Product[Category]", "source": "pending", "expected": null},
+    {"id": "logic.userculture", "query": "EVALUATE ROW(\"a\", USERCULTURE())", "source": "pending", "expected": null},
+    {"id": "logic.coalesce", "query": "EVALUATE ROW(\"a\", COALESCE(BLANK(), BLANK(), 3), \"b\", COALESCE(BLANK(), BLANK()), \"c\", COALESCE(\"\", 5))", "source": "pending", "expected": null},
+    {"id": "logic.and.or", "query": "EVALUATE ROW(\"a\", AND(TRUE(), BLANK()), \"b\", OR(BLANK(), FALSE()), \"c\", AND(1, 1), \"d\", NOT(0), \"e\", NOT(BLANK()))", "source": "pending", "expected": null}
+  ]
+}

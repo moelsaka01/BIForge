@@ -6,3 +6,12 @@ members = ["crates/engine", "crates/dax", "crates/m", "crates/model", "app/src-t
 version = "0.0.1"
 edition = "2021"
 license = "Apache-2.0"
+
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+debug = false
+
+[profile.test]
+debug = "line-tables-only"

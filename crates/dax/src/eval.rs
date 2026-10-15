@@ -406,7 +406,7 @@ impl<'e> Evaluator<'e> {
         if frames.is_empty() {
             return Ok(env.filter.clone());
         }
-        let mut ctx = env.filter.clone();
+        let mut ctx = env.filter.with_shadow();
         let g = self.graph(&ctx);
         for f in frames.iter().rev() {
             let (filters, cols): (Vec<Filter>, HashSet<ColId>) = match f {
@@ -450,6 +450,10 @@ impl<'e> Evaluator<'e> {
             Cols(Vec<ColId>),
             Table(TableId),
             TableExcept(TableId, Vec<ColId>),
+            SelectedAll,
+            SelectedCols(Vec<ColId>),
+            SelectedTable(TableId),
+            CrossTable(TableId),
         }
         // 1. evaluate filter arguments in the original context
         let mut ops = Vec::new();
@@ -495,8 +499,19 @@ impl<'e> Evaluator<'e> {
                     let left_is_from = a.map(|c| c.table) == Some(self.data.model.relationships[r].from.table);
                     ops.push(Op::Cross(r, dir, left_is_from));
                 }
-                BKind::Call { name, .. } if matches!(name.as_str(), "ALLSELECTED" | "ALLCROSSFILTERED") => {
-                    return Err(EvalError::new(ErrorCode::NotImplemented, format!("{name} is not implemented in BIForge yet.")));
+                BKind::Call { name, args } if !keep && name == "ALLSELECTED" => {
+                    if args.is_empty() {
+                        ops.push(Op::Remove(RemoveSpec::SelectedAll));
+                    } else if let Some(t) = args[0].table() {
+                        ops.push(Op::Remove(RemoveSpec::SelectedTable(t)));
+                    } else {
+                        let cols = args.iter().map(|a| a.col().ok_or_else(|| EvalError::new(ErrorCode::InvalidParameter, "ALLSELECTED needs a table or column references."))).collect::<VResult<Vec<_>>>()?;
+                        ops.push(Op::Remove(RemoveSpec::SelectedCols(cols)));
+                    }
+                }
+                BKind::Call { name, args } if !keep && name == "ALLCROSSFILTERED" => {
+                    let t = args[0].table().ok_or_else(|| EvalError::new(ErrorCode::InvalidParameter, "ALLCROSSFILTERED needs a table reference."))?;
+                    ops.push(Op::Remove(RemoveSpec::CrossTable(t)));
                 }
                 _ => {
                     let flt = if crate::functions::is_scalar_expr(inner) {
@@ -551,6 +566,27 @@ impl<'e> Evaluator<'e> {
                     RemoveSpec::All => ctx.clear(),
                     RemoveSpec::Cols(cols) => ctx.remove_columns(self.data, &g, &cols.iter().copied().collect()),
                     RemoveSpec::Table(t) => ctx.remove_columns(self.data, &g, &g.expanded_columns(self.data, *t).into_iter().collect()),
+                    RemoveSpec::SelectedAll => ctx.restore_selected(self.data, &g, None),
+                    RemoveSpec::SelectedCols(cols) => ctx.restore_selected(self.data, &g, Some(&cols.iter().copied().collect())),
+                    RemoveSpec::SelectedTable(t) => ctx.restore_selected(self.data, &g, Some(&g.expanded_columns(self.data, *t).into_iter().collect())),
+                    RemoveSpec::CrossTable(t) => {
+                        // every table connected to t by any relationship, in either direction
+                        let mut seen = HashSet::from([*t]);
+                        let mut grew = true;
+                        while grew {
+                            grew = false;
+                            for r in &self.data.model.relationships {
+                                let (a, b) = (r.from.table, r.to.table);
+                                if seen.contains(&a) != seen.contains(&b) {
+                                    seen.insert(a);
+                                    seen.insert(b);
+                                    grew = true;
+                                }
+                            }
+                        }
+                        let cols: HashSet<ColId> = seen.iter().flat_map(|t| self.data.model.columns_of(*t).collect::<Vec<_>>()).collect();
+                        ctx.remove_columns(self.data, &g, &cols)
+                    }
                     RemoveSpec::TableExcept(t, keep) => {
                         let cols: HashSet<ColId> = g.expanded_columns(self.data, *t).into_iter().filter(|c| !keep.contains(c)).collect();
                         ctx.remove_columns(self.data, &g, &cols)
