@@ -5,6 +5,7 @@ pub mod catalog;
 pub mod data;
 pub mod deps;
 pub mod diag;
+pub mod editor;
 pub mod eval;
 pub mod filter;
 pub mod fn_agg;

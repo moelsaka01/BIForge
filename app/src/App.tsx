@@ -7,6 +7,8 @@ import { DataPane } from "./views/DataPane";
 import { DataView } from "./views/DataView";
 import { ModelView } from "./views/ModelView";
 import { ImportDialog } from "./views/ImportDialog";
+import { MeasureEditor } from "./views/MeasureEditor";
+import { createMonacoEditor } from "./core/dax/monaco";
 
 /**
  * Temporary host UI (Phases 1–2). It only dispatches registered commands and renders state; the real
@@ -20,7 +22,7 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [tableName, setTableName] = useState("");
-  const [view, setView] = useState<"report" | "data" | "model">("model");
+  const [view, setView] = useState<"report" | "data" | "model" | "measures">("model");
   const [selectedTable, setSelectedTable] = useState<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
@@ -99,6 +101,7 @@ export function App() {
             <Tab value="report">Report</Tab>
             <Tab value="data">Data</Tab>
             <Tab value="model">Model</Tab>
+            <Tab value="measures">Measures</Tab>
           </TabList>
           <div style={{ display: "flex", height: "62vh", border: "1px solid #ddd" }}>
             <div style={{ width: 260, borderRight: "1px solid #ddd", flex: "none" }}>
@@ -125,6 +128,7 @@ export function App() {
                 </div>
               )}
               {view === "data" && session.engine && <DataView engine={session.engine} table={selectedTable} reloadKey={reloadKey + sess.dataTables.length} />}
+              {view === "measures" && <MeasureEditor project={doc.project} dax={rt.dax} registry={registry} factory={createMonacoEditor} onError={setError} />}
               {view === "model" && <ModelView project={doc.project} session={session} registry={registry} engine={session.engine} onError={setError} />}
             </div>
           </div>

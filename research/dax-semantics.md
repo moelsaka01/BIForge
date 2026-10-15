@@ -54,3 +54,31 @@ Original notes. Sources: Microsoft's public DAX reference (operators, data types
 3. Currency mixed arithmetic result types; date-to-text default format.
 4. Fact-table filter overriding dimension filters (COUNTROWS(Product) case above).
 5. Multi-column filters spanning several tables: we apply them only to tables whose expanded table holds every column.
+
+## Phase 3 additions (function tranches)
+
+Sources: Microsoft's public function reference and our own reasoning, as before. Everything marked **harness** is our best reading and is covered by pending cases in tests/dax/cases (to be recorded from Power BI Desktop's local engine once the fixture report exists).
+
+### Marked date tables
+- A table marked as a date table has a key date column (`Model::date_tables`; from TMDL `dataCategory: Time` plus the `isKey` column). A CALCULATE filter argument that involves that column replaces **all** filters on the table, not only the filters on the column. This is why `CALCULATE(..., DATESYTD(Date[Date]))` still gives a year to date when a month filter from a visual is in force. Without the mark only the column's own filters are replaced (tested both ways in tranche_time.rs). **harness**: whether ordinary boolean filters on the key column behave the same.
+
+### Time intelligence (default behavior)
+- Context dates = values of the date column visible in the filter context. Date-returning functions return values of the whole column (filters ignored) inside a range computed from the context dates, as a table with the column's lineage.
+- Anchors (**harness**): DATESMTD/QTD/YTD and STARTOF*/ENDOF* use the last context date (STARTOF* returns the first visible date of that period); PREVIOUS*/NEXT*/PARALLELPERIOD use the first context date (PARALLELPERIOD returns whole periods from the shifted first to the shifted last date); PREVIOUSDAY/NEXTDAY use the first date.
+- DATEADD / SAMEPERIODLASTYEAR: each context date is moved by the interval (day clamped to the month end: Feb 29 -> Feb 28) and the result is the set of those dates present in the column. No whole-period alignment (**harness**: Power BI may return a complete month when a complete month is selected).
+- OPENINGBALANCE* = value on the day before the first visible date of the period of the last visible date; CLOSINGBALANCE* = value on the last visible date of that period (**harness**).
+- TOTALMTD/QTD/YTD = CALCULATE(expression, DATES*(dates), filter); a text literal in the filter position of TOTALYTD and the balance functions is the year end date ("6/30"). FIRSTNONBLANK/LASTNONBLANK evaluate the expression with the column filtered to one value (no row context).
+- Fiscal year end ("6/30"): the year starts the day after the year end.
+
+### Other decisions to confirm
+- BLANK in numeric / text / date functions counts as 0 / "" / serial 0 (12/30/1899) (cases math.blank.args, date.parts).
+- ROUND is half away from zero after normalizing to 15 significant digits (1.005 -> 1.01); INT returns Integer; ROUND of an Integer with digits >= 0 stays Integer; TRUNC of a Number stays Number.
+- PRODUCT returns Number; AVERAGEA / MINA / MAXA count text as 0 and booleans as 1/0, skipping BLANK.
+- SWITCH compares with `=` (so BLANK matches 0 and ""); comparing text with a number is an error.
+- FORMAT: number sections, `0 # , . % E+`, quoted and escaped literals, named formats, date tokens (yyyy MMMM ddd HH h mm ss AM/PM tt); `mm` after `h` is minutes, `M` months. Unknown characters are copied.
+- VALUE accepts thousands separators, `$`, `%`, `(n)`, dates and times; empty text is an error, BLANK stays BLANK.
+- Sample variance and standard deviation over fewer than two values return BLANK; GEOMEAN over a non-positive value is an error; PERCENTILE.EXC outside 1/(n+1)..n/(n+1) is an error.
+- RANKX: ties SKIP (default) or DENSE, BLANK expression values are ignored and a BLANK value ranks BLANK; the value argument defaults to the expression in the current context.
+- ALLSELECTED: the "outer" selection is the filter context in force before the innermost SUMMARIZECOLUMNS group-by or context transition (shadow filters). No subtotals / ROLLUP support, hence no ISINSCOPE.
+- LOOKUPVALUE ignores the filter context (searches every row of the result column's table) (**harness**).
+- TOPN keeps rows tied with the last place; GROUPBY evaluates its expressions over CURRENTGROUP().

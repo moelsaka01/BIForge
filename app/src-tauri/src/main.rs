@@ -2,6 +2,7 @@
 
 mod commands;
 mod data;
+mod dax;
 
 fn main() {
     tauri::Builder::default()
@@ -14,6 +15,9 @@ fn main() {
             commands::write_recovery,
             commands::read_recovery,
             commands::clear_recovery,
+            dax::dax_catalog,
+            dax::dax_check,
+            dax::dax_query,
             data::engine_open_store,
             data::engine_import,
             data::engine_table_info,

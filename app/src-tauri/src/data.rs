@@ -30,6 +30,13 @@ impl DataService {
         f(e).map_err(msg)
     }
 
+    /// Runs `f` with the open store; the error type is the DAX layer's plain text.
+    pub fn with_store<T>(&self, f: impl FnOnce(&Engine) -> Result<T, String>) -> Result<T, String> {
+        let g = self.engine.lock().map_err(|_| "The data store is unavailable.".to_string())?;
+        let e = g.as_ref().ok_or("No project is open, so there is no data store.")?;
+        f(e)
+    }
+
     /// Opens `<root>/.biforge/data.duckdb` and returns the tables it holds. The folder gets a `.gitignore` so data is never committed.
     pub fn open_store(&self, root: &str) -> Result<Vec<String>, String> {
         let dir = Path::new(root).join(".biforge");
