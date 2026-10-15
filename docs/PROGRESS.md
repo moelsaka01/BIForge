@@ -8,3 +8,6 @@
 - Scaffolded workspace: root Cargo workspace (crates engine/dax/m/model as placeholders with trivial tests), `app/` Vite + React 19 + Fluent UI v9 + Tauri 2 (`app/src-tauri`), `tests/dax`, CI workflow.
 - Verified locally: `npm run build`, `npm test` (1 test), `cargo test --workspace` pass; `npx tauri dev` opened a window titled "BIForge" (manual check only).
 - Power BI Desktop not found at the default MSI path; no Ghidra/Hopper/IDA installed. rea not installed or run (awaiting user review).
+- Added `app/src-tauri/tests/window_smoke.rs`: launches the real binary, waits for a visible top-level window titled "BIForge" owned by that PID, kills only its own child. Passes locally.
+- Added "Process safety" rule to CLAUDE.md (never kill processes not started by us; PID only).
+- Looked for Power BI Desktop (Appx package, registry uninstall keys, Program Files, LocalAppData, running process): not found on this machine. No .NET SDK and no ilspycmd present. `rea setup --dry-run --client claude_code` reviewed; nothing applied.

@@ -25,6 +25,9 @@ BIForge: open-source Windows desktop app recreating Power BI Desktop-style workf
 - Conventional commits, commit after each working milestone. Push at least at end of each day and before a session ends. Update PROGRESS and COVERAGE before pushing.
 - Never commit secrets or large data files.
 
+## Process safety
+Never kill processes you did not start. Stop only your own process, by the exact PID captured when you started it. Never stop by name (no `Stop-Process -Name node`, `taskkill /IM`), because the user may have unrelated processes running.
+
 ## Ask first
 Large toolchain installs; running rea against Power BI; any fixed decision found unworkable.
 
