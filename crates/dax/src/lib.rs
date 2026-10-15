@@ -11,6 +11,7 @@ pub mod fn_agg;
 pub mod fn_date;
 pub mod fn_logic;
 pub mod fn_math;
+pub mod fn_stats;
 pub mod fn_table;
 pub mod fn_text;
 pub mod fn_time;

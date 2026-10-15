@@ -36,11 +36,22 @@ pub fn is_implemented(name: &str) -> bool {
     IMPLEMENTED.contains(&name) || MODULE_NAMES.iter().any(|n| n.contains(&name))
 }
 
+/// All implemented function names (core list plus the tranche modules), sorted.
+pub fn implemented_names() -> Vec<&'static str> {
+    let mut v: Vec<&str> = IMPLEMENTED.to_vec();
+    for m in MODULE_NAMES {
+        v.extend(m.iter().copied());
+    }
+    v.sort_unstable();
+    v.dedup();
+    v
+}
+
 /// Names implemented by the tranche modules (each module owns its list).
-const MODULE_NAMES: &[&[&str]] = &[crate::fn_agg::NAMES, crate::fn_logic::NAMES, crate::fn_math::NAMES, crate::fn_text::NAMES, crate::fn_date::NAMES, crate::fn_table::NAMES, crate::fn_time::NAMES];
+const MODULE_NAMES: &[&[&str]] = &[crate::fn_agg::NAMES, crate::fn_logic::NAMES, crate::fn_math::NAMES, crate::fn_text::NAMES, crate::fn_date::NAMES, crate::fn_table::NAMES, crate::fn_time::NAMES, crate::fn_stats::NAMES];
 
 type ModuleFn = for<'a> fn(&'a Evaluator<'a>, &str, &'a [BExpr], &Env<'a>) -> Option<VResult<Val>>;
-const MODULES: &[ModuleFn] = &[crate::fn_agg::call, crate::fn_logic::call, crate::fn_math::call, crate::fn_text::call, crate::fn_date::call, crate::fn_table::call, crate::fn_time::call];
+const MODULES: &[ModuleFn] = &[crate::fn_agg::call, crate::fn_logic::call, crate::fn_math::call, crate::fn_text::call, crate::fn_date::call, crate::fn_table::call, crate::fn_time::call, crate::fn_stats::call];
 
 /// Evaluates every argument to a scalar; an omitted argument (a gap in the list) is None.
 pub(crate) fn eval_args<'a>(ev: &'a Evaluator<'a>, args: &'a [BExpr], env: &Env<'a>) -> VResult<Vec<Option<Value>>> {
@@ -57,7 +68,7 @@ pub fn check_args(name: &str, args: &[BExpr], span: Span) -> Result<(), Diagnost
         }
     };
     match name {
-        "SUM" | "AVERAGEA" | "MINA" | "MAXA" | "PRODUCT" | "APPROXIMATEDISTINCTCOUNT" | "HASONEFILTER" | "COUNT" | "COUNTA" | "COUNTBLANK" | "AVERAGE" | "DISTINCTCOUNT" | "DISTINCTCOUNTNOBLANK" | "RELATED" | "EARLIER" | "EARLIEST" | "SELECTEDVALUE" | "HASONEVALUE" => need_col(0),
+        "SUM" | "MEDIAN" | "GEOMEAN" | "STDEV.S" | "STDEV.P" | "VAR.S" | "VAR.P" | "PERCENTILE.INC" | "PERCENTILE.EXC" | "AVERAGEA" | "MINA" | "MAXA" | "PRODUCT" | "APPROXIMATEDISTINCTCOUNT" | "HASONEFILTER" | "COUNT" | "COUNTA" | "COUNTBLANK" | "AVERAGE" | "DISTINCTCOUNT" | "DISTINCTCOUNTNOBLANK" | "RELATED" | "EARLIER" | "EARLIEST" | "SELECTEDVALUE" | "HASONEVALUE" => need_col(0),
         "MIN" | "MAX" if args.len() == 1 => need_col(0),
         "USERELATIONSHIP" | "CROSSFILTER" => {
             need_col(0)?;
@@ -715,4 +726,20 @@ fn summarize<'a>(ev: &'a Evaluator<'a>, args: &'a [BExpr], env: &Env<'a>) -> VRe
     let mut tcols: Vec<TCol> = cols.iter().map(|&c| TCol { name: ev.data.model.column(c).name.clone(), lineage: Some(c) }).collect();
     tcols.extend(pairs.iter().map(|(n, _)| TCol { name: n.clone(), lineage: None }));
     Ok(TableVal::mat(tcols, rows))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn every_implemented_name_is_in_the_catalog_once() {
+        let cat = Catalog::builtin();
+        let names = implemented_names();
+        for n in &names {
+            assert!(cat.get(n).is_some(), "{n} is implemented but missing from the catalog");
+        }
+        let total = IMPLEMENTED.len() + MODULE_NAMES.iter().map(|m| m.len()).sum::<usize>();
+        assert_eq!(names.len(), total, "a function is listed twice");
+    }
 }
