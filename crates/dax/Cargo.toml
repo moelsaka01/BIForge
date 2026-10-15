@@ -14,5 +14,3 @@ thiserror = "2"
 chrono = "0.4"
 biforge-model = { path = "../model" }
 
-[dev-dependencies]
-duckdb = { version = "1", features = ["bundled", "json", "parquet"] }

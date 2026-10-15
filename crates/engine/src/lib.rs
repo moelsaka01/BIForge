@@ -1,5 +1,6 @@
 //! DuckDB-backed data store and importers. The UI never computes data itself; it asks this crate.
 pub mod creds;
+pub mod dax_bridge;
 pub mod error;
 pub mod sources;
 pub mod types;
@@ -48,6 +49,11 @@ impl Engine {
             std::fs::create_dir_all(dir)?;
         }
         Ok(Engine { conn: Connection::open(path)? })
+    }
+
+    /// The underlying connection (for the DAX bridge).
+    pub(crate) fn conn(&self) -> &Connection {
+        &self.conn
     }
 
     pub fn has_table(&self, name: &str) -> Result<bool> {

@@ -324,11 +324,19 @@ dependencies = [
 [[package]]
 name = "biforge-dax"
 version = "0.0.1"
+dependencies = [
+ "biforge-model",
+ "chrono",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+]
 
 [[package]]
 name = "biforge-engine"
 version = "0.0.1"
 dependencies = [
+ "biforge-dax",
  "calamine",
  "chrono",
  "duckdb",

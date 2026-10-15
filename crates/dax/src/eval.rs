@@ -758,6 +758,19 @@ impl Engine {
         ev.scalar(&b, &Env::empty())
     }
 
+    /// Like `eval_scalar`, optionally letting aggregations run as SQL; also returns how many did.
+    pub fn eval_scalar_with(&self, src: &str, sql: Option<&dyn SqlExecutor>) -> VResult<(Value, usize)> {
+        let e = crate::parser::parse_expression(src)?;
+        let scope = QueryScope::default();
+        let b = Binder::new(&self.data.model, &scope, 0).bind(&e)?;
+        let mut ev = self.evaluator();
+        if let Some(s) = sql {
+            ev = ev.with_sql(s);
+        }
+        let v = ev.scalar(&b, &Env::empty())?;
+        Ok((v, ev.sql_hits.get()))
+    }
+
     /// Evaluates a measure of the model in an empty filter context.
     pub fn eval_measure(&self, name: &str) -> VResult<Value> {
         let m = self.data.model.measure(name).ok_or_else(|| EvalError::new(ErrorCode::UnrecognizedIdentifier, format!("Measure '{name}' does not exist.")))?;

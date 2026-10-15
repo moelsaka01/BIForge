@@ -17,6 +17,7 @@ rusqlite = { version = "0.32", features = ["bundled"] }
 postgres = { version = "0.19", features = ["with-chrono-0_4"] }
 chrono = "0.4"
 keyring = { version = "3", features = ["windows-native"] }
+biforge-dax = { path = "../dax" }
 
 [dev-dependencies]
 tempfile = "3"
