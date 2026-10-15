@@ -1,0 +1,19 @@
+table Product
+	lineageTag: 5b3e9e0c-0f6e-4d77-8a7e-3d4f0a1b2c01
+
+	column ProductKey
+		dataType: int64
+		isKey
+		sourceColumn: ProductKey
+
+	column 'Product Name'
+		dataType: string
+		sourceColumn: ProductName
+
+	partition Product = m
+		mode: import
+		source =
+			let
+				Source = Csv.Document(File.Contents(DataFolder & "\product.csv"))
+			in
+				Source

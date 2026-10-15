@@ -3,12 +3,16 @@ use std::fs;
 use std::path::PathBuf;
 
 fn fixture(rel: &str) -> String {
-    let p: PathBuf = [env!("CARGO_MANIFEST_DIR"), "tests", "fixtures", rel].iter().collect();
+    let p: PathBuf = [env!("CARGO_MANIFEST_DIR"), "tests", "fixtures", rel]
+        .iter()
+        .collect();
     fs::read_to_string(p).unwrap().replace("\r\n", "\n")
 }
 
 fn canonical_files() -> Vec<String> {
-    let dir: PathBuf = [env!("CARGO_MANIFEST_DIR"), "tests", "fixtures", "canonical"].iter().collect();
+    let dir: PathBuf = [env!("CARGO_MANIFEST_DIR"), "tests", "fixtures", "canonical"]
+        .iter()
+        .collect();
     let mut v: Vec<String> = fs::read_dir(dir)
         .unwrap()
         .map(|e| e.unwrap().file_name().into_string().unwrap())
@@ -30,7 +34,10 @@ fn canonical_fixtures_print_byte_identical() {
 
 #[test]
 fn printing_is_idempotent_on_all_fixtures() {
-    let mut all: Vec<String> = canonical_files().into_iter().map(|f| format!("canonical/{f}")).collect();
+    let mut all: Vec<String> = canonical_files()
+        .into_iter()
+        .map(|f| format!("canonical/{f}"))
+        .collect();
     all.push("messy/spaces2.tmdl".into());
     for f in all {
         let doc = tmdl::parse(&fixture(&f)).unwrap();
@@ -56,9 +63,15 @@ fn crlf_and_bom_are_accepted() {
 fn sales_structure_is_parsed() {
     let doc = tmdl::parse(&fixture("canonical/sales.tmdl")).unwrap();
     let t = &doc.nodes[0];
-    assert_eq!((t.kind.as_str(), t.name.as_deref()), ("table", Some("Sales")));
+    assert_eq!(
+        (t.kind.as_str(), t.name.as_deref()),
+        ("table", Some("Sales"))
+    );
     assert_eq!(t.description, vec!["Sales fact table"]);
-    assert_eq!(t.text_prop("lineageTag"), Some("9a48bea0-e5fb-40fa-9e81-f61288e31a02"));
+    assert_eq!(
+        t.text_prop("lineageTag"),
+        Some("9a48bea0-e5fb-40fa-9e81-f61288e31a02")
+    );
 
     let amount = &t.children[0];
     assert_eq!(amount.name.as_deref(), Some("Sales Amount"));
@@ -67,7 +80,10 @@ fn sales_structure_is_parsed() {
         amount.default.as_ref().unwrap().text,
         "SUMX(Sales, Sales[Quantity] * Sales[Net Price])"
     );
-    assert_eq!(amount.text_prop("displayFolder"), Some(" My \"Amazing\" Measures"));
+    assert_eq!(
+        amount.text_prop("displayFolder"),
+        Some(" My \"Amazing\" Measures")
+    );
 
     let ly = &t.children[1];
     assert_eq!(
@@ -75,7 +91,11 @@ fn sales_structure_is_parsed() {
         "var ly = CALCULATE([Sales Amount], SAMEPERIODLASTYEAR('Calendar'[Date]))\nreturn ly"
     );
 
-    let key = t.children.iter().find(|c| c.name.as_deref() == Some("Product Key")).unwrap();
+    let key = t
+        .children
+        .iter()
+        .find(|c| c.name.as_deref() == Some("Product Key"))
+        .unwrap();
     assert!(key.has_flag("isHidden"));
 
     let part = t.children.iter().find(|c| c.kind == "partition").unwrap();
@@ -104,7 +124,12 @@ fn fence_keeps_trailing_whitespace_and_blank_lines() {
 #[test]
 fn model_refs_are_kept_in_order() {
     let doc = tmdl::parse(&fixture("canonical/model.tmdl")).unwrap();
-    let refs: Vec<_> = doc.nodes.iter().skip(1).map(|n| (n.kind.clone(), n.name.clone().unwrap())).collect();
+    let refs: Vec<_> = doc
+        .nodes
+        .iter()
+        .skip(1)
+        .map(|n| (n.kind.clone(), n.name.clone().unwrap()))
+        .collect();
     assert_eq!(
         refs,
         vec![

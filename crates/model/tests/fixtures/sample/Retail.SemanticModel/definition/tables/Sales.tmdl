@@ -1,0 +1,20 @@
+table Sales
+
+	column ProductKey
+		dataType: int64
+		sourceColumn: ProductKey
+
+	column Quantity
+		dataType: int64
+		sourceColumn: Quantity
+
+	column Amount
+		dataType: double
+		sourceColumn: Amount
+
+	measure 'Total Amount' = SUM(Sales[Amount])
+		formatString: #,##0.00
+
+	measure 'Average Price' =
+			DIVIDE([Total Amount], SUM(Sales[Quantity]))
+		formatString: #,##0.00

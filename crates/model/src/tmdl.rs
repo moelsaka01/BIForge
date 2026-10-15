@@ -9,6 +9,7 @@
 //! Known limitation: within one object, properties are stored separately from
 //! child objects, so the printer emits all properties first, then children.
 
+use serde::{Deserialize, Serialize};
 use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -26,12 +27,12 @@ impl fmt::Display for ParseError {
 
 impl std::error::Error for ParseError {}
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct Document {
     pub nodes: Vec<Node>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct Node {
     /// Lines of the `///` description block above the object (without the marker).
     pub description: Vec<String>,
@@ -46,20 +47,20 @@ pub struct Node {
 }
 
 /// Expression text; lines are joined with `\n`, outer indentation removed.
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct Expr {
     pub text: String,
     /// Was written between triple-backtick fences (kept verbatim).
     pub verbatim: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Prop {
     pub key: String,
     pub value: PropValue,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PropValue {
     /// Bare property name, meaning "true".
     Flag,
@@ -131,7 +132,11 @@ pub fn parse(input: &str) -> Result<Document, ParseError> {
         })
         .collect();
     let style = detect_style(&lines)?;
-    let mut p = Parser { lines, style, pos: 0 };
+    let mut p = Parser {
+        lines,
+        style,
+        pos: 0,
+    };
     let mut nodes = Vec::new();
     let mut desc: Vec<String> = Vec::new();
     let mut desc_line = 0;
@@ -139,7 +144,10 @@ pub fn parse(input: &str) -> Result<Document, ParseError> {
         let line = &p.lines[p.pos];
         if is_blank(line.text) {
             if !desc.is_empty() {
-                return Err(err(desc_line, "description is not directly above an object"));
+                return Err(err(
+                    desc_line,
+                    "description is not directly above an object",
+                ));
             }
             p.pos += 1;
             continue;
@@ -334,7 +342,10 @@ impl<'a> Parser<'a> {
             let num = self.lines[self.pos].num;
             if is_blank(text) {
                 if !desc.is_empty() {
-                    return Err(err(desc_line, "description is not directly above an object"));
+                    return Err(err(
+                        desc_line,
+                        "description is not directly above an object",
+                    ));
                 }
                 self.pos += 1;
                 continue;
@@ -365,7 +376,10 @@ impl<'a> Parser<'a> {
                 }
                 other => {
                     if !desc.is_empty() {
-                        return Err(err(desc_line, "description is not directly above an object"));
+                        return Err(err(
+                            desc_line,
+                            "description is not directly above an object",
+                        ));
                     }
                     self.pos += 1;
                     let prop = match other {
@@ -462,7 +476,9 @@ impl<'a> Parser<'a> {
 // --------------------------------------------------------------- printing
 
 fn needs_quotes_name(n: &str) -> bool {
-    n.is_empty() || n.chars().any(|c| c.is_whitespace() || matches!(c, '.' | '=' | ':' | '\''))
+    n.is_empty()
+        || n.chars()
+            .any(|c| c.is_whitespace() || matches!(c, '.' | '=' | ':' | '\''))
 }
 
 fn quote_name(n: &str) -> String {
