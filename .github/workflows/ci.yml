@@ -24,5 +24,23 @@ jobs:
       - name: Frontend tests
         working-directory: app
         run: npm test
+      - name: Start PostgreSQL (connector tests)
+        shell: pwsh
+        run: |
+          $pg = (Get-ChildItem "C:\Program Files\PostgreSQL" -Directory | Sort-Object Name -Descending | Select-Object -First 1).FullName
+          $data = Join-Path $env:RUNNER_TEMP "pgdata"
+          $pw = Join-Path $env:RUNNER_TEMP "pw.txt"
+          $sql = Join-Path $env:RUNNER_TEMP "seed.sql"
+          [IO.File]::WriteAllText($pw, "ci-test-password")
+          Set-Content -Path $sql -Value @(
+            'CREATE TABLE public.people(id int, name text, score numeric, born date, ok boolean);',
+            'INSERT INTO public.people VALUES (1, ''Ann'', 1.5, ''2024-01-02'', true), (2, ''Bob'', NULL, NULL, false);'
+          )
+          & "$pg\bin\initdb.exe" -D $data -U postgres --pwfile=$pw -A scram-sha-256 -E UTF8
+          & "$pg\bin\pg_ctl.exe" -D $data -o "-p 5433" -w start
+          $env:PGPASSWORD = "ci-test-password"
+          & "$pg\bin\psql.exe" -h localhost -p 5433 -U postgres -v ON_ERROR_STOP=1 -f $sql
+          "BIFORGE_TEST_PG=localhost:5433:postgres:postgres:ci-test-password:public.people" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+          "BIFORGE_REQUIRE_PG=1" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
       - name: Rust tests
         run: cargo test --workspace
