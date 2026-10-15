@@ -11,7 +11,7 @@ Last updated: 2026-10-15, end of Phase 2 work (see PROGRESS.md). Phases 1 and 2 
 | Connectivity | Excel import (sheet pick, header row, dates, duplicate headers) | Done-tested for .xlsx (calamine also reads .xls/.xlsb/.ods through the same code, untested) |
 | Connectivity | JSON / Parquet import | Done-tested (JSON array of objects; Parquet written by DuckDB itself) |
 | Connectivity | SQLite connector (pick table, import) | Done-tested |
-| Connectivity | PostgreSQL connector (list tables, import, password in Windows Credential Manager) | Partial: the test needs a server (BIFORGE_TEST_PG) and is only run in CI, not locally (no server on the dev machine). No TLS yet. Whole tables only (no custom SQL). |
+| Connectivity | PostgreSQL connector (list tables, import, password in Windows Credential Manager) | Done-tested in CI against a real PostgreSQL (run 38754396338); the test is skipped locally unless BIFORGE_TEST_PG is set (no server on the dev machine). No TLS yet. Whole tables only (no custom SQL). |
 | Connectivity | Credentials in Windows Credential Manager, never in project files | Done-tested (round trip with the real store; source specs contain no secret) |
 | Connectivity | Refresh (one table, all tables; a failed refresh keeps the old data) | Done-tested (engine staging swap + session tests) |
 | Connectivity | Row transfer to the UI as Arrow | Deferred: grid pages travel as JSON text (every cell a string); Arrow IPC when visuals need bulk data |

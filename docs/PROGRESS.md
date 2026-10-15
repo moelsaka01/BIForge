@@ -43,6 +43,6 @@
 - App core: applyImport, relationship ops (a second path between tables is created inactive), session import/refresh/refresh-all, commands data.import, data.refreshTable, data.refreshAll, model.add/update/deleteRelationship, all undoable.
 - Views: Data pane, Data view (own virtualization + page cache), Model view, Import dialog, wired into the temporary host screen. Frontend tests: 98 (jsdom + testing-library added as dev dependencies).
 - CI: starts the runner's PostgreSQL on port 5433 and sets BIFORGE_TEST_PG / BIFORGE_REQUIRE_PG so the connector test cannot be silently skipped there.
-- Not verified: the real app UI by hand (import dialog, drag in a real WebView), the PostgreSQL connector locally, Excel formats other than xlsx, opening imported tables in Power BI Desktop.
+- Not verified: the real app UI by hand (import dialog, drag in a real WebView), the PostgreSQL connector locally (it passed in CI), Excel formats other than xlsx, opening imported tables in Power BI Desktop.
 - Known gaps are listed in the Connectivity and UI rows of COVERAGE.md (no Arrow transfer, memory-bound Excel/SQLite/PostgreSQL loads, fixed card layout, no TLS).
 - Environment: one cargo run failed once because Windows Application Control blocked a build script (os error 4551); a rerun worked.
