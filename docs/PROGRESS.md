@@ -23,3 +23,7 @@
 - `research/ui-modes.md`: Classic vs Modern mapping from user settings and feature switches (onObject, useModernFormatPane, ribbon switches, styling). How users toggle on-object is unverified.
 - `research/pbip-tmdl-format.md`: PBIP/PBIR/TMDL layout and rules from public docs; gaps listed (no binary work needed so far).
 - DAX harness approved by owner (recorded outputs on our own data are acceptable).
+
+## 2026-10-15 (Day 1, continued): group 3
+- `research/dax-parser.md`: DAX parser assembly analysed with rea (it admitted metadata for this 315-type assembly) plus type listing. Findings: token/keyword set, 16 syntax error codes, function category/role/parameter-role model, ~210 statically named functions; full catalog is supplied by the engine at runtime, so it will be recorded through the black-box harness.
+- Native engine (msmdsrv.exe) was not analysed, per instructions; no Ghidra installed.
