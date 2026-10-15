@@ -5,8 +5,8 @@ Last updated: 2026-10-15. Only the scaffold exists; no product features are impl
 
 | Area | Feature | Status |
 | --- | --- | --- |
-| Platform | Tauri window launches | Partial (launched manually, titled "BIForge"; no automated test) |
-| Platform | CI build + tests on Windows | Partial (workflow written; result pending) |
+| Platform | Tauri window launches | Done-tested (app/src-tauri/tests/window_smoke.rs, passes locally and in CI) |
+| Platform | CI build + tests on Windows | Done-tested (workflow green on windows-latest) |
 | Connectivity | CSV import | Not started |
 | Connectivity | Excel import | Not started |
 | Connectivity | JSON / Parquet import | Not started |
