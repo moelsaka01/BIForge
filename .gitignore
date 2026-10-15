@@ -1,0 +1,55 @@
+# Rust / Cargo
+target/
+**/*.rs.bk
+# Node / Vite
+node_modules/
+dist/
+dist-ssr/
+*.local
+npm-debug.log*
+yarn-debug.log*
+.pnpm-debug.log*
+.vite/
+coverage/
+*.tsbuildinfo
+# Tauri
+app/src-tauri/target/
+app/src-tauri/gen/
+src-tauri/gen/schemas/
+# Windows
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+*.msi
+*.exe
+!tools/**/*.exe.keep
+# IDE / editor
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.suo
+*.user
+*.swp
+.DS_Store
+# Claude Code local state
+.claude/settings.local.json
+# Reverse-engineering raw output (NEVER commit)
+research/_raw/
+# Local data files
+*.duckdb
+*.duckdb.wal
+*.db
+*.parquet
+*.arrow
+*.pbix
+*.pbit
+*.pbix.*
+data/local/
+*.log
+.env
+.env.*
+!.env.example
+*.pem
+*.key
