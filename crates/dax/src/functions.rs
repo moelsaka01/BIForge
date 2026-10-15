@@ -17,7 +17,7 @@ use std::rc::Rc;
 pub const IMPLEMENTED: &[&str] = &[
     // filter / context
     "CALCULATE", "CALCULATETABLE", "FILTER", "ALL", "ALLEXCEPT", "ALLNOBLANKROW", "REMOVEFILTERS", "KEEPFILTERS", "VALUES", "DISTINCT", "SELECTEDVALUE", "EARLIER", "EARLIEST",
-    "TREATAS",
+    "TREATAS", "ALLSELECTED", "ALLCROSSFILTERED",
     // relationships
     "RELATED", "RELATEDTABLE", "USERELATIONSHIP", "CROSSFILTER",
     // information
@@ -271,7 +271,22 @@ pub fn call<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], whole: &'a
             let rows = ev.all_rows(cols[0].table, with_blank);
             t(col_table(ev, &cols, ev.distinct_combos(&cols, &rows)))
         }
-        "REMOVEFILTERS" | "KEEPFILTERS" | "USERELATIONSHIP" | "CROSSFILTER" | "ALLEXCEPT" => {
+        "ALLSELECTED" => {
+            let g = ev.graph(&env.filter);
+            if let Some(tb) = args.first().and_then(|a| a.table()) {
+                let cols: HashSet<ColId> = g.expanded_columns(ev.data, tb).into_iter().collect();
+                let ctx = env.filter.restore_selected(ev.data, &g, Some(&cols));
+                return t(TableVal::Base { table: tb, rows: Rc::new(ev.table_rows(&ctx, tb, true)) });
+            }
+            let cols = (0..args.len()).map(|i| col_arg(name, args, i)).collect::<VResult<Vec<_>>>()?;
+            if cols.is_empty() || cols.iter().any(|c| c.table != cols[0].table) {
+                return Err(err(ErrorCode::InvalidParameter, "ALLSELECTED expects a table or columns of one table (without arguments it can only be a filter argument of CALCULATE)."));
+            }
+            let ctx = env.filter.restore_selected(ev.data, &g, Some(&cols.iter().copied().collect()));
+            let rows = ev.table_rows(&ctx, cols[0].table, true);
+            t(col_table(ev, &cols, ev.distinct_combos(&cols, &rows)))
+        }
+        "REMOVEFILTERS" | "KEEPFILTERS" | "USERELATIONSHIP" | "CROSSFILTER" | "ALLEXCEPT" | "ALLCROSSFILTERED" => {
             Err(err(ErrorCode::InvalidParameter, format!("{name} can only be used as a filter argument of CALCULATE or CALCULATETABLE.")))
         }
         "VALUES" | "DISTINCT" => {

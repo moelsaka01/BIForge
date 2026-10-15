@@ -446,6 +446,17 @@ impl<'a> Parser<'a> {
                     }
                 }
                 let end = self.expect(Tok::RBrace, "} to close the table constructor")?.span;
+                // DATATABLE rows are written {{1, "a"}, {2, "b"}}: every item is itself a constructor whose
+                // single-column rows are the values of one row
+                if rows.iter().all(|r| r.len() == 1 && matches!(&r[0].kind, ExprKind::TableConstructor(inner) if inner.iter().all(|x| x.len() == 1))) {
+                    rows = rows
+                        .into_iter()
+                        .map(|mut r| match r.pop().unwrap().kind {
+                            ExprKind::TableConstructor(inner) => inner.into_iter().map(|mut x| x.pop().unwrap()).collect(),
+                            _ => unreachable!(),
+                        })
+                        .collect();
+                }
                 let width = rows[0].len();
                 if rows.iter().any(|r| r.len() != width) {
                     return Err(Diagnostic::new(ErrorCode::GrammaticalError, "Every row of a table constructor must have the same number of values.", span.to(end)));
