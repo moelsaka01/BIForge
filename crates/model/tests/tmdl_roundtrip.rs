@@ -212,3 +212,35 @@ fn empty_and_blank_documents_are_empty() {
     assert!(tmdl::parse("\n\n").unwrap().nodes.is_empty());
     assert_eq!(tmdl::print(&tmdl::Document::default()), "");
 }
+
+#[test]
+fn import_source_annotation_with_json_value_round_trips() {
+    use biforge_model::tmdl::{Document, Expr, Node, Prop};
+    let json = r#"{"kind":"csv","path":"C:\data\a \"q\".csv","delimiter":null,"header":true}"#;
+    let mut table = Node::new("table", Some("Sales Data"));
+    table.props.push(Prop { key: "lineageTag".into(), value: PropValue::Text("t1".into()) });
+    let mut col = Node::new("column", Some("Id"));
+    col.props.push(Prop { key: "dataType".into(), value: PropValue::Text("int64".into()) });
+    col.props.push(Prop { key: "sourceColumn".into(), value: PropValue::Text("Id".into()) });
+    table.children.push(col);
+    let mut ann = Node::new("annotation", Some("BIForge.Source"));
+    ann.default = Some(Expr { text: json.into(), verbatim: false });
+    table.children.push(ann);
+    let doc = Document { nodes: vec![table] };
+
+    let text = tmdl::print(&doc);
+    let back = tmdl::parse(&text).unwrap();
+    assert_eq!(back, doc, "{text}");
+    assert_eq!(tmdl::print(&back), text, "printing is stable");
+    let ann = &back.nodes[0].children[1];
+    assert_eq!(ann.default.as_ref().unwrap().text, json);
+}
+
+#[test]
+fn relationship_with_cardinality_and_inactive_flag_round_trips() {
+    let src = "relationship r1\n\tfromCardinality: one\n\ttoCardinality: many\n\tcrossFilteringBehavior: bothDirections\n\tisActive: false\n\tfromColumn: 'Dim Table'.id\n\ttoColumn: Fact.'cust key'\n";
+    let doc = tmdl::parse(src).unwrap();
+    assert_eq!(doc.nodes[0].text_prop("fromCardinality"), Some("one"));
+    assert_eq!(doc.nodes[0].text_prop("isActive"), Some("false"));
+    assert_eq!(tmdl::print(&doc), src);
+}

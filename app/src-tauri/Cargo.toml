@@ -11,6 +11,7 @@ tauri-build = { version = "2", features = [] }
 tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
 biforge-model = { path = "../../crates/model" }
+biforge-engine = { path = "../../crates/engine" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 

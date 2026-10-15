@@ -6,3 +6,18 @@ license.workspace = true
 
 [lib]
 path = "src/lib.rs"
+
+[dependencies]
+thiserror = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+duckdb = { version = "1", features = ["bundled", "json", "parquet"] }
+calamine = { version = "0.26", features = ["dates"] }
+rusqlite = { version = "0.32", features = ["bundled"] }
+postgres = { version = "0.19", features = ["with-chrono-0_4"] }
+chrono = "0.4"
+keyring = { version = "3", features = ["windows-native"] }
+
+[dev-dependencies]
+tempfile = "3"
+rust_xlsxwriter = "0.79"
