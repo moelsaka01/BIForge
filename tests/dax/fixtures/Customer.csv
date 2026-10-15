@@ -1,0 +1,11 @@
+CustomerKey,Customer,City,Country,Segment,BirthDate
+1,Alice,Seattle,United States,Consumer,1985-03-12
+2,Bruno,Lyon,France,Corporate,1979-11-02
+3,Chen,Toronto,Canada,Consumer,
+4,Dana,Seattle,United States,Home Office,1992-07-30
+5,Émile,Paris,France,Consumer,2000-01-01
+6,Farah,Toronto,Canada,Corporate,1988-05-19
+7,Goran,Berlin,Germany,Consumer,1970-12-31
+8,Hana,Berlin,Germany,,1995-02-28
+9,Ivan,Portland,United States,Corporate,1983-09-09
+10,Jun,Osaka,Japan,Home Office,1990-04-04

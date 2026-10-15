@@ -1,0 +1,10 @@
+ProductKey,Product,Category,Subcategory,Color,ListPrice,Cost
+1,Trail Bike,Bikes,Mountain,Red,1200,700
+2,City Bike,Bikes,Road,Blue,850.5,500.25
+3,Kids Bike,Bikes,Road,,300,180
+4,Helmet,Accessories,Safety,Black,45.99,20
+5,Bottle,Accessories,Hydration,Blue,9.5,2.75
+6,Lights,Accessories,Safety,Black,25,11.4
+7,Jersey,Clothing,Tops,Red,59.99,25
+8,Gloves,Clothing,Hands,Black,19.99,7.5
+9,Rain Jacket,Clothing,Tops,Yellow,120,60

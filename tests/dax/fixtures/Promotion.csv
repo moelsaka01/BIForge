@@ -1,0 +1,5 @@
+PromotionKey,Promotion,DiscountPct
+1,No Promotion,0
+2,Spring Sale,0.1
+3,Black Friday,0.25
+4,Clearance,0.4
