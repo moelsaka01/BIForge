@@ -1,14 +1,26 @@
-//! dax crate. Not implemented yet.
+//! BIForge DAX: lexer, parser, function catalog and semantic engine.
+pub mod ast;
+pub mod bind;
+pub mod catalog;
+pub mod data;
+pub mod deps;
+pub mod diag;
+pub mod eval;
+pub mod filter;
+pub mod functions;
+pub mod lexer;
+pub mod model;
+pub mod parser;
+pub mod query;
+pub mod sql;
+pub mod table;
+pub mod value;
 
-/// Returns the crate name; placeholder so the workspace builds and tests run.
-pub fn crate_name() -> &'static str {
-    "biforge-dax"
-}
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn crate_name_is_stable() {
-        assert_eq!(super::crate_name(), "biforge-dax");
-    }
-}
+pub use catalog::Catalog;
+pub use data::{DataSource, MemorySource};
+pub use diag::{Diagnostic, ErrorCode, Span};
+pub use eval::Engine;
+pub use model::{Cardinality, CrossFilter, DataType, Model};
+pub use parser::{diagnose, parse_expression, parse_formula, parse_query};
+pub use query::ResultTable;
+pub use value::{EvalError, Value};
