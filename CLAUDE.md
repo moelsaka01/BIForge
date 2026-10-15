@@ -2,6 +2,8 @@
 
 BIForge: open-source Windows desktop app recreating Power BI Desktop-style workflows (Classic and Modern shells) under original branding. License Apache-2.0.
 
+Follow docs/MASTER_PLAN.md; work one phase per session.
+
 ## Fixed decisions (ask the user before changing any)
 - Stack: Tauri 2 (Windows), React + TypeScript (Vite), Fluent UI React v9, Monaco (DAX/M editors), Apache ECharts, Rust core, DuckDB, Apache Arrow. No Polars, no SQLite metadata store.
 - DAX: custom parser + semantic engine in Rust. Compile measures to DuckDB SQL where semantics allow; filter context, context transition and blank semantics handled in the engine; hybrid evaluator where SQL cannot express behavior.
