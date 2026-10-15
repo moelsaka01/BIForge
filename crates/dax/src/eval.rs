@@ -595,19 +595,30 @@ impl<'e> Evaluator<'e> {
             }
         }
         // 5. filter arguments: each overrides the existing filters on its columns; together they intersect
+        let filters: Vec<(Filter, bool)> = ops.into_iter().filter_map(|op| if let Op::Apply(f, keep) = op { Some((f, keep)) } else { None }).collect();
+        Ok(self.apply_filters(ctx, &g, filters))
+    }
+
+    /// Applies filter arguments to a context: every filter replaces the existing filters on its columns (unless it
+    /// is a KEEPFILTERS one); a filter on the key column of a marked date table replaces all filters on that table.
+    pub fn apply_filters(&self, mut ctx: FilterCtx, g: &Graph, filters: Vec<(Filter, bool)>) -> FilterCtx {
         let mut remove = HashSet::new();
-        for op in &ops {
-            if let Op::Apply(f, false) = op {
-                remove.extend(f.cols().iter().copied());
+        for (f, keep) in &filters {
+            if *keep {
+                continue;
+            }
+            remove.extend(f.cols().iter().copied());
+            for dc in &self.data.model.date_tables {
+                if f.cols().contains(dc) {
+                    remove.extend(self.data.model.columns_of(dc.table));
+                }
             }
         }
-        ctx = ctx.remove_columns(self.data, &g, &remove);
-        for op in ops {
-            if let Op::Apply(f, _) = op {
-                ctx = ctx.push(f);
-            }
+        ctx = ctx.remove_columns(self.data, g, &remove);
+        for (f, _) in filters {
+            ctx = ctx.push(f);
         }
-        Ok(ctx)
+        ctx
     }
 
     fn find_relationship(&self, a: Option<ColId>, b: Option<ColId>) -> Option<usize> {

@@ -31,6 +31,8 @@ pub fn setup() -> (Engine, biforge_dax::Engine) {
     model.add_relationship(("Sales", "CustomerKey"), ("Customer", "CustomerKey"), CrossFilter::Single, true).unwrap();
     model.add_relationship(("Sales", "ProductKey"), ("Product", "ProductKey"), CrossFilter::Single, true).unwrap();
     model.add_relationship(("Sales", "PromotionKey"), ("Promotion", "PromotionKey"), CrossFilter::Both, true).unwrap();
+    // step 5 of the fixture README: Mark as date table
+    model.mark_date_table("Date", "Date").unwrap();
     let dax = biforge_dax::Engine::new(model, &store).unwrap();
     (store, dax)
 }

@@ -91,6 +91,9 @@ pub struct Model {
     pub tables: Vec<Table>,
     pub measures: Vec<Measure>,
     pub relationships: Vec<Relationship>,
+    /// Key columns of tables marked as date tables ("Mark as date table"). A CALCULATE filter on such a column
+    /// replaces every filter on that table, not only the filters on the column.
+    pub date_tables: Vec<ColId>,
     table_index: HashMap<String, TableId>,
     measure_index: HashMap<String, usize>,
 }
@@ -119,6 +122,18 @@ impl Model {
         });
         self.table_index.insert(norm(name), id);
         Ok(id)
+    }
+
+    /// Marks a table as a date table through its date key column.
+    pub fn mark_date_table(&mut self, table: &str, column: &str) -> Result<ColId, ModelError> {
+        let t = self.table_id(table).ok_or_else(|| ModelError(format!("Table '{table}' does not exist.")))?;
+        let c = self.column_id(t, column).ok_or_else(|| ModelError(format!("Column '{table}'[{column}] does not exist.")))?;
+        if self.column(c).data_type != DataType::DateTime {
+            return Err(ModelError(format!("The date table key '{table}'[{column}] must be a date column.")));
+        }
+        self.date_tables.retain(|x| x.table != t);
+        self.date_tables.push(c);
+        Ok(c)
     }
 
     pub fn add_calculated_column(&mut self, table: &str, name: &str, expression: &str) -> Result<ColId, ModelError> {
@@ -205,6 +220,12 @@ impl Model {
                 for (cn, dt, e) in calcs {
                     let id = m.add_calculated_column(&name, &cn, &e)?;
                     m.tables[id.table].columns[id.col].data_type = dt;
+                }
+                if n.text_prop("dataCategory").is_some_and(|v| v.eq_ignore_ascii_case("time")) {
+                    if let Some(k) = n.children.iter().find(|c| c.kind == "column" && c.has_flag("isKey")) {
+                        // a key column that is not a date column cannot mark the table; the table stays unmarked
+                        let _ = m.mark_date_table(&name, k.name.as_deref().unwrap_or(""));
+                    }
                 }
                 for me in n.children.iter().filter(|c| c.kind == "measure") {
                     pending_measures.push((name.clone(), me.name.clone().unwrap_or_default(), me.default.as_ref().map(|e| e.text.clone()).unwrap_or_default()));

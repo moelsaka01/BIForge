@@ -13,6 +13,7 @@ pub mod fn_logic;
 pub mod fn_math;
 pub mod fn_table;
 pub mod fn_text;
+pub mod fn_time;
 pub mod functions;
 pub mod lexer;
 pub mod model;
