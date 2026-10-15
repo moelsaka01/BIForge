@@ -328,3 +328,15 @@ fn file_name_sanitizing() {
     assert_eq!(sanitize_file_name("name. "), "name");
     assert_eq!(sanitize_file_name(""), "_");
 }
+
+#[test]
+fn create_new_validates_name_and_refuses_overwrite() {
+    let d = tempfile::tempdir().unwrap();
+    let root = d.path().join("proj");
+    let p = Project::create_new(&root, "Sales Report").unwrap();
+    assert_eq!(Project::open(&p.pbip_path(&root)).unwrap(), p);
+    assert!(matches!(Project::create_new(&root, "Sales Report"), Err(ProjectError::Invalid(_))));
+    for bad in ["", " lead", "a/b", "x.pbip", "CON"] {
+        assert!(matches!(Project::create_new(&d.path().join("o"), bad), Err(ProjectError::Invalid(_))), "{bad:?}");
+    }
+}

@@ -16,3 +16,10 @@ Status: design only; no code exists yet.
 - One document store, one engine; shells never contain business logic.
 - Every user action is a registered command, so both shells and tests drive the same path.
 - Conformance tests in `tests/` (e.g. `tests/dax`) define expected results independent of implementation.
+
+## Phase 1 implementation notes (2026-10-15)
+- `crates/model`: `tmdl` (generic TMDL tree + canonical printer; kinds are plain strings, interpreted by callers) and `project` (PBIP-shaped folder: `.pbip`, `<name>.SemanticModel/definition/**/*.tmdl`, `<name>.Report/definition/**/*.json`). Only those managed files are read/written; other files in the folders are never touched. Saves stage temp files first, skip unchanged files, refuse unsafe paths, and delete only stale managed files.
+- Project JSON crosses the Tauri boundary as serde JSON (`Project`), and the TS document store holds exactly that shape (`app/src/core/model/types.ts`). Model edits (`app/src/core/model/ops.ts`) operate on the TMDL tree; validation of DAX is not done yet.
+- `app/src/core`: `store/documentStore.ts` (transactions on clones, undo/redo, dirty by reference to the saved snapshot), `commands/registry.ts` + `builtin.ts` (the only place UI actions are defined), `session/` (project root, recovery offer, autosave controller, Tauri IO adapter).
+- Crash recovery: snapshot of the whole project at `<project root>/.biforge/recovery/project.json` (gitignored), written debounced after edits, removed on save, offered on next open.
+- Known limits: history stores full project snapshots; the report side is held as opaque JSON values; new-project report files follow Microsoft's published JSON schemas but have not been opened in Power BI Desktop.

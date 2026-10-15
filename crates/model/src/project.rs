@@ -93,7 +93,7 @@ pub struct Project {
     pub report: ReportFolder,
 }
 
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SaveReport {
     pub written: Vec<String>,
     pub deleted: Vec<String>,
@@ -546,4 +546,23 @@ fn rel_display(root: &Path, path: &Path) -> String {
         .map(|c| c.as_os_str().to_string_lossy().into_owned())
         .collect::<Vec<_>>()
         .join("/")
+}
+
+impl Project {
+    /// Creates a new project on disk (a fresh folder or an empty existing one) and returns it.
+    /// Refuses to touch a folder that already contains a project with the same name.
+    pub fn create_new(root: &Path, name: &str) -> Result<Project, ProjectError> {
+        let trimmed = name.trim();
+        if trimmed.is_empty() || trimmed != name || sanitize_file_name(name) != name || name.ends_with(".pbip") {
+            return Err(ProjectError::Invalid(format!(
+                "\"{name}\" cannot be used as a project name (use letters, digits, spaces, dashes)"
+            )));
+        }
+        let project = Project::new(name);
+        if project.pbip_path(root).exists() {
+            return Err(ProjectError::Invalid(format!("a project named \"{name}\" already exists in {}", root.display())));
+        }
+        project.save(root)?;
+        Ok(project)
+    }
 }

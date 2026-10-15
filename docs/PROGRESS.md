@@ -27,3 +27,11 @@
 ## 2026-10-15 (Day 1, continued): group 3
 - `research/dax-parser.md`: DAX parser assembly analysed with rea (it admitted metadata for this 315-type assembly) plus type listing. Findings: token/keyword set, 16 syntax error codes, function category/role/parameter-role model, ~210 statically named functions; full catalog is supplied by the engine at runtime, so it will be recorded through the black-box harness.
 - Native engine (msmdsrv.exe) was not analysed, per instructions; no Ghidra installed.
+
+## 2026-10-15: Phase 1 (model and project)
+- Added `docs/MASTER_PLAN.md` (verbatim) and the "one phase per session" line in CLAUDE.md.
+- `crates/model`: TMDL parser + canonical printer (16 tests, hand-written fixtures from the public spec incl. messy/CRLF/BOM/fenced cases and error cases) and PBIP-shaped project open/save/new + recovery snapshot (15 tests, hand-written Retail sample).
+- App: Tauri commands (tested wrappers), TS document store with undo/redo (13 tests), command registry (12), model ops (15), session + autosave/recovery with fake IO (21). Total frontend tests: 62.
+- Temporary host screen (toolbar, model tree, recovery banner); marked as placeholder in the UI and in COVERAGE.md.
+- Bugs found by tests while building: fixture/test indentation mistakes only (no parser defects found); clippy `manual_contains` fixed.
+- Not done / not verified: Desktop-written TMDL and PBIP samples; opening our files in Power BI Desktop; Tauri glue and UI have no automated tests; Options > Preview features check (user asked for it "later").
