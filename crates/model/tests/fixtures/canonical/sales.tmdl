@@ -1,0 +1,42 @@
+/// Sales fact table
+table Sales
+	lineageTag: 9a48bea0-e5fb-40fa-9e81-f61288e31a02
+
+	/// Total of net amount
+	measure 'Sales Amount' = SUMX(Sales, Sales[Quantity] * Sales[Net Price])
+		formatString: $ #,##0
+		displayFolder: " My ""Amazing"" Measures"
+
+	measure 'Sales (ly)' =
+			var ly = CALCULATE([Sales Amount], SAMEPERIODLASTYEAR('Calendar'[Date]))
+			return ly
+		formatString: $ #,##0
+
+	column 'Product Key'
+		dataType: int64
+		isHidden
+		sourceColumn: ProductKey
+		summarizeBy: none
+
+	column Quantity
+		dataType: int64
+		sourceColumn: Quantity
+
+	column 'Line Total' = Sales[Quantity] * Sales[Net Price]
+		dataType: double
+
+	hierarchy 'Product Hierarchy'
+
+		level Category
+			column: Category
+
+	partition Sales-Partition = m
+		mode: import
+		source =
+			let
+				Source = Sql.Database(Server, Database),
+				Sales = Source{[Schema="dbo",Item="Sales"]}[Data]
+			in
+				Sales
+
+	annotation PBI_ResultType = Table

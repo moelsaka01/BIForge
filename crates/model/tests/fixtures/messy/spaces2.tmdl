@@ -1,0 +1,20 @@
+table Product
+  lineageTag: abc
+
+  column 'Product Key'
+    dataType: int64
+    isKey
+    sourceColumn: "ProductKey"
+
+  column 'Net Price'
+
+    sourceColumn: "Net Price"
+    summarizeBy: none
+  measure 'Count'  =  COUNTROWS(Product)  
+  measure Multi =
+      var x = 1
+
+      return x
+
+
+    formatString: 0

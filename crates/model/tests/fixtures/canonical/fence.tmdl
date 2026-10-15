@@ -1,0 +1,8 @@
+table Notes
+
+	measure Padded = ```
+			VAR a = 1   
+
+			RETURN a
+			```
+		formatString: 0

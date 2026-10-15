@@ -1,0 +1,4 @@
+role 'Stores Cluster 1'
+	modelPermission: read
+
+	tablePermission Store = 'Store'[Store Code] IN {1, 10, 20, 30}

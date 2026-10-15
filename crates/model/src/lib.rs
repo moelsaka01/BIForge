@@ -1,14 +1,3 @@
-//! model crate. Not implemented yet.
+//! Semantic model and project format (TMDL / PBIP-shaped folders).
 
-/// Returns the crate name; placeholder so the workspace builds and tests run.
-pub fn crate_name() -> &'static str {
-    "biforge-model"
-}
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn crate_name_is_stable() {
-        assert_eq!(super::crate_name(), "biforge-model");
-    }
-}
+pub mod tmdl;

@@ -1,0 +1,9 @@
+relationship cdb6e6a9-c9d1-42b9-b9e0-484a1bc7e123
+	fromColumn: Sales.'Product Key'
+	toColumn: Product.'Product Key'
+
+relationship 0f7f1b0e-5d2a-4c3b-8a41-6f2c9d7e5b10
+	crossFilteringBehavior: bothDirections
+	fromColumn: Sales.'Date Key'
+	toColumn: Calendar.'Date Key'
+	isActive: false
