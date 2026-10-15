@@ -2,6 +2,7 @@ import { createRegistry } from "./commands/builtin";
 import { Session } from "./session/session";
 import { AutosaveController } from "./session/autosave";
 import { tauriDialogs, tauriIO } from "./session/tauriIO";
+import { tauriEngine } from "./data/tauriEngine";
 
 export interface AppRuntime {
   session: Session;
@@ -11,6 +12,6 @@ export interface AppRuntime {
 
 /** Wires the real (Tauri-backed) services. Tests build their own Session with fakes instead. */
 export function createAppRuntime(): AppRuntime {
-  const session = new Session(tauriIO, tauriDialogs);
+  const session = new Session(tauriIO, tauriDialogs, tauriEngine);
   return { session, registry: createRegistry(session), autosave: new AutosaveController(session, 2000) };
 }

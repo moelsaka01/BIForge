@@ -17,6 +17,10 @@ export const tauriDialogs: Dialogs = {
     const r = await open({ multiple: false, directory: false, filters: [{ name: "BIForge / Power BI project", extensions: ["pbip"] }] });
     return typeof r === "string" ? r : null;
   },
+  pickFile: async (name, extensions) => {
+    const r = await open({ multiple: false, directory: false, filters: [{ name, extensions }] });
+    return typeof r === "string" ? r : null;
+  },
   pickFolder: async () => {
     const r = await open({ multiple: false, directory: true });
     return typeof r === "string" ? r : null;

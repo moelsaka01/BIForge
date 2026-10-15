@@ -1,6 +1,8 @@
 import { CommandRegistry } from "./registry";
 import type { Session } from "../session/session";
 import * as ops from "../model/ops";
+import * as rel from "../model/relationships";
+import type { SourceSpec } from "../data/types";
 
 function argsOf<T extends object>(args: unknown, required: (keyof T & string)[]): T {
   const a = (args ?? {}) as Record<string, unknown>;
@@ -129,6 +131,80 @@ export function createRegistry(session: Session): CommandRegistry<Session> {
     run: (s, args) => {
       const { name } = argsOf<{ name: string }>(args, ["name"]);
       s.store.transact(`Delete measure "${name}"`, (p) => ops.deleteMeasure(p, name));
+    },
+  });
+
+  // ---- Phase 2: data and relationships ----
+  const hasEngineProject = (s: Session) => hasProject(s) && s.root !== null && s.engine !== null;
+
+  r.register({
+    id: "data.import",
+    label: "Import data",
+    category: "Data",
+    isEnabled: hasEngineProject,
+    run: async (s, args) => {
+      const a = args as { name?: string; spec?: SourceSpec } | undefined;
+      if (!a?.name?.trim() || !a.spec) throw new Error("Missing table name or source.");
+      await s.importTable(a.name.trim(), a.spec);
+    },
+  });
+  r.register({
+    id: "data.refreshTable",
+    label: "Refresh table",
+    category: "Data",
+    isEnabled: hasEngineProject,
+    run: async (s, args) => {
+      const { name } = argsOf<{ name: string }>(args, ["name"]);
+      await s.refreshTable(name);
+    },
+  });
+  r.register({
+    id: "data.refreshAll",
+    label: "Refresh all",
+    category: "Data",
+    isEnabled: hasEngineProject,
+    run: async (s) => {
+      const failures = await s.refreshAll();
+      if (failures.length) throw new Error(`Refresh failed for: ${failures.map((f) => f.table).join(", ")}.`);
+    },
+  });
+
+  r.register({
+    id: "model.addRelationship",
+    label: "New relationship",
+    category: "Modeling",
+    isEnabled: hasProject,
+    run: (s, args) => {
+      const a = args as rel.NewRelationship | undefined;
+      if (!a?.fromTable || !a.fromColumn || !a.toTable || !a.toColumn) throw new Error("Missing relationship columns.");
+      let createdInactive = false;
+      s.store.transact(`New relationship ${a.fromTable}[${a.fromColumn}] to ${a.toTable}[${a.toColumn}]`, (p) => {
+        createdInactive = rel.addRelationship(p, a).createdInactive;
+      });
+      s.setMessage(
+        createdInactive ? "Relationship created but inactive: another active path already connects these tables." : "Relationship created.",
+      );
+    },
+  });
+  r.register({
+    id: "model.updateRelationship",
+    label: "Edit relationship",
+    category: "Modeling",
+    isEnabled: hasProject,
+    run: (s, args) => {
+      const a = args as { id?: string; patch?: rel.RelationshipPatch } | undefined;
+      if (!a?.id || !a.patch) throw new Error("Missing relationship or changes.");
+      s.store.transact("Edit relationship", (p) => rel.updateRelationship(p, a.id!, a.patch!));
+    },
+  });
+  r.register({
+    id: "model.deleteRelationship",
+    label: "Delete relationship",
+    category: "Modeling",
+    isEnabled: hasProject,
+    run: (s, args) => {
+      const { id } = argsOf<{ id: string }>(args, ["id"]);
+      s.store.transact("Delete relationship", (p) => rel.deleteRelationship(p, id));
     },
   });
 

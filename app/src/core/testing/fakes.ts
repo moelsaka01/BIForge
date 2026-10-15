@@ -100,8 +100,12 @@ export class FakeIO implements ProjectIO {
 export class FakeDialogs implements Dialogs {
   pbip: string | null = null;
   folder: string | null = null;
+  file: string | null = null;
   async pickPbip() {
     return this.pbip;
+  }
+  async pickFile() {
+    return this.file;
   }
   async pickFolder() {
     return this.folder;

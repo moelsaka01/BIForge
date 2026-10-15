@@ -40,20 +40,20 @@ export function findTable(p: Project, name: string): { key: string; node: TmdlNo
   return undefined;
 }
 
-function requireTable(p: Project, name: string) {
+export function requireTable(p: Project, name: string) {
   const t = findTable(p, name);
   if (!t) throw new ModelError("not-found", `Table "${name}" does not exist.`);
   return t;
 }
 
-function checkName(name: string, what: string): string {
+export function checkName(name: string, what: string): string {
   const n = name.trim();
   if (n === "") throw new ModelError("invalid-name", `${what} name cannot be empty.`);
   if (/[\r\n\t]/.test(n)) throw new ModelError("invalid-name", `${what} name cannot contain line breaks or tabs.`);
   return n;
 }
 
-function allTables(p: Project): TmdlNode[] {
+export function allTables(p: Project): TmdlNode[] {
   return Object.values(p.model.tmdl).flatMap((d) => d.nodes.filter(isTable));
 }
 
@@ -122,7 +122,7 @@ export function parseColumnRef(s: string): { table: string; column: string } | n
   return column === null ? null : { table, column };
 }
 
-function textProp(n: TmdlNode, key: string): string | null {
+export function textProp(n: TmdlNode, key: string): string | null {
   const p = n.props.find((x) => x.key === key);
   return p && typeof p.value === "object" && "Text" in p.value ? p.value.Text : null;
 }
