@@ -47,4 +47,4 @@ Scope note for BIForge: items tied to Microsoft cloud services (datahub, Dataver
 - Keyboard shortcut table not yet extracted (keytips exist; global hotkeys not located).
 - The exact tab → group → control tree for the report ribbon is inside `desktop.min.js`; extract it by structured search when we build our declarative layout.
 - Dialog inventory (Options, Manage relationships, Model view panes) not started.
-- Resolve the Classic/Modern mapping with the user (section 2).
+- Classic/Modern mapping is now in ui-modes.md.

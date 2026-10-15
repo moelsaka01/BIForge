@@ -13,7 +13,7 @@ Goal: obtain trustworthy expected results for DAX semantics without analysing th
 Filter context (CALCULATE, ALL/ALLEXCEPT/REMOVEFILTERS, KEEPFILTERS), context transition, relationships (one-to-many, bidirectional, inactive with USERELATIONSHIP), blank semantics, time intelligence, iterators, SUMMARIZECOLUMNS/ADDCOLUMNS/GROUPBY, sort and rounding rules.
 
 ## Risks and questions
-- Recorded values are Microsoft engine output on our own data. They are behavioral facts rather than Microsoft assets, but confirm this is acceptable under the project's licensing stance.
+- Recorded values are Microsoft engine output on our own data, behavioral facts rather than Microsoft assets. Approved by the project owner.
 - The local instance exists only while the report is open, so recording is a manual, occasional step.
 - Fixture reports (.pbix) are created by hand and stay local (gitignored).
 - Port discovery and authentication need to be confirmed on this machine before building.
