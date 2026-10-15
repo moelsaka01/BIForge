@@ -12,4 +12,5 @@ Original notes about the behavior of Power BI Desktop and related formats, writt
 ## Notes
 - [ui-ribbon-commands.md](ui-ribbon-commands.md) – UI architecture, ribbon tabs, command inventory, ribbon-mode switch.
 - [ui-modes.md](ui-modes.md) – Classic vs Modern mapping: user settings and feature switches.
+- [pbip-tmdl-format.md](pbip-tmdl-format.md) – PBIP/PBIR/TMDL layout and rules from public docs, plus gaps.
 - [dax-harness-design.md](dax-harness-design.md) – proposed black-box harness for DAX expected results (design only, not built).

@@ -18,3 +18,8 @@
 - rea limitation: cannot admit metadata for the largest assemblies; ilspycmd listing used instead.
 - Added `tools/re/` helper scripts and `research/dax-harness-design.md` (design only, awaiting review).
 - Not verified: what "Modern" refers to. Keyboard shortcuts and dialogs not yet extracted.
+
+## 2026-10-15 (Day 1, continued): Classic/Modern flags and group 2
+- `research/ui-modes.md`: Classic vs Modern mapping from user settings and feature switches (onObject, useModernFormatPane, ribbon switches, styling). How users toggle on-object is unverified.
+- `research/pbip-tmdl-format.md`: PBIP/PBIR/TMDL layout and rules from public docs; gaps listed (no binary work needed so far).
+- DAX harness approved by owner (recorded outputs on our own data are acceptable).
