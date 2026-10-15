@@ -49,4 +49,5 @@ docs/                COVERAGE.md, ARCHITECTURE.md, PROGRESS.md
 
 ## Commands
 Verified (from repo root, with cargo on PATH): `cargo test --workspace`; in `app/`: `npm install`, `npm run build`, `npm test`, `npx tauri dev` (opens the window).
+RE tooling: dotnet SDK 9 at `C:\Program Files\dotnet`; ilspycmd 9.1.0.7988 in ~/.dotnet/tools; rea via `npx rea-agents`. Power BI Desktop is read in place from its WindowsApps folder (see research/README.md). Keep raw output in research/_raw/ and search it with rg.
 Environment note: on this machine `cargo`/`rustc` live in `~/.cargo/bin` and may not be on the bash PATH (`export PATH="$HOME/.cargo/bin:$PATH"`).
