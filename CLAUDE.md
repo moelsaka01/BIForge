@@ -45,5 +45,5 @@ docs/                COVERAGE.md, ARCHITECTURE.md, PROGRESS.md
 ```
 
 ## Commands
-Verified commands are added here as they become true. Not yet scaffolded.
+Verified (from repo root, with cargo on PATH): `cargo test --workspace`; in `app/`: `npm install`, `npm run build`, `npm test`, `npx tauri dev` (opens the window).
 Environment note: on this machine `cargo`/`rustc` live in `~/.cargo/bin` and may not be on the bash PATH (`export PATH="$HOME/.cargo/bin:$PATH"`).

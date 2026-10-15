@@ -1,12 +1,12 @@
 # Feature coverage
 
 Status values: **Not started** / **Partial** / **Done-tested** (done requires a passing automated test).
-Last updated: 2026-10-15. Nothing is implemented yet.
+Last updated: 2026-10-15. Only the scaffold exists; no product features are implemented.
 
 | Area | Feature | Status |
 | --- | --- | --- |
-| Platform | Tauri window launches | Not started |
-| Platform | CI build + tests on Windows | Not started |
+| Platform | Tauri window launches | Partial (launched manually, titled "BIForge"; no automated test) |
+| Platform | CI build + tests on Windows | Partial (workflow written; result pending) |
 | Connectivity | CSV import | Not started |
 | Connectivity | Excel import | Not started |
 | Connectivity | JSON / Parquet import | Not started |

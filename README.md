@@ -30,7 +30,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). In short: `app/` (UI shells + 
 
 ## Build from source
 
-Not yet available – the scaffold is still being created. Prerequisites that will be needed: Rust (stable, MSVC target), Visual Studio Build Tools (C++), Node.js 22+, WebView2 runtime. Exact commands will be filled in here once they are verified.
+Prerequisites: Rust (stable, MSVC target), Visual Studio Build Tools (C++), Node.js 22+, WebView2 runtime. Then: `cd app && npm install && npx tauri dev` to launch; `cargo test --workspace` and `cd app && npm test` to test.
 
 ## Roadmap
 

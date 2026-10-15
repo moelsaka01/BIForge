@@ -5,3 +5,6 @@
 - Added .gitignore, README, CLAUDE.md, docs skeletons.
 - Toolchain check: Rust 1.94.1 (msvc, in ~/.cargo/bin, not on bash PATH), Node 24.14, npm 11.9, VS 2022 BuildTools with MSVC 14.44, WebView2 present, gh authenticated.
 - Reviewed rea documentation (no run yet). Awaiting user go-ahead before running against Power BI.
+- Scaffolded workspace: root Cargo workspace (crates engine/dax/m/model as placeholders with trivial tests), `app/` Vite + React 19 + Fluent UI v9 + Tauri 2 (`app/src-tauri`), `tests/dax`, CI workflow.
+- Verified locally: `npm run build`, `npm test` (1 test), `cargo test --workspace` pass; `npx tauri dev` opened a window titled "BIForge" (manual check only).
+- Power BI Desktop not found at the default MSI path; no Ghidra/Hopper/IDA installed. rea not installed or run (awaiting user review).
