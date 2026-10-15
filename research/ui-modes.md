@@ -2,7 +2,7 @@
 
 Definitions (from the project owner):
 - **Modern**: the current default UI with newer authoring features on (on-object interaction, the new Format pane, current styling, single-line ribbon if that is the default, newer card and slicer visuals).
-- **Classic**: the older equivalents Power BI still offers (multi-line ribbon, legacy Format pane without on-object, older visual defaults).
+- **Classic**: the older equivalents Power BI still offers (multi-line ribbon, no on-object, older visual defaults). Note: 2.158 offers no legacy Format pane, so Classic also uses the modern Format pane (see "Verified in the running app" below).
 
 Method: searched the feature-switch description table and the main desktop bundle on disk with rg, plus the user-settings class. Switch names are identifiers; descriptions below are paraphrased.
 
@@ -25,11 +25,27 @@ Method: searched the feature-switch description table and the main desktop bundl
 | Other user settings | app theme (including dark mode), backstage as initial view, new filter pane preferred (`IsNewFilterPanePreferred`) | - | user settings | verified names |
 
 ## What this means for BIForge
-- Treat each row as a *shell capability flag*, stored in per-shell layout config (not in the document): `ribbonMode`, `onObject`, `formatPane: "modern" | "legacy"`, `paneStyling`, `visualDefaults: "fluent2" | "classic"`.
-- Modern shell: single-line ribbon default, on-object overlay editing, new Format pane, Fluent 2 default theme. Classic shell: multi-line ribbon, pane-based Format, classic default theme. Both read the same document and call the same commands.
+- Treat each row as a *shell capability flag*, stored in per-shell layout config (not in the document): `ribbonMode`, `onObject`, `powerQueryEditor: "new" | "current"`, `paneStyling`, `visualDefaults: "fluent2" | "classic"`.
+- Modern shell: single-line ribbon default, on-object overlay editing, modern Format pane, new Power Query editor, Fluent 2 default theme. Classic shell: multi-line ribbon, the same modern Format pane without on-object, current Power Query editor, classic default theme. Both read the same document and call the same commands.
 - Visual defaults ("older card/slicer visuals") are **document-affecting** (they change rendered output), so they must be a *report theme/visual-default setting in the document*, not a shell-only choice. Needs a decision.
 
 ## Open items
-- Run the app and check Options > Preview features and the View tab to confirm which of these are user-toggleable in this build.
+- Done for Options > Preview features (see the verified table below). The View tab and ribbon switches are still unchecked.
 - Identify the legacy card and slicer visuals (older vs "new" card) – not located yet.
 - Defaults per switch (what a fresh install gets) are not derivable from static analysis.
+
+## Verified in the running app (Power BI Desktop 2.158, Options > Preview features)
+Checked by the project owner on the reference machine. This resolves the "how does a user flip it" question for these switches.
+
+| Feature | In 2.158 | Default | BIForge Modern | BIForge Classic |
+| --- | --- | --- | --- | --- |
+| On-object interaction | Preview feature toggle | Off | On | Off |
+| Format pane | No toggle: the modern Format pane is the only one offered | Modern | Modern Format pane | Modern Format pane (same pane; Classic edits through it without on-object) |
+| New Power Query experience | Preview feature toggle | Off | New Power Query editor | Current Power Query editor |
+| Enhanced DAX Time Intelligence | Preview feature toggle | Off | Not a shell difference: match the default (off) behavior first; the enhanced behavior is a later item | same |
+| Save as PBIP with TMDL model and PBIR report | Enabled on the reference machine | (machine setting) | Native format for both shells | same |
+
+Consequences:
+- The earlier assumption that Classic uses a legacy Format pane is dropped: both shells use the modern Format pane. Classic differs by having on-object off (pane-based editing) and the multi-line ribbon.
+- The Power Query editor has two UIs; Modern gets the new one, Classic the current one (Phase 5 follow-up, see docs/COVERAGE.md).
+- DAX time intelligence follows the classic (default) semantics. The enhanced variant is recorded in COVERAGE.md as a later item.

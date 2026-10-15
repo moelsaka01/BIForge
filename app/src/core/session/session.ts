@@ -28,6 +28,17 @@ export interface SessionSnapshot {
   dataTables: string[];
 }
 
+/** JSON with object keys sorted, so two equal projects compare equal whatever order their keys were built in. */
+export function canonicalJson(v: unknown): string {
+  return JSON.stringify(v, (_k, val: unknown) =>
+    val && typeof val === "object" && !Array.isArray(val)
+      ? Object.fromEntries(Object.entries(val as Record<string, unknown>).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)))
+      : val,
+  );
+}
+
+const rootKey = (root: string) => root.replace(/\//g, "\\").replace(/\\+$/, "").toLowerCase();
+
 export function dirname(path: string): string {
   const i = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
   return i <= 0 ? path : path.slice(0, i);
@@ -38,6 +49,8 @@ export class Session {
   readonly store = new DocumentStore();
   private snap: SessionSnapshot = { root: null, pendingRecovery: null, lastMessage: null, dataTables: [] };
   private listeners = new Set<() => void>();
+  /** Project roots whose recovery snapshot was written by this running app (not left behind by a crash). */
+  private ownRecovery = new Set<string>();
 
   constructor(
     readonly io: ProjectIO,
@@ -68,6 +81,12 @@ export class Session {
   async newProject(root: string, name: string): Promise<void> {
     const project = await this.io.newProject(root, name);
     this.store.load(project);
+    try {
+      // a snapshot left in this folder belongs to some other, earlier project
+      await this.io.clearRecovery(root);
+    } catch {
+      /* harmless: it is overwritten by the next autosave */
+    }
     const dataNote = await this.openDataStore(root, project);
     this.set({ root, pendingRecovery: null, lastMessage: `Created project "${name}".${dataNote}` });
   }
@@ -80,8 +99,14 @@ export class Session {
     let message: string | null = `Opened "${project.name}".`;
     try {
       const rec = await this.io.readRecovery(root);
-      if (rec && JSON.stringify(rec) !== JSON.stringify(project)) pending = rec;
-      else if (rec) await this.io.clearRecovery(root);
+      // Only a snapshot from an earlier run of the app is a recovery. One this run wrote itself (the project was
+      // already open here) or one equal to the saved files is dropped.
+      const own = this.ownRecovery.has(rootKey(root));
+      if (rec && !own && canonicalJson(rec) !== canonicalJson(project)) pending = rec;
+      else if (rec) {
+        await this.io.clearRecovery(root);
+        this.ownRecovery.delete(rootKey(root));
+      }
     } catch (e) {
       message = `Opened "${project.name}", but its recovery file could not be read: ${errText(e)}`;
     }
@@ -106,6 +131,15 @@ export class Session {
     }
     this.set({ lastMessage: report.written.length ? `Saved ${report.written.length} file(s).` : "Saved (no changes on disk)." });
     return report;
+  }
+
+  /** Writes the crash-recovery snapshot for the open project (used by autosave) and remembers that this run wrote it. */
+  async writeRecovery(): Promise<void> {
+    const root = this.snap.root;
+    const project = this.store.project;
+    if (!root || !project) return;
+    this.ownRecovery.add(rootKey(root));
+    await this.io.writeRecovery(root, project);
   }
 
   /** Loads the recovery snapshot as unsaved edits on top of the on-disk project. */

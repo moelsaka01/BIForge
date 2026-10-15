@@ -40,11 +40,10 @@ export class AutosaveController {
   /** Writes the snapshot now (also used on window close). Resolves when written. */
   flush(): Promise<void> {
     this.writing = this.writing.then(async () => {
-      const root = this.session.root;
       const snap = this.session.store.getSnapshot();
-      if (!root || !snap.project || !snap.isDirty) return;
+      if (!this.session.root || !snap.project || !snap.isDirty) return;
       try {
-        await this.session.io.writeRecovery(root, snap.project);
+        await this.session.writeRecovery();
         this.lastError = null;
       } catch (e) {
         this.lastError = e instanceof Error ? e.message : String(e);

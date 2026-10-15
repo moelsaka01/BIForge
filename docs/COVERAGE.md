@@ -20,6 +20,8 @@ Last updated: 2026-10-15, end of Phase 2 work (see PROGRESS.md). Phases 1 and 2 
 | Power Query | M parser (license check first) | Not started |
 | Power Query | M evaluator folding to DuckDB SQL | Not started |
 | Power Query | Query editor UI + applied steps | Not started |
+| Power Query | Two editor UIs: Modern shell uses the "New Power Query experience" editor, Classic the current editor (both are Desktop 2.158 options, new one off by default; see research/ui-modes.md) | Not started (Phase 5 follow-up) |
+| Power Query | **PRIORITY (Phase 5):** imported tables get TMDL partitions with M source expressions, so Power BI Desktop can open BIForge projects | Not started |
 | Modeling | Tables / columns / data types (read from TMDL, listed in UI tree) | Partial (read-only listing tested in ops.test.ts; no column editing) |
 | Modeling | Add / delete table (with model ref + relationship cleanup) | Done-tested (ops.test.ts, session.test.ts); UI input only manually checked |
 | Modeling | Add / edit / delete measure (DAX text only, not evaluated) | Done-tested (ops.test.ts); expression is stored, never parsed or run |
@@ -32,6 +34,7 @@ Last updated: 2026-10-15, end of Phase 2 work (see PROGRESS.md). Phases 1 and 2 
 | DAX | Context transition, blank semantics | Not started |
 | DAX | DuckDB SQL compilation | Not started |
 | DAX | Monaco editor with highlighting | Not started |
+| DAX | "Enhanced DAX Time Intelligence" (Desktop 2.158 preview, off by default): we match the default behavior first; the enhanced variant is a later item | Not started (later) |
 | Reports | Pages / canvas | Not started |
 | Reports | ECharts visuals (bar, line, table, card) | Not started |
 | Reports | Slicers, filters, cross-highlighting | Not started |
@@ -46,16 +49,18 @@ Last updated: 2026-10-15, end of Phase 2 work (see PROGRESS.md). Phases 1 and 2 
 | Interop | PBIX read-only import | Not started |
 | Core | Document store with transactions, undo/redo, dirty tracking | Done-tested (documentStore.test.ts, 13 tests); history keeps full snapshots (memory grows with model size) |
 | Core | Command registry (id, label, enabled state, keytip, shortcut) | Done-tested (registry.test.ts) |
-| Core | Autosave + crash-recovery snapshot | Partial: Rust snapshot read/write and TS controller tested with fakes (autosave.test.ts, project.rs); Tauri `invoke` glue and a real crash are not tested |
+| Core | Autosave + crash-recovery snapshot | Partial: Rust snapshot read/write and TS controller tested with fakes (autosave.test.ts, recoveryOwnership.test.ts, project.rs). The recovery offer only appears for snapshots from an earlier run of the app. Tauri `invoke` glue and a real crash are not tested |
 | Core | Open / save commands wired to disk through Tauri | Partial: Rust command wrappers tested; TS `tauriIO.ts` and dialogs not tested |
-| UI | Host screen (temporary: toolbar, view tabs, recovery banner) | Partial (placeholder; the app was not run by hand in this phase, only built and jsdom-tested) |
+| UI | Host screen (temporary: toolbar, view tabs, recovery banner) | Partial (placeholder). Status banner lists what works and what does not (info.test.ts) |
 | UI | Data pane (tables, columns, measures, search, refresh buttons) | Done-tested (jsdom) |
 | UI | Import dialog (all six sources) | Partial: form logic tested (importForm); the dialog itself has no automated test and was not exercised in the real app |
-| UI | Data view: virtualized grid, column types, sort | Done-tested (jsdom, 100,000-row fake engine). Single-column sort, read-only; no column resize or formatting; cells are text |
+| UI | Data view: virtualized grid, column types, sort | Done-tested (jsdom, 100,000-row fake engine). Single-column sort, read-only; no column resize. Decimal numbers use the default General format (format.test.ts); dates still show DuckDB text, not the Power BI locale format |
 | UI | Model view: table cards, drag-to-create relationship, edit panel | Done-tested (jsdom drag events). Cards sit in an automatic grid: no moving, zoom or hiding columns |
 | UI | Report view | Not started (shows a visible Not yet implemented message) |
 | UI | Ribbon bound to command ids | Not started |
 | UI | Classic shell | Not started |
 | UI | Modern shell | Not started |
 | UI | Per-shell layout persistence | Not started |
-| UI | Options > Preview features check of Classic/Modern switches in the real Desktop app | Not started (research task; see research/ui-modes.md open items) |
+| UI | Start screen (Phase 6; layout from Desktop 2.158, see MASTER_PLAN.md). Cloud items shown disabled and marked Deferred | Not started |
+| UI | Cloud items on the start screen: OneLake catalog, Sign in, Shared with me | Deferred (no service connectivity; shown disabled) |
+| UI | Options > Preview features check of Classic/Modern switches in the real Desktop app | Done (checked by the owner in Desktop 2.158; recorded in research/ui-modes.md). Research item, no code |

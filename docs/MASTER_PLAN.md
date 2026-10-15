@@ -11,8 +11,8 @@ Recreate Power BI Desktop's features, workflows and UI (Classic and Modern) as a
 - Undo/redo is implemented at the document-store level via command transactions.
 
 ## UI modes
-- Modern: single-line ribbon; on-object interaction; modern Format pane; modern explore canvas; pane color refresh; Fluent 2 default theme for NEW reports (newVisualDefaults2026 equivalent).
-- Classic: multiline ribbon; legacy Format pane (no on-object); older visual defaults for NEW reports.
+- Modern: single-line ribbon; on-object interaction; modern Format pane; new Power Query editor; modern explore canvas; pane color refresh; Fluent 2 default theme for NEW reports (newVisualDefaults2026 equivalent).
+- Classic: multiline ribbon; modern Format pane without on-object (2.158 has no legacy Format pane toggle); current Power Query editor; older visual defaults for NEW reports.
 - Switching modes never alters an existing document.
 - Sources: research/ui-modes.md, research/ui-ribbon-commands.md.
 
@@ -22,7 +22,7 @@ Recreate Power BI Desktop's features, workflows and UI (Classic and Modern) as a
 3. DAX engine: lexer/parser covering research/dax-parser.md grammar and error codes; semantic engine with filter context, row context, context transition, CALCULATE/CALCULATETABLE, iterators, relationship functions (RELATED, RELATEDTABLE, USERELATIONSHIP, CROSSFILTER), blank semantics, VAR/RETURN; measures and calculated columns; compile to DuckDB SQL where semantics allow, engine-side evaluation otherwise. Function tranche order: aggregation, logical, math, text, filter, date/time, time intelligence, statistical. DAX editor with Monaco (syntax highlighting, IntelliSense from our catalog, error squiggles). Runner for tests/dax cases.
 4. Reports: canvas with pages and tabs; Visualizations, Data and Filters panes; visuals via ECharts (bar/column clustered+stacked+100%, line, area, combo, pie, donut, scatter, table, matrix, card, multi-row card, KPI, gauge, treemap, funnel, waterfall, map placeholder marked Deferred); slicers; cross-filter and cross-highlight; drill down/up and drillthrough; tooltips; conditional formatting; bookmarks; themes (JSON); Format pane in both modes.
 5. Power Query: reuse Microsoft's open-source M parser if license-compatible; M evaluator folding to DuckDB SQL; Applied Steps; editor UI with ribbon built from the inventory; transforms: types, filter, sort, remove/keep rows and columns, split, replace, group by, merge, append, pivot/unpivot, custom and conditional columns, fill, dedupe, folder import; query dependencies view; Advanced Editor.
-6. Shells: full Classic and Modern ribbons from the inventory (tabs, groups, contextual tabs) bound to commands; keytips; keyboard shortcuts; context menus; pane docking and resizing; layout persistence per shell; mode switch in Options.
+6. Shells: start screen (see "Phase 6: Start screen" below); full Classic and Modern ribbons from the inventory (tabs, groups, contextual tabs) bound to commands; keytips; keyboard shortcuts; context menus; pane docking and resizing; layout persistence per shell; mode switch in Options.
 7. Ship: export page to PDF and PNG; PBIP export/import verified against Microsoft samples; read-only PBIX import if feasible (else Deferred); Windows installer via Tauri bundler (NSIS); signed-off README, docs/USER_GUIDE.md; tag v0.1.0 and create a GitHub release.
 
 ## Rules for every session
@@ -34,3 +34,11 @@ Recreate Power BI Desktop's features, workflows and UI (Classic and Modern) as a
 - Security: credentials stored via Windows Credential Manager, never in project files or logs.
 - Token budget: read files selectively; use rg; don't print large outputs.
 - End of phase: run all tests, update COVERAGE.md and PROGRESS.md (what works, what's partial, what failed), commit with conventional messages, push, confirm CI green, report a short summary and stop.
+
+## Phase 6: Start screen
+Described from Power BI Desktop 2.158 (reference screenshots are local only, in research/_raw/reference-screens/, gitignored; never commit them). Replicate the layout and workflow; use original icons, and our own wording wherever the original text is Microsoft branding.
+- Title bar: save, undo and redo icons; document title; a centered search box; settings, a light/dark theme toggle, a sign-in area, window controls.
+- Left navigation: Home and Open at the top; Sign in, Options and settings, About at the bottom.
+- Main area: the heading "Select a data source or start with a blank report" with cards: Blank report, OneLake catalog, Excel workbook, SQL Server, Learn with sample data, Get data from other sources. A collapsible "Recommended" section with a carousel. Tabs for Recent and Shared with me, with a keyword filter and a Filter dropdown.
+- Cloud items (OneLake catalog, Sign in, Shared with me) are shown but visibly disabled and marked Deferred.
+- Every card and navigation item dispatches a registered command; the start screen holds no logic of its own.

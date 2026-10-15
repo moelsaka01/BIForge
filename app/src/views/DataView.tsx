@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { BiType, EngineApi, SortSpec, TableInfo } from "../core/data/types";
 import { visibleRange } from "./gridMath";
 import { PageCache } from "./pageCache";
+import { formatCell } from "./format";
 
 export const ROW_HEIGHT = 28;
 const COL_WIDTH = 170;
@@ -153,7 +154,7 @@ export function DataView({ engine, table, reloadKey }: DataViewProps) {
                       textAlign: isNumeric(c.biType) ? "right" : "left",
                     }}
                   >
-                    {row ? (row[j] ?? "") : "…"}
+                    {row ? formatCell(row[j], c.biType) : "…"}
                   </div>
                 ))}
               </div>

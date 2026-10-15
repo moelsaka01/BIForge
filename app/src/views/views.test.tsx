@@ -65,6 +65,16 @@ describe("DataView", () => {
     expect(header.getAttribute("aria-sort")).toBe("none");
   });
 
+  it("shows decimal numbers in Power BI's default format (no trailing .0)", async () => {
+    const e = new FakeEngine();
+    e.tables.set("D", { columns: [col("amount", "double")], rows: [["1504210000000.0"], ["2.50"], [null]] });
+    render(<DataView engine={e} table="D" reloadKey={0} />);
+    const cell = (r: number) => document.querySelector(`[data-row="${r}"] [role="gridcell"]`)?.textContent;
+    await waitFor(() => expect(cell(0)).toBe("1504210000000"));
+    expect(cell(1)).toBe("2.5");
+    expect(cell(2)).toBe("");
+  });
+
   it("explains when no table is selected or no data is loaded", async () => {
     const e = new FakeEngine();
     const { rerender } = render(<DataView engine={e} table={null} reloadKey={0} />);

@@ -46,3 +46,11 @@
 - Not verified: the real app UI by hand (import dialog, drag in a real WebView), the PostgreSQL connector locally (it passed in CI), Excel formats other than xlsx, opening imported tables in Power BI Desktop.
 - Known gaps are listed in the Connectivity and UI rows of COVERAGE.md (no Arrow transfer, memory-bound Excel/SQLite/PostgreSQL loads, fixed card layout, no TLS).
 - Environment: one cargo run failed once because Windows Application Control blocked a build script (os error 4551); a rerun worked.
+
+## 2026-10-15: pre-Phase 3 housekeeping
+- research/ui-modes.md: Options > Preview features as verified by the owner in Desktop 2.158 (on-object and the new Power Query experience are preview toggles, off by default; no legacy Format pane toggle; Enhanced DAX Time Intelligence preview, off; PBIP with TMDL + PBIR enabled). MASTER_PLAN UI-mode lines adjusted to match (Classic keeps the modern Format pane).
+- MASTER_PLAN: Phase 6 start screen item. COVERAGE: Phase 5 priority (TMDL partitions with M source expressions for Desktop interop), new Power Query editor follow-up, enhanced DAX time intelligence (later), start screen and its deferred cloud items.
+- Bugs from the owner's manual test of Phase 2, each with a regression test:
+  - Host banner said no features were implemented; it now lists what works and what does not (info.ts, info.test.ts).
+  - Recovery banner in a fresh session after an import: the autosave snapshot written by the current run was offered as a crash recovery when the project was opened again in the same run. The session now remembers which snapshots it wrote and only offers snapshots from an earlier run; snapshots are compared with sorted keys, and a new project clears a snapshot left in its folder (recoveryOwnership.test.ts). I could not reproduce the exact click path from the report; the test covers the new → import → autosave → open path.
+  - Decimal cells showed DuckDB's text ("1504210000000.0"); they now use Power BI's default General number format (15 significant digits, scientific notation only beyond 1E+15 / below 1E-05) (format.test.ts, DataView test).

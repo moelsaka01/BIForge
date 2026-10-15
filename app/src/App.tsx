@@ -56,7 +56,7 @@ export function App() {
         {APP_NAME} {doc.project ? `— ${doc.project.name}${doc.isDirty ? " *" : ""}` : ""}
       </Text>
       <MessageBar intent="warning">
-        <MessageBarBody>{STATUS_NOTICE} This is a temporary host screen: ribbons, DAX and reports are not yet implemented.</MessageBarBody>
+        <MessageBarBody data-testid="status-notice">{STATUS_NOTICE}</MessageBarBody>
       </MessageBar>
       {error && (
         <MessageBar intent="error">
