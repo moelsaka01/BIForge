@@ -35,6 +35,8 @@ export interface RibbonCtx {
   panes: Record<PaneId, boolean>;
   themeName: string;
   zoom: Zoom;
+  /** Optimize > Pause visuals is on. */
+  paused: boolean;
 }
 
 export type Args = Record<string, unknown> | ((c: RibbonCtx) => unknown);
@@ -359,8 +361,24 @@ function reportTabs(shell: ShellKind): RibbonTab[] {
     keytip: "W",
     groups: shell === "classic" ? [themesGroup(), pageViewGroup(), pageOptionsGroup(), panesGroup()] : [pageViewGroup(), pageOptionsGroup(), panesGroup()],
   };
+  const optimize: RibbonTab = {
+    id: "optimize",
+    label: "Optimize",
+    keytip: "Z",
+    groups: [
+      {
+        id: "optimize",
+        label: "Optimize",
+        controls: [
+          cmd("pauseVisuals", "Pause visuals", "performance", "report.visuals.pause", { size: "large", checked: (c) => c.paused, keytip: "PV" }),
+          cmd("refreshVisuals", "Refresh visuals", "refresh", "report.visuals.refresh", { size: "large", keytip: "RV" }),
+        ],
+      },
+      { id: "analyze", label: "Performance", controls: [todo("performanceAnalyzer", "Performance analyzer", "performance", { size: "large" })] },
+    ],
+  };
   const design: RibbonTab = { id: "design", label: "Design", keytip: "G", groups: [themesGroup(), { id: "page", label: "Page", controls: pageViewGroup().controls }] };
-  const base = shell === "classic" ? [fileTab(), home, insert, modeling, viewTab, helpTab()] : [fileTab(), home, insert, modeling, design, viewTab, helpTab()];
+  const base = shell === "classic" ? [fileTab(), home, insert, modeling, viewTab, optimize, helpTab()] : [fileTab(), home, insert, modeling, design, viewTab, optimize, helpTab()];
   return [...base, formatTab(), drillTab()];
 }
 
@@ -443,7 +461,7 @@ function daxTabs(): RibbonTab[] {
 function tmdlTabs(): RibbonTab[] {
   return [
     fileTab(),
-    { id: "home", label: "Home", keytip: "H", groups: [{ id: "tmdl", label: "TMDL", controls: [todo("apply", "Apply changes", "code", { size: "large" }), cmd("refresh", "Refresh", "refresh", "data.refreshAll", { size: "large" })] }] },
+    { id: "home", label: "Home", keytip: "H", groups: [{ id: "tmdl", label: "TMDL", controls: [cmd("apply", "Apply changes", "code", "tmdl.apply", { size: "large", keytip: "AP" }), cmd("refresh", "Refresh", "refresh", "data.refreshAll", { size: "large" })] }] },
     helpTab(),
   ];
 }

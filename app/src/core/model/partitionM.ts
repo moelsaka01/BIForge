@@ -93,6 +93,10 @@ export function partitionM(source: SourceSpec, columns: ColumnInfo[]): string {
       steps.push(step("Source", `PostgreSQL.Database(${mText(`${source.host}:${source.port ?? 5432}`)}, ${mText(source.database)})`));
       steps.push(step("#\"Table\"", `Source{[Schema=${mText(source.schema ?? "public")}, Item=${mText(source.table)}]}[Data]`));
       break;
+    case "sqlserver":
+      steps.push(step("Source", `Sql.Database(${mText(source.port ? `${source.server},${source.port}` : source.server)}, ${mText(source.database)})`));
+      steps.push(step("#\"Table\"", `Source{[Schema=${mText(source.schema ?? "dbo")}, Item=${mText(source.table)}]}[Data]`));
+      break;
   }
   const body = steps.map((s, i) => `\t${s.name} = ${s.expr}${i < steps.length - 1 ? "," : ""}`).join("\n");
   const last = steps[steps.length - 1].name;

@@ -61,7 +61,14 @@ export function makeApp(opts: { storage?: MemoryStorage; withProjectOnDisk?: boo
   const registry = createRegistry(session);
   const dax = new FakeDax();
   dax.handler = () => ({ results: [result(["x"], [])], elapsedMs: 1 });
-  const tmdl: TmdlPrinter = { print: async (docs) => Object.fromEntries(Object.keys(docs).map((k) => [k, `printed ${k}`])) };
+  // stand-in for the Rust printer and parser: prints a label per file, parses "table X" lines, refuses text with "!!!"
+  const tmdl: TmdlPrinter = {
+    print: async (docs) => Object.fromEntries(Object.keys(docs).map((k) => [k, `printed ${k}`])),
+    parse: async (text) => {
+      if (text.includes("!!!")) throw new Error("line 2: unexpected indentation");
+      return { nodes: text.split("\n").filter((l) => l.startsWith("table ")).map((l) => ({ description: [], kind: "table", name: l.slice(6), default: null, props: [], children: [] })) };
+    },
+  };
   const files: FileUi & { saved: { name: string; text: string }[]; next: string | null } = {
     saved: [],
     next: null,

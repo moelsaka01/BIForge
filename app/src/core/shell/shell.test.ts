@@ -98,6 +98,7 @@ function ctx(over: Partial<RibbonCtx> = {}): RibbonCtx {
     daxTab: "query",
     panes: { filters: true, visualizations: true, data: true, properties: true, bookmarks: false },
     themeName: "BIForge Default",
+    paused: false,
     zoom: "fit",
     ...over,
   };

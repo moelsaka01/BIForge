@@ -78,6 +78,9 @@ export class FakeEngine implements EngineApi {
   async postgresTables(): Promise<string[]> {
     return [];
   }
+  async sqlserverTables(): Promise<string[]> {
+    return [];
+  }
   async setCredential(spec: SourceSpec, secret: string): Promise<void> {
     this.calls.push(`cred:${spec.kind}:${secret.length}`);
   }

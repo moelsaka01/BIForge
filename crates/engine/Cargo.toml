@@ -19,6 +19,9 @@ chrono = "0.4"
 keyring = { version = "3", features = ["windows-native"] }
 biforge-dax = { path = "../dax" }
 biforge-m = { path = "../m" }
+tiberius = { version = "0.12", default-features = false, features = ["tds73", "native-tls", "chrono", "winauth"] }
+tokio = { version = "1", features = ["rt", "net", "time"] }
+tokio-util = { version = "0.7", features = ["compat"] }
 
 [dev-dependencies]
 tempfile = "3"

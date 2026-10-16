@@ -222,7 +222,12 @@ fn run<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], env: &Env<'a>) 
                 i += 1;
             }
             if keys_spec.is_empty() {
-                return Err(err(ErrorCode::MissingParameters, "TOPN needs an order-by expression."));
+                // without an order-by Desktop returns the first n rows in the table's own order (recorded cases filter.topn.noorder.*)
+                let rows: Vec<usize> = (0..src.nrows().min(n)).collect();
+                return t(match &src {
+                    TableVal::Base { table, rows: base } => TableVal::Base { table: *table, rows: Rc::new(rows.iter().map(|&i| base[i]).collect()) },
+                    other => TableVal::mat(other.cols(ev.data), rows.iter().map(|&i| other.row(ev.data, i)).collect()),
+                });
             }
             let mut scored: Vec<(Vec<Value>, usize)> = Vec::new();
             for_each_row(ev, &src, env, |r, e2| {

@@ -61,6 +61,12 @@ pub fn write_sample_data(root: String) -> Result<Vec<String>, String> {
     Ok(paths)
 }
 
+/// Parses TMDL text typed in the TMDL view. The error says which line is wrong.
+#[tauri::command]
+pub fn tmdl_parse(text: String) -> Result<Document, String> {
+    tmdl::parse(&text).map_err(|e| e.to_string())
+}
+
 /// The TMDL text of each model file (the TMDL view shows it read-only).
 #[tauri::command]
 pub fn tmdl_print(documents: BTreeMap<String, Document>) -> BTreeMap<String, String> {
@@ -70,6 +76,17 @@ pub fn tmdl_print(documents: BTreeMap<String, Document>) -> BTreeMap<String, Str
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn tmdl_parse_returns_the_document_or_a_line_error() {
+        let doc = tmdl_parse("table T\n\tcolumn A\n\t\tdataType: int64\n".into()).unwrap();
+        assert_eq!(doc.nodes.len(), 1);
+        assert_eq!(doc.nodes[0].children[0].name.as_deref(), Some("A"));
+        // what the printer writes parses back to the same document
+        assert_eq!(tmdl_parse(tmdl::print(&doc)).unwrap(), doc);
+        let err = tmdl_parse("table T\n\t\t\tcolumn Deep\n".into()).unwrap_err();
+        assert!(err.starts_with("line "), "{err}");
+    }
 
     #[test]
     fn sample_data_is_written_with_a_header_and_rows() {

@@ -1,4 +1,5 @@
 import { useState, type CSSProperties } from "react";
+import { generalCards, visualCards } from "../../core/report/formatSchema";
 import { fieldLabel } from "../../core/report/fields";
 import { FormatReader } from "../../core/report/formatReader";
 import { resolveInteraction, supportsHighlight } from "../../core/report/interactions";
@@ -89,6 +90,11 @@ export function VisualFrame(p: FrameProps) {
   const editingSource = c.snap.editInteractions;
   const sourceVisual = editingSource ? page.visuals.find((v) => v.name === editingSource) : undefined;
   const showBar = p.selected || hover;
+  // On-object formatting: what a selected visual offers right on it (the cards it really has)
+  const cardIds = new Set([...visualCards(visual.visualType), ...generalCards([])].map((x) => x.id));
+  const handle = (card: string, label: string, def: boolean): { card: string; label: string; on: boolean } | null =>
+    cardIds.has(card) ? { card, label, on: card === "title" ? showTitle : f.bool(card, "show", def) } : null;
+  const handles = [handle("title", "Title", false), handle("legend", "Legend", true), handle("labels", "Data labels", false)].filter((x): x is NonNullable<typeof x> => x !== null);
 
   const menu = (e: React.MouseEvent) => {
     // a right-click on a data point has its own menu (the chart prevents the default before this runs)
@@ -177,7 +183,11 @@ export function VisualFrame(p: FrameProps) {
       }}
       onContextMenu={menu}
     >
-      {showTitle && <div style={{ ...titleStyle, height: titleH }}>{titleText}</div>}
+      {showTitle && (
+        <div style={{ ...titleStyle, height: titleH }} onDoubleClick={c.onObject && p.editing ? () => c.focusFormat(visual.name, "title") : undefined}>
+          {titleText}
+        </div>
+      )}
       <div style={{ position: "absolute", left: pad, right: pad, top: titleH + pad, bottom: pad, overflow: "hidden" }}>
         {pos.width > 20 && <VisualContent page={page} visual={visual} width={Math.max(20, pos.width - pad * 2)} height={Math.max(20, pos.height - titleH - pad * 2)} />}
       </div>
@@ -212,6 +222,44 @@ export function VisualFrame(p: FrameProps) {
         </div>
       )}
       {interactionControls()}
+      {c.onObject && p.editing && p.selected && !editingSource && (
+        <div
+          role="toolbar"
+          aria-label="Format on the visual"
+          data-testid="on-object"
+          onPointerDown={(e) => e.stopPropagation()}
+          style={{ position: "absolute", left: 4, bottom: 4, display: "flex", gap: 2, background: "#fffffff2", border: "1px solid #aaa", borderRadius: 4, padding: 2, zIndex: 7, color: "#222" }}
+        >
+          {handles.map((h) => (
+            <button
+              key={h.card}
+              type="button"
+              aria-pressed={h.on}
+              aria-label={`${h.on ? "Hide" : "Show"} ${h.label.toLowerCase()}`}
+              title={`${h.on ? "Hide" : "Show"} ${h.label.toLowerCase()}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                c.dispatch("report.format.set", { page: page.name, visual: visual.name, object: h.card, prop: "show", value: { t: "bool", v: !h.on } });
+              }}
+              style={{ border: "none", borderRadius: 3, padding: "1px 6px", fontSize: 11, cursor: "pointer", background: h.on ? "#cfe3f8" : "transparent", color: "#222" }}
+            >
+              {h.label}
+            </button>
+          ))}
+          <button
+            type="button"
+            aria-label="Open the formatting options of this visual"
+            title="Open the formatting options of this visual"
+            onClick={(e) => {
+              e.stopPropagation();
+              c.focusFormat(visual.name, handles.find((h) => h.on)?.card ?? "title");
+            }}
+            style={{ border: "none", borderRadius: 3, padding: "1px 6px", fontSize: 11, cursor: "pointer", background: "transparent", color: "#222" }}
+          >
+            Format ▸
+          </button>
+        </div>
+      )}
       {p.editing && p.selected && !editingSource &&
         HANDLES.map((h) => (
           <div

@@ -31,7 +31,7 @@ const dax: DaxApi = {
   check: async () => [],
   query: (documents: TmdlDocument[], query: string) => post("/dax", { documents, query }) as Promise<QueryOutcome>,
 };
-const tmdl: TmdlPrinter = { print: (documents) => post("/tmdl", { documents }) };
+const tmdl: TmdlPrinter = { print: (documents) => post("/tmdl", { documents }), parse: () => Promise.reject(new Error("Parsing is not available in the browser harness.")) };
 
 async function main() {
   const project = (await (await fetch(`${BASE}/project`)).json()) as Project;

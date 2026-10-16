@@ -3,6 +3,7 @@
 import type { CommandRegistry } from "./registry";
 import { optionDef, optionValue } from "../options/schema";
 import { setModelCulture } from "../model/ops";
+import type { TmdlDocument } from "../model/types";
 import type { Session } from "../session/session";
 import { PANE_IDS, type PaneId, type ShellKind } from "../shell/settings";
 import { VIEW_IDS, type ViewId, type Zoom } from "../shell/shellStore";
@@ -190,6 +191,24 @@ export function registerShellCommands(r: CommandRegistry<Session>): void {
   r.register({ id: "model.newMeasure", label: "New measure", category: "Modeling", isEnabled: hasProject, run: (s) => s.shell.requestNewMeasure() });
   r.register({ id: "model.newTableDialog", label: "New table", category: "Modeling", isEnabled: hasProject, run: (s) => s.shell.openDialog({ kind: "newTable" }) });
   r.register({ id: "model.manageRelationships", label: "Manage relationships", category: "Modeling", isEnabled: hasProject, run: (s) => s.shell.setView("model") });
+  r.register({ id: "tmdl.apply", label: "Apply TMDL changes", category: "Modeling", isEnabled: hasProject, run: (s) => s.shell.requestApplyTmdl() });
+  r.register({
+    id: "model.setTmdlDocument",
+    label: "Edit a TMDL file",
+    category: "Modeling",
+    isEnabled: hasProject,
+    run(s, args) {
+      const a = (args ?? {}) as { path?: string; document?: TmdlDocument };
+      if (!a.path || !/^[^\\:*?"<>|]+\.tmdl$/.test(a.path) || a.path.split("/").some((p) => p === ".." || p === "" || p === ".")) throw new Error("A TMDL file path looks like model.tmdl or tables/Sales.tmdl.");
+      if (!a.document || !Array.isArray(a.document.nodes)) throw new Error("Missing TMDL document.");
+      const document = a.document;
+      const path = a.path;
+      s.store.transact(`Edit ${path}`, (p) => {
+        if (!(path in p.model.tmdl)) throw new Error(`The model has no file ${path}.`);
+        p.model.tmdl[path] = document;
+      });
+    },
+  });
   r.register({ id: "dax.query.run", label: "Run query", category: "DAX", isEnabled: hasProject, run: (s) => s.shell.requestRunQuery() });
   r.register({
     id: "dax.tab",

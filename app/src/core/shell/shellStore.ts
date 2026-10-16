@@ -38,6 +38,8 @@ export interface ShellState {
   /** Modern shell: which pane the right-hand sidebar shows. */
   sideTab: "visualizations" | "filters" | "bookmarks";
   systemDark: boolean;
+  /** Bumped by the TMDL ribbon's Apply so the TMDL view applies its edits. */
+  applyTmdlTick: number;
 }
 
 const INITIAL: ShellState = {
@@ -54,6 +56,7 @@ const INITIAL: ShellState = {
   daxQuery: "",
   sideTab: "visualizations",
   systemDark: false,
+  applyTmdlTick: 0,
 };
 
 /** Transient UI state of the app frame (which screen, which view, which dialog) plus the persisted settings. */
@@ -158,6 +161,10 @@ export class ShellStore {
 
   setSideTab(tab: ShellState["sideTab"]): void {
     this.set({ sideTab: tab });
+  }
+
+  requestApplyTmdl(): void {
+    this.set({ view: "tmdl", screen: "workspace", applyTmdlTick: this.snap.applyTmdlTick + 1 });
   }
 
   requestRunQuery(): void {

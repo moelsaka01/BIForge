@@ -125,6 +125,7 @@ function ViewBody({ spec, onScale }: { spec: ShellSpec; onScale(s: number): void
             onScale={onScale}
             onSelectVisual={(page, visual) => session.shell.selectVisual(page && visual ? { page, visual } : null)}
             docks={spec.reportDocks}
+            onObject={spec.kind === "modern" && settings.options["preview.onObject"] !== false}
           />
         </div>
       );
@@ -221,6 +222,7 @@ export function Frame({ spec }: { spec: ShellSpec }) {
         bookmarks: modern ? open("visualizations") && side === "bookmarks" : open("bookmarks"),
       },
       themeName: project ? resolveTheme(project).name : "",
+      paused: report.paused,
       zoom: st.zoom,
     };
   }, [project, report, st, layout, spec.kind, sess.dataTables]);

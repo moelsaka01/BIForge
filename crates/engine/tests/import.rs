@@ -282,6 +282,37 @@ fn postgres_import_against_a_real_server() {
     assert!(e.import("PgT2", &spec, &bad).is_err());
 }
 
+/// Needs a real SQL Server: set BIFORGE_TEST_MSSQL="server:port:database:user:password:schema.table" (a table with an
+/// integer and a text column; an empty user means Windows authentication). Skipped when the variable is absent.
+/// The machine this was written on has no SQL Server, so this path has not been run against one yet.
+#[test]
+fn sqlserver_import_against_a_real_server() {
+    let Ok(v) = std::env::var("BIFORGE_TEST_MSSQL") else {
+        assert!(std::env::var("BIFORGE_REQUIRE_MSSQL").is_err(), "BIFORGE_REQUIRE_MSSQL is set but BIFORGE_TEST_MSSQL is not");
+        eprintln!("SKIPPED: BIFORGE_TEST_MSSQL not set");
+        return;
+    };
+    let parts: Vec<&str> = v.splitn(6, ':').collect();
+    let (schema, table) = parts[5].split_once('.').unwrap();
+    let spec = SourceSpec::SqlServer {
+        server: parts[0].into(),
+        port: parts[1].parse().ok(),
+        database: parts[2].into(),
+        user: if parts[3].is_empty() { None } else { Some(parts[3].into()) },
+        schema: schema.into(),
+        table: table.into(),
+    };
+    let c = MemoryCredentialStore::default();
+    if let Some(k) = spec.credential_key() {
+        c.set(&k, parts[4]).unwrap();
+    }
+    assert!(sqlserver_tables(&spec, &c).unwrap().contains(&table.to_string()));
+    let e = Engine::in_memory().unwrap();
+    let t = e.import("MsT", &spec, &c).unwrap();
+    assert!(t.row_count > 0);
+    assert!(t.columns.iter().any(|c| c.bi_type == BiType::Int64));
+}
+
 #[test]
 fn csv_empty_text_fields_load_as_empty_string_like_power_query() {
     let d = tempfile::tempdir().unwrap();

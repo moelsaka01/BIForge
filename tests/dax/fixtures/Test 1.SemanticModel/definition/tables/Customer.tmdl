@@ -1,0 +1,51 @@
+table Customer
+	lineageTag: 36e3a689-b747-42b8-b6ea-9cbc110a29cb
+
+	column CustomerKey
+		dataType: int64
+		sourceColumn: CustomerKey
+		lineageTag: f7933b6f-1f5d-4407-afeb-003f3de93178
+
+	column Customer
+		dataType: string
+		sourceColumn: Customer
+		lineageTag: c7a52f1c-2e0d-4887-a96c-c23a9f0ca8ad
+		summarizeBy: none
+
+	column City
+		dataType: string
+		sourceColumn: City
+		lineageTag: 15da7ecc-190f-46d6-a3f3-97f72944d6e6
+		summarizeBy: none
+
+	column Country
+		dataType: string
+		sourceColumn: Country
+		lineageTag: e41a2754-011a-4396-98d1-7cf98c1e5714
+		summarizeBy: none
+
+	column Segment
+		dataType: string
+		sourceColumn: Segment
+		lineageTag: ecb2edab-d569-4dc9-b39c-06992cb6bf32
+		summarizeBy: none
+
+	column BirthDate
+		dataType: dateTime
+		sourceColumn: BirthDate
+		lineageTag: c5a7ecd2-80c8-4457-8b16-3781da4722a8
+		summarizeBy: none
+
+	partition Customer = m
+		mode: import
+		source =
+			let
+				Source = Csv.Document(File.Contents("C:\dev\BIForge\tests\dax\fixtures\Customer.csv"), [Delimiter=",", Columns=6, Encoding=65001, QuoteStyle=QuoteStyle.Csv]),
+				#"Promoted Headers" = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),
+				#"Changed Type" = Table.TransformColumnTypes(#"Promoted Headers", {{"CustomerKey", Int64.Type}, {"Customer", type text}, {"City", type text}, {"Country", type text}, {"Segment", type text}, {"BirthDate", type date}}, "en-US")
+			in
+				#"Changed Type"
+
+		annotation 'BIForge.GeneratedM' = true
+
+	annotation 'BIForge.Source' = {"kind":"csv","path":"C:\\dev\\BIForge\\tests\\dax\\fixtures\\Customer.csv","delimiter":null,"header":true}

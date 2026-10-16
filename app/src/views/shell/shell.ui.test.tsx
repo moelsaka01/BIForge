@@ -135,7 +135,7 @@ describe("workspace", () => {
     render(a.element);
     await openProject(a);
     fireEvent.click(screen.getByRole("button", { name: "TMDL view" }));
-    await waitFor(() => expect(screen.getByTestId("tmdl-text").textContent).toBe("printed model.tmdl"));
+    await waitFor(() => expect((screen.getByTestId("tmdl-text") as HTMLTextAreaElement).value).toBe("printed model.tmdl"));
     fireEvent.click(screen.getByRole("button", { name: "DAX query view" }));
     expect(await screen.findByLabelText("DAX query area")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Model view" }));

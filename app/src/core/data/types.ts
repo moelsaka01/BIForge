@@ -6,7 +6,9 @@ export type SourceSpec =
   | { kind: "json"; path: string }
   | { kind: "parquet"; path: string }
   | { kind: "sqlite"; path: string; table: string }
-  | { kind: "postgres"; host: string; port?: number; database: string; user: string; schema?: string; table: string };
+  | { kind: "postgres"; host: string; port?: number; database: string; user: string; schema?: string; table: string }
+  /** SQL Server; without `user` Windows integrated authentication. */
+  | { kind: "sqlserver"; server: string; port?: number | null; database: string; user?: string | null; schema?: string; table: string };
 
 export type BiType = "int64" | "double" | "decimal" | "boolean" | "dateTime" | "string" | "binary";
 
@@ -55,5 +57,6 @@ export interface EngineApi {
   excelSheets(path: string): Promise<string[]>;
   sqliteTables(path: string): Promise<string[]>;
   postgresTables(spec: SourceSpec): Promise<string[]>;
+  sqlserverTables(spec: SourceSpec): Promise<string[]>;
   setCredential(spec: SourceSpec, secret: string): Promise<void>;
 }

@@ -280,6 +280,50 @@
         "rows": [
           ["Bikes",270],
           ["Clothing",181]
+        ]}},
+    {"id": "filter.topn.noorder.table", "query": "EVALUATE TOPN(3, Customer)", "source": "recorded",
+      "expected": {"columns": ["Customer[CustomerKey]","Customer[Customer]","Customer[City]","Customer[Country]","Customer[Segment]","Customer[BirthDate]"], "types": ["int","text","text","text","text","datetime"],
+        "rows": [
+          [1,"Alice","Seattle","United States","Consumer","1985-03-12T00:00:00"],
+          [2,"Bruno","Lyon","France","Corporate","1979-11-02T00:00:00"],
+          [3,"Chen","Toronto","Canada","Consumer",null]
+        ]}},
+    {"id": "filter.topn.noorder.fact", "query": "EVALUATE TOPN(3, Sales)", "source": "recorded",
+      "expected": {"columns": ["Sales[SalesKey]","Sales[OrderDate]","Sales[ShipDate]","Sales[CustomerKey]","Sales[ProductKey]","Sales[PromotionKey]","Sales[Quantity]","Sales[UnitPrice]","Sales[Discount]","Sales[Channel]"], "types": ["int","datetime","datetime","int","int","int","int","real","real","text"],
+        "rows": [
+          [1,"2024-10-11T00:00:00","2024-10-14T00:00:00",7,7,1,2,64.08,0,"Online"],
+          [2,"2024-08-22T00:00:00","2024-08-25T00:00:00",4,1,1,2,1298.98,0.05,"Online"],
+          [3,"2024-08-07T00:00:00","2024-08-12T00:00:00",3,8,1,5,18.27,null,"Store"]
+        ]}},
+    {"id": "filter.topn.noorder.select", "query": "EVALUATE TOPN(2, SELECTCOLUMNS(Customer, \"k\", [CustomerKey], \"n\", [Customer]))", "source": "recorded",
+      "expected": {"columns": ["[k]","[n]"], "types": ["int","text"],
+        "rows": [
+          [1,"Alice"],
+          [2,"Bruno"]
+        ]}},
+    {"id": "filter.topn.noorder.zero", "query": "EVALUATE TOPN(0, Customer)", "source": "recorded",
+      "expected": {"columns": ["Customer[CustomerKey]","Customer[Customer]","Customer[City]","Customer[Country]","Customer[Segment]","Customer[BirthDate]"], "types": ["int","text","text","text","text","datetime"],
+        "rows": [
+        ]}},
+    {"id": "filter.topn.noorder.values", "query": "EVALUATE TOPN(3, VALUES(Customer[Country]))", "source": "recorded",
+      "expected": {"columns": ["Customer[Country]"], "types": ["text"],
+        "rows": [
+          ["United States"],
+          ["France"],
+          ["Canada"]
+        ]}},
+    {"id": "filter.topn.noorder.more", "query": "EVALUATE TOPN(100, Product)", "source": "recorded",
+      "expected": {"columns": ["Product[ProductKey]","Product[Product]","Product[Category]","Product[Subcategory]","Product[Color]","Product[ListPrice]","Product[Cost]"], "types": ["int","text","text","text","text","real","real"],
+        "rows": [
+          [1,"Trail Bike","Bikes","Mountain","Red",1200,700],
+          [2,"City Bike","Bikes","Road","Blue",850.5,500.25],
+          [3,"Kids Bike","Bikes","Road","",300,180],
+          [4,"Helmet","Accessories","Safety","Black",45.99,20],
+          [5,"Bottle","Accessories","Hydration","Blue",9.5,2.75],
+          [6,"Lights","Accessories","Safety","Black",25,11.4],
+          [7,"Jersey","Clothing","Tops","Red",59.99,25],
+          [8,"Gloves","Clothing","Hands","Black",19.99,7.5],
+          [9,"Rain Jacket","Clothing","Tops","Yellow",120,60]
         ]}}
   ]
 }

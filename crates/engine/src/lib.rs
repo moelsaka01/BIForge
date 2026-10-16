@@ -195,6 +195,10 @@ impl Engine {
                 let raw = sources::postgres_src::read(spec, creds)?;
                 sources::load(&self.conn, STAGE, &raw)
             }
+            SourceSpec::SqlServer { .. } => {
+                let raw = sources::sqlserver_src::read(spec, creds)?;
+                sources::load(&self.conn, STAGE, &raw)
+            }
         }
     }
 
@@ -294,6 +298,11 @@ pub fn sqlite_tables(path: &str) -> Result<Vec<String>> {
 /// Lists tables of a PostgreSQL schema (for the import dialog).
 pub fn postgres_tables(spec: &SourceSpec, creds: &dyn CredentialStore) -> Result<Vec<String>> {
     sources::postgres_src::list_tables(spec, creds)
+}
+
+/// Lists tables of a SQL Server schema (for the import dialog).
+pub fn sqlserver_tables(spec: &SourceSpec, creds: &dyn CredentialStore) -> Result<Vec<String>> {
+    sources::sqlserver_src::list_tables(spec, creds)
 }
 
 impl Engine {

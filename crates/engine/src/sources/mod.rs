@@ -2,6 +2,7 @@
 //! File formats DuckDB reads natively (CSV, JSON, Parquet) are handled in `lib.rs`.
 pub mod excel;
 pub mod postgres_src;
+pub mod sqlserver_src;
 pub mod sqlite_src;
 
 use crate::error::Result;

@@ -38,8 +38,23 @@ pub enum SourceSpec {
         schema: String,
         table: String,
     },
+    /// SQL Server (tiberius). Without `user` Windows integrated authentication is used.
+    SqlServer {
+        server: String,
+        #[serde(default)]
+        port: Option<u16>,
+        database: String,
+        #[serde(default)]
+        user: Option<String>,
+        #[serde(default = "mssql_schema")]
+        schema: String,
+        table: String,
+    },
 }
 
+fn mssql_schema() -> String {
+    "dbo".into()
+}
 fn yes() -> bool {
     true
 }
@@ -56,6 +71,9 @@ impl SourceSpec {
         match self {
             SourceSpec::Postgres { host, port, database, user, .. } => {
                 Some(format!("postgres:{user}@{host}:{port}/{database}"))
+            }
+            SourceSpec::SqlServer { server, port, database, user: Some(user), .. } => {
+                Some(format!("sqlserver:{user}@{server}:{}/{database}", port.unwrap_or(1433)))
             }
             _ => None,
         }

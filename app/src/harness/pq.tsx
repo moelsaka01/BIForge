@@ -33,6 +33,7 @@ const httpEngine: EngineApi = {
   excelSheets: () => Promise.resolve(["Sheet1"]),
   sqliteTables: unsupported,
   postgresTables: unsupported,
+  sqlserverTables: unsupported,
   setCredential: unsupported,
 };
 

@@ -102,6 +102,9 @@ impl DataService {
         let key = spec.credential_key().ok_or("This source type does not use a stored credential.")?;
         self.creds.set(&key, secret).map_err(msg)
     }
+    pub fn sqlserver_tables(&self, spec: &SourceSpec) -> Result<Vec<String>, String> {
+        biforge_engine::sqlserver_tables(spec, self.creds.as_ref()).map_err(msg)
+    }
     pub fn postgres_tables(&self, spec: &SourceSpec) -> Result<Vec<String>, String> {
         biforge_engine::postgres_tables(spec, self.creds.as_ref()).map_err(msg)
     }
@@ -156,6 +159,10 @@ pub fn engine_sqlite_tables(path: String) -> Result<Vec<String>, String> {
 #[tauri::command]
 pub fn engine_postgres_tables(state: tauri::State<DataService>, spec: SourceSpec) -> Result<Vec<String>, String> {
     state.postgres_tables(&spec)
+}
+#[tauri::command]
+pub fn engine_sqlserver_tables(state: tauri::State<DataService>, spec: SourceSpec) -> Result<Vec<String>, String> {
+    state.sqlserver_tables(&spec)
 }
 #[tauri::command]
 pub fn engine_set_credential(state: tauri::State<DataService>, spec: SourceSpec, secret: String) -> Result<(), String> {

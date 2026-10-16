@@ -6,6 +6,7 @@ import { installDomStubs } from "../../core/testing/domStubs";
 import { OPTION_PAGES } from "../../core/options/schema";
 import { getModelCulture } from "../../core/model/ops";
 import { SETTINGS_KEY } from "../../core/shell/settings";
+import { agg, column, lit } from "../../core/report/fields";
 import { MemoryStorage, PBIP, ROOT, makeApp } from "./testApp";
 
 installDomStubs();
@@ -250,5 +251,141 @@ describe("system keys are never intercepted", () => {
     run(); // key tips on
     // a key that is not a key tip ends the key tip mode without being cancelled
     expect(fire("keydown", { key: "PrintScreen", code: "PrintScreen" })).toBe(false);
+  });
+});
+
+describe("TMDL view is editable", () => {
+  async function openTmdl() {
+    const a = makeApp();
+    render(a.element);
+    await openProject(a);
+    fireEvent.click(screen.getByRole("button", { name: "TMDL view" }));
+    const box = (await screen.findByTestId("tmdl-text")) as HTMLTextAreaElement;
+    await waitFor(() => expect(box.value).toBe("printed model.tmdl"));
+    return { a, box };
+  }
+
+  it("Apply parses the edited file, replaces it in the model as one undoable step, and undo brings the old text back", async () => {
+    const { a, box } = await openTmdl();
+    const before = JSON.stringify(a.session.store.project!.model.tmdl["model.tmdl"]);
+    fireEvent.change(box, { target: { value: "table Added\ntable Another" } });
+    expect(screen.getByRole("button", { name: "Apply" }).hasAttribute("disabled")).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+    await waitFor(() => expect(a.session.store.project!.model.tmdl["model.tmdl"].nodes.map((n) => n.name)).toEqual(["Added", "Another"]));
+    expect(a.session.store.getSnapshot().isDirty).toBe(true);
+    expect(a.session.store.getSnapshot().undoLabel).toBe("Edit model.tmdl");
+    await act(async () => void a.registry.execute("edit.undo"));
+    expect(JSON.stringify(a.session.store.project!.model.tmdl["model.tmdl"])).toBe(before);
+    expect(a.session.store.getSnapshot().isDirty).toBe(false);
+    await act(async () => void a.registry.execute("edit.redo"));
+    expect(a.session.store.project!.model.tmdl["model.tmdl"].nodes).toHaveLength(2);
+  });
+
+  it("text that does not parse is refused with the line, and the model is untouched", async () => {
+    const { a, box } = await openTmdl();
+    const before = a.session.store.project;
+    fireEvent.change(box, { target: { value: "table X\n!!!" } });
+    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+    expect((await screen.findByRole("alert")).textContent).toMatch(/model\.tmdl: line 2: unexpected indentation/);
+    expect(a.session.store.project).toBe(before);
+    expect(a.session.store.getSnapshot().canUndo).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: "Revert" }));
+    expect(box.value).toBe("printed model.tmdl");
+  });
+
+  it("the ribbon's Apply changes applies the open file; a path outside the model is refused", async () => {
+    const { a, box } = await openTmdl();
+    fireEvent.change(box, { target: { value: "table ViaRibbon" } });
+    fireEvent.click(within(screen.getByTestId("ribbon")).getByRole("button", { name: "Apply changes" }));
+    await waitFor(() => expect(a.session.store.project!.model.tmdl["model.tmdl"].nodes[0].name).toBe("ViaRibbon"));
+    const doc = { nodes: [] };
+    for (const path of ["../evil.tmdl", "nope.tmdl", "/abs.tmdl", "model.txt"]) {
+      expect((await a.registry.execute("model.setTmdlDocument", { path, document: doc })).ok, path).toBe(false);
+    }
+  });
+});
+
+async function visualApp(shell: "classic" | "modern") {
+  const a = makeApp();
+  render(a.element);
+  await openProject(a);
+  if (shell === "modern") await act(async () => void a.registry.execute("app.shell.set", { shell: "modern" }));
+  await act(async () => {
+    await a.registry.execute("report.visual.add", { type: "clusteredColumnChart", fields: [{ role: "Category", field: column("Product", "Category") }, { role: "Y", field: agg("Sales", "Quantity", 0) }] });
+  });
+  const frame = await waitFor(() => {
+    const el = document.querySelector("[data-visual]") as HTMLElement;
+    expect(el).toBeTruthy();
+    return el;
+  });
+  fireEvent.pointerDown(frame, { button: 0 });
+  return { a, frame };
+}
+
+describe("On-object formatting (Modern)", () => {
+  it("a selected visual shows formatting handles in Modern, none in Classic", async () => {
+    await visualApp("classic");
+    expect(screen.queryByTestId("on-object")).toBeNull();
+    cleanup();
+    await visualApp("modern");
+    expect(await screen.findByTestId("on-object")).toBeTruthy();
+  });
+
+  it("the handles change the visual's own formatting through commands (undoable), and Format opens the card in the Format pane", async () => {
+    const { a, frame } = await visualApp("modern");
+    const bar = await screen.findByTestId("on-object");
+    const legend = within(bar).getByRole("button", { name: /legend/i });
+    const wasOn = legend.getAttribute("aria-pressed") === "true";
+    fireEvent.click(legend);
+    await waitFor(() => expect(within(screen.getByTestId("on-object")).getByRole("button", { name: /legend/i }).getAttribute("aria-pressed")).toBe(String(!wasOn)));
+    expect(a.session.store.getSnapshot().undoLabel).toMatch(/format/i);
+    await act(async () => void a.registry.execute("edit.undo"));
+    await waitFor(() => expect(within(screen.getByTestId("on-object")).getByRole("button", { name: /legend/i }).getAttribute("aria-pressed")).toBe(String(wasOn)));
+
+    fireEvent.click(within(screen.getByTestId("on-object")).getByRole("button", { name: /Open the formatting options/ }));
+    const pane = await screen.findByLabelText("Format pane");
+    expect(pane).toBeTruthy();
+    expect(a.session.report.getSnapshot().formatFocus?.visual).toBe(frame.getAttribute("data-visual"));
+    // the card asked for is open
+    await waitFor(() => expect(document.querySelector('[data-card] [aria-expanded="true"]')).toBeTruthy());
+  });
+
+  it("the Options switch turns the handles off", async () => {
+    const { a } = await visualApp("modern");
+    expect(await screen.findByTestId("on-object")).toBeTruthy();
+    await act(async () => void a.registry.execute("app.option.set", { id: "preview.onObject", value: false }));
+    await waitFor(() => expect(screen.queryByTestId("on-object")).toBeNull());
+  });
+});
+
+describe("Optimize tab: pause and refresh visuals", () => {
+  it("is in both interfaces; while paused a selection sends no new query, and Refresh visuals catches up", async () => {
+    const { a } = await visualApp("classic");
+    expect(within(screen.getByTestId("ribbon")).getByRole("tab", { name: "Optimize" })).toBeTruthy();
+    await act(async () => {
+      await a.registry.execute("report.visual.add", { type: "card", fields: [{ role: "Values", field: agg("Sales", "Quantity", 0) }] });
+    });
+    const page = a.session.report.getSnapshot().page!;
+    const visual = (document.querySelector("[data-visual]") as HTMLElement).getAttribute("data-visual")!;
+    const queries = () => a.dax.calls.filter((c) => c.startsWith("query:")).length;
+    await waitFor(() => expect(queries()).toBeGreaterThan(1));
+    await new Promise((r) => setTimeout(r, 100));
+
+    fireEvent.click(within(screen.getByTestId("ribbon")).getByRole("tab", { name: "Optimize" }));
+    fireEvent.click(within(screen.getByTestId("ribbon")).getByRole("button", { name: "Pause visuals" }));
+    await waitFor(() => expect(a.session.report.getSnapshot().paused).toBe(true));
+    expect(within(screen.getByTestId("ribbon")).getByRole("button", { name: "Pause visuals" }).getAttribute("aria-pressed")).toBe("true");
+    await new Promise((r) => setTimeout(r, 100));
+
+    const paused = queries();
+    await act(async () => void a.session.report.select(page, visual, { fields: [column("Product", "Category")], values: [lit.str("Bikes")] }, false));
+    await new Promise((r) => setTimeout(r, 200));
+    expect(queries(), "no query while paused").toBe(paused);
+
+    fireEvent.click(within(screen.getByTestId("ribbon")).getByRole("button", { name: "Refresh visuals" }));
+    await waitFor(() => expect(queries()).toBeGreaterThan(paused));
+
+    fireEvent.click(within(screen.getByTestId("ribbon")).getByRole("button", { name: "Pause visuals" }));
+    await waitFor(() => expect(a.session.report.getSnapshot().paused).toBe(false));
   });
 });

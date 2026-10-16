@@ -18,10 +18,16 @@ export interface ViewSnapshot {
   drillMode: string | null;
   /** Page being edited for visual interactions: the source visual whose controls are shown. */
   editInteractions: string | null;
+  /** Optimize > Pause visuals: the visuals keep what they show while selections, drilling and data changes pile up. */
+  paused: boolean;
+  /** Bumped by Refresh visuals: a paused report catches up once. */
+  refreshTick: number;
+  /** On-object formatting: the Format pane opens this card for this visual (tick makes the same request repeatable). */
+  formatFocus: { visual: string; card: string; tick: number } | null;
 }
 
 export class ReportRuntime {
-  private snap: ViewSnapshot = { page: null, selection: null, drill: {}, drillthrough: null, collapsed: {}, epoch: 0, drillMode: null, editInteractions: null };
+  private snap: ViewSnapshot = { page: null, selection: null, drill: {}, drillthrough: null, collapsed: {}, epoch: 0, drillMode: null, editInteractions: null, paused: false, refreshTick: 0, formatFocus: null };
   private listeners = new Set<() => void>();
 
   getSnapshot = (): ViewSnapshot => this.snap;
@@ -33,6 +39,19 @@ export class ReportRuntime {
   private set(patch: Partial<ViewSnapshot>): void {
     this.snap = { ...this.snap, ...patch };
     this.listeners.forEach((l) => l());
+  }
+
+  focusFormat(visual: string, card: string): void {
+    this.set({ formatFocus: { visual, card, tick: (this.snap.formatFocus?.tick ?? 0) + 1 } });
+  }
+
+  setPaused(paused: boolean): void {
+    if (paused !== this.snap.paused) this.set({ paused });
+  }
+
+  /** Refresh visuals: a paused report catches up with the current state. */
+  refreshVisuals(): void {
+    this.set({ refreshTick: this.snap.refreshTick + 1 });
   }
 
   /** Switches page; selections and drillthrough belong to the page they were made on. */

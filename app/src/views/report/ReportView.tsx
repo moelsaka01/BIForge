@@ -30,6 +30,8 @@ export interface ReportViewProps {
   onScale?(scale: number): void;
   /** Panes docked left and right of the canvas. Without it the Filters and Visualizations panes sit on the right. */
   docks?(api: ReportDockApi): { left?: React.ReactNode; right?: React.ReactNode };
+  /** On-object formatting is on (Modern interface with the preview feature enabled). */
+  onObject?: boolean;
 }
 
 type Zoom = "fit" | number;
@@ -124,13 +126,17 @@ export function ReportView(p: ReportViewProps) {
   useEffect(() => setSelected((s) => (s && page?.visuals.some((v) => v.name === s) ? s : null)), [page]);
   useEffect(() => p.onSelectVisual?.(page?.name ?? null, selected), [page?.name, selected]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const view: ViewState = useMemo(() => ({ selection: snap.selection, drill: snap.drill, drillthrough: snap.drillthrough?.filters ?? [], epoch: snap.epoch + p.dataEpoch }), [snap.selection, snap.drill, snap.drillthrough, snap.epoch, p.dataEpoch]);
+  const liveView: ViewState = useMemo(() => ({ selection: snap.selection, drill: snap.drill, drillthrough: snap.drillthrough?.filters ?? [], epoch: snap.epoch + p.dataEpoch }), [snap.selection, snap.drill, snap.drillthrough, snap.epoch, p.dataEpoch]);
+  // Pause visuals: the visuals keep the view they had when paused (so they send no new queries) until Refresh visuals
+  const frozen = useRef({ view: liveView, tick: snap.refreshTick });
+  if (!snap.paused || frozen.current.tick !== snap.refreshTick) frozen.current = { view: liveView, tick: snap.refreshTick };
+  const view = snap.paused ? frozen.current.view : liveView;
   const onTooltip = useCallback((pg: PageModel, _v: string, point: SelectedPoint | null, x: number, y: number) => setTip(point ? { page: pg, point, x, y } : null), []);
   const onMenu = useCallback((items: CtxMenuItem[], x: number, y: number) => setMenu({ items, x, y }), []);
 
   const ctx: ReportCtx = useMemo(
-    () => ({ project: p.project, pages, theme, model, data, view, snap, dispatch: p.dispatch, onTooltip, onMenu }),
-    [p.project, pages, theme, model, data, view, snap, p.dispatch, onTooltip, onMenu],
+    () => ({ project: p.project, pages, theme, model, data, view, snap, onObject: p.onObject === true, focusFormat: (v: string, c: string) => p.runtime.focusFormat(v, c), dispatch: p.dispatch, onTooltip, onMenu }),
+    [p.project, pages, theme, model, data, view, snap, p.onObject, p.runtime, p.dispatch, onTooltip, onMenu],
   );
 
   const fit = page ? Math.min(size.w / page.width, size.h / page.height) : 1;

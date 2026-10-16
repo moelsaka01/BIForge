@@ -13,5 +13,6 @@ export const tauriEngine: EngineApi = {
   excelSheets: (path) => invoke<string[]>("engine_excel_sheets", { path }),
   sqliteTables: (path) => invoke<string[]>("engine_sqlite_tables", { path }),
   postgresTables: (spec: SourceSpec) => invoke<string[]>("engine_postgres_tables", { spec }),
+  sqlserverTables: (spec: SourceSpec) => invoke<string[]>("engine_sqlserver_tables", { spec }),
   setCredential: (spec, secret) => invoke<void>("engine_set_credential", { spec, secret }),
 };

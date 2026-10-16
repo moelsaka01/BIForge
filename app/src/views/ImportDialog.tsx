@@ -23,6 +23,7 @@ const KINDS: { kind: SourceKind; label: string }[] = [
   { kind: "parquet", label: "Parquet" },
   { kind: "sqlite", label: "SQLite database" },
   { kind: "postgres", label: "PostgreSQL database" },
+  { kind: "sqlserver", label: "SQL Server database" },
 ];
 
 export function ImportDialog({ open, initialKind, engine, dialogs, onSubmit, onClose }: ImportDialogProps) {
@@ -68,10 +69,10 @@ export function ImportDialog({ open, initialKind, engine, dialogs, onSubmit, onC
 
   const listPg = async () => {
     const r = buildSpec({ ...f, pgTable: f.pgTable || "x" });
-    if ("error" in r || r.spec.kind !== "postgres") return setError("error" in r ? r.error : "Invalid server settings.");
+    if ("error" in r || (r.spec.kind !== "postgres" && r.spec.kind !== "sqlserver")) return setError("error" in r ? r.error : "Invalid server settings.");
     try {
       if (password) await engine.setCredential(r.spec, password);
-      const tables = await engine.postgresTables(r.spec);
+      const tables = r.spec.kind === "sqlserver" ? await engine.sqlserverTables(r.spec) : await engine.postgresTables(r.spec);
       setChoices(tables);
       set({ pgTable: tables[0] ?? "" });
       if (!name && tables[0]) setName(tables[0]);
@@ -87,7 +88,7 @@ export function ImportDialog({ open, initialKind, engine, dialogs, onSubmit, onC
     const tableName = (name || defaultTableName(r.spec)).trim();
     setBusy(true);
     try {
-      if (r.spec.kind === "postgres" && password) await engine.setCredential(r.spec, password);
+      if ((r.spec.kind === "postgres" || r.spec.kind === "sqlserver") && password) await engine.setCredential(r.spec, password);
       const err = await onSubmit(tableName, r.spec, password);
       if (err) setError(err);
       else {
@@ -130,7 +131,7 @@ export function ImportDialog({ open, initialKind, engine, dialogs, onSubmit, onC
               </Select>
             </label>
 
-            {f.kind !== "postgres" && (
+            {f.kind !== "postgres" && f.kind !== "sqlserver" && (
               <div style={{ display: "flex", gap: 6 }}>
                 <Input aria-label="File path" style={{ flex: 1 }} value={f.path} onChange={(_, d) => set({ path: d.value })} onBlur={() => void loadChoices(f)} />
                 <Button onClick={() => void pick()}>Browse…</Button>
@@ -159,12 +160,12 @@ export function ImportDialog({ open, initialKind, engine, dialogs, onSubmit, onC
                 ))}
               </Select>
             )}
-            {f.kind === "postgres" && (
+            {(f.kind === "postgres" || f.kind === "sqlserver") && (
               <>
                 <Input aria-label="Server" placeholder="Server" value={f.host} onChange={(_, d) => set({ host: d.value })} />
-                <Input aria-label="Port" placeholder="Port" value={f.port} onChange={(_, d) => set({ port: d.value })} />
+                <Input aria-label="Port" placeholder={f.kind === "sqlserver" ? "Port (blank = 1433)" : "Port"} value={f.port} onChange={(_, d) => set({ port: d.value })} />
                 <Input aria-label="Database" placeholder="Database" value={f.database} onChange={(_, d) => set({ database: d.value })} />
-                <Input aria-label="User" placeholder="User" value={f.user} onChange={(_, d) => set({ user: d.value })} />
+                <Input aria-label="User" placeholder={f.kind === "sqlserver" ? "User (blank = Windows authentication)" : "User"} value={f.user} onChange={(_, d) => set({ user: d.value })} />
                 <Input
                   aria-label="Password"
                   type="password"
@@ -181,7 +182,8 @@ export function ImportDialog({ open, initialKind, engine, dialogs, onSubmit, onC
                   </Select>
                   <Button onClick={() => void listPg()}>List tables</Button>
                 </div>
-                <div style={{ fontSize: 11, opacity: 0.7 }}>Connections are not encrypted yet (no TLS); use only on trusted networks.</div>
+                {f.kind === "postgres" && <div style={{ fontSize: 11, opacity: 0.7 }}>Connections are not encrypted yet (no TLS); use only on trusted networks.</div>}
+                {f.kind === "sqlserver" && <div style={{ fontSize: 11, opacity: 0.7 }}>Connections are encrypted; the server certificate must validate.</div>}
               </>
             )}
             <Input aria-label="Table name" placeholder="Table name" value={name} onChange={(_, d) => setName(d.value)} />

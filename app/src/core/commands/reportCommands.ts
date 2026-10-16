@@ -89,6 +89,8 @@ export function registerReportCommands(r: CommandRegistry<Session>): void {
   });
 
   // ---- visuals ----
+  r.register({ id: "report.visuals.pause", label: "Pause visuals", category: "Report", isEnabled: (s) => s.store.project !== null, run: (s, a) => s.report.setPaused((a as { paused?: boolean } | undefined)?.paused ?? !s.report.getSnapshot().paused) });
+  r.register({ id: "report.visuals.refresh", label: "Refresh visuals", category: "Report", isEnabled: (s) => s.store.project !== null, run: (s) => s.report.refreshVisuals() });
   reg("report.visual.add", "Add visual", (s, a) => {
     const x = need<{ type: string }>(a, ["type"]);
     const args = a as { page?: string; position?: Partial<Position>; fields?: { role: string; field: FieldRef }[] };

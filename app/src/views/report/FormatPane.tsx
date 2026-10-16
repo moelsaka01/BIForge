@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Accordion, AccordionHeader, AccordionItem, AccordionPanel, Button, Input, Select, Switch, Tab, TabList } from "@fluentui/react-components";
 import { fieldKey, fieldLabel, lit, type FieldRef, type Lit } from "../../core/report/fields";
 import { generalCards, visualCards, type CardDef, type PropDef } from "../../core/report/formatSchema";
@@ -7,7 +7,7 @@ import { getFormat, getRawProp, type PageModel, type VisualModel } from "../../c
 import { visualType } from "../../core/report/visualTypes";
 import { condFormatFromPbir } from "../../core/report/condFormat";
 import { CondFormatDialog } from "./CondFormatDialog";
-import type { Dispatch } from "./reportContext";
+import { useReport, type Dispatch } from "./reportContext";
 
 export interface FormatPaneProps {
   page: PageModel;
@@ -91,6 +91,20 @@ export function FormatPane(p: FormatPaneProps) {
   const [q, setQ] = useState("");
   const [cond, setCond] = useState<{ title: string; object: string; prop: string; selector?: string; allowFieldValue: boolean } | null>(null);
   const [colField, setColField] = useState(0);
+  const rc = useReport();
+  const focus = rc.snap.formatFocus && rc.snap.formatFocus.visual === p.visual.name ? rc.snap.formatFocus : null;
+  const generalIds = generalCards([]).map((x) => x.id);
+  const [open, setOpen] = useState<string[] | null>(null);
+  // On-object formatting asks for a card: show the tab that has it, open it and scroll to it
+  useEffect(() => {
+    if (!focus) return;
+    const inVisual = visualCards(p.visual.visualType).some((x) => x.id === focus.card);
+    setTab(inVisual ? "visual" : generalIds.includes(focus.card) ? "general" : "visual");
+    setQ("");
+    setOpen([focus.card]);
+    const t = setTimeout(() => document.querySelector(`[data-card="${focus.card}"]`)?.scrollIntoView?.({ block: "nearest" }), 0);
+    return () => clearTimeout(t);
+  }, [focus?.tick]); // eslint-disable-line react-hooks/exhaustive-deps
   const type = visualType(p.visual.visualType);
   const needle = q.trim().toLowerCase();
   const cards: CardDef[] = tab === "visual" ? visualCards(p.visual.visualType) : generalCards(p.pages.filter((x) => x.type === "Tooltip").map((x) => ({ name: x.name, displayName: x.displayName })));
@@ -126,9 +140,14 @@ export function FormatPane(p: FormatPaneProps) {
         <Tab value="general">General</Tab>
       </TabList>
       <Input size="small" placeholder="Search" aria-label="Search the Format pane" value={q} onChange={(_, d) => setQ(d.value)} />
-      <Accordion multiple collapsible defaultOpenItems={shown.slice(0, 2).map((c) => c.id)} key={`${tab}-${p.visual.name}-${needle}`}>
+      <Accordion
+        multiple
+        collapsible
+        {...(open ? { openItems: open, onToggle: (_: unknown, d: { openItems: unknown[] }) => setOpen(d.openItems as string[]) } : { defaultOpenItems: shown.slice(0, 2).map((c) => c.id) })}
+        key={`${tab}-${p.visual.name}-${needle}-${open ? "c" : "u"}`}
+      >
         {shown.map((c) => (
-          <AccordionItem key={c.id} value={c.id}>
+          <AccordionItem key={c.id} value={c.id} data-card={c.id}>
             <AccordionHeader size="small">{c.label}</AccordionHeader>
             <AccordionPanel>
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>

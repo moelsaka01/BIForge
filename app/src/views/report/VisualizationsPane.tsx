@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button, Select, Tab, TabList } from "@fluentui/react-components";
 import { AGG_LABELS, fieldKey, fieldLabel, type AggFn, type FieldRef } from "../../core/report/fields";
 import { fieldForRole } from "../../core/report/fieldRouting";
@@ -31,6 +31,10 @@ export function VisualizationsPane(p: VisualizationsPaneProps) {
   const c = useReport();
   const [tab, setTab] = useState<"build" | "format">("build");
   const { visual, page } = p;
+  const focus = c.snap.formatFocus;
+  useEffect(() => {
+    if (focus && visual && focus.visual === visual.name) setTab("format");
+  }, [focus?.tick]); // eslint-disable-line react-hooks/exhaustive-deps
   const type = visual ? visualType(visual.visualType) : undefined;
 
   const pick = (id: string) => {

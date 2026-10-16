@@ -16,6 +16,10 @@ export interface ReportCtx {
   data: ReportData;
   view: ViewState;
   snap: ViewSnapshot;
+  /** Modern interface with On-object interaction: a selected visual shows formatting handles. */
+  onObject: boolean;
+  /** Opens a card of the Format pane for a visual (on-object formatting). */
+  focusFormat(visual: string, card: string): void;
   dispatch: Dispatch;
   /** Hover over a data point of a visual whose tooltip is a report page. */
   onTooltip(page: PageModel, visual: string, point: import("../../core/report/interactions").SelectedPoint | null, x: number, y: number): void;
