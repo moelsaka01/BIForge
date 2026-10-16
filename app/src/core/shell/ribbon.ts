@@ -395,6 +395,21 @@ function modelTabs(): RibbonTab[] {
       keytip: "H",
       groups: [...homeCommon(), relationshipsGroup(), modelingCalculations(), { id: "parameters", label: "Parameters", controls: [todo("whatIf", "New parameter", "parameter", { size: "large" })] }, securityGroup(), { id: "qna", label: "Q&A", controls: [todo("qnaSetup", "Q&A setup", "qna", { size: "large" }), todo("language", "Language", "language", { size: "large" })] }],
     },
+    {
+      id: "view",
+      label: "View",
+      keytip: "W",
+      groups: [
+        {
+          id: "panes",
+          label: "Show panes",
+          controls: [
+            cmd("pane.properties", "Properties", "dataPane", "pane.toggle", { size: "large", args: { pane: "properties" }, checked: (c) => c.panes.properties, keytip: "PR" }),
+            cmd("pane.data", "Data", "dataPane", "pane.toggle", { size: "large", args: { pane: "data" }, checked: (c) => c.panes.data }),
+          ],
+        },
+      ],
+    },
     helpTab(),
   ];
 }

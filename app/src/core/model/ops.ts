@@ -188,7 +188,7 @@ export function deleteMeasure(p: Project, measure: string): void {
 
 export interface TableView {
   name: string;
-  columns: { name: string; dataType: string | null }[];
+  columns: { name: string; dataType: string | null; summarizeBy: string | null }[];
   measures: { name: string; expression: string }[];
 }
 
@@ -197,7 +197,7 @@ export function listTables(p: Project): TableView[] {
     name: t.name ?? "",
     columns: t.children
       .filter((c) => c.kind === "column")
-      .map((c) => ({ name: c.name ?? "", dataType: textProp(c, "dataType") })),
+      .map((c) => ({ name: c.name ?? "", dataType: textProp(c, "dataType"), summarizeBy: textProp(c, "summarizeBy") })),
     measures: t.children
       .filter((c) => c.kind === "measure")
       .map((c) => ({ name: c.name ?? "", expression: c.default?.text ?? "" })),

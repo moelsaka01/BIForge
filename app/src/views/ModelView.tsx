@@ -3,7 +3,10 @@ import type { CommandRegistry } from "../core/commands/registry";
 import type { Session } from "../core/session/session";
 import type { Project } from "../core/model/types";
 import type { EngineApi } from "../core/data/types";
-import { listTables } from "../core/model/ops";
+import { listTables, type TableView } from "../core/model/ops";
+import { getTableSource } from "../core/model/tables";
+import { PaneFrame } from "./shell/PaneFrame";
+import { FieldIcon, fieldIconKind } from "./fieldIcon";
 import { listRelationships, type EndCardinality, type NewRelationship, type Relationship } from "../core/model/relationships";
 
 const CARD_W = 220;
@@ -12,7 +15,10 @@ const ROW_H = 22;
 const GAP_X = 70;
 const GAP_Y = 40;
 const COLS = 4;
-const MAX_ROWS = 10;
+const MAX_ROWS = 14;
+const CARD_PAD = 10; // border (2) + bottom padding (8): the card is always tall enough for its rows
+
+const TYPE_NAMES: Record<string, string> = { int64: "Whole number", double: "Decimal number", decimal: "Fixed decimal number", dateTime: "Date/time", string: "Text", boolean: "True/false", binary: "Binary" };
 
 interface Box {
   x: number;
@@ -22,13 +28,13 @@ interface Box {
 }
 
 /** Automatic grid layout; card positions are not user-editable yet. */
-export function layoutCards(tables: { name: string; columns: unknown[] }[]): Map<string, Box> {
+export function layoutCards(tables: { name: string; columns: unknown[]; measures?: unknown[] }[]): Map<string, Box> {
   const out = new Map<string, Box>();
   const rowBottoms: number[] = [];
   tables.forEach((t, i) => {
     const r = Math.floor(i / COLS);
     const c = i % COLS;
-    const h = HEAD_H + Math.min(Math.max(t.columns.length, 1), MAX_ROWS) * ROW_H + 8;
+    const h = HEAD_H + Math.min(Math.max(t.columns.length + (t.measures?.length ?? 0), 1), MAX_ROWS) * ROW_H + CARD_PAD;
     const y = r === 0 ? 20 : rowBottoms[r - 1] + GAP_Y;
     rowBottoms[r] = Math.max(rowBottoms[r] ?? 0, y + h);
     out.set(t.name, { x: 20 + c * (CARD_W + GAP_X), y, w: CARD_W, h });
@@ -53,13 +59,19 @@ export interface ModelViewProps {
   registry: CommandRegistry<Session>;
   engine: EngineApi | null;
   onError(message: string | null): void;
+  /** The collapsible Properties pane. Without it the pane is always shown (used by tests). */
+  properties?: { open: boolean; width: number; onOpenChange(open: boolean): void; onResize(width: number): void };
 }
 
-export function ModelView({ project, session, registry, engine, onError }: ModelViewProps) {
+type Sel = { kind: "none" } | { kind: "rel"; id: string } | { kind: "table"; table: string } | { kind: "column"; table: string; column: string } | { kind: "measure"; table: string; name: string };
+
+export function ModelView({ project, session, registry, engine, onError, properties }: ModelViewProps) {
   const tables = listTables(project);
   const rels = listRelationships(project);
   const boxes = layoutCards(tables);
-  const [selected, setSelected] = useState<string | null>(null);
+  const [sel0, setSel] = useState<Sel>({ kind: "none" });
+  const selected = sel0.kind === "rel" ? sel0.id : null;
+  const setSelected = (id: string | null) => setSel(id ? { kind: "rel", id } : { kind: "none" });
   const [dropTarget, setDropTarget] = useState<string | null>(null);
   const dragging = useRef<{ table: string; column: string } | null>(null);
 
@@ -134,6 +146,7 @@ export function ModelView({ project, session, registry, engine, onError }: Model
           </svg>
           {tables.map((t) => {
             const box = boxes.get(t.name)!;
+            const selTable = (sel0.kind === "table" || sel0.kind === "column" || sel0.kind === "measure") && sel0.table === t.name;
             return (
               <div
                 key={t.name}
@@ -144,7 +157,8 @@ export function ModelView({ project, session, registry, engine, onError }: Model
                   top: box.y,
                   width: box.w,
                   height: box.h,
-                  border: "1px solid #8a8886",
+                  boxSizing: "border-box",
+                  border: selTable ? "2px solid #0f6cbd" : "1px solid #8a8886",
                   borderRadius: 4,
                   background: "var(--colorNeutralBackground1, #fff)",
                   overflow: "hidden",
@@ -152,19 +166,25 @@ export function ModelView({ project, session, registry, engine, onError }: Model
                   flexDirection: "column",
                 }}
               >
-                <div style={{ height: HEAD_H, lineHeight: `${HEAD_H}px`, padding: "0 8px", fontWeight: 600, background: "#e1dfdd", flex: "none" }}>
+                <div
+                  data-testid={`card-head-${t.name}`}
+                  onClick={() => setSel({ kind: "table", table: t.name })}
+                  style={{ height: HEAD_H, lineHeight: `${HEAD_H}px`, padding: "0 8px", fontWeight: 600, background: "var(--colorNeutralBackground3, #e1dfdd)", flex: "none", cursor: "pointer", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
+                >
                   {t.name}
                 </div>
-                <div style={{ overflowY: "auto", flex: 1 }}>
-                  {t.columns.length === 0 && <div style={{ padding: "2px 8px", opacity: 0.6 }}>(no columns)</div>}
+                <div style={{ overflowY: t.columns.length + t.measures.length > MAX_ROWS ? "auto" : "hidden", flex: 1, minHeight: 0 }}>
+                  {t.columns.length + t.measures.length === 0 && <div style={{ padding: "2px 8px", opacity: 0.6 }}>(no columns)</div>}
                   {t.columns.map((c) => {
                     const key = `${t.name}.${c.name}`;
+                    const isSel = sel0.kind === "column" && sel0.table === t.name && sel0.column === c.name;
                     return (
                       <div
                         key={c.name}
                         data-testid={`col-${key}`}
                         draggable
                         title="Drag onto a column of another table to create a relationship"
+                        onClick={() => setSel({ kind: "column", table: t.name, column: c.name })}
                         onDragStart={(e) => {
                           dragging.current = { table: t.name, column: c.name };
                           e.dataTransfer?.setData("text/plain", key);
@@ -190,19 +210,31 @@ export function ModelView({ project, session, registry, engine, onError }: Model
                         }}
                         style={{
                           height: ROW_H,
-                          lineHeight: `${ROW_H}px`,
+                          boxSizing: "border-box",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
                           padding: "0 8px",
                           cursor: "grab",
-                          background: dropTarget === key ? "#cfe4fa" : undefined,
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
+                          background: dropTarget === key ? "#cfe4fa" : isSel ? "var(--colorSubtleBackgroundSelected, #e6f2fb)" : undefined,
                         }}
                       >
-                        {c.name} <span style={{ opacity: 0.55, fontSize: 11 }}>{c.dataType ?? ""}</span>
+                        <FieldIcon kind={fieldIconKind(c.dataType, c.summarizeBy)} />
+                        <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{c.name}</span>
                       </div>
                     );
                   })}
+                  {t.measures.map((m) => (
+                    <div
+                      key={`m:${m.name}`}
+                      data-testid={`measure-${t.name}.${m.name}`}
+                      onClick={() => setSel({ kind: "measure", table: t.name, name: m.name })}
+                      style={{ height: ROW_H, boxSizing: "border-box", display: "flex", alignItems: "center", gap: 6, padding: "0 8px", cursor: "pointer", background: sel0.kind === "measure" && sel0.table === t.name && sel0.name === m.name ? "var(--colorSubtleBackgroundSelected, #e6f2fb)" : undefined }}
+                    >
+                      <FieldIcon kind="measure" />
+                      <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{m.name}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             );
@@ -210,16 +242,68 @@ export function ModelView({ project, session, registry, engine, onError }: Model
         </div>
       </div>
 
-      <aside style={{ width: 280, borderLeft: "1px solid #ddd", padding: 12, overflow: "auto" }} aria-label="Relationships">
-        <strong>Relationships ({rels.length})</strong>
+      {properties ? (
+        <PaneFrame title="Properties" side="right" open={properties.open} width={properties.width} onOpenChange={properties.onOpenChange} onResize={properties.onResize}>
+          {propertiesBody()}
+        </PaneFrame>
+      ) : (
+        <aside style={{ width: 280, borderLeft: "1px solid #ddd", overflow: "auto" }} aria-label="Properties">
+          {propertiesBody()}
+        </aside>
+      )}
+    </div>
+  );
+
+  function propertiesBody() {
+    const table = (name: string): TableView | undefined => tables.find((t) => t.name === name);
+    const field = (label: string, value: string) => (
+      <div style={{ display: "grid", gridTemplateColumns: "110px 1fr", gap: 6, padding: "2px 0", fontSize: 13 }}>
+        <span style={{ opacity: 0.7 }}>{label}</span>
+        <span style={{ overflowWrap: "anywhere" }}>{value}</span>
+      </div>
+    );
+    const numeric = (t: string | null | undefined) => t === "int64" || t === "double" || t === "decimal";
+    return (
+      <div style={{ padding: 12 }} data-testid="properties">
+        {sel0.kind === "table" && (
+          <section aria-label="Table properties" data-testid="table-properties">
+            <strong>Table</strong>
+            {field("Name", sel0.table)}
+            {field("Columns", String(table(sel0.table)?.columns.length ?? 0))}
+            {field("Measures", String(table(sel0.table)?.measures.length ?? 0))}
+            {field("Source", getTableSource(project, sel0.table)?.kind ?? "none (model table)")}
+            <div style={{ fontSize: 12, opacity: 0.7, marginTop: 6 }}>Table properties cannot be edited yet.</div>
+          </section>
+        )}
+        {sel0.kind === "column" && (() => {
+          const c = table(sel0.table)?.columns.find((x) => x.name === sel0.column);
+          return (
+            <section aria-label="Column properties" data-testid="column-properties">
+              <strong>Column</strong>
+              {field("Name", sel0.column)}
+              {field("Table", sel0.table)}
+              {field("Data type", c?.dataType ? (TYPE_NAMES[c.dataType] ?? c.dataType) : "Not set")}
+              {field("Summarize by", c?.summarizeBy ?? (numeric(c?.dataType) ? "Sum (default)" : "None"))}
+              <div style={{ fontSize: 12, opacity: 0.7, marginTop: 6 }}>Column properties cannot be edited yet.</div>
+            </section>
+          );
+        })()}
+        {sel0.kind === "measure" && (() => {
+          const m = table(sel0.table)?.measures.find((x) => x.name === sel0.name);
+          return (
+            <section aria-label="Measure properties" data-testid="measure-properties">
+              <strong>Measure</strong>
+              {field("Name", sel0.name)}
+              {field("Table", sel0.table)}
+              {field("Expression", m?.expression ?? "")}
+            </section>
+          );
+        })()}
+        <strong style={{ display: "block", marginTop: sel0.kind === "none" || sel0.kind === "rel" ? 0 : 14 }}>Relationships ({rels.length})</strong>
         <ul style={{ paddingLeft: 16, margin: "6px 0" }}>
           {rels.map((r) => (
             <li key={r.id}>
-              <button
-                style={{ all: "unset", cursor: "pointer", fontWeight: r.id === selected ? 700 : 400 }}
-                data-testid={`rel-item-${r.id}`}
-                onClick={() => setSelected(r.id)}
-              >
+              <button style={{ all: "unset", cursor: "pointer", fontWeight: r.id === selected ? 700 : 400 }} data-testid={`rel-item-${r.id}`} onClick={() => setSelected(r.id)}>
                 {describe(r)}
               </button>
             </li>
@@ -231,44 +315,27 @@ export function ModelView({ project, session, registry, engine, onError }: Model
             <div style={{ fontSize: 12, marginBottom: 6 }}>{describe(sel)}</div>
             <label style={{ display: "block" }}>
               {sel.fromTable} side{" "}
-              <select
-                aria-label="From cardinality"
-                value={sel.fromCardinality}
-                onChange={(e) => void run("model.updateRelationship", { id: sel.id, patch: { fromCardinality: e.target.value } })}
-              >
+              <select aria-label="From cardinality" value={sel.fromCardinality} onChange={(e) => void run("model.updateRelationship", { id: sel.id, patch: { fromCardinality: e.target.value } })}>
                 <option value="many">Many (*)</option>
                 <option value="one">One (1)</option>
               </select>
             </label>
             <label style={{ display: "block" }}>
               {sel.toTable} side{" "}
-              <select
-                aria-label="To cardinality"
-                value={sel.toCardinality}
-                onChange={(e) => void run("model.updateRelationship", { id: sel.id, patch: { toCardinality: e.target.value } })}
-              >
+              <select aria-label="To cardinality" value={sel.toCardinality} onChange={(e) => void run("model.updateRelationship", { id: sel.id, patch: { toCardinality: e.target.value } })}>
                 <option value="many">Many (*)</option>
                 <option value="one">One (1)</option>
               </select>
             </label>
             <label style={{ display: "block" }}>
               Cross-filter direction{" "}
-              <select
-                aria-label="Cross-filter direction"
-                value={sel.crossFilter}
-                onChange={(e) => void run("model.updateRelationship", { id: sel.id, patch: { crossFilter: e.target.value } })}
-              >
+              <select aria-label="Cross-filter direction" value={sel.crossFilter} onChange={(e) => void run("model.updateRelationship", { id: sel.id, patch: { crossFilter: e.target.value } })}>
                 <option value="single">Single</option>
                 <option value="both">Both</option>
               </select>
             </label>
             <label style={{ display: "block" }}>
-              <input
-                type="checkbox"
-                checked={sel.isActive}
-                onChange={(e) => void run("model.updateRelationship", { id: sel.id, patch: { isActive: e.target.checked } })}
-              />{" "}
-              Make this relationship active
+              <input type="checkbox" checked={sel.isActive} onChange={(e) => void run("model.updateRelationship", { id: sel.id, patch: { isActive: e.target.checked } })} /> Make this relationship active
             </label>
             <button
               onClick={async () => {
@@ -279,9 +346,9 @@ export function ModelView({ project, session, registry, engine, onError }: Model
             </button>
           </fieldset>
         ) : (
-          <div style={{ fontSize: 12, opacity: 0.7 }}>Select a relationship line or list entry to edit it. Drag a column onto a column of another table to create one.</div>
+          <div style={{ fontSize: 12, opacity: 0.7 }}>Select a table, column, measure or relationship line to see its properties. Drag a column onto a column of another table to create a relationship.</div>
         )}
-      </aside>
-    </div>
-  );
+      </div>
+    );
+  }
 }

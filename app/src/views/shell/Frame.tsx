@@ -97,6 +97,7 @@ function ViewBody({ spec, onScale }: { spec: ShellSpec; onScale(s: number): void
   const doc = useDoc();
   const sess = useSession();
   const st = useShellState();
+  const settings = useSettings();
   const { session } = env;
   const project = doc.project;
   if (!project) return null;
@@ -130,7 +131,21 @@ function ViewBody({ spec, onScale }: { spec: ShellSpec; onScale(s: number): void
     case "data":
       return withData(session.engine ? <DataView engine={session.engine} table={dataTable} reloadKey={sess.dataEpoch + sess.dataTables.length} /> : <div className="empty-note">The data engine is not available.</div>);
     case "model":
-      return withData(<ModelView project={project} session={session} registry={env.registry} engine={session.engine} onError={env.setError} />);
+      return withData(
+        <ModelView
+          project={project}
+          session={session}
+          registry={env.registry}
+          engine={session.engine}
+          onError={env.setError}
+          properties={{
+            open: settings.layouts[spec.kind].panes.properties.open,
+            width: settings.layouts[spec.kind].panes.properties.width,
+            onOpenChange: (open) => session.shell.settings.setPane(spec.kind, "properties", { open }),
+            onResize: (width) => session.shell.settings.setPane(spec.kind, "properties", { width }),
+          }}
+        />,
+      );
     case "dax":
       return <DaxView spec={spec} />;
     case "tmdl":

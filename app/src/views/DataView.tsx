@@ -6,6 +6,19 @@ import { formatCell } from "./format";
 
 export const ROW_HEIGHT = 28;
 const COL_WIDTH = 170;
+
+/** Header and body cells share this box (same width, border-box sizing, padding and border), so columns line up exactly. */
+const cellBox = (numeric: boolean): React.CSSProperties => ({
+  width: COL_WIDTH,
+  flex: "none",
+  boxSizing: "border-box",
+  padding: "0 8px",
+  borderRight: "1px solid transparent",
+  overflow: "hidden",
+  whiteSpace: "nowrap",
+  textOverflow: "ellipsis",
+  textAlign: numeric ? "right" : "left",
+});
 const FALLBACK_VIEWPORT = 480;
 
 const TYPE_LABEL: Record<BiType, string> = {
@@ -105,18 +118,16 @@ export function DataView({ engine, table, reloadKey }: DataViewProps) {
                 onClick={() => toggleSort(c.name)}
                 title={`${c.name} — ${TYPE_LABEL[c.biType]} (${c.duckdbType}). Click to sort.`}
                 style={{
-                  width: COL_WIDTH,
-                  flex: "none",
+                  font: "inherit",
+                  ...cellBox(isNumeric(c.biType)),
                   height: ROW_HEIGHT + 8,
-                  textAlign: isNumeric(c.biType) ? "right" : "left",
-                  border: 0,
-                  borderRight: "1px solid #ddd",
+                  borderTop: 0,
+                  borderBottom: 0,
+                  borderLeft: 0,
                   background: "transparent",
                   cursor: "pointer",
-                  padding: "2px 8px",
-                  overflow: "hidden",
-                  whiteSpace: "nowrap",
-                  textOverflow: "ellipsis",
+                  paddingTop: 2,
+                  paddingBottom: 2,
                   fontWeight: 600,
                   lineHeight: 1.1,
                 }}
@@ -143,16 +154,7 @@ export function DataView({ engine, table, reloadKey }: DataViewProps) {
                   <div
                     key={c.name}
                     role="gridcell"
-                    style={{
-                      width: COL_WIDTH,
-                      flex: "none",
-                      padding: "0 8px",
-                      lineHeight: `${ROW_HEIGHT}px`,
-                      overflow: "hidden",
-                      whiteSpace: "nowrap",
-                      textOverflow: "ellipsis",
-                      textAlign: isNumeric(c.biType) ? "right" : "left",
-                    }}
+                    style={{ ...cellBox(isNumeric(c.biType)), lineHeight: `${ROW_HEIGHT}px` }}
                   >
                     {row ? formatCell(row[j], c.biType) : "…"}
                   </div>
