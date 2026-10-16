@@ -7,8 +7,9 @@ import customerCsv from "../../../../tests/dax/fixtures/Customer.csv?raw";
 import dateCsv from "../../../../tests/dax/fixtures/Date.csv?raw";
 import { measure, type AggFn, type FieldRef } from "./fields";
 import type { ModelInfo } from "./modelInfo";
-import { parseVisual, projectionJson, type Projection, type VisualModel } from "./visualDoc";
-import { VISUAL_SCHEMA } from "./visualDoc";
+import { PAGE_SCHEMA, PAGES_SCHEMA, parseVisual, projectionJson, VISUAL_SCHEMA, type Projection, type VisualModel } from "./visualDoc";
+import type { Project, TmdlNode } from "../model/types";
+import { sampleProject } from "../testing/fakes";
 
 const CSV: Record<string, string> = { Sales: salesCsv, Product: productCsv, Customer: customerCsv, Date: dateCsv };
 
@@ -56,3 +57,43 @@ export function visualOf(visualType: string, roles: Record<string, FieldRef[]>, 
 
 export const sumOf = (table: string, name: string) => ({ kind: "agg" as const, table, name, fn: 0 as AggFn });
 export { measure };
+
+// ---- a Project with the fixture model and an empty one-page report ---------------------------------
+
+const tnode = (kind: string, name: string, extra: Partial<TmdlNode> = {}): TmdlNode => ({ description: [], kind, name, default: null, props: [], children: [], ...extra });
+
+export function fixtureProject(measures: Record<string, { name: string; expr: string; format?: string }[]> = {}): Project {
+  const p = sampleProject("Fixture");
+  p.model.tmdl = {
+    "model.tmdl": { nodes: [tnode("model", "Model")] },
+    ...Object.fromEntries(
+      Object.entries(TABLE_COLUMNS).map(([t, cols]) => [
+        `tables/${t}.tmdl`,
+        {
+          nodes: [
+            tnode("table", t, {
+              children: [
+                ...Object.entries(cols).map(([c, dt]) => tnode("column", c, { props: [{ key: "dataType", value: { Text: dt } }] })),
+                ...(measures[t] ?? []).map((m) =>
+                  tnode("measure", m.name, { default: { text: m.expr, verbatim: false }, props: m.format ? [{ key: "formatString", value: { Text: m.format } }] : [] }),
+                ),
+              ],
+            }),
+          ],
+        },
+      ]),
+    ),
+  };
+  p.report = {
+    pbir: {},
+    platform: null,
+    files: {
+      "version.json": { version: "2.0.0" },
+      "report.json": { themeCollection: { baseTheme: { name: "CY24SU10", type: "SharedResources" } } },
+      "pages/pages.json": { $schema: PAGES_SCHEMA, pageOrder: ["page1"], activePageName: "page1" },
+      "pages/page1/page.json": { $schema: PAGE_SCHEMA, name: "page1", displayName: "Page 1", displayOption: "FitToPage", height: 720, width: 1280 },
+    },
+    static_resources: {},
+  };
+  return p;
+}

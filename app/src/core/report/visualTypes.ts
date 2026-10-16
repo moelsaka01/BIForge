@@ -189,7 +189,8 @@ export function defaultRole(typeId: string, kind: "column" | "value", current: R
   for (const r of candidates) {
     if ((current[r.name]?.length ?? 0) < r.max) return r.name;
   }
-  return null;
+  // every well is full: a field dropped on the visual replaces the one in a single-field well
+  return candidates.find((r) => r.max === 1)?.name ?? null;
 }
 
 export const isChartFamily = (f: VisualFamily) => ["cartesian", "pie", "scatter", "treemap", "funnel", "waterfall", "gauge"].includes(f);

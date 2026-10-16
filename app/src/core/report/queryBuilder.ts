@@ -39,6 +39,8 @@ export interface PlannedColumn {
 export interface BuiltQuery {
   dax: string;
   columns: PlannedColumn[];
+  /** Set when the rows are ordered by a value (index among the value columns); charts order categories by total. */
+  valueSort?: { valueIndex: number; dir: "asc" | "desc" };
 }
 
 export interface QueryOptions {
@@ -137,6 +139,14 @@ export function buildVisualQuery(v: VisualModel, model: ModelInfo, opt: QueryOpt
   return assemble(model, groups, values, [...opt.filters, ...extra], opt.tuples ?? [], v.sort, byValue);
 }
 
+/** Grand totals of the value fields of a table, under the same filters (one row). */
+export function buildTotalsQuery(v: VisualModel, model: ModelInfo, opt: QueryOptions): BuiltQuery | null {
+  const type = visualType(v.visualType);
+  if (!type) return null;
+  const { values } = slotsFor(v, type.family, opt.drill);
+  return values.length ? assemble(model, [], values, opt.filters, opt.tuples ?? [], null, false) : null;
+}
+
 function assemble(model: ModelInfo, groups: Slot[], values: Slot[], filters: FilterDef[], tuples: TupleFilter[], sort: SortSpec | null, byValue: boolean): BuiltQuery {
   const fa = filtersToDax(filters);
   const args = [...fa.args, ...tuples.map(tupleArg).filter((x): x is string => x !== null)];
@@ -180,16 +190,23 @@ function assemble(model: ModelInfo, groups: Slot[], values: Slot[], filters: Fil
   };
   const dirOf = (d: "asc" | "desc") => (d === "asc" ? "ASC" : "DESC");
   let explicit = false;
+  let valueSort: BuiltQuery["valueSort"];
   if (sort) {
     const g = groups.find((x) => sameField(x.field, sort.field));
     const vi = values.findIndex((x) => sameField(x.field, sort.field));
     if (g) pushGroup(g.field, dirOf(sort.dir));
-    else if (vi >= 0) order.push(`[m${vi}] ${dirOf(sort.dir)}`);
+    else if (vi >= 0) {
+      order.push(`[m${vi}] ${dirOf(sort.dir)}`);
+      valueSort = { valueIndex: vi, dir: sort.dir };
+    }
     explicit = !!g || vi >= 0;
   }
-  if (!explicit && byValue) order.push("[m0] DESC");
+  if (!explicit && byValue) {
+    order.push("[m0] DESC");
+    valueSort = { valueIndex: 0, dir: "desc" };
+  }
   for (const g of groups) pushGroup(g.field, "ASC");
-  return { dax: `EVALUATE ${filtered}${order.length ? `\nORDER BY ${order.join(", ")}` : ""}`, columns };
+  return { dax: `EVALUATE ${filtered}${order.length ? `\nORDER BY ${order.join(", ")}` : ""}`, columns, ...(valueSort ? { valueSort } : {}) };
 }
 
 // ---- matrix -----------------------------------------------------------------------------------

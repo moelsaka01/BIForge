@@ -1,0 +1,351 @@
+// Models for the DOM-rendered visuals (table, matrix, card, KPI): arranged cells and display text. Pure.
+import { isNumeric, valueKey, type Value } from "./cells";
+import { BLANK_LABEL, columnsOf, labelOf, num } from "./chartData";
+import { colorFn, condFormatFromPbir, textOn } from "./condFormat";
+import type { Loaded } from "./dataLoader";
+import { fieldKey, type FieldRef } from "./fields";
+import { FormatReader } from "./formatReader";
+import { formatCompact, formatNumber, type DisplayUnits } from "./numberFormat";
+import { queryRefOf } from "./pbir";
+import type { BuiltMatrixQuery, PlannedColumn } from "./queryBuilder";
+import type { Theme } from "./theme";
+import type { VisualModel } from "./visualDoc";
+
+export function displayValue(v: Value, col: { format: string | null; field: FieldRef }, f?: FormatReader): string {
+  if (v.kind === "blank") return "";
+  if (isNumeric(v) && v.num !== null) {
+    const u = f ? (f.str("values", "displayUnits", "none") as DisplayUnits) : "none";
+    return u === "none" || u === "auto" ? formatNumber(v.num, col.format) : formatCompact(v.num, u, f?.num("values", "decimalPlaces", 1) ?? 1, col.format);
+  }
+  return v.text;
+}
+
+export interface CellStyle {
+  background?: string;
+  color?: string;
+  /** 0..1 width of a data bar behind a numeric cell, and its color. */
+  bar?: { ratio: number; color: string; negative: boolean };
+}
+
+/** Formatting of one column from its `values` entry (selector = the column's query reference). */
+function columnStyler(f: FormatReader, col: PlannedColumn, numbers: (number | null)[]): (v: Value) => CellStyle {
+  const sel = queryRefOf(col.field);
+  const bg = f.raw("values", "backColor", sel);
+  const fg = f.raw("values", "fontColor", sel);
+  const bgSpec = bg ? condFormatFromPbir(bg) : null;
+  const fgSpec = fg ? condFormatFromPbir(fg) : null;
+  const bgFn = bgSpec ? colorFn(bgSpec, numbers) : null;
+  const fgFn = fgSpec ? colorFn(fgSpec, numbers) : null;
+  const plainBg = f.color("values", "backColor", sel);
+  const plainFg = f.color("values", "fontColor", sel);
+  const bars = f.bool("values", "dataBars", false, sel);
+  const nums = numbers.filter((x): x is number => x !== null);
+  const maxAbs = nums.length ? Math.max(...nums.map(Math.abs)) : 0;
+  const barColor = f.color("values", "dataBarColor", sel) ?? "#6aa9e9";
+  return (v) => {
+    const s: CellStyle = {};
+    const key: number | string | null = isNumeric(v) ? v.num : v.kind === "blank" ? null : v.text;
+    const b = bgFn?.(key) ?? (bgSpec ? null : plainBg);
+    if (b) {
+      s.background = b;
+      s.color = textOn(b);
+    }
+    const c = fgFn?.(key) ?? (fgSpec ? null : plainFg);
+    if (c) s.color = c;
+    if (bars && isNumeric(v) && v.num !== null && maxAbs > 0) s.bar = { ratio: Math.abs(v.num) / maxAbs, color: barColor, negative: v.num < 0 };
+    return s;
+  };
+}
+
+// ---- table ---------------------------------------------------------------------------------------------
+
+export interface TableColumn {
+  label: string;
+  field: FieldRef;
+  align: "left" | "right";
+  isValue: boolean;
+  /** Sort state of this column (from the visual's sort definition). */
+  sort: "asc" | "desc" | null;
+}
+
+export interface TableModel {
+  columns: TableColumn[];
+  rows: { text: string; style: CellStyle; raw: Value }[][];
+  totals: string[] | null;
+  truncated: boolean;
+}
+
+export function buildTable(visual: VisualModel, loaded: Extract<Loaded, { kind: "grouped" }>, theme: Theme, totals: Value[] | null): TableModel {
+  const f = new FormatReader(visual.json, theme, visual.visualType);
+  const q = loaded.query;
+  // display order = the order of the fields in the well
+  const fields = visual.roles.Values ?? [];
+  const cols: { pf: (typeof fields)[number]; pc: PlannedColumn }[] = [];
+  for (const [i, pf] of fields.entries()) {
+    const pc = q.columns.find((c) => c.role === "Values" && c.order === i && c.kind !== "helper");
+    if (pc) cols.push({ pf, pc });
+  }
+  const sortKey = visual.sort ? fieldKey(visual.sort.field) : null;
+  const columns: TableColumn[] = cols.map(({ pf, pc }) => ({
+    label: pf.displayName ?? pc.label,
+    field: pc.field,
+    align: pc.kind === "value" ? "right" : "left",
+    isValue: pc.kind === "value",
+    sort: sortKey && sortKey === fieldKey(pc.field) ? visual.sort!.dir : null,
+  }));
+  const stylers = cols.map(({ pc }) => columnStyler(f, pc, loaded.rows.map((r) => num(r[pc.index]))));
+  const rows = loaded.rows.map((row) =>
+    cols.map(({ pc }, i) => {
+      const v = row[pc.index];
+      return { text: displayValue(v, pc, f), style: stylers[i](v), raw: v };
+    }),
+  );
+  const tot = totals && f.bool("total", "totals", true) ? cols.map(({ pc }) => (pc.kind === "value" ? displayValue(totals[valueIndex(q.columns, pc)], pc, f) : "")) : null;
+  if (tot && tot.length) tot[0] = tot[0] || "Total";
+  return { columns, rows, totals: tot, truncated: loaded.truncated };
+}
+
+/** Position of a value column among the value columns (the totals query returns only values). */
+function valueIndex(all: PlannedColumn[], pc: PlannedColumn): number {
+  return all.filter((c) => c.kind === "value").findIndex((c) => c.index === pc.index);
+}
+
+// ---- matrix --------------------------------------------------------------------------------------------
+
+export interface MatrixHeaderCell {
+  text: string;
+  span: number;
+}
+
+export interface MatrixRow {
+  key: string;
+  depth: number;
+  label: string;
+  /** True when the row has children and can be expanded or collapsed. */
+  expandable: boolean;
+  expanded: boolean;
+  cells: { text: string; style: CellStyle }[];
+  total: { text: string; style: CellStyle }[];
+  /** Row-field values leading to this row (for selection). */
+  path: Value[];
+  isGrand?: boolean;
+}
+
+export interface MatrixModel {
+  rowHeader: string;
+  /** Header rows above the data: one per column field, then one for the value names when there are several. */
+  headers: MatrixHeaderCell[][];
+  rows: MatrixRow[];
+  valueCount: number;
+  showRowTotals: boolean;
+  /** Labels of the row total columns, one per value. */
+  totalLabels: string[];
+}
+
+interface PartIndex {
+  /** key of (row values + column values) -> values */
+  map: Map<string, Value[]>;
+}
+
+export function buildMatrix(visual: VisualModel, parts: Value[][][], q: BuiltMatrixQuery, theme: Theme, collapsed: Set<string>): MatrixModel {
+  const f = new FormatReader(visual.json, theme, visual.visualType);
+  const R = q.rows.length;
+  const C = q.cols.length;
+  const V = q.values.length;
+  const idx = new Map<string, PartIndex>();
+  const partOf = (rd: number, cd: number) => q.parts.findIndex((p) => p.rowDepth === rd && p.colDepth === cd);
+  q.parts.forEach((p, i) => {
+    const gcols = p.columns.filter((c) => c.kind === "group");
+    const vcols = p.columns.filter((c) => c.kind === "value");
+    const map = new Map<string, Value[]>();
+    for (const row of parts[i] ?? []) map.set(gcols.map((c) => valueKey(row[c.index])).join("\u0001"), vcols.map((c) => row[c.index]));
+    idx.set(`${p.rowDepth},${p.colDepth}`, { map });
+  });
+  const cell = (rd: number, cd: number, rowVals: Value[], colVals: Value[]): Value[] | undefined => idx.get(`${rd},${cd}`)?.map.get([...rowVals.slice(0, rd), ...colVals.slice(0, cd)].map(valueKey).join("\u0001"));
+
+  // distinct row paths (from the leaf-by-nothing part) and column paths
+  const rowLeaf = partOf(R, 0) >= 0 ? partOf(R, 0) : partOf(R, C);
+  const colLeaf = partOf(0, C) >= 0 ? partOf(0, C) : -1;
+  const rowCols = q.parts[rowLeaf]?.columns.filter((c) => c.role === "Rows" && c.kind === "group") ?? [];
+  const colCols = colLeaf >= 0 ? q.parts[colLeaf].columns.filter((c) => c.role === "Columns" && c.kind === "group") : [];
+  const rowPaths: Value[][] = R ? (parts[rowLeaf] ?? []).map((r) => rowCols.map((c) => r[c.index])) : [[]];
+  const colPaths: Value[][] = C && colLeaf >= 0 ? (parts[colLeaf] ?? []).map((r) => colCols.map((c) => r[c.index])) : [[]];
+
+  const valueCols = q.parts[partOf(R, C) >= 0 ? partOf(R, C) : rowLeaf]?.columns.filter((c) => c.kind === "value") ?? [];
+  const fmtOf = (vi: number) => valueCols[vi] ?? { format: null, field: q.values[vi] };
+  const labelFor = (vi: number) => visual.roles.Values?.[vi]?.displayName ?? valueCols[vi]?.label ?? "";
+
+  // styling by column of values (all numbers of that value across the leaf cells)
+  const allNums: (number | null)[][] = Array.from({ length: V }, () => []);
+  for (const rp of rowPaths) for (const cp of colPaths) cell(R, C, rp, cp)?.forEach((v, vi) => allNums[vi].push(num(v)));
+  const stylers = valueCols.map((pc, vi) => columnStyler(f, pc, allNums[vi]));
+
+  const mk = (vals: Value[] | undefined, vi: number) => {
+    const v = vals?.[vi];
+    return v ? { text: displayValue(v, fmtOf(vi), f), style: stylers[vi]?.(v) ?? {} } : { text: "", style: {} };
+  };
+
+  // headers
+  const headers: MatrixHeaderCell[][] = [];
+  for (let level = 0; level < C; level++) {
+    const row: MatrixHeaderCell[] = [];
+    let i = 0;
+    while (i < colPaths.length) {
+      let j = i + 1;
+      while (j < colPaths.length && colPaths.slice(i, j + 1).every((p) => p.slice(0, level + 1).map(valueKey).join() === colPaths[i].slice(0, level + 1).map(valueKey).join())) j++;
+      row.push({ text: labelOf(colPaths[i][level], colCols[level].format), span: (j - i) * Math.max(1, V) });
+      i = j;
+    }
+    headers.push(row);
+  }
+  if (V > 1 || C === 0) headers.push(colPaths.flatMap(() => Array.from({ length: V }, (_, vi) => ({ text: labelFor(vi), span: 1 }))));
+
+  // rows (stepped layout; collapsed parents hide their children)
+  const rows: MatrixRow[] = [];
+  const seen = new Set<string>();
+  const addRow = (path: Value[], depth: number) => {
+    const key = path.slice(0, depth + 1).map(valueKey).join("\u0001");
+    if (seen.has(key)) return;
+    seen.add(key);
+    const expandable = depth < R - 1;
+    const isCollapsed = collapsed.has(key);
+    rows.push({
+      key,
+      depth,
+      label: labelOf(path[depth], rowCols[depth]?.format),
+      expandable,
+      expanded: expandable && !isCollapsed,
+      path: path.slice(0, depth + 1),
+      cells: colPaths.flatMap((cp) => Array.from({ length: V }, (_, vi) => mk(cell(depth + 1, C, path, cp), vi))),
+      total: Array.from({ length: V }, (_, vi) => mk(cell(depth + 1, 0, path, []), vi)),
+    });
+  };
+  if (R === 0) {
+    rows.push({
+      key: "",
+      depth: 0,
+      label: "",
+      expandable: false,
+      expanded: false,
+      path: [],
+      cells: colPaths.flatMap((cp) => Array.from({ length: V }, (_, vi) => mk(cell(0, C, [], cp), vi))),
+      total: Array.from({ length: V }, (_, vi) => mk(cell(0, 0, [], []), vi)),
+    });
+  } else {
+    for (const path of rowPaths) {
+      for (let d = 0; d < R; d++) {
+        const parentKey = (k: number) => path.slice(0, k + 1).map(valueKey).join("\u0001");
+        if (d > 0 && Array.from({ length: d }, (_, k) => k).some((k) => collapsed.has(parentKey(k)))) break;
+        addRow(path, d);
+      }
+    }
+  }
+  // grand total row
+  if (R > 0 && V > 0 && f.bool("rowTotals", "show", true)) {
+    rows.push({
+      key: "\u0000grand",
+      depth: 0,
+      label: "Total",
+      expandable: false,
+      expanded: false,
+      path: [],
+      isGrand: true,
+      cells: colPaths.flatMap((cp) => Array.from({ length: V }, (_, vi) => mk(cell(0, C, [], cp), vi))),
+      total: Array.from({ length: V }, (_, vi) => mk(cell(0, 0, [], []), vi)),
+    });
+  }
+  return {
+    rowHeader: q.rows.map((r) => r.name).join(" / "),
+    headers,
+    rows,
+    valueCount: V,
+    showRowTotals: C > 0 && V > 0 && f.bool("columnTotals", "show", true),
+    totalLabels: Array.from({ length: V }, (_, vi) => (V > 1 ? `Total ${labelFor(vi)}` : "Total")),
+  };
+}
+
+// ---- cards and KPI -----------------------------------------------------------------------------------------
+
+export interface CardModel {
+  label: string;
+  text: string;
+  color?: string;
+  fontSize: number;
+  showLabel: boolean;
+}
+
+export function buildCard(visual: VisualModel, loaded: Extract<Loaded, { kind: "grouped" }>, theme: Theme): CardModel {
+  const f = new FormatReader(visual.json, theme, visual.visualType);
+  const col = loaded.query.columns.find((c) => c.role === "Values" && c.kind === "value");
+  const v = col ? loaded.rows[0]?.[col.index] : undefined;
+  const text = v ? (v.kind === "blank" ? BLANK_LABEL : isNumeric(v) && v.num !== null ? formatCompact2(v.num, f, col!.format) : v.text) : "";
+  const raw = f.raw("labels", "color");
+  const spec = raw ? condFormatFromPbir(raw) : null;
+  const color = spec && v ? (colorFn(spec, [v.num ?? null])(isNumeric(v) ? v.num : v.text) ?? undefined) : f.color("labels", "color");
+  return {
+    label: visual.roles.Values?.[0]?.displayName ?? col?.label ?? "",
+    text: v?.kind === "blank" ? "" : text,
+    color,
+    fontSize: f.num("labels", "fontSize", theme.textClasses.callout.fontSize),
+    showLabel: f.bool("categoryLabels", "show", true),
+  };
+}
+
+function formatCompact2(x: number, f: FormatReader, fmt: string | null): string {
+  const u = f.str("labels", "displayUnits", "auto") as DisplayUnits;
+  const dec = f.num("labels", "decimalPlaces", 1);
+  if (u === "none") return formatNumber(x, fmt);
+  return fmt && /[%]/.test(fmt) ? formatNumber(x, fmt) : formatCompact(x, u, dec, fmt);
+}
+
+export interface MultiRowCardModel {
+  cards: { title: string; items: { label: string; text: string }[] }[];
+}
+
+export function buildMultiRowCard(visual: VisualModel, loaded: Extract<Loaded, { kind: "grouped" }>, theme: Theme): MultiRowCardModel {
+  const f = new FormatReader(visual.json, theme, visual.visualType);
+  const q = loaded.query;
+  const fields = visual.roles.Values ?? [];
+  const cols = fields.map((pf, i) => ({ pf, pc: q.columns.find((c) => c.role === "Values" && c.order === i && c.kind !== "helper")! })).filter((x) => x.pc);
+  const cards = loaded.rows.map((row) => ({
+    title: "",
+    items: cols.map(({ pf, pc }) => ({ label: pf.displayName ?? pc.label, text: displayValue(row[pc.index], pc, f) })),
+  }));
+  return { cards };
+}
+
+export interface KpiModel {
+  value: string;
+  goal: string | null;
+  /** (value - goal) / goal, or null without a goal. */
+  variance: number | null;
+  varianceText: string | null;
+  status: "good" | "bad" | "neutral";
+  trend: { x: string; y: number | null }[];
+  label: string;
+}
+
+export function buildKpi(visual: VisualModel, loaded: Extract<Loaded, { kind: "grouped" }>, theme: Theme): KpiModel {
+  const f = new FormatReader(visual.json, theme, visual.visualType);
+  const q = loaded.query;
+  const ind = columnsOf(q, "Indicator", "value")[0];
+  const goal = columnsOf(q, "Goal", "value")[0];
+  const axis = columnsOf(q, "TrendAxis", "group")[0];
+  // the indicator is the value at the last point of the trend axis (or the only row)
+  const rows = loaded.rows;
+  const last = rows.length ? rows[rows.length - 1] : undefined;
+  const v = last && ind ? num(last[ind.index]) : null;
+  const g = last && goal ? num(last[goal.index]) : null;
+  const variance = v !== null && g !== null && g !== 0 ? (v - g) / Math.abs(g) : null;
+  const higherIsBetter = f.str("indicator", "direction", "High is good") !== "Low is good";
+  const status = variance === null ? "neutral" : (variance >= 0) === higherIsBetter ? "good" : "bad";
+  return {
+    value: v === null ? "" : formatCompact(v, "auto", 1, ind?.format ?? null),
+    goal: g === null ? null : formatCompact(g, "auto", 1, goal?.format ?? null),
+    variance,
+    varianceText: variance === null ? null : `${variance >= 0 ? "+" : ""}${(variance * 100).toFixed(1)}%`,
+    status,
+    trend: axis && ind ? rows.map((r) => ({ x: labelOf(r[axis.index], axis.format), y: num(r[ind.index]) })) : [],
+    label: visual.roles.Indicator?.[0]?.displayName ?? ind?.label ?? "",
+  };
+}
