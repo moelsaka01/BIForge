@@ -1,0 +1,563 @@
+// The forms of the Power Query editor as data: fields to show and a builder that turns the values into a transform
+// or a command. No React here, so every dialog's output can be tested.
+import type { StepColumn, Transform, DataTypeName, Condition, FilterOp } from "./types";
+import { m_text } from "./mText";
+
+export type Values = Record<string, unknown>;
+export interface Option {
+  value: string;
+  label: string;
+}
+
+export type Field =
+  | { kind: "text"; key: string; label: string; placeholder?: string; default?: string }
+  | { kind: "number"; key: string; label: string; default?: number; min?: number }
+  | { kind: "select"; key: string; label: string; options: Option[] | ((v: Values) => Option[]); default?: string }
+  | { kind: "multi"; key: string; label: string; options: Option[]; default?: string[] }
+  | { kind: "textarea"; key: string; label: string; rows?: number; default?: string; placeholder?: string }
+  | { kind: "check"; key: string; label: string; default?: boolean }
+  | { kind: "file"; key: string; label: string; extensions: string[]; name: string }
+  | { kind: "folder"; key: string; label: string }
+  | { kind: "rows"; key: string; label: string; addLabel: string; fields: Field[]; min?: number; defaultRows?: Values[] };
+
+export type DialogAction = { transform: Transform } | { command: string; args: unknown };
+
+export interface DialogDef {
+  title: string;
+  submitLabel: string;
+  fields: Field[];
+  build(values: Values): DialogAction;
+}
+
+export interface DialogContext {
+  columns: StepColumn[];
+  /** Names of the selected columns, in table order. */
+  selected: string[];
+  /** The query being edited. */
+  query: string;
+  /** Names of the other queries and their column names (for merge and append). */
+  queries: string[];
+  queryColumns: Record<string, string[]>;
+  /** Sheet names of the workbook chosen in the new-Excel dialog. */
+  sheets?: string[];
+}
+
+export type DialogKind =
+  | "filter" | "keepTop" | "keepBottom" | "keepRange" | "removeTop" | "removeBottom" | "replace" | "split" | "group" | "merge"
+  | "append" | "conditional" | "custom" | "chooseColumns" | "pivot" | "round" | "rename" | "newCsv" | "newExcel" | "newFolder"
+  | "enterData" | "customStep" | "indexCustom";
+
+const NUMERIC = /^(TINYINT|SMALLINT|INTEGER|BIGINT|HUGEINT|UTINYINT|USMALLINT|UINTEGER|UBIGINT|FLOAT|DOUBLE|DECIMAL)/i;
+
+export function valueTypeOf(duckdbType: string): "text" | "number" | "date" | "logical" {
+  if (NUMERIC.test(duckdbType)) return "number";
+  if (/^(DATE|TIMESTAMP)/i.test(duckdbType)) return "date";
+  if (/^BOOLEAN$/i.test(duckdbType)) return "logical";
+  return "text";
+}
+
+export function isTextType(duckdbType: string): boolean {
+  return /^VARCHAR$/i.test(duckdbType);
+}
+
+/** The M data type menu entries of the ribbon. */
+export const DATA_TYPES: { type: DataTypeName; label: string }[] = [
+  { type: "decimal", label: "Fixed decimal number" },
+  { type: "number", label: "Decimal number" },
+  { type: "int64", label: "Whole number" },
+  { type: "percentage", label: "Percentage" },
+  { type: "datetime", label: "Date/Time" },
+  { type: "date", label: "Date" },
+  { type: "time", label: "Time" },
+  { type: "text", label: "Text" },
+  { type: "logical", label: "True/False" },
+];
+
+export function typeLabelOf(duckdbType: string): string {
+  const u = duckdbType.toUpperCase();
+  if (u === "VARCHAR") return "Text";
+  if (u === "DATE") return "Date";
+  if (u.startsWith("TIMESTAMP")) return "Date/Time";
+  if (u === "TIME") return "Time";
+  if (u === "BOOLEAN") return "True/False";
+  if (u.startsWith("DECIMAL")) return "Fixed decimal number";
+  if (u === "DOUBLE" || u === "FLOAT") return "Decimal number";
+  if (NUMERIC.test(u)) return "Whole number";
+  return "Any";
+}
+
+const OPS: { value: FilterOp; label: string; text?: boolean; noValue?: boolean }[] = [
+  { value: "eq", label: "equals" },
+  { value: "ne", label: "does not equal" },
+  { value: "gt", label: "is greater than" },
+  { value: "ge", label: "is greater than or equal to" },
+  { value: "lt", label: "is less than" },
+  { value: "le", label: "is less than or equal to" },
+  { value: "contains", label: "contains", text: true },
+  { value: "notContains", label: "does not contain", text: true },
+  { value: "startsWith", label: "begins with", text: true },
+  { value: "endsWith", label: "ends with", text: true },
+  { value: "isNull", label: "is null", noValue: true },
+  { value: "isNotNull", label: "is not null", noValue: true },
+];
+const opOptions: Option[] = OPS.map((o) => ({ value: o.value, label: o.label }));
+
+function colOptions(c: DialogContext): Option[] {
+  return c.columns.map((x) => ({ value: x.name, label: x.name }));
+}
+
+function typeOfColumn(c: DialogContext, name: string): string {
+  return c.columns.find((x) => x.name === name)?.duckdbType ?? "VARCHAR";
+}
+
+function need(v: unknown, what: string): string {
+  const s = typeof v === "string" ? v.trim() : "";
+  if (!s) throw new Error(`${what} is required.`);
+  return s;
+}
+
+function count(v: unknown, what: string): number {
+  const n = Number(v);
+  if (!Number.isInteger(n) || n < 0) throw new Error(`${what} must be a whole number of at least 0.`);
+  return n;
+}
+
+function condition(c: DialogContext, v: Values, what = "condition"): Condition {
+  const column = need(v.column, "The column");
+  const op = (v.op as FilterOp) ?? "eq";
+  const info = OPS.find((o) => o.value === op);
+  if (!info) throw new Error(`Unknown operator for the ${what}.`);
+  if (info.noValue) return { column, op };
+  const raw = typeof v.value === "string" ? v.value : String(v.value ?? "");
+  const vt = info.text ? "text" : valueTypeOf(typeOfColumn(c, column));
+  if (raw.trim() === "" && vt !== "text") throw new Error(`The ${what} on "${column}" needs a value.`);
+  if (vt === "number" && !/^-?\d+(\.\d+)?([eE][+-]?\d+)?$/.test(raw.trim())) throw new Error(`"${raw}" is not a number (column "${column}").`);
+  if (vt === "date" && !/^\d{4}-\d{1,2}-\d{1,2}$/.test(raw.trim())) throw new Error(`"${raw}" is not a date; write it as yyyy-mm-dd (column "${column}").`);
+  if (vt === "logical" && !/^(true|false)$/i.test(raw.trim())) throw new Error(`"${raw}" is not true or false (column "${column}").`);
+  return { column, op, value: vt === "text" ? raw : raw.trim(), valueType: vt };
+}
+
+const looksNumeric = (s: string) => /^-?\d+(\.\d+)?$/.test(s.trim());
+
+const csvName = (path: string) => path.replace(/\\/g, "/").split("/").pop()?.replace(/\.[^.]*$/, "") || "Query";
+
+/** The M of a query that reads a CSV/text file (steps as Power Query writes them). */
+export function csvQueryText(path: string, delimiter: string): string {
+  return `let\n    Source = Csv.Document(File.Contents(${m_text(path)}), [Delimiter=${m_text(delimiter)}, Encoding=65001, QuoteStyle=QuoteStyle.Csv]),\n    #"Promoted Headers" = Table.PromoteHeaders(Source, [PromoteAllScalars=true])\nin\n    #"Promoted Headers"`;
+}
+
+export function excelQueryText(path: string, sheet: string): string {
+  return `let\n    Source = Excel.Workbook(File.Contents(${m_text(path)}), true, true),\n    ${quoteName(sheet + "_Sheet")} = Source{[Item=${m_text(sheet)},Kind="Sheet"]}[Data]\nin\n    ${quoteName(sheet + "_Sheet")}`;
+}
+
+function quoteName(n: string): string {
+  return `#"${n.replace(/"/g, '""')}"`;
+}
+
+/** `#table` M for rows typed or pasted into Enter Data: the first line holds the column names. */
+export function enterDataText(input: string): string {
+  const lines = input.replace(/\r\n/g, "\n").split("\n").filter((l) => l.trim() !== "");
+  if (lines.length === 0) throw new Error("Type or paste at least a row of column names.");
+  const sep = lines[0].includes("\t") ? "\t" : ",";
+  const cells = lines.map((l) => l.split(sep).map((c) => c.trim()));
+  const names = cells[0];
+  if (names.some((n) => n === "")) throw new Error("Every column needs a name in the first line.");
+  if (new Set(names).size !== names.length) throw new Error("Column names must be different.");
+  const rows = cells.slice(1).map((r) => {
+    if (r.length > names.length) throw new Error("A row has more values than there are column names.");
+    return `{${names.map((_, i) => (r[i] === undefined || r[i] === "" ? "null" : m_text(r[i]))).join(", ")}}`;
+  });
+  return `let\n    Source = #table({${names.map(m_text).join(", ")}}, {${rows.join(", ")}})\nin\n    Source`;
+}
+
+export function dialogFor(kind: DialogKind, c: DialogContext): DialogDef {
+  const cols = colOptions(c);
+  const first = c.selected[0] ?? c.columns[0]?.name ?? "";
+  switch (kind) {
+    case "filter":
+      return {
+        title: "Filter Rows",
+        submitLabel: "OK",
+        fields: [
+          { kind: "select", key: "combine", label: "Keep rows where", options: [{ value: "and", label: "all conditions are true" }, { value: "or", label: "any condition is true" }], default: "and" },
+          {
+            kind: "rows",
+            key: "conditions",
+            label: "Conditions",
+            addLabel: "Add condition",
+            min: 1,
+            defaultRows: [{ column: first, op: "eq", value: "" }],
+            fields: [
+              { kind: "select", key: "column", label: "Column", options: cols, default: first },
+              { kind: "select", key: "op", label: "Operator", options: opOptions, default: "eq" },
+              { kind: "text", key: "value", label: "Value" },
+            ],
+          },
+        ],
+        build: (v) => ({
+          transform: { kind: "filterRows", combine: v.combine === "or" ? "or" : "and", conditions: (v.conditions as Values[]).map((r) => condition(c, r)) },
+        }),
+      };
+    case "keepTop":
+    case "keepBottom":
+    case "removeTop":
+    case "removeBottom": {
+      const titles = { keepTop: "Keep Top Rows", keepBottom: "Keep Bottom Rows", removeTop: "Remove Top Rows", removeBottom: "Remove Bottom Rows" } as const;
+      const kinds = { keepTop: "keepTopRows", keepBottom: "keepBottomRows", removeTop: "removeTopRows", removeBottom: "removeBottomRows" } as const;
+      return {
+        title: titles[kind],
+        submitLabel: "OK",
+        fields: [{ kind: "number", key: "count", label: "Number of rows", default: 10, min: 0 }],
+        build: (v) => ({ transform: { kind: kinds[kind], count: count(v.count, "The number of rows") } }),
+      };
+    }
+    case "keepRange":
+      return {
+        title: "Keep Range of Rows",
+        submitLabel: "OK",
+        fields: [
+          { kind: "number", key: "first", label: "First row", default: 1, min: 1 },
+          { kind: "number", key: "count", label: "Number of rows", default: 10, min: 0 },
+        ],
+        build: (v) => {
+          const f = count(v.first, "The first row");
+          if (f < 1) throw new Error("The first row must be at least 1.");
+          return { transform: { kind: "keepRange", offset: f - 1, count: count(v.count, "The number of rows") } };
+        },
+      };
+    case "replace":
+      return {
+        title: "Replace Values",
+        submitLabel: "OK",
+        fields: [
+          { kind: "multi", key: "columns", label: "In columns", options: cols, default: c.selected.length ? c.selected : first ? [first] : [] },
+          { kind: "check", key: "findNull", label: "Value to find is null" },
+          { kind: "text", key: "find", label: "Value to find" },
+          { kind: "text", key: "replace", label: "Replace with" },
+          { kind: "check", key: "entire", label: "Match entire cell contents", default: true },
+        ],
+        build: (v) => {
+          const columns = (v.columns as string[]) ?? [];
+          if (!columns.length) throw new Error("Choose at least one column.");
+          const numeric = columns.every((n) => valueTypeOf(typeOfColumn(c, n)) === "number");
+          const find = v.findNull ? null : String(v.find ?? "");
+          if (find === "" && !v.findNull) throw new Error("Enter the value to find (or tick \"Value to find is null\").");
+          const rep = String(v.replace ?? "");
+          if (numeric) {
+            if ((find !== null && !looksNumeric(find)) || !(rep === "" ? false : looksNumeric(rep))) throw new Error("These columns hold numbers: the value to find and the replacement must be numbers.");
+            return { transform: { kind: "replaceValues", columns, find: find === null ? null : Number(find), replace: Number(rep), mode: "value", valueType: "number" } };
+          }
+          return { transform: { kind: "replaceValues", columns, find, replace: rep, mode: v.entire || find === null ? "value" : "text" } };
+        },
+      };
+    case "split":
+      return {
+        title: "Split Column",
+        submitLabel: "OK",
+        fields: [
+          { kind: "select", key: "column", label: "Column", options: cols, default: first },
+          {
+            kind: "select",
+            key: "by",
+            label: "Split by",
+            options: [
+              { value: "delimiter", label: "Delimiter" },
+              { value: "positions", label: "Positions" },
+              { value: "lengths", label: "Lengths" },
+              { value: "repeatedLength", label: "Number of characters (repeatedly)" },
+            ],
+            default: "delimiter",
+          },
+          { kind: "text", key: "delimiter", label: "Delimiter", default: "," },
+          { kind: "text", key: "list", label: "Positions or lengths (comma separated)", placeholder: "0, 3, 6" },
+          { kind: "number", key: "length", label: "Number of characters", default: 3, min: 1 },
+          { kind: "number", key: "count", label: "Number of new columns", default: 2, min: 1 },
+        ],
+        build: (v) => {
+          const column = need(v.column, "The column");
+          const by = (v.by as "delimiter" | "positions" | "lengths" | "repeatedLength") ?? "delimiter";
+          const n = count(v.count, "The number of new columns");
+          if (n < 1) throw new Error("A column must be split into at least one column.");
+          const list = String(v.list ?? "").split(",").map((s) => s.trim()).filter(Boolean).map(Number);
+          if (by === "delimiter") return { transform: { kind: "splitColumn", column, by, delimiter: String(v.delimiter ?? ""), count: n } };
+          if (by === "repeatedLength") return { transform: { kind: "splitColumn", column, by, length: count(v.length, "The number of characters"), count: n } };
+          if (list.length === 0 || list.some((x) => !Number.isInteger(x) || x < 0)) throw new Error("Enter whole numbers separated by commas.");
+          return { transform: { kind: "splitColumn", column, by, ...(by === "positions" ? { positions: list } : { lengths: list }), count: Math.max(n, by === "positions" ? list.length : list.length) } };
+        },
+      };
+    case "group": {
+      const aggOps: Option[] = [
+        { value: "sum", label: "Sum" },
+        { value: "average", label: "Average" },
+        { value: "min", label: "Min" },
+        { value: "max", label: "Max" },
+        { value: "median", label: "Median" },
+        { value: "count", label: "Count" },
+        { value: "countDistinct", label: "Count Distinct" },
+        { value: "countRows", label: "Count Rows" },
+      ];
+      return {
+        title: "Group By",
+        submitLabel: "OK",
+        fields: [
+          { kind: "multi", key: "keys", label: "Group by", options: cols, default: c.selected },
+          {
+            kind: "rows",
+            key: "aggregates",
+            label: "Aggregations",
+            addLabel: "Add aggregation",
+            min: 1,
+            defaultRows: [{ name: "Count", op: "countRows", column: "" }],
+            fields: [
+              { kind: "text", key: "name", label: "New column name" },
+              { kind: "select", key: "op", label: "Operation", options: aggOps, default: "countRows" },
+              { kind: "select", key: "column", label: "Column", options: [{ value: "", label: "(none)" }, ...cols], default: "" },
+            ],
+          },
+        ],
+        build: (v) => {
+          const keys = (v.keys as string[]) ?? [];
+          const aggregates = (v.aggregates as Values[]).map((r) => {
+            const name = need(r.name, "Each aggregation needs a new column name; it");
+            const op = r.op as "sum";
+            const column = String(r.column ?? "");
+            if (op !== ("countRows" as string) && !column) throw new Error(`The aggregation "${name}" needs a column.`);
+            return op === ("countRows" as string) ? { name, op } : { name, op, column };
+          });
+          const names = [...keys, ...aggregates.map((a) => a.name)];
+          if (new Set(names).size !== names.length) throw new Error("The new column names must differ from each other and from the grouping columns.");
+          return { transform: { kind: "groupBy", keys, aggregates } };
+        },
+      };
+    }
+    case "merge": {
+      const joinKinds: Option[] = [
+        { value: "leftOuter", label: "Left outer (all from first, matching from second)" },
+        { value: "rightOuter", label: "Right outer (all from second, matching from first)" },
+        { value: "fullOuter", label: "Full outer (all rows from both)" },
+        { value: "inner", label: "Inner (only matching rows)" },
+        { value: "leftAnti", label: "Left anti (rows only in first)" },
+      ];
+      return {
+        title: "Merge Queries",
+        submitLabel: "OK",
+        fields: [
+          { kind: "select", key: "right", label: "Second query", options: c.queries.map((q) => ({ value: q, label: q })), default: c.queries[0] ?? "" },
+          { kind: "select", key: "leftKey", label: `Matching column in ${c.query}`, options: cols, default: first },
+          {
+            kind: "select",
+            key: "rightKey",
+            label: "Matching column in the second query",
+            options: (v) => (c.queryColumns[String(v.right ?? c.queries[0] ?? "")] ?? []).map((n) => ({ value: n, label: n })),
+          },
+          { kind: "select", key: "joinKind", label: "Join kind", options: joinKinds, default: "leftOuter" },
+          { kind: "check", key: "expand", label: "Expand the columns of the second query", default: true },
+        ],
+        build: (v) => {
+          const right = need(v.right, "The second query");
+          const leftKey = need(v.leftKey, "The matching column of the first query");
+          const rightKey = need(v.rightKey, "The matching column of the second query");
+          const rightCols = c.queryColumns[right] ?? [];
+          const expand = v.expand
+            ? rightCols.filter((n) => n !== rightKey || true).map((n) => ({ name: n, newName: c.columns.some((x) => x.name === n) ? `${right}.${n}` : n }))
+            : [];
+          return { transform: { kind: "merge", right, leftKeys: [leftKey], rightKeys: [rightKey], joinKind: (v.joinKind as "inner") ?? "leftOuter", newColumn: right, expand } };
+        },
+      };
+    }
+    case "append":
+      return {
+        title: "Append Queries",
+        submitLabel: "OK",
+        fields: [{ kind: "multi", key: "queries", label: "Queries to add to the end of this one", options: c.queries.map((q) => ({ value: q, label: q })) }],
+        build: (v) => {
+          const queries = (v.queries as string[]) ?? [];
+          if (!queries.length) throw new Error("Choose at least one query.");
+          return { transform: { kind: "append", queries } };
+        },
+      };
+    case "conditional":
+      return {
+        title: "Add Conditional Column",
+        submitLabel: "OK",
+        fields: [
+          { kind: "text", key: "name", label: "New column name", default: "Custom" },
+          {
+            kind: "rows",
+            key: "clauses",
+            label: "If / else if",
+            addLabel: "Add clause",
+            min: 1,
+            defaultRows: [{ column: first, op: "eq", value: "", result: "" }],
+            fields: [
+              { kind: "select", key: "column", label: "Column", options: cols, default: first },
+              { kind: "select", key: "op", label: "Operator", options: opOptions, default: "eq" },
+              { kind: "text", key: "value", label: "Value" },
+              { kind: "text", key: "result", label: "Then" },
+            ],
+          },
+          { kind: "text", key: "otherwise", label: "Otherwise", default: "" },
+        ],
+        build: (v) => {
+          const lit = (s: unknown) => {
+            const t = String(s ?? "");
+            return looksNumeric(t) ? { value: Number(t), type: "number" as const } : { value: t, type: "text" as const };
+          };
+          const name = need(v.name, "The column name");
+          if (c.columns.some((x) => x.name === name)) throw new Error(`The column "${name}" already exists.`);
+          const clauses = (v.clauses as Values[]).map((r) => {
+            const res = lit(r.result);
+            return { condition: condition(c, r, "clause"), result: res.value, resultType: res.type };
+          });
+          const other = String(v.otherwise ?? "") === "" ? { value: null, type: undefined } : lit(v.otherwise);
+          return { transform: { kind: "addConditionalColumn", name, clauses, elseValue: other.value, ...(other.type ? { elseType: other.type } : {}) } };
+        },
+      };
+    case "custom":
+      return {
+        title: "Custom Column",
+        submitLabel: "OK",
+        fields: [
+          { kind: "text", key: "name", label: "New column name", default: "Custom" },
+          { kind: "textarea", key: "formula", label: "Custom column formula  (use [Column] to refer to a column)", rows: 4, default: "" },
+        ],
+        build: (v) => {
+          const name = need(v.name, "The column name");
+          if (c.columns.some((x) => x.name === name)) throw new Error(`The column "${name}" already exists.`);
+          return { transform: { kind: "addCustomColumn", name, formula: need(v.formula, "The formula") } };
+        },
+      };
+    case "chooseColumns":
+      return {
+        title: "Choose Columns",
+        submitLabel: "OK",
+        fields: [{ kind: "multi", key: "columns", label: "Columns to keep", options: cols, default: c.columns.map((x) => x.name) }],
+        build: (v) => {
+          const keep = new Set((v.columns as string[]) ?? []);
+          if (keep.size === 0) throw new Error("Choose at least one column.");
+          return { transform: { kind: "keepColumns", columns: c.columns.map((x) => x.name).filter((n) => keep.has(n)) } };
+        },
+      };
+    case "pivot":
+      return {
+        title: "Pivot Column",
+        submitLabel: "OK",
+        fields: [
+          { kind: "select", key: "attribute", label: "Column whose values become the new columns", options: cols, default: first },
+          { kind: "select", key: "value", label: "Values column", options: cols, default: c.columns.find((x) => x.name !== first && valueTypeOf(x.duckdbType) === "number")?.name ?? c.columns.find((x) => x.name !== first)?.name ?? "" },
+          { kind: "select", key: "aggregate", label: "Aggregate value function", options: [{ value: "sum", label: "Sum" }, { value: "count", label: "Count (all)" }, { value: "min", label: "Minimum" }, { value: "max", label: "Maximum" }, { value: "average", label: "Average" }, { value: "none", label: "Don't aggregate" }], default: "sum" },
+        ],
+        build: (v) => {
+          const attribute = need(v.attribute, "The column to pivot");
+          const value = need(v.value, "The values column");
+          if (attribute === value) throw new Error("The pivoted column and the values column must be different.");
+          return { transform: { kind: "pivot", attribute, value, attributeIsText: isTextType(typeOfColumn(c, attribute)), aggregate: (v.aggregate as "sum") ?? "sum" } };
+        },
+      };
+    case "round":
+      return {
+        title: "Round",
+        submitLabel: "OK",
+        fields: [
+          { kind: "multi", key: "columns", label: "Columns", options: cols, default: c.selected },
+          { kind: "number", key: "digits", label: "Decimal places", default: 0 },
+        ],
+        build: (v) => {
+          const columns = (v.columns as string[]) ?? [];
+          if (!columns.length) throw new Error("Choose at least one column.");
+          return { transform: { kind: "round", columns, digits: Number(v.digits ?? 0) } };
+        },
+      };
+    case "rename":
+      return {
+        title: "Rename Column",
+        submitLabel: "OK",
+        fields: [
+          { kind: "select", key: "column", label: "Column", options: cols, default: first },
+          { kind: "text", key: "to", label: "New name" },
+        ],
+        build: (v) => {
+          const column = need(v.column, "The column");
+          const to = need(v.to, "The new name");
+          if (to !== column && c.columns.some((x) => x.name === to)) throw new Error(`A column named "${to}" already exists.`);
+          return { transform: { kind: "renameColumns", pairs: [[column, to]] } };
+        },
+      };
+    case "indexCustom":
+      return {
+        title: "Add Index Column",
+        submitLabel: "OK",
+        fields: [
+          { kind: "text", key: "name", label: "Column name", default: "Index" },
+          { kind: "number", key: "start", label: "Starting index", default: 0 },
+          { kind: "number", key: "step", label: "Increment", default: 1 },
+        ],
+        build: (v) => {
+          const name = need(v.name, "The column name");
+          if (c.columns.some((x) => x.name === name)) throw new Error(`The column "${name}" already exists.`);
+          return { transform: { kind: "addIndexColumn", name, start: Number(v.start ?? 0), step: Number(v.step ?? 1) } };
+        },
+      };
+    case "customStep":
+      return {
+        title: "Insert Step",
+        submitLabel: "OK",
+        fields: [
+          { kind: "text", key: "name", label: "Step name", default: "Custom Step" },
+          { kind: "textarea", key: "expr", label: "Formula  (the previous step is available by its name)", rows: 4 },
+        ],
+        build: (v) => ({ transform: { kind: "custom", name: need(v.name, "The step name"), expr: need(v.expr, "The formula") } }),
+      };
+    case "newCsv":
+      return {
+        title: "Text/CSV",
+        submitLabel: "OK",
+        fields: [
+          { kind: "file", key: "path", label: "File path", extensions: ["csv", "txt", "tsv"], name: "Text or CSV files" },
+          { kind: "text", key: "delimiter", label: "Delimiter", default: "," },
+        ],
+        build: (v) => {
+          const path = need(v.path, "The file path");
+          return { command: "query.add", args: { name: csvName(path), text: csvQueryText(path, String(v.delimiter ?? ",") || ","), loaded: true } };
+        },
+      };
+    case "newExcel":
+      return {
+        title: "Excel workbook",
+        submitLabel: "OK",
+        fields: [
+          { kind: "file", key: "path", label: "File path", extensions: ["xlsx", "xlsm", "xls"], name: "Excel workbooks" },
+          { kind: "select", key: "sheet", label: "Sheet", options: (c.sheets ?? []).map((s) => ({ value: s, label: s })), default: c.sheets?.[0] },
+        ],
+        build: (v) => {
+          const path = need(v.path, "The file path");
+          const sheet = need(v.sheet, "The sheet");
+          return { command: "query.add", args: { name: sheet, text: excelQueryText(path, sheet), loaded: true } };
+        },
+      };
+    case "newFolder":
+      return {
+        title: "Folder",
+        submitLabel: "OK",
+        fields: [
+          { kind: "folder", key: "folder", label: "Folder path" },
+          { kind: "text", key: "extension", label: "Combine files with this extension", default: "csv" },
+          { kind: "text", key: "delimiter", label: "Delimiter", default: "," },
+        ],
+        build: (v) => ({
+          command: "query.addFromFolder",
+          args: { folder: need(v.folder, "The folder path"), extension: need(v.extension, "The extension"), delimiter: String(v.delimiter ?? ",") || "," },
+        }),
+      };
+    case "enterData":
+      return {
+        title: "Create Table",
+        submitLabel: "OK",
+        fields: [
+          { kind: "text", key: "name", label: "Query name", default: "Table" },
+          { kind: "textarea", key: "data", label: "Column names in the first line, then one row per line (comma or tab separated)", rows: 8, placeholder: "Name,Qty\nPen,3\nInk,4" },
+        ],
+        build: (v) => ({ command: "query.add", args: { name: need(v.name, "The query name"), text: enterDataText(String(v.data ?? "")), loaded: true } }),
+      };
+  }
+}

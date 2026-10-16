@@ -7,7 +7,7 @@ import { removeRelationshipsOnColumns } from "./relationships";
 
 const SOURCE_ANNOTATION = "BIForge.Source";
 
-const node = (kind: string, name: string | null, props: TmdlNode["props"] = [], children: TmdlNode[] = []): TmdlNode => ({
+export const node = (kind: string, name: string | null, props: TmdlNode["props"] = [], children: TmdlNode[] = []): TmdlNode => ({
   description: [],
   kind,
   name,
@@ -16,9 +16,9 @@ const node = (kind: string, name: string | null, props: TmdlNode["props"] = [], 
   children,
 });
 
-const text = (key: string, v: string) => ({ key, value: { Text: v } });
+export const text = (key: string, v: string) => ({ key, value: { Text: v } });
 
-function columnNode(name: string, t: BiType, newId: () => string, existing?: TmdlNode): TmdlNode {
+export function columnNode(name: string, t: BiType, newId: () => string, existing?: TmdlNode): TmdlNode {
   if (existing) {
     // Refresh keeps user-edited properties (format, description, lineageTag, ...) and only updates what the source defines.
     const c = structuredClone(existing);

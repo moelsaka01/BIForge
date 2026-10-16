@@ -437,3 +437,19 @@ fn aggregate(name: &str, v: &Value) -> R<Value> {
         other => Err(MError::expr(format!("{name} needs a list or a column of a group, found {}.", other.type_name()))),
     }
 }
+
+/// Functions the library knows by name but that BIForge's engine reports as not supported.
+pub const NOT_SUPPORTED: &[&str] = &[
+    "Web.Contents", "Sql.Database", "PostgreSQL.Database", "OData.Feed", "Table.RemoveRowsWithErrors", "Table.SelectRowsWithErrors",
+    "Table.ReplaceErrorValues", "Table.Transpose", "Table.CombineColumns", "Table.ExpandRecordColumn", "Table.ExpandListColumn",
+    "Table.Profile", "Table.TransformColumnNames", "#time", "#duration", "Splitter.SplitTextByEachDelimiter",
+    "Splitter.SplitTextByCharacterTransition",
+];
+
+/// Sorted names of the library functions that work (used for editor completions; a test keeps the app's copy in sync).
+pub fn supported_functions() -> Vec<&'static str> {
+    let mut v: Vec<&'static str> = SCALAR_FNS.iter().chain(TABLE_FNS.iter()).copied().filter(|n| !NOT_SUPPORTED.contains(n)).collect();
+    v.sort_unstable();
+    v.dedup();
+    v
+}

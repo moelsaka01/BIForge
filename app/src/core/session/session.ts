@@ -3,7 +3,11 @@ import { ReportRuntime } from "../report/runtime";
 import type { Project, SaveReport } from "../model/types";
 import type { EngineApi, SourceSpec } from "../data/types";
 import { applyImport, getTableSource, importedTables } from "../model/tables";
-import { listTables } from "../model/ops";
+import { listTables, deleteTable } from "../model/ops";
+import { QueryDraft } from "../queries/draft";
+import type { MApi } from "../queries/types";
+import { applyQueryLoad, expressionExists, listQueries, queryTexts, removeExpression, upsertExpression, userMTables } from "../queries/queries";
+import { findTable } from "../model/ops";
 
 export interface ProjectIO {
   newProject(root: string, name: string): Promise<Project>;
@@ -50,6 +54,8 @@ export class Session {
   readonly store = new DocumentStore();
   /** View state of the open report (selection, drilling, current page). */
   readonly report = new ReportRuntime();
+  /** Editing state of the Power Query editor. */
+  readonly queries = new QueryDraft();
   private snap: SessionSnapshot = { root: null, pendingRecovery: null, lastMessage: null, dataTables: [] };
   private listeners = new Set<() => void>();
   /** Project roots whose recovery snapshot was written by this running app (not left behind by a crash). */
@@ -59,6 +65,7 @@ export class Session {
     readonly io: ProjectIO,
     readonly dialogs: Dialogs,
     readonly engine: EngineApi | null = null,
+    readonly m: MApi | null = null,
   ) {}
 
   getSnapshot = (): SessionSnapshot => this.snap;
@@ -177,7 +184,7 @@ export class Session {
         else await this.engine.dropTable(n);
       }
       this.set({ dataTables: keep });
-      const missing = importedTables(project).filter((t) => !keep.some((k) => k.toLowerCase() === t.toLowerCase()));
+      const missing = [...importedTables(project), ...userMTables(project)].filter((t) => !keep.some((k) => k.toLowerCase() === t.toLowerCase()));
       return missing.length ? ` Data for ${missing.length} table(s) is not loaded; use Refresh all.` : "";
     } catch (e) {
       this.set({ dataTables: [] });
@@ -217,8 +224,89 @@ export class Session {
   async refreshTable(name: string): Promise<void> {
     const p = this.store.project;
     const spec = p ? getTableSource(p, name) : null;
-    if (!spec) throw new Error(`Table "${name}" was not imported from a source, so it cannot be refreshed.`);
-    await this.importTable(name, spec);
+    if (spec) return this.importTable(name, spec);
+    if (p && userMTables(p).some((t) => t.toLowerCase() === name.toLowerCase())) return this.refreshQuery(name);
+    throw new Error(`Table "${name}" was not imported from a source, so it cannot be refreshed.`);
+  }
+
+  /** Runs the M query of a table and replaces its data (the document changes only if the query succeeds). */
+  private async refreshQuery(name: string): Promise<void> {
+    const engine = this.requireEngine();
+    if (!this.m) throw new Error("The query engine is not available.");
+    const p = this.store.project!;
+    const texts = queryTexts(p);
+    const info = await this.m.load(texts, name, name);
+    this.store.transact(`Refresh "${name}"`, (pp) => void applyQueryLoad(pp, info, texts[name]));
+    void engine;
+    this.markLoaded(info.name);
+    this.setMessage(`Refreshed "${info.name}": ${info.rowCount} rows, ${info.columns.length} columns.`);
+  }
+
+  /** Opens the Power Query editor on the project's queries. */
+  openQueryEditor(select?: string | null): void {
+    const p = this.store.project;
+    if (!p) throw new Error("Open or create a project first.");
+    this.queries.open(listQueries(p), select);
+  }
+
+  /**
+   * Applies the editor's changes: changed loaded queries (and the ones that use them) run and replace their tables,
+   * other queries are stored as named expressions. A query that fails stays in the editor, the others are applied.
+   */
+  async applyQueries(): Promise<{ loaded: string[]; failures: { query: string; error: string }[] }> {
+    const engine = this.requireEngine();
+    const m = this.m;
+    if (!m) throw new Error("The query engine is not available.");
+    const draft = this.queries;
+    const snap = draft.getSnapshot();
+    const texts = draft.texts();
+    const deps = await m.dependencies(texts);
+    const changed = new Set(snap.queries.filter((q) => draft.isChanged(q)).map((q) => q.name));
+    const usesChanged = (name: string, seen = new Set<string>()): boolean => {
+      if (seen.has(name)) return false;
+      seen.add(name);
+      return (deps[name] ?? []).some((d) => changed.has(d) || usesChanged(d, seen));
+    };
+    const toLoad = snap.queries.filter((q) => q.loaded && (changed.has(q.name) || usesChanged(q.name)));
+    const loaded: { name: string; info: Awaited<ReturnType<MApi["load"]>> }[] = [];
+    const failures: { query: string; error: string }[] = [];
+    for (const q of toLoad) {
+      try {
+        loaded.push({ name: q.name, info: await m.load(texts, q.name, q.name) });
+      } catch (e) {
+        failures.push({ query: q.name, error: errText(e) });
+      }
+    }
+    let kinds: Record<string, string> = {};
+    try {
+      kinds = await m.queryKinds(texts);
+    } catch {
+      /* the result type annotation falls back to Table */
+    }
+    const resultType = (k: string | undefined) => ({ table: "Table", number: "Number", text: "Text", function: "Function", list: "List", record: "Record", logical: "Logical" })[k ?? "table"] ?? "Table";
+    const removedDone: string[] = [];
+    const applied = snap.queries.filter((q) => !q.loaded && changed.has(q.name)).map((q) => q.name);
+    this.store.transact("Apply query changes", (p) => {
+      for (const { name, info } of loaded) applyQueryLoad(p, info, texts[name]);
+      for (const q of snap.queries) if (!q.loaded && changed.has(q.name)) upsertExpression(p, q.name, q.text, resultType(kinds[q.name]));
+      for (const r of snap.removed) {
+        if (expressionExists(p, r)) removeExpression(p, r);
+        else if (findTable(p, r)) deleteTable(p, r);
+        removedDone.push(r);
+      }
+    });
+    for (const r of removedDone) {
+      if (!snap.queries.some((q) => q.name === r)) await engine.dropTable(r).catch(() => undefined);
+      this.set({ dataTables: this.snap.dataTables.filter((t) => t.toLowerCase() !== r.toLowerCase()) });
+    }
+    for (const { name } of loaded) this.markLoaded(name);
+    draft.markApplied([...loaded.map((l) => l.name), ...applied], removedDone);
+    this.setMessage(
+      failures.length
+        ? `Applied ${loaded.length} of ${toLoad.length} loaded quer${toLoad.length === 1 ? "y" : "ies"}. Failed: ${failures.map((f) => `${f.query} (${f.error})`).join("; ")}`
+        : `Applied query changes: ${loaded.length} table(s) loaded.`,
+    );
+    return { loaded: loaded.map((l) => l.name), failures };
   }
 
   /** Refreshes every imported table; one failing table does not stop the others. Returns the failures. */
@@ -226,7 +314,7 @@ export class Session {
     const p = this.store.project;
     if (!p) throw new Error("Open or create a project first.");
     const failures: { table: string; error: string }[] = [];
-    const tables = importedTables(p);
+    const tables = [...importedTables(p), ...userMTables(p)];
     for (const t of tables) {
       try {
         await this.refreshTable(t);

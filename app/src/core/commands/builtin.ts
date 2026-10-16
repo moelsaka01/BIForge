@@ -4,6 +4,7 @@ import * as ops from "../model/ops";
 import * as rel from "../model/relationships";
 import type { SourceSpec } from "../data/types";
 import { registerReportCommands } from "./reportCommands";
+import { registerQueryCommands } from "./queryCommands";
 
 function argsOf<T extends object>(args: unknown, required: (keyof T & string)[]): T {
   const a = (args ?? {}) as Record<string, unknown>;
@@ -210,6 +211,7 @@ export function createRegistry(session: Session): CommandRegistry<Session> {
   });
 
   registerReportCommands(r);
+  registerQueryCommands(r);
 
   return r;
 }

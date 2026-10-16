@@ -10,6 +10,7 @@ import { ImportDialog } from "./views/ImportDialog";
 import { MeasureEditor } from "./views/MeasureEditor";
 import { createMonacoEditor } from "./core/dax/monaco";
 import { ReportView } from "./views/report/ReportView";
+import { PowerQueryEditor } from "./views/pq/PowerQueryEditor";
 import { modelInfo } from "./core/report/modelInfo";
 import { asValueField, routeField, usedIn } from "./core/report/fieldRouting";
 import { parseVisual, visualKey } from "./core/report/visualDoc";
@@ -110,6 +111,7 @@ export function App() {
         {btn("file.save")}
         {btn("edit.undo")}
         {btn("edit.redo")}
+        {btn("query.editor.open")}
         <Text size={200}>{doc.undoLabel ? `Undo: ${doc.undoLabel}` : ""}</Text>
       </div>
 
@@ -155,6 +157,7 @@ export function App() {
           </div>
         </div>
       )}
+      <PowerQueryEditor session={session} registry={registry} />
       {session.engine && (
         <ImportDialog
           open={importOpen}

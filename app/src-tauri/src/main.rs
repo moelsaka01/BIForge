@@ -3,6 +3,7 @@
 mod commands;
 mod data;
 mod dax;
+mod pq;
 
 fn main() {
     tauri::Builder::default()
@@ -18,6 +19,16 @@ fn main() {
             dax::dax_catalog,
             dax::dax_check,
             dax::dax_query,
+            pq::m_parse_query,
+            pq::m_check,
+            pq::m_apply_transform,
+            pq::m_edit_step,
+            pq::m_dependencies,
+            pq::m_folder_query,
+            pq::m_analyze,
+            pq::m_preview,
+            pq::m_load,
+            pq::m_query_kinds,
             data::engine_open_store,
             data::engine_import,
             data::engine_table_info,

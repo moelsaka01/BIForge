@@ -268,3 +268,22 @@ fn import_partition_prints_in_the_form_power_bi_desktop_writes() {
     assert_eq!(printed, expected);
     assert_eq!(tmdl::parse(&printed).unwrap().nodes[0], tmdl::parse(expected).unwrap().nodes[0]);
 }
+
+#[test]
+fn named_expressions_for_queries_and_parameters_round_trip() {
+    use biforge_model::tmdl::{Expr, Node, Prop};
+    let mut q = Node::new("expression", Some("Staging Orders"));
+    q.default = Some(Expr { text: "let\n\tSource = 1\nin\n\tSource".into(), verbatim: false });
+    q.props.push(Prop { key: "lineageTag".into(), value: PropValue::Text("abc".into()) });
+    let mut ann = Node::new("annotation", Some("PBI_ResultType"));
+    ann.default = Some(Expr { text: "Table".into(), verbatim: false });
+    q.children.push(ann);
+    let mut param = Node::new("expression", Some("Region"));
+    param.default = Some(Expr { text: "\"West\" meta [IsParameterQuery=true, Type=\"Text\", IsParameterQueryRequired=true]".into(), verbatim: false });
+    let doc = tmdl::Document { nodes: vec![q, param] };
+    let printed = tmdl::print(&doc);
+    assert_eq!(tmdl::parse(&printed).unwrap(), doc, "{printed}");
+    assert!(printed.contains("expression 'Staging Orders' ="), "{printed}");
+    assert!(printed.contains("expression Region = \"West\" meta [IsParameterQuery=true"), "{printed}");
+    assert_eq!(tmdl::print(&tmdl::parse(&printed).unwrap()), printed);
+}

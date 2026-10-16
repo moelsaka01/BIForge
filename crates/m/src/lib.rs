@@ -7,6 +7,8 @@ pub mod lexer;
 pub mod parser;
 pub mod run;
 pub mod stdlib;
+pub mod steps;
+pub mod transforms;
 pub mod value;
 
 pub use backend::{Backend, SourceRequest};
