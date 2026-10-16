@@ -4,6 +4,12 @@ BIForge: open-source Windows desktop app recreating Power BI Desktop-style workf
 
 Follow docs/MASTER_PLAN.md; work one phase per session.
 
+## Scope (changed 2026-10-16)
+Target: every feature of Power BI Desktop 2.158 except cloud features. docs/INVENTORY.md is the definition of "everything"; every inventory item has a status in docs/COVERAGE.md.
+Excluded entirely (no UI, no disabled buttons, no menu entries; listed only under "Excluded (cloud)" in COVERAGE.md): sign in / accounts, Publish, Share, OneLake catalog, Dataverse, Fabric / SQL databases in Fabric, datahub, Shared with me, Copilot and "Prep data for AI", sensitivity labels, Power BI service features, cloud-only connectors, external semantic models from the service.
+Library rule: prefer a mature library (Apache-2.0/MIT/BSD only; check and record the license) over custom code when it gives the same result: tiberius (SQL Server, M source Sql.Database), odbc-api, DuckDB extensions, reqwest + quick-xml (Web, REST, OData, XML), calamine, ECharts (maps with Natural Earth boundaries, no online tiles), Monaco, WebView2 printing via Tauri, tauri-driver/WebDriver or Playwright for real-window UI tests.
+Never intercept system keys (Print Screen, Win+key, Alt+Tab, ...).
+
 ## Fixed decisions (ask the user before changing any)
 - Stack: Tauri 2 (Windows), React + TypeScript (Vite), Fluent UI React v9, Monaco (DAX/M editors), Apache ECharts, Rust core, DuckDB, Apache Arrow. No Polars, no SQLite metadata store.
 - DAX: custom parser + semantic engine in Rust. Compile measures to DuckDB SQL where semantics allow; filter context, context transition and blank semantics handled in the engine; hybrid evaluator where SQL cannot express behavior.

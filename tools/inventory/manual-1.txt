@@ -1,0 +1,271 @@
+# Format: "## Area" starts an area; "### Group" a group; items are "S | text" with S = D (done-tested), P (partial), N (not started).
+## 1. Start screen
+### Navigation and layout
+D | Home page with Recent list
+D | Open (file dialog for a project)
+D | Options and settings entry
+D | About entry
+P | Data-source cards: Blank report, Excel workbook, Get data from other sources
+N | Card: SQL Server
+N | Card: Learn with sample data (own sample project)
+D | Collapsible Recommended section with tip carousel (original tips)
+D | Recent list: keyword filter, date filter, remove entry
+D | Missing recent project reports the error and can be removed
+N | Recent list: pin an entry, open with Enter, thumbnail
+N | Show the start screen on launch setting
+## 2. Title bar and window
+### Title bar
+D | Quick-access Save, Undo, Redo
+D | Document title with saved/unsaved state
+D | Command search box (finds ribbon commands)
+D | Light/dark theme toggle
+D | Theme choice: Light, Dark
+N | Theme choice: Use system setting (follows Windows light/dark)
+D | Window buttons minimize / maximize / close, drag region, minimum size
+D | Close guard for unsaved changes (Save, Don't save, Cancel)
+N | Window size, position and state remembered between runs
+N | System menu (restore, move, size, close) on the title bar
+### Status bar
+D | Page indicator and status text
+N | Zoom slider with Fit to page / Fit to width buttons
+N | Page navigation arrows
+## 3. File menu and backstage
+### Items (no cloud items)
+D | New
+D | Open
+D | Save
+N | Save as
+N | Save a copy
+D | Close project
+P | Get data
+N | Import: Power BI template (.pbit)
+N | Import: Power BI file (.pbix, read-only)
+N | Import: report theme
+N | Export: Power BI template (.pbit)
+N | Export: PDF
+N | Export: PBIP project copy
+N | Print
+D | Options and settings: Options
+N | Options and settings: Data source settings
+N | Options and settings: Custom visual security
+D | About
+D | Exit
+N | Recover unsaved files list (autorecovery folder)
+## 4. Report view ribbon: Home tab
+### Clipboard
+N | Paste
+N | Cut
+N | Copy
+N | Format painter
+### Data
+D | Get data menu
+N | Excel workbook
+N | Text/CSV
+N | SQL Server
+N | Enter data
+N | Recent sources
+D | Transform data (opens Power Query editor)
+N | Transform data menu: Data source settings
+N | Transform data menu: Edit parameters
+D | Refresh
+### Insert
+D | New visual
+N | Text box
+N | More visuals (from file)
+### Calculations
+D | New measure
+N | Quick measure
+## 5. Report view ribbon: Insert tab
+### Pages
+D | New page
+N | New blank page
+### Visuals
+D | New visual
+N | Visuals gallery group
+N | Visual from file
+N | Q&A visual (local)
+N | Smart narrative
+N | Key influencers
+N | Decomposition tree
+N | Find anomalies
+N | Forecast
+N | Sparklines
+N | Paginated report visual (local .rdl)
+### Elements
+N | Text box
+N | Buttons gallery (back, information, help, Q&A, bookmark, page navigation, blank, reset, previous, next, clear all slicers, apply all slicers)
+N | Shapes gallery (rectangle, rounded rectangle, oval, line, arrow, triangle, ...)
+N | Image
+N | Page navigator
+N | Bookmark navigator
+## 6. Report view ribbon: Modeling tab
+### Relationships
+D | Manage relationships
+### Calculations
+D | New measure
+N | Quick measure
+N | New column
+N | New table
+N | New calculation group
+N | New visual calculation
+### What-if
+N | New parameter
+### Sort
+N | Sort by column
+### Formatting
+N | Data type
+N | Format menu
+N | Currency, Percent, Comma, Auto decimal places
+N | Summarization
+N | Data category
+N | Data groups (group, bin)
+### Security
+N | Manage roles
+N | View as roles
+### Q&A
+N | Linguistic schema import/export
+N | Q&A language
+### Other
+N | Home table
+D | Mark as date table
+N | Hide/Unhide in report view
+## 7. Report view ribbon: View tab
+### Themes
+D | Theme gallery (own built-in themes)
+D | Browse for themes (import JSON)
+N | Customize current theme (dialog, every setting)
+D | Save current theme
+### Page view
+P | Fit to page / Fit to width / Actual size
+N | Mobile layout
+N | Gridlines
+N | Snap to grid
+N | Lock objects
+### Show panes
+D | Filters pane
+D | Bookmarks pane
+N | Selection pane
+N | Sync slicers pane
+N | Performance analyzer pane
+D | Data pane
+D | Format pane
+### Accessibility
+N | Keyboard-focus indicator
+N | Show visuals as tables (Ctrl+Shift+F11)
+N | High-contrast support
+## 8. Report view ribbon: Optimize tab
+N | Pause visuals
+N | Refresh visuals
+N | Optimization presets
+N | Performance analyzer (start recording, stop, refresh visuals, clear, export)
+## 9. Report view ribbon: Help tab
+N | Documentation links (open the default browser)
+N | Keyboard shortcuts dialog
+D | About
+N | Sample reports (own)
+N | Report an issue / Submit an idea (GitHub issues)
+## 10. Report view ribbon: External Tools tab
+N | External tools discovery (*.pbitool.json) and launch
+N | Local model server for external tools (port and database name arguments)
+## 11. Report view contextual tabs
+### Format tab (visual selected)
+D | Edit interactions
+N | Align (left, center, right, top, middle, bottom)
+N | Distribute horizontally / vertically
+N | Group / Ungroup
+D | Bring forward / Send backward (to front / to back)
+N | Selection pane
+D | Size and position
+N | Format painter
+N | Alt text
+### Data/Drill tab (visual selected)
+D | Drill down / Drill up
+D | Expand all down one level
+D | Go to the next level
+D | Show next level
+N | Include / Exclude
+N | Sort axis
+N | Show data as table
+N | Export data
+N | Spotlight
+N | Focus mode
+N | Copy visual as image
+### Shape / Text box / Image tabs
+N | Shape fill, outline, effects, rotation
+N | Text box font, size, bold, italic, underline, color, alignment, bullets, link
+N | Image scaling and fit
+### Table tools (Table view)
+D | Mark as date table
+N | New column
+N | New table
+D | New measure
+N | Sort by column
+N | Data category
+N | Properties group (name, home table, data type, format)
+### Column tools
+N | Name, data type, format, summarization, data category, sort by column
+N | Hide / Unhide
+### Measure tools
+N | Name, home table, format, data category
+N | Format DAX expression (local formatter)
+### Visual calculations tab
+N | New / Edit / Hide fields / Templates / Add function
+## 12. Report canvas and page features
+### Canvas
+D | Pages and page tabs: add, rename, reorder, duplicate, delete, hide
+D | Page size (16:9, 4:3, Letter, Tooltip, Custom)
+D | Page background
+D | Visual frames: drag, resize (8 handles), nudge, delete, z-order, duplicate
+D | Zoom: fit, 50%, 75%, 100%, 150%
+N | Multi-selection with rubber band and Shift/Ctrl click
+N | Align and distribute with smart guides
+N | Group visuals and nested groups
+N | Copy and paste visuals between pages and reports
+N | Rotation (shapes, images, text box)
+N | Selection pane (rename, show/hide, reorder, tab order)
+N | Wallpaper and canvas background image
+N | Gridlines, snap to grid, lock objects
+N | Mobile layout canvas (phone portrait)
+N | Alt text for visuals
+N | Tab order
+N | Per-visual header icons (focus mode, more options, filters)
+### Interactions
+D | Cross-filter and cross-highlight
+D | Edit interactions: filter / highlight / none
+D | Drill down / drill up / next level / expand all
+D | Drillthrough to pages with Back button
+D | Report-page tooltips
+N | Sync slicers across pages
+N | Hierarchy slicer
+N | Show data point as a table / See records
+N | Spotlight
+N | Export data (summarized / underlying)
+N | Copy visual as image
+N | Personalize visuals
+N | Annotations
+### Bookmarks
+D | Add, apply, update, rename, reorder, delete bookmarks
+D | Data / Display / Current page options
+N | Bookmark groups
+N | Selection-pane based bookmark visibility
+N | Bookmark navigator visual
+N | Bookmark view mode (presenting)
+### Themes
+D | Five built-in themes
+D | Import and export theme JSON
+N | Customize theme dialog: Name and colors, Text, Visuals, Page, Filter pane
+N | Reset theme to default
+### Filters pane
+D | Report, page and visual level filters
+D | Basic list, advanced (two conditions), Top N / Bottom N
+D | Measure filters
+N | Relative date and relative time filters
+N | Filter on a hierarchy
+N | Require single selection
+N | Lock and hide filter
+N | Filter pane formatting (colors, fonts, size)
+N | Switch filter type (Basic, Advanced, Top N, Relative date, Relative time)
+N | Include / exclude mode
+N | Collapse and expand filter cards, search in filters
+N | Drillthrough filters, keep all filters
+N | Clear all / Apply all filters (button mode)

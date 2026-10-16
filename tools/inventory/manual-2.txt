@@ -1,0 +1,612 @@
+## 13. Visuals (types) and analytics
+### Chart and data visuals
+D | Stacked bar chart
+D | Stacked column chart
+D | Clustered bar chart
+D | Clustered column chart
+D | 100% stacked bar chart
+D | 100% stacked column chart
+D | Line chart
+D | Area chart
+D | Stacked area chart
+N | 100% stacked area chart
+D | Line and stacked column chart
+D | Line and clustered column chart
+N | Ribbon chart
+D | Waterfall chart
+D | Funnel chart
+D | Scatter chart (bubble)
+N | Scatter play axis
+D | Pie chart
+D | Donut chart
+D | Treemap
+D | Gauge
+D | Card
+N | Card (new)
+D | Multi-row card
+D | KPI
+D | Table
+D | Matrix
+D | Slicer (list, dropdown, tiles, numeric/date range, relative date)
+N | Slicer: hierarchy
+N | Slicer: text slicer / list slicer variants (new slicer)
+N | Slicer: button slicer
+N | Basic map (bubble)
+N | Filled map
+N | Shape map
+N | Azure map (excluded as cloud tiles; local boundary version only)
+N | Decomposition tree
+N | Key influencers
+N | Q&A
+N | Smart narrative
+N | R script visual (needs local R)
+N | Python script visual (needs local Python)
+N | Paginated report visual (local .rdl)
+N | Custom visual import from file (.pbiviz)
+N | Small multiples on supported visuals
+N | Sparklines in table and matrix
+N | Table/matrix: drill on columns, values on rows, stepped layout, percent of row/column
+N | Table/matrix: column resizing, wrap text, word wrap headers
+N | Table/matrix: conditional formatting icons
+N | Table/matrix: web URL formatting
+N | Table/matrix: cell elements (data bars, icons, web URL, field value)
+### Non-data visuals
+N | Text box
+N | Shape
+N | Image
+N | Button
+N | Page navigator
+N | Bookmark navigator
+### Analytics pane
+N | Constant line
+N | Min line
+N | Max line
+N | Average line
+N | Median line
+N | Percentile line
+N | X-axis constant line
+N | Y-axis constant line
+N | Symmetry shading
+N | Trend line
+N | Error bars
+N | Forecast
+N | Find anomalies
+### Visual behavior
+N | Visual-level filters (Top N, etc.)
+N | Show items with no data
+N | Sort by (field, ascending, descending)
+N | Hierarchy: expand/collapse in matrix
+N | Tooltips fields well
+N | Drill through fields well
+N | Visual calculations
+## 14. Table view (Data view)
+D | Virtualized grid
+D | Column headers with type
+N | Header alignment matching cell alignment (text left, numbers right)
+D | Single-column sort
+N | Multi-column sort
+N | Column width drag
+N | Column context menu (rename, copy, hide, sort, format)
+N | Right-click row/column menu
+N | Formula bar (calculated column, measure)
+N | Column tools tab
+N | Filter on columns (value list)
+N | Go to / Find in table
+N | Show hidden columns
+N | Table header menu (New column, rename, copy table)
+N | Copy table / copy values to clipboard
+N | Data category and format display
+N | Calculated column editing in grid
+N | Locale-formatted dates
+## 15. Model view
+D | Table cards in a grid
+D | Drag to create relationships
+D | Relationship edit pane (cardinality, cross-filter direction, active)
+P | Cards not clipped, Power BI-style field icons (Σ, calendar)
+N | Properties pane (collapsible) for table, column, measure, relationship, multi-selection
+N | Move cards, zoom, fit to screen, 100%, minimap
+N | Layout tabs (All tables, additional layouts)
+N | Show/hide fields, hidden fields display
+N | Collapse/expand table cards
+N | Relationship lines with cardinality and filter direction markers
+N | Highlight related tables
+N | Select related tables
+N | Bulk edit of properties (multi-select)
+N | Hierarchies in cards
+N | Display folders in cards
+N | Calculation group cards
+N | Field parameter cards
+N | Context menus (Delete, Hide, Rename, Add to layout)
+N | Auto-create relationships
+N | Manage relationships dialog (grid, autodetect)
+N | Create relationship dialog
+N | Edit relationship dialog with Cross-filter direction, Make this relationship active, Apply security filter in both directions, Assume referential integrity
+N | Many-to-many with both cross-filter
+## 16. DAX query view
+D | Query editor (Monaco) with Run
+D | Result tables
+N | Multiple query tabs
+N | Query tab rename, save, open .dax files
+N | Run selection
+N | Quick queries from a table, column or measure (EVALUATE sample, summarize, TOPN...)
+N | Update model with measure/column/table changes from a query (DEFINE blocks to model)
+N | Format query
+N | Find and replace
+N | Comment/uncomment toggles
+N | Query error squiggles
+N | Cancel running query
+N | Result export (copy/CSV)
+N | Query tab: DEFINE COLUMN and FUNCTION
+N | Model-wide Info functions (INFO.VIEW.*)
+## 17. TMDL view
+D | Text of every model file
+N | Edit TMDL text and apply to model
+N | Undo/redo through TMDL edits
+N | Script table/column/measure/relationship as TMDL
+N | Syntax errors reported in the editor
+N | Tabs per object
+N | Drag-drop of objects into the editor
+N | Compare local versus model
+## 18. Modeling features
+### Tables, columns, measures
+D | Add / delete table
+D | Add / edit / delete measure (DAX text)
+N | Rename table / column / measure
+N | Calculated columns (create, edit, delete)
+N | Calculated tables (create, edit, delete)
+N | Data type of columns
+N | Format string (general, number, currency, percent, date) with decimals and units
+N | Summarize by (sum, average, count, min, max, none)
+N | Data categories
+N | Sort by column
+N | Hide / unhide columns, measures, tables
+N | Display folders
+N | Descriptions
+N | Synonyms (Q&A)
+N | Alternate keys
+N | Column from examples (Power Query)
+### Hierarchies, groups, parameters
+N | Hierarchies (create, edit, levels)
+N | Data groups (list and bin groups)
+N | What-if parameters
+N | Field parameters
+N | Calculation groups with precedence and format string expressions
+N | Quick measures (all calculation types)
+N | Time intelligence (enhanced) preview
+### Dates
+D | Mark as date table
+N | Auto date/time (hidden tables and hierarchies)
+N | Date table created by DAX templates (CALENDAR, CALENDARAUTO)
+N | Date/time hierarchy in field list
+### Security
+N | Row-level security: roles, table filter expressions
+N | View as roles (and as specific user)
+N | Object-level security (table/column)
+### Relationships
+D | Create, edit cardinality, cross-filter direction, active/inactive, delete
+D | Ambiguity check
+D | Relationship cardinality detection from data
+N | Many-to-many with ambiguity warning
+N | Referential integrity assumption
+### Others
+N | Perspectives
+N | Translations (cultures)
+N | Aggregations (manage aggregations)
+N | Incremental refresh policy (local)
+N | Composite model storage modes (Import, DirectQuery, Dual)
+N | DirectQuery sources
+N | Model properties (culture, description)
+N | Calculated tables: column and table functions
+N | User-defined functions
+N | Query-reduction settings
+N | Display units and formatting for measures
+N | Annotations (read-write)
+N | Export/import data model as .bim/TMSL
+## 19. DAX language
+### Language
+D | Lexer and parser (all token types and 16 syntax error codes)
+D | Function catalog (317 functions: category, signature, description)
+D | Filter context, row context, context transition
+D | VAR / RETURN
+D | Measures with cycle detection and calculated columns
+D | DEFINE / EVALUATE / ORDER BY / START AT
+N | DEFINE COLUMN
+N | DEFINE FUNCTION and user-defined functions
+N | Visual calculations language
+N | Format string expressions (dynamic format strings)
+D | Monaco editor with IntelliSense, signature help, hover, squiggles
+N | Quick-fix / code actions in the editor
+### Compilation
+D | DuckDB SQL compilation of simple aggregates
+N | SQL compilation of additional patterns
+N | Large-model performance and cancellation
+## 20. Power Query editor: window and ribbon
+### Window
+D | Queries pane (new, duplicate, rename, delete, enable load)
+D | Applied Steps pane (insert, delete, rename, move, edit)
+D | Formula bar
+D | Preview grid with column menus
+D | Advanced Editor
+D | Query Dependencies view
+N | Query groups (folders)
+N | Column quality, distribution, profile
+N | Column profiling based on entire data set
+N | Parameters (manage)
+N | Data source settings
+N | Query properties dialog
+N | Enable load / Include in report refresh
+N | Query diagnostics
+N | Preview refresh controls
+N | Query step icons (fold indicators, native query view)
+N | View native query
+N | Context menus on columns (right-click)
+N | Drag to reorder columns
+N | Reference / duplicate query
+N | Monospace font display and whitespace display
+N | Display the formula bar toggle
+N | Go to column
+N | Column header filter menu with value list
+N | New Power Query experience (Modern)
+### Home tab
+D | Close & Apply, Apply, Discard
+D | New source (opens the import dialog)
+N | Recent sources
+N | Enter data
+N | Data source settings
+N | Manage parameters
+D | Refresh preview
+N | Properties
+D | Advanced editor
+N | Manage (delete, duplicate, reference)
+D | Choose columns / Remove columns
+D | Keep rows (top, bottom, range, duplicates, errors) / Remove rows (top, bottom, alternate, duplicates, blank, errors)
+D | Sort ascending / descending
+D | Split column
+D | Group by
+D | Data type
+D | Use first row as headers
+D | Replace values
+D | Merge queries
+D | Append queries
+P | Combine files
+N | Combine: Binary
+### Transform tab
+D | Group by / Count rows
+D | Use first row as headers / Use headers as first row
+D | Transpose
+D | Reverse rows
+D | Data type: detect, change
+D | Rename column
+D | Replace values / Replace errors
+D | Fill down / up
+D | Pivot column / Unpivot columns / Unpivot other / Unpivot selected
+N | Move (to beginning, left, right, to end)
+N | Convert to list
+N | Format: lowercase, UPPERCASE, Capitalize each word, Trim, Clean, Add prefix, Add suffix
+N | Merge columns
+N | Extract: length, first characters, last characters, range, text before/after/between delimiter
+N | Parse: JSON, XML
+N | Statistics: sum, min, max, median, average, count values, count distinct, standard deviation
+N | Standard: add, multiply, subtract, divide, integer-divide, modulo, percentage, percent of
+N | Scientific: absolute, power, square root, exponent, logarithm, factorial, trig
+N | Rounding: round up, down, round
+N | Information: is even, is odd, sign
+N | Date: age, date only, year, quarter, month, week, day, day of week, day of year, start/end of period, name of day/month
+N | Time: hour, minute, second, local time, time only, earliest, latest
+N | Duration: days, hours, minutes, seconds, total, subtract, multiply, divide, statistics
+N | Structured columns: expand, aggregate, extract values
+N | Text analytics, vision and Azure ML: excluded (cloud)
+N | Run R script
+N | Run Python script
+### Add Column tab
+D | Custom column
+D | Conditional column
+D | Index column (from 0, from 1, custom)
+N | Column from examples
+N | Invoke custom function
+N | Duplicate column
+N | Format / Extract / Parse (same as Transform on a new column)
+N | Statistics / Standard / Scientific / Trigonometry / Rounding / Information (new column)
+N | Date / Time / Duration (new column)
+### View tab
+N | Layout: Query Settings pane, formula bar, status bar, monospace, show whitespace
+N | Column quality / distribution / profile toggles
+N | Go to column
+N | Advanced editor / Query dependencies / Parameters / Data source settings
+### Tools / Help tab
+N | Session diagnostics (local)
+N | Start / stop diagnostics, diagnose step, export
+N | Options (opens the Options dialog)
+### Contextual tabs
+N | List tools (transform)
+N | Record tools (expand, convert)
+N | Binary tools (combine)
+N | Text / Number / Date / DateTime / Duration / Time column tools
+## 21. M language
+D | Parser: let, each, functions, records, lists, if, try (partly), types
+N | Parser: section documents
+N | Parser: function types and implicit projection
+N | try ... otherwise ... and error values
+N | Row-level error values in tables
+N | Type system (type declarations, ascription)
+N | Query folding indicators
+D | Evaluator folding to DuckDB SQL (symbolic scalars, CTE chains)
+N | Native query / Value.NativeQuery
+N | Custom functions over tables
+N | Privacy levels and formula firewall (local rules)
+N | Parameters as M values
+## 22. Get data: connectors (local; online services excluded)
+### File
+D | Text/CSV
+D | Excel workbook (.xlsx; .xls/.xlsb/.ods untested)
+D | JSON (array of objects)
+N | JSON (nested records, lists)
+D | Parquet
+N | XML
+N | PDF
+D | Folder (files, combine)
+N | Access database
+N | Excel via ACE (legacy)
+N | Fixed-width text
+### Database
+N | SQL Server database (tiberius; M Sql.Database)
+N | Azure SQL Database via SQL Server connector
+D | SQLite (through ODBC)
+D | PostgreSQL database
+N | MySQL database
+N | Oracle database
+N | IBM Db2
+N | Teradata
+N | SAP HANA
+N | Sybase
+N | Amazon Redshift (ODBC)
+N | Snowflake (ODBC)
+N | Google BigQuery (ODBC)
+N | Databricks (ODBC)
+N | Generic ODBC
+N | Generic OLE DB
+N | Analysis Services (local multidimensional/tabular)
+N | Custom SQL query text for any database connector
+N | Native query toggle
+### Other
+N | Web (HTML tables from a URL)
+N | Web API (reqwest, headers, JSON/CSV/XML body)
+N | OData feed
+N | REST via Web.Contents
+N | Active Directory (local)
+N | Exchange (on-premises)
+N | SharePoint list (on-premises)
+N | SharePoint folder (on-premises)
+N | Blank query
+N | Enter data
+N | Sample data (own)
+N | Python/R script as source
+N | Connector credentials dialog (Windows, Basic, Database, Anonymous)
+N | Privacy levels dialog
+N | Navigator (preview, multi-select)
+N | Data source settings (change source, edit permissions, clear)
+N | DirectQuery mode for supported databases
+## 23. Options dialog: Global
+### Data Load
+N | Type detection: always / per file / never
+N | Background data: allow data preview to download in the background
+N | Parallel loading of tables
+N | Time intelligence: auto date/time for new files
+N | Column name suffix for duplicate names
+N | Null value handling
+### Power Query Editor
+N | Display the formula bar
+N | Display monospace font
+N | Display whitespace
+N | Show native queries
+N | Always allow parameterized data source
+N | Show Query dependencies on open
+N | Allow data preview to download in the background
+### DirectQuery
+N | Use the latest schema
+N | Allow unrestricted measures in DirectQuery mode
+N | Assume referential integrity (default)
+### Security / Privacy
+N | Native database queries approval
+N | Web content warning
+N | Custom connector warnings
+N | Privacy levels: always combine / per file / ignore
+### Regional settings
+N | Application language
+N | Model language
+N | Locale for import
+### Updates / Usage data / Diagnostics
+N | Updates notification (local build only)
+N | Usage data (no telemetry in BIForge; the page states this)
+N | Diagnostic: enable tracing
+N | Diagnostic: trace folder location and open
+N | Diagnostic: crash dump collection
+### Preview features
+N | Preview features list (each switch)
+### Auto recovery
+D | Autosave and crash recovery
+N | Autosave interval setting
+N | Autorecovery folder and open folder
+### Report settings
+N | Use the modern visual tooltip
+N | Allow users to change filter types
+N | Enable slicer search
+N | Enable the filter pane search
+N | Persistent filters
+N | Report: default view setting
+N | Show visual header on hover
+N | Default cross filtering / cross highlighting
+N | Hide the filters pane for new reports
+N | Drill-through default
+N | Allow changes to measures in the report
+N | Apply a theme to new reports
+### Interface and display
+D | Interface: Classic and Modern
+D | Ribbon mode: multi-line, single line
+D | Theme: Light, Dark
+N | Theme: Use system setting
+N | Display language (UI strings)
+N | Font size and zoom of the interface
+N | Show recent files count
+N | Always show start screen
+### External tools / Scripting
+N | R scripting: home directory, IDE
+N | Python scripting: home directory, IDE
+N | R/Python script timeouts
+### Data cache
+N | Data cache management permissions
+N | Clear cache
+### Other global
+N | Developer options (custom visual developer mode)
+N | Certificate/CA settings for web sources
+N | Crash reporting (none)
+N | Region-specific number and date formats
+## 24. Options dialog: Current File
+### Data Load
+N | Time intelligence for this file (auto date/time)
+N | Background data
+N | Type detection for this file
+N | Allow parallel loading
+N | Locale for import
+### Regional settings
+N | Model language for this file
+N | Model locale
+### Privacy
+N | Privacy levels for this file
+### Auto recovery
+N | Recovery for this file
+### Query reduction
+N | Disable cross highlighting/filtering by default
+N | Slicer apply button
+N | Filter apply button
+N | Report-level Add apply button to all slicers
+### Report settings
+N | Use the modern visual tooltip for this file
+N | Default page size and view
+N | Allow changes to filter types
+N | Persistent filters
+N | Slicer search
+N | Q&A
+N | Show visuals as tables default
+N | Export data setting
+N | Hidden pages shown to users
+N | Accessibility: alt text prompt
+## 25. Dialogs
+D | Import dialog (all local sources)
+D | New project dialog
+D | Unsaved changes dialog
+D | About dialog
+D | Options dialog (interface, theme, ribbon mode, reset layout)
+D | Create relationship dialog
+D | Relationship edit panel
+D | Power Query dialogs for every transform in the editor
+D | Conditional formatting dialog
+D | Format pane
+N | Manage relationships
+N | Edit relationships
+N | Manage roles
+N | View as roles
+N | Quick measures
+N | New parameter (what-if)
+N | Customize theme
+N | Data source settings
+N | Data groups
+N | Edit data (enter data)
+N | Export data
+N | Performance analyzer
+N | Report settings dialog
+N | Feature switches (preview features)
+N | Keyboard shortcuts dialog
+N | Save as dialog
+N | Export to PDF dialog
+N | Print dialog
+N | Linguistic schema
+N | Calculation group editor
+N | Field parameters dialog
+N | Hierarchy editor
+N | Mobile layout tools
+N | Selection pane
+N | Sync slicers pane
+N | Relative date filter dialog
+N | Data bars dialog
+N | Icons dialog
+N | Web URL dialog
+N | Report validator dialog
+N | Save diagnostics dialog
+N | New features dialog (what's new, local)
+N | Update model with query changes
+N | Auto-recovery dialog
+N | Error dialog with details and copy
+N | Delete visual / custom visual warnings
+N | Theme validation errors
+N | Add column from examples
+## 26. Keyboard shortcuts
+### Global and file
+N | Ctrl+N new
+N | Ctrl+O open
+D | Ctrl+S save
+N | Ctrl+Shift+S save as
+N | Ctrl+P print
+N | Ctrl+Z undo
+N | Ctrl+Y redo
+N | Ctrl+C copy
+N | Ctrl+X cut
+N | Ctrl+V paste
+N | Ctrl+A select all
+N | Delete delete selection
+N | F11 full screen
+N | Alt+key tips for tabs and commands
+D | Alt key tips for tabs and main controls
+### Canvas
+N | Arrow keys move selected visual
+N | Shift+Arrow resize visual
+N | Ctrl+G group / Ctrl+Shift+G ungroup
+N | Ctrl+D duplicate
+N | Tab cycles visuals
+N | Ctrl+F6 / Shift+Ctrl+F6 move focus between sections
+N | Ctrl+Shift+F11 show visuals as tables
+N | Ctrl+Shift+F10 show/hide tooltip
+N | Alt+Shift+F10 focus visual menu
+N | Ctrl+Space multi-select data points
+N | Ctrl+H show data point details
+N | Ctrl+Shift+C clear data selection
+N | Ctrl+Alt+I annotations visibility
+N | Alt+Shift+1 collapse all tables, Alt+Shift+9 expand all tables
+N | Ctrl+Right Arrow enter visual
+N | Esc exit visual
+N | Enter slicer control
+N | F1 help
+### Text editors
+D | Monaco shortcuts in DAX, M and TMDL editors (Ctrl+Space, Ctrl+F, Ctrl+/ ...)
+N | Ctrl+Enter / F5 run query in DAX query view
+N | F2 rename in Model and Table view
+N | Print Screen / system keys never intercepted (tested)
+## 27. Export, print and file formats
+N | Export report to PDF
+N | Export page to PNG
+N | Export visual data to CSV
+N | Export visual data to XLSX
+N | Copy visual as image
+N | Print report
+D | PBIP project (TMDL model + PBIR report) open/save
+N | PBIP verified in Power BI Desktop for report pages and every source
+N | .pbit template export/import
+N | Read-only PBIX import
+N | TMSL (model.bim) import/export
+N | PBIR-Legacy (report.json) import
+N | Theme JSON export for all settings
+N | Linguistic schema export
+D | Autosave snapshot format
+## 28. Accessibility and platform
+N | Keyboard navigation for all panes and canvas
+N | Screen reader names for ribbon, panes and visuals
+N | High-contrast mode
+N | Focus indicators
+N | Text scaling
+N | Alt text and tab order for visuals
+N | Localization of UI strings
+D | Windows window smoke test
+N | Installer (NSIS)
+N | Auto-update (local) or manual update notice
+N | Crash handler (local report)
+N | Real-window UI tests (WebDriver)
