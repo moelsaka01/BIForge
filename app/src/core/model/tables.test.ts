@@ -25,8 +25,8 @@ describe("applyImport", () => {
     expect(r).toEqual({ created: true, removedRelationships: [] });
     const t = listTables(p).find((x) => x.name === "Orders")!;
     expect(t.columns).toEqual([
-      { name: "Id", dataType: "int64" },
-      { name: "Name", dataType: "string" },
+      { name: "Id", dataType: "int64", summarizeBy: null },
+      { name: "Name", dataType: "string", summarizeBy: "none" },
     ]);
     expect(getTableSource(p, "Orders")).toEqual(csv);
     expect(importedTables(p)).toEqual(["Orders"]);

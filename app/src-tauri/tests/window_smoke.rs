@@ -13,6 +13,7 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
 struct Search {
     pid: u32,
     found_title: Option<String>,
+    hwnd: isize,
 }
 
 unsafe extern "system" fn visit(hwnd: HWND, lparam: LPARAM) -> BOOL {
@@ -25,6 +26,7 @@ unsafe extern "system" fn visit(hwnd: HWND, lparam: LPARAM) -> BOOL {
         let title = String::from_utf16_lossy(&buf[..n.max(0) as usize]);
         if title == "BIForge" {
             s.found_title = Some(title);
+            s.hwnd = hwnd as isize;
             return 0;
         }
     }
@@ -36,7 +38,7 @@ fn app_window_opens_with_expected_title() {
     let mut child = Command::new(env!("CARGO_BIN_EXE_biforge-app"))
         .spawn()
         .expect("failed to launch biforge-app");
-    let mut search = Search { pid: child.id(), found_title: None };
+    let mut search = Search { pid: child.id(), found_title: None, hwnd: 0 };
     let deadline = Instant::now() + Duration::from_secs(60);
     while Instant::now() < deadline && search.found_title.is_none() {
         if let Ok(Some(status)) = child.try_wait() {
@@ -49,3 +51,4 @@ fn app_window_opens_with_expected_title() {
     let _ = child.wait();
     assert_eq!(search.found_title.as_deref(), Some("BIForge"), "window did not appear");
 }
+

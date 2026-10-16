@@ -457,7 +457,12 @@ describe("Modern shell", () => {
     const dlg = await screen.findByRole("dialog", { name: "Options" });
     fireEvent.click(within(dlg).getByLabelText(/Modern:/));
     await waitFor(() => expect(document.querySelector(".app")!.getAttribute("data-shell")).toBe("modern"));
-    const again = await screen.findByRole("dialog", { name: "Options" });
+    // the shell was replaced under the open dialog; tabster may mark it aria-hidden for a moment
+    const again = await waitFor(() => {
+      const el = document.querySelector<HTMLElement>('[role="dialog"][aria-label="Options"]');
+      expect(el).toBeTruthy();
+      return el!;
+    });
     fireEvent.click(within(again).getByLabelText(/Classic:/));
     await waitFor(() => expect(document.querySelector(".app")!.getAttribute("data-shell")).toBe("classic"));
     expect(JSON.stringify(a.session.store.project)).toBe(before);

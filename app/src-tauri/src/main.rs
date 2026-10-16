@@ -4,11 +4,23 @@ mod commands;
 mod data;
 mod dax;
 mod pq;
+mod syskeys;
 
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .manage(data::DataService::system())
+        .setup(|app| {
+            // an Alt tap must not start Windows' menu mode, which swallows the next key (Print Screen)
+            #[cfg(windows)]
+            if let Some(w) = tauri::Manager::get_webview_window(app, "main") {
+                if let Ok(h) = w.hwnd() {
+                    syskeys::install(h.0 as isize);
+                }
+            }
+            let _ = app;
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             commands::new_project,
             commands::open_project,

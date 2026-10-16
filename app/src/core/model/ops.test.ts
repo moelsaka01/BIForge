@@ -104,8 +104,8 @@ describe("measures", () => {
   it("lists columns with their data types", () => {
     const t = ops.listTables(fresh()).find((x) => x.name === "Sales")!;
     expect(t.columns).toEqual([
-      { name: "ProductKey", dataType: "int64" },
-      { name: "DateKey", dataType: "int64" },
+      { name: "ProductKey", dataType: "int64", summarizeBy: null },
+      { name: "DateKey", dataType: "int64", summarizeBy: null },
     ]);
   });
 });
