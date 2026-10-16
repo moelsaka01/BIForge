@@ -1,0 +1,195 @@
+// Catalog of the visual types BIForge can author. Type ids are the PBIR visualType names.
+
+export type RoleKind = "column" | "value" | "any";
+
+export interface RoleDef {
+  name: string;
+  label: string;
+  /** column: grouping fields only; value: measures and aggregated columns; any: both (tables). */
+  accepts: RoleKind;
+  /** Maximum number of fields; more than one grouping field in the first role makes a drill hierarchy. */
+  max: number;
+}
+
+export type VisualFamily = "cartesian" | "pie" | "scatter" | "table" | "matrix" | "card" | "kpi" | "gauge" | "treemap" | "funnel" | "waterfall" | "slicer" | "map";
+
+export interface VisualTypeDef {
+  id: string;
+  label: string;
+  family: VisualFamily;
+  roles: RoleDef[];
+  size: { width: number; height: number };
+  /** Short text shown on the gallery button. */
+  glyph: string;
+  /** Marked as not implemented in the UI; the visual shows a placeholder. */
+  deferred?: boolean;
+}
+
+const cat = (max = 8): RoleDef => ({ name: "Category", label: "X-axis", accepts: "column", max });
+const series: RoleDef = { name: "Series", label: "Legend", accepts: "column", max: 1 };
+const y = (label = "Y-axis", max = 12): RoleDef => ({ name: "Y", label, accepts: "value", max });
+
+const cartesian = (id: string, label: string, glyph: string, extra: RoleDef[] = []): VisualTypeDef => ({
+  id,
+  label,
+  family: "cartesian",
+  roles: [cat(), series, y(), ...extra],
+  size: { width: 400, height: 300 },
+  glyph,
+});
+
+export const VISUAL_TYPES: VisualTypeDef[] = [
+  cartesian("clusteredBarChart", "Clustered bar chart", "≡▮"),
+  cartesian("stackedBarChart", "Stacked bar chart", "≣▮"),
+  cartesian("hundredPercentStackedBarChart", "100% stacked bar chart", "%≡"),
+  cartesian("clusteredColumnChart", "Clustered column chart", "▮▮"),
+  cartesian("stackedColumnChart", "Stacked column chart", "▮▯"),
+  cartesian("hundredPercentStackedColumnChart", "100% stacked column chart", "%▮"),
+  cartesian("lineChart", "Line chart", "╱╲"),
+  cartesian("areaChart", "Area chart", "◿"),
+  cartesian("stackedAreaChart", "Stacked area chart", "◢"),
+  cartesian("lineClusteredColumnComboChart", "Line and clustered column chart", "▮╱", [{ name: "Y2", label: "Line y-axis", accepts: "value", max: 12 }]),
+  {
+    id: "pieChart",
+    label: "Pie chart",
+    family: "pie",
+    roles: [{ name: "Category", label: "Legend", accepts: "column", max: 1 }, y("Values", 1)],
+    size: { width: 360, height: 300 },
+    glyph: "◔",
+  },
+  {
+    id: "donutChart",
+    label: "Donut chart",
+    family: "pie",
+    roles: [{ name: "Category", label: "Legend", accepts: "column", max: 1 }, y("Values", 1)],
+    size: { width: 360, height: 300 },
+    glyph: "◎",
+  },
+  {
+    id: "scatterChart",
+    label: "Scatter chart",
+    family: "scatter",
+    roles: [
+      { name: "Category", label: "Details", accepts: "column", max: 1 },
+      { name: "Series", label: "Legend", accepts: "column", max: 1 },
+      { name: "X", label: "X-axis", accepts: "value", max: 1 },
+      { name: "Y", label: "Y-axis", accepts: "value", max: 1 },
+      { name: "Size", label: "Size", accepts: "value", max: 1 },
+    ],
+    size: { width: 420, height: 320 },
+    glyph: "∴",
+  },
+  {
+    id: "tableEx",
+    label: "Table",
+    family: "table",
+    roles: [{ name: "Values", label: "Columns", accepts: "any", max: 30 }],
+    size: { width: 460, height: 300 },
+    glyph: "▦",
+  },
+  {
+    id: "pivotTable",
+    label: "Matrix",
+    family: "matrix",
+    roles: [
+      { name: "Rows", label: "Rows", accepts: "column", max: 6 },
+      { name: "Columns", label: "Columns", accepts: "column", max: 3 },
+      { name: "Values", label: "Values", accepts: "value", max: 12 },
+    ],
+    size: { width: 480, height: 320 },
+    glyph: "▤",
+  },
+  { id: "card", label: "Card", family: "card", roles: [{ name: "Values", label: "Fields", accepts: "value", max: 1 }], size: { width: 200, height: 120 }, glyph: "123" },
+  {
+    id: "multiRowCard",
+    label: "Multi-row card",
+    family: "card",
+    roles: [{ name: "Values", label: "Fields", accepts: "any", max: 12 }],
+    size: { width: 260, height: 220 },
+    glyph: "☰",
+  },
+  {
+    id: "kpi",
+    label: "KPI",
+    family: "kpi",
+    roles: [
+      { name: "Indicator", label: "Value", accepts: "value", max: 1 },
+      { name: "TrendAxis", label: "Trend axis", accepts: "column", max: 1 },
+      { name: "Goal", label: "Target", accepts: "value", max: 1 },
+    ],
+    size: { width: 240, height: 160 },
+    glyph: "▲",
+  },
+  {
+    id: "gauge",
+    label: "Gauge",
+    family: "gauge",
+    roles: [
+      { name: "Y", label: "Value", accepts: "value", max: 1 },
+      { name: "MinValue", label: "Minimum", accepts: "value", max: 1 },
+      { name: "MaxValue", label: "Maximum", accepts: "value", max: 1 },
+      { name: "TargetValue", label: "Target", accepts: "value", max: 1 },
+    ],
+    size: { width: 300, height: 220 },
+    glyph: "◠",
+  },
+  {
+    id: "treemap",
+    label: "Treemap",
+    family: "treemap",
+    roles: [{ name: "Group", label: "Category", accepts: "column", max: 2 }, { name: "Values", label: "Values", accepts: "value", max: 1 }],
+    size: { width: 400, height: 300 },
+    glyph: "▩",
+  },
+  {
+    id: "funnel",
+    label: "Funnel",
+    family: "funnel",
+    roles: [{ name: "Category", label: "Category", accepts: "column", max: 1 }, y("Values", 1)],
+    size: { width: 360, height: 300 },
+    glyph: "⏷",
+  },
+  {
+    id: "waterfallChart",
+    label: "Waterfall chart",
+    family: "waterfall",
+    roles: [
+      { name: "Category", label: "Category", accepts: "column", max: 1 },
+      { name: "Breakdown", label: "Breakdown", accepts: "column", max: 1 },
+      y("Y-axis", 1),
+    ],
+    size: { width: 420, height: 300 },
+    glyph: "▂▅",
+  },
+  { id: "slicer", label: "Slicer", family: "slicer", roles: [{ name: "Values", label: "Field", accepts: "column", max: 1 }], size: { width: 200, height: 240 }, glyph: "▽" },
+  {
+    id: "map",
+    label: "Map (deferred)",
+    family: "map",
+    roles: [{ name: "Category", label: "Location", accepts: "column", max: 1 }, { name: "Size", label: "Bubble size", accepts: "value", max: 1 }],
+    size: { width: 400, height: 300 },
+    glyph: "🌐",
+    deferred: true,
+  },
+];
+
+export function visualType(id: string): VisualTypeDef | undefined {
+  return VISUAL_TYPES.find((t) => t.id === id);
+}
+
+export function roleDef(typeId: string, role: string): RoleDef | undefined {
+  return visualType(typeId)?.roles.find((r) => r.name === role);
+}
+
+/** The role a field is added to by default when it is dropped on the visual without choosing a well. */
+export function defaultRole(typeId: string, kind: "column" | "value", current: Record<string, unknown[]>): string | null {
+  const t = visualType(typeId);
+  if (!t) return null;
+  const candidates = t.roles.filter((r) => r.accepts === "any" || r.accepts === kind);
+  for (const r of candidates) {
+    if ((current[r.name]?.length ?? 0) < r.max) return r.name;
+  }
+  return null;
+}
+
+export const isChartFamily = (f: VisualFamily) => ["cartesian", "pie", "scatter", "treemap", "funnel", "waterfall", "gauge"].includes(f);

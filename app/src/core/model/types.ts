@@ -39,6 +39,8 @@ export interface Project {
     pbir: unknown;
     platform: unknown | null;
     files: Record<string, unknown>;
+    /** Custom themes (StaticResources/RegisteredResources), keyed by file name. */
+    static_resources?: Record<string, unknown>;
   };
 }
 

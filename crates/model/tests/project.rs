@@ -340,3 +340,35 @@ fn create_new_validates_name_and_refuses_overwrite() {
         assert!(matches!(Project::create_new(&d.path().join("o"), bad), Err(ProjectError::Invalid(_))), "{bad:?}");
     }
 }
+
+#[test]
+fn registered_resources_round_trip_and_are_deleted_when_removed() {
+    let (d, pbip) = sample_copy();
+    let mut p = Project::open(&pbip).unwrap();
+    assert!(p.report.static_resources.is_empty());
+    p.report
+        .static_resources
+        .insert("MyTheme.json".into(), serde_json::json!({"name": "MyTheme", "dataColors": ["#112233"]}));
+    p.save(d.path()).unwrap();
+    let file = d.path().join("Retail.Report/StaticResources/RegisteredResources/MyTheme.json");
+    assert!(file.is_file());
+    assert_eq!(Project::open(&pbip).unwrap(), p);
+    p.report.static_resources.clear();
+    let r = p.save(d.path()).unwrap();
+    assert_eq!(r.deleted.len(), 1);
+    assert!(!file.exists());
+    // path escapes are refused
+    p.report.static_resources.insert("../x.json".into(), serde_json::json!({}));
+    assert!(p.save(d.path()).is_err());
+}
+
+#[test]
+fn recovery_files_without_resources_still_load() {
+    // a snapshot written before static_resources existed has no such field
+    let (_d, pbip) = sample_copy();
+    let p = Project::open(&pbip).unwrap();
+    let mut v = serde_json::to_value(&p).unwrap();
+    v["report"].as_object_mut().unwrap().remove("static_resources");
+    let back: Project = serde_json::from_value(v).unwrap();
+    assert_eq!(back, p);
+}

@@ -80,7 +80,12 @@ pub struct ReportFolder {
     pub platform: Option<Value>,
     /// PBIR JSON files, keyed by path relative to `definition/` using `/` separators.
     pub files: BTreeMap<String, Value>,
+    /// JSON files under `StaticResources/RegisteredResources/` (custom themes), keyed relative to that folder.
+    #[serde(default)]
+    pub static_resources: BTreeMap<String, Value>,
 }
+
+const RESOURCES_REL: &str = "StaticResources/RegisteredResources";
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Project {
@@ -265,6 +270,7 @@ impl Project {
                 }),
                 platform: None,
                 files,
+                static_resources: BTreeMap::new(),
             },
         }
     }
@@ -356,6 +362,13 @@ impl Project {
             files.insert(rel, read_json(&path)?);
         }
 
+        let mut static_resources = BTreeMap::new();
+        let res_root = report_root.join(RESOURCES_REL);
+        for rel in list_files(&res_root, "json")? {
+            let path = res_root.join(rel.replace('/', std::path::MAIN_SEPARATOR_STR));
+            static_resources.insert(rel, read_json(&path)?);
+        }
+
         Ok(Project {
             name,
             pbip,
@@ -370,6 +383,7 @@ impl Project {
                 pbir,
                 platform: read_optional_json(&report_root.join(".platform"))?,
                 files,
+                static_resources,
             },
         })
     }
@@ -411,9 +425,15 @@ impl Project {
             validate_key(key, "json")?;
             planned.push((rdef.join(key), to_pretty_json(v)));
         }
+        let res = report_root.join(RESOURCES_REL);
+        for (key, v) in &self.report.static_resources {
+            validate_key(key, "json")?;
+            planned.push((res.join(key), to_pretty_json(v)));
+        }
         let stale: Vec<PathBuf> = [
             (&def, "tmdl", self.model.tmdl.keys().collect::<Vec<_>>()),
             (&rdef, "json", self.report.files.keys().collect::<Vec<_>>()),
+            (&res, "json", self.report.static_resources.keys().collect::<Vec<_>>()),
         ]
         .into_iter()
         .map(|(dir, ext, keep)| -> Result<Vec<PathBuf>, ProjectError> {
