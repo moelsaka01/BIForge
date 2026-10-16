@@ -1,4 +1,5 @@
 import { DocumentStore } from "../store/documentStore";
+import { ReportRuntime } from "../report/runtime";
 import type { Project, SaveReport } from "../model/types";
 import type { EngineApi, SourceSpec } from "../data/types";
 import { applyImport, getTableSource, importedTables } from "../model/tables";
@@ -47,6 +48,8 @@ export function dirname(path: string): string {
 /** App-level state around the document: where it lives, recovery offers, last user-facing message. */
 export class Session {
   readonly store = new DocumentStore();
+  /** View state of the open report (selection, drilling, current page). */
+  readonly report = new ReportRuntime();
   private snap: SessionSnapshot = { root: null, pendingRecovery: null, lastMessage: null, dataTables: [] };
   private listeners = new Set<() => void>();
   /** Project roots whose recovery snapshot was written by this running app (not left behind by a crash). */

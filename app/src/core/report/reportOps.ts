@@ -225,6 +225,16 @@ export function deleteVisual(p: Project, page: string, visual: string): void {
   if (Array.isArray(pj.visualInteractions)) pj.visualInteractions = pj.visualInteractions.filter((i: J) => i.source !== visual && i.target !== visual);
 }
 
+export function duplicateVisual(p: Project, page: string, visual: string, newId: () => string = newName): string {
+  const src = visualJson(p, page, visual);
+  const copy = structuredClone(src);
+  copy.name = newId();
+  const top = Math.max(0, ...Object.keys(files(p)).filter((k) => k.startsWith(visualPrefix(page)) && k.endsWith("/visual.json")).map((k) => files(p)[k].position?.z ?? 0));
+  copy.position = { ...copy.position, x: (copy.position.x ?? 0) + 24, y: (copy.position.y ?? 0) + 24, z: top + 1000 };
+  files(p)[visualKey(page, copy.name)] = copy;
+  return copy.name;
+}
+
 export function setPosition(p: Project, page: string, visual: string, pos: Partial<Position>): void {
   const j = visualJson(p, page, visual);
   const next = { ...j.position, ...pos };
