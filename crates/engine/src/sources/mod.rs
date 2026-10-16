@@ -90,6 +90,20 @@ pub fn q(ident: &str) -> String {
 
 /// Creates `table` (typed by inference over all rows) and appends the rows.
 pub fn load(conn: &Connection, table: &str, raw: &RawTable) -> Result<()> {
+    load_as(conn, table, raw, false)
+}
+
+/// Like `load`; `temp` creates a temporary table (lives as long as the connection).
+pub fn load_as(conn: &Connection, table: &str, raw: &RawTable, temp: bool) -> Result<()> {
+    if temp {
+        // the appender cannot address the temp catalog, so fill a plain table first and copy it
+        let stage = format!("{table}__fill");
+        conn.execute_batch(&format!("DROP TABLE IF EXISTS {}", q(&stage)))?;
+        load_as(conn, &stage, raw, false)?;
+        let r = conn.execute_batch(&format!("CREATE TEMP TABLE {} AS SELECT * FROM {}", q(table), q(&stage)));
+        let _ = conn.execute_batch(&format!("DROP TABLE IF EXISTS {}", q(&stage)));
+        return Ok(r?);
+    }
     let types: Vec<&str> = (0..raw.columns.len()).map(|i| column_type(&raw.rows, i)).collect();
     let defs: Vec<String> = raw.columns.iter().zip(&types).map(|(c, t)| format!("{} {}", q(c), t)).collect();
     conn.execute_batch(&format!("CREATE TABLE {} ({})", q(table), defs.join(", ")))?;

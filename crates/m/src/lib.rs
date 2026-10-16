@@ -1,14 +1,15 @@
-//! m crate. Not implemented yet.
+//! M (Power Query formula language): parser, evaluator that folds table steps to DuckDB SQL, Applied Steps model.
+pub mod ast;
+pub mod backend;
+pub mod eval;
+pub mod fold;
+pub mod lexer;
+pub mod parser;
+pub mod run;
+pub mod stdlib;
+pub mod value;
 
-/// Returns the crate name; placeholder so the workspace builds and tests run.
-pub fn crate_name() -> &'static str {
-    "biforge-m"
-}
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn crate_name_is_stable() {
-        assert_eq!(super::crate_name(), "biforge-m");
-    }
-}
+pub use backend::{Backend, SourceRequest};
+pub use lexer::ParseError;
+pub use parser::parse;
+pub use value::{Col, MError};

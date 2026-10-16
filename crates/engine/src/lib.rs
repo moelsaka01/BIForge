@@ -1,6 +1,7 @@
 //! DuckDB-backed data store and importers. The UI never computes data itself; it asks this crate.
 pub mod creds;
 pub mod dax_bridge;
+pub mod m_bridge;
 pub mod error;
 pub mod sources;
 pub mod types;
@@ -115,6 +116,17 @@ impl Engine {
         Ok(())
     }
 
+    /// Stores the result of a SELECT as table `name`; like `import`, a failing query leaves existing data intact.
+    pub fn import_select(&self, name: &str, select_sql: &str) -> Result<TableInfo> {
+        check_name(name)?;
+        self.conn.execute_batch(&format!("DROP TABLE IF EXISTS {}", q(STAGE)))?;
+        if let Err(e) = self.conn.execute_batch(&format!("CREATE TABLE {} AS {select_sql}", q(STAGE))) {
+            let _ = self.conn.execute_batch(&format!("DROP TABLE IF EXISTS {}", q(STAGE)));
+            return Err(e.into());
+        }
+        self.swap_stage(name)
+    }
+
     /// Imports `spec` into table `name`. Used for both first import and refresh: the new data is built in a
     /// staging table and swapped in only on success, so a failed import/refresh leaves existing data intact.
     pub fn import(&self, name: &str, spec: &SourceSpec, creds: &dyn CredentialStore) -> Result<TableInfo> {
@@ -124,6 +136,10 @@ impl Engine {
             let _ = self.conn.execute_batch(&format!("DROP TABLE IF EXISTS {}", q(STAGE)));
             return Err(e);
         }
+        self.swap_stage(name)
+    }
+
+    fn swap_stage(&self, name: &str) -> Result<TableInfo> {
         let swap = format!(
             "BEGIN; DROP TABLE IF EXISTS {t}; ALTER TABLE {s} RENAME TO {t}; COMMIT;",
             t = q(name),
