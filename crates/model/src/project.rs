@@ -236,7 +236,7 @@ impl Project {
             "report.json".to_string(),
             json!({
                 "$schema": REPORT_SCHEMA,
-                "themeCollection": {"baseTheme": {"name": "BIForgeDefault", "reportVersionAtImport": "1.0", "type": "SharedResources"}}
+                "themeCollection": {"baseTheme": {"name": "CY24SU10", "reportVersionAtImport": {"visual": "1.8.0", "page": "1.0.0", "report": "1.0.0"}, "type": "SharedResources"}}
             }),
         );
         files.insert(

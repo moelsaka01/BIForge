@@ -22,6 +22,16 @@ fn model_of(documents: &[Document]) -> Result<Model, String> {
     Model::from_tmdl(documents.iter()).map_err(|e| e.to_string())
 }
 
+/// Hash of the model text: the loaded engine is reused while it stays the same.
+fn model_key(documents: &[Document]) -> u64 {
+    use std::hash::{Hash, Hasher};
+    let mut h = std::collections::hash_map::DefaultHasher::new();
+    for d in documents {
+        biforge_model::tmdl::print(d).hash(&mut h);
+    }
+    h.finish()
+}
+
 pub struct DaxService<'a> {
     pub data: &'a DataService,
 }
@@ -39,10 +49,9 @@ impl DaxService<'_> {
 
     /// Runs a DAX query (`DEFINE ... EVALUATE ...`) over the project's model and data.
     pub fn query(&self, documents: &[Document], query: &str) -> Result<QueryOutcome, String> {
-        let model = model_of(documents)?;
         self.data.with_store(|store| {
             let started = Instant::now();
-            let engine = biforge_dax::Engine::new(model, store)?;
+            let engine = self.data.dax_cache.get(model_key(documents), store, || model_of(documents))?;
             let tables = engine.query_with(query, Some(store)).map_err(|e| e.message)?;
             Ok(QueryOutcome { results: tables.iter().map(result_dto).collect(), elapsed_ms: started.elapsed().as_millis() as u64 })
         })
@@ -98,6 +107,31 @@ mod tests {
         let out = dax.query(&docs, q).unwrap();
         let rows: Vec<(String, String)> = out.results[0].rows.iter().map(|r| (r[0].v.clone(), r[1].v.clone())).collect();
         assert_eq!(rows, vec![("East".into(), "14".into()), ("West".into(), "6".into())]);
+    }
+
+    #[test]
+    fn repeated_queries_reuse_the_loaded_engine_until_the_model_or_the_data_change() {
+        let (d, svc, docs) = setup();
+        let dax = DaxService { data: &svc };
+        let q = "EVALUATE ROW(\"v\", [Total])";
+        assert_eq!(dax.query(&docs, q).unwrap().results[0].rows[0][0].v, "10");
+        dax.query(&docs, "EVALUATE ROW(\"v\", [Total] + 1)").unwrap();
+        assert_eq!(svc.dax_cache.loads(), 1, "the second query reloaded the model");
+        // a changed model loads again
+        let docs2 = vec![biforge_model::tmdl::parse(&MODEL.replace("measure Total = SUM(Sales[Qty])", "measure Total = SUM(Sales[Qty]) * 2")).unwrap()];
+        assert_eq!(dax.query(&docs2, q).unwrap().results[0].rows[0][0].v, "20");
+        assert_eq!(svc.dax_cache.loads(), 2);
+        // refreshed data loads again and the answer changes
+        std::fs::write(d.path().join("s.csv"), "Region,Qty
+East,100
+").unwrap();
+        svc.import("Sales", &SourceSpec::Csv { path: d.path().join("s.csv").to_string_lossy().into_owned(), delimiter: None, header: None }).unwrap();
+        assert_eq!(dax.query(&docs2, q).unwrap().results[0].rows[0][0].v, "200");
+        assert_eq!(svc.dax_cache.loads(), 3);
+        // a different store never reuses another store's engine
+        let other = tempfile::tempdir().unwrap();
+        svc.open_store(&other.path().to_string_lossy()).unwrap();
+        assert!(dax.query(&docs2, q).is_err() || svc.dax_cache.loads() == 4);
     }
 
     #[test]

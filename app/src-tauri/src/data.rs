@@ -9,6 +9,8 @@ use std::sync::{Arc, Mutex};
 pub struct DataService {
     engine: Mutex<Option<Engine>>,
     creds: Arc<dyn CredentialStore>,
+    /// The loaded DAX engine of the last query, reused while the model and the data are unchanged.
+    pub dax_cache: biforge_engine::dax_bridge::DaxCache,
 }
 
 fn msg<E: std::fmt::Display>(e: E) -> String {
@@ -17,7 +19,7 @@ fn msg<E: std::fmt::Display>(e: E) -> String {
 
 impl DataService {
     pub fn new(creds: Arc<dyn CredentialStore>) -> Self {
-        Self { engine: Mutex::new(None), creds }
+        Self { engine: Mutex::new(None), creds, dax_cache: Default::default() }
     }
 
     pub fn system() -> Self {

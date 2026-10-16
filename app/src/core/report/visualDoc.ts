@@ -86,7 +86,7 @@ export function parseVisual(pageName: string, json: J): VisualModel | null {
     visualType: json.visual.visualType,
     position: { x: pos.x ?? 0, y: pos.y ?? 0, z: pos.z ?? 0, width: pos.width ?? 200, height: pos.height ?? 150, ...(pos.tabOrder !== undefined ? { tabOrder: pos.tabOrder } : {}) },
     roles,
-    sort: sf ? { field: sf, dir: s.direction === 2 ? "desc" : "asc" } : null,
+    sort: sf ? { field: sf, dir: s.direction === 2 || s.direction === "Descending" ? "desc" : "asc" } : null,
     hidden: json.isHidden === true,
     filters: readFilters(json),
     json,

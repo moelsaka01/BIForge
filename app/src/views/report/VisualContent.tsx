@@ -30,6 +30,15 @@ export function VisualContent({ page, visual, width, height }: { page: PageModel
 
   const type = visualType(visual.visualType);
   const selected = c.snap.selection && c.snap.selection.page === page.name && c.snap.selection.visual === visual.name ? c.snap.selection.points : [];
+  const selectedKey = JSON.stringify(selected);
+  // the chart option is rebuilt only when its inputs change, so that a click is not interrupted by a redraw
+  const chartBuild = useMemo(() => {
+    if (!loaded || loaded.kind !== "grouped") return null;
+    const fam = visualType(visual.visualType)?.family;
+    if (fam === "table" || fam === "card" || fam === "kpi") return null;
+    return buildChart({ visual, loaded, theme: c.theme, selected });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded, visual, c.theme, selectedKey]);
   const cats = (visual.roles.Category ?? []).map((p) => p.field);
   const drill = c.snap.drill[visual.name];
 
@@ -142,7 +151,7 @@ export function VisualContent({ page, visual, width, height }: { page: PageModel
     case "kpi":
       return <KpiView model={buildKpi(visual, loaded, c.theme)} theme={c.theme} width={width} height={height} />;
     default: {
-      const build = buildChart({ visual, loaded, theme: c.theme, selected });
+      const build = chartBuild;
       if (!build || build.count === 0) return <Notice muted>No data</Notice>;
       return <ChartView build={build} width={width} height={height} onPoint={onPoint} onContext={onContext} onHover={onHover} label={`${type.label}`} />;
     }

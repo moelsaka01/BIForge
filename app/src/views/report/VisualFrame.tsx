@@ -91,6 +91,8 @@ export function VisualFrame(p: FrameProps) {
   const showBar = p.selected || hover;
 
   const menu = (e: React.MouseEvent) => {
+    // a right-click on a data point has its own menu (the chart prevents the default before this runs)
+    if (e.defaultPrevented) return;
     e.preventDefault();
     c.onMenu(
       [

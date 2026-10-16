@@ -1,0 +1,16 @@
+{
+  "name": "pbir-validate",
+  "version": "1.0.0",
+  "description": "Validates the report files BIForge writes against Microsoft's public JSON schemas for the PBIR report format (github.com/microsoft/json-schemas, `fabric/item/report/definition`). The schemas are fetched when you run the check and are not stored in this repository.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "ajv": "^8.20.0"
+  }
+}

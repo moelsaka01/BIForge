@@ -130,6 +130,7 @@ describe("visuals", () => {
     expect(() => ops.setAggregation(p, "page1", v, "Category", 5, 1)).toThrow(/Only columns/);
     ops.setSort(p, "page1", v, { field: agg("Sales", "Quantity", 1), dir: "desc" });
     expect(vis(p, v).sort).toEqual({ field: agg("Sales", "Quantity", 1), dir: "desc" });
+    expect((p.report.files[visualKey("page1", v)] as { visual: { query: { sortDefinition: { sort: { direction: string }[] } } } }).visual.query.sortDefinition.sort[0].direction).toBe("Descending");
     ops.removeField(p, "page1", v, "Y", 0);
     expect(vis(p, v).sort).toBeNull();
   });
@@ -192,7 +193,7 @@ describe("filters and interactions", () => {
     expect(ops.getFilters(p, { level: "page", page: "page1" })[0].cond).toEqual(f.cond);
     ops.removeFilter(p, { level: "report" }, "f");
     expect(ops.getFilters(p, { level: "report" })).toEqual([]);
-    expect(Object.keys(p.report.files["report.json"] as object)).toEqual(["themeCollection"]);
+    expect(Object.keys(p.report.files["report.json"] as object).sort()).toEqual(["$schema", "themeCollection"]);
   });
 
   it("interaction settings; default removes the entry; deleting a visual removes its entries", () => {

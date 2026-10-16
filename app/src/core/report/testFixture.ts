@@ -7,6 +7,7 @@ import customerCsv from "../../../../tests/dax/fixtures/Customer.csv?raw";
 import dateCsv from "../../../../tests/dax/fixtures/Date.csv?raw";
 import { measure, type AggFn, type FieldRef } from "./fields";
 import type { ModelInfo } from "./modelInfo";
+const REPORT_SCHEMA = "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/report/3.3.0/schema.json";
 import { PAGE_SCHEMA, PAGES_SCHEMA, parseVisual, projectionJson, VISUAL_SCHEMA, type Projection, type VisualModel } from "./visualDoc";
 import type { Project, TmdlNode } from "../model/types";
 import { sampleProject } from "../testing/fakes";
@@ -88,8 +89,8 @@ export function fixtureProject(measures: Record<string, { name: string; expr: st
     pbir: {},
     platform: null,
     files: {
-      "version.json": { version: "2.0.0" },
-      "report.json": { themeCollection: { baseTheme: { name: "CY24SU10", type: "SharedResources" } } },
+      "version.json": { $schema: "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/versionMetadata/1.0.0/schema.json", version: "2.0.0" },
+      "report.json": { $schema: REPORT_SCHEMA, themeCollection: { baseTheme: { name: "CY24SU10", reportVersionAtImport: { visual: "1.8.0", page: "1.0.0", report: "1.0.0" }, type: "SharedResources" } } },
       "pages/pages.json": { $schema: PAGES_SCHEMA, pageOrder: ["page1"], activePageName: "page1" },
       "pages/page1/page.json": { $schema: PAGE_SCHEMA, name: "page1", displayName: "Page 1", displayOption: "FitToPage", height: 720, width: 1280 },
     },

@@ -17,7 +17,13 @@ const STAGE: &str = "__biforge_stage";
 
 pub struct Engine {
     conn: Connection,
+    /// Identifies this store (a new project gets a new id), so cached DAX engines are never reused across stores.
+    id: u64,
+    /// Bumped by every change of the stored data made through this type (import, refresh, drop).
+    version: std::sync::atomic::AtomicU64,
 }
+
+static NEXT_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
 
 fn lit(s: &str) -> String {
     format!("'{}'", s.replace('\'', "''"))
@@ -39,8 +45,22 @@ fn require_file(path: &str) -> Result<()> {
 }
 
 impl Engine {
+    fn with_conn(conn: Connection) -> Engine {
+        Engine { conn, id: NEXT_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed), version: std::sync::atomic::AtomicU64::new(0) }
+    }
+
+    /// (store id, data version): changes whenever cached results derived from the data would be stale.
+    pub fn data_stamp(&self) -> (u64, u64) {
+        (self.id, self.version.load(std::sync::atomic::Ordering::Relaxed))
+    }
+
+    /// Call after changing the data through `connection()` directly.
+    pub fn data_changed(&self) {
+        self.version.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    }
+
     pub fn in_memory() -> Result<Engine> {
-        Ok(Engine { conn: Connection::open_in_memory()? })
+        Ok(Engine::with_conn(Connection::open_in_memory()?))
     }
 
     /// Opens (or creates) the project's data file.
@@ -48,7 +68,7 @@ impl Engine {
         if let Some(dir) = path.parent() {
             std::fs::create_dir_all(dir)?;
         }
-        Ok(Engine { conn: Connection::open(path)? })
+        Ok(Engine::with_conn(Connection::open(path)?))
     }
 
     /// The underlying connection (for the DAX bridge).
@@ -91,6 +111,7 @@ impl Engine {
 
     pub fn drop_table(&self, name: &str) -> Result<()> {
         self.conn.execute_batch(&format!("DROP TABLE IF EXISTS {}", q(name)))?;
+        self.data_changed();
         Ok(())
     }
 
@@ -113,6 +134,7 @@ impl Engine {
             let _ = self.conn.execute_batch(&format!("DROP TABLE IF EXISTS {}", q(STAGE)));
             return Err(e.into());
         }
+        self.data_changed();
         self.table_info(name)
     }
 

@@ -88,3 +88,46 @@ impl SqlExecutor for Engine {
         }
     }
 }
+
+/// Keeps the last loaded DAX engine (the model's tables read from the store) so that a report page with many
+/// visuals, or repeated interactions, does not reload every table for every query. The engine is reused while the
+/// model text and the stored data are unchanged.
+#[derive(Default)]
+pub struct DaxCache {
+    slot: std::sync::Mutex<Option<CacheSlot>>,
+    loads: std::sync::atomic::AtomicU64,
+}
+
+struct CacheSlot {
+    model_key: u64,
+    stamp: (u64, u64),
+    engine: std::sync::Arc<biforge_dax::Engine>,
+}
+
+impl DaxCache {
+    /// The loaded engine for `model_key` (a hash of the model text) over `store`; `build` makes the model on a miss.
+    pub fn get(&self, model_key: u64, store: &Engine, build: impl FnOnce() -> Result<Model, String>) -> Result<std::sync::Arc<biforge_dax::Engine>, String> {
+        let stamp = store.data_stamp();
+        let mut slot = self.slot.lock().map_err(|_| "The DAX cache is unavailable.".to_string())?;
+        if let Some(s) = slot.as_ref() {
+            if s.model_key == model_key && s.stamp == stamp {
+                return Ok(s.engine.clone());
+            }
+        }
+        let engine = std::sync::Arc::new(biforge_dax::Engine::new(build()?, store)?);
+        self.loads.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        *slot = Some(CacheSlot { model_key, stamp, engine: engine.clone() });
+        Ok(engine)
+    }
+
+    /// How many times an engine was loaded (cache misses).
+    pub fn loads(&self) -> u64 {
+        self.loads.load(std::sync::atomic::Ordering::Relaxed)
+    }
+
+    pub fn clear(&self) {
+        if let Ok(mut s) = self.slot.lock() {
+            *s = None;
+        }
+    }
+}

@@ -255,6 +255,31 @@
       "expected": {"columns": ["[a]"], "types": ["int"],
         "rows": [
           [4]
+        ]}},
+    {"id": "filter.treatas.groupcol", "query": "EVALUATE SUMMARIZECOLUMNS(Product[Category], TREATAS({(\"Bikes\", \"Online\")}, Product[Category], Sales[Channel]), \"m\", SUM(Sales[Quantity]))", "source": "recorded",
+      "expected": {"columns": ["Product[Category]","[m]"], "types": ["text","int"],
+        "rows": [
+          ["Bikes",178]
+        ]}},
+    {"id": "filter.treatas.groupcol.two", "query": "EVALUATE SUMMARIZECOLUMNS(Product[Category], Sales[Channel], TREATAS({(\"Bikes\", \"Online\"), (\"Clothing\", \"Store\")}, Product[Category], Sales[Channel]), \"m\", SUM(Sales[Quantity])) ORDER BY Product[Category], Sales[Channel]", "source": "recorded",
+      "expected": {"columns": ["Product[Category]","Sales[Channel]","[m]"], "types": ["text","text","int"],
+        "rows": [
+          ["Bikes","Online",178],
+          ["Clothing","Store",64]
+        ]}},
+    {"id": "filter.treatas.groupcol.other", "query": "EVALUATE SUMMARIZECOLUMNS(Customer[Country], TREATAS({(\"Bikes\", \"Online\")}, Product[Category], Sales[Channel]), \"m\", SUM(Sales[Quantity])) ORDER BY Customer[Country]", "source": "recorded",
+      "expected": {"columns": ["Customer[Country]","[m]"], "types": ["text","int"],
+        "rows": [
+          ["Canada",54],
+          ["France",23],
+          ["Germany",34],
+          ["United States",67]
+        ]}},
+    {"id": "filter.treatas.groupcol.single", "query": "EVALUATE SUMMARIZECOLUMNS(Product[Category], TREATAS({\"Bikes\", \"Clothing\"}, Product[Category]), \"m\", SUM(Sales[Quantity])) ORDER BY Product[Category]", "source": "recorded",
+      "expected": {"columns": ["Product[Category]","[m]"], "types": ["text","int"],
+        "rows": [
+          ["Bikes",270],
+          ["Clothing",181]
         ]}}
   ]
 }

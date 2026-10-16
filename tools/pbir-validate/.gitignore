@@ -1,0 +1,4 @@
+node_modules/
+schemas/
+dump.json
+package-lock.json

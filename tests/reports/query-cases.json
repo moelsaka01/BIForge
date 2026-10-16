@@ -248,6 +248,13 @@
      ["Clothing","United States","Online",40],
      ["Clothing","United States","Store",6]]
    ]},
+  {"id": "matrix.tuple-on-row-column", "ordered": true, "dax": "EVALUATE SUMMARIZECOLUMNS(TREATAS({(\"Bikes\", \"Online\")}, Product[Category], Sales[Channel]), \"m0\", SUM(Sales[Quantity]))\nEVALUATE SUMMARIZECOLUMNS(Sales[Channel], TREATAS({(\"Bikes\", \"Online\")}, Product[Category], Sales[Channel]), \"m0\", SUM(Sales[Quantity]))\nORDER BY Sales[Channel] ASC\nEVALUATE SUMMARIZECOLUMNS(Product[Category], TREATAS({(\"Bikes\", \"Online\")}, Product[Category], Sales[Channel]), \"m0\", SUM(Sales[Quantity]))\nORDER BY Product[Category] ASC\nEVALUATE SUMMARIZECOLUMNS(Product[Category], Sales[Channel], TREATAS({(\"Bikes\", \"Online\")}, Product[Category], Sales[Channel]), \"m0\", SUM(Sales[Quantity]))\nORDER BY Product[Category] ASC, Sales[Channel] ASC",
+   "expected": [
+    [[178]],
+    [["Online",178]],
+    [["Bikes",178]],
+    [["Bikes","Online",178]]
+   ]},
   {"id": "slicer.country-given-segment", "ordered": true, "dax": "EVALUATE CALCULATETABLE(VALUES(Customer[Country]), FILTER(ALL(Customer[Segment]), Customer[Segment] IN {\"Consumer\"}))\nORDER BY Customer[Country]",
    "expected": [
     [["Canada"],

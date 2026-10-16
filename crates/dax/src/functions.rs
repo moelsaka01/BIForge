@@ -653,13 +653,15 @@ fn summarize_columns<'a>(ev: &'a Evaluator<'a>, args: &'a [BExpr], env: &Env<'a>
         order.extend(cols.iter().copied());
     }
     let mut out_rows = Vec::new();
-    let g = ev.graph(&ctx);
     for combo in combos {
         if pairs.is_empty() {
             out_rows.push(combo);
             continue;
         }
-        let mut c2 = ctx.remove_columns(ev.data, &g, &order.iter().copied().collect());
+        // the group values are added to the filter arguments (intersected, not substituted): a filter argument that
+        // spans several columns, such as TREATAS over a group-by column and another table's column, keeps its
+        // tuples together (found by running generated report queries: the group value used to replace the tuple)
+        let mut c2 = ctx.clone();
         for (k, &c) in order.iter().enumerate() {
             c2 = c2.push(Filter::single(c, combo[k].key()));
         }

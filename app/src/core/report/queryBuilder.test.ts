@@ -139,9 +139,9 @@ describe("visual queries (checked against values computed from the fixture CSV f
 
   it("explicit sort by value ascending and by category descending", () => {
     const asc = groupSum(joined, [cat], sumQty, "valueDesc").slice().reverse();
-    visualCase("sort.value-asc", visualOf("clusteredColumnChart", { Category: [Cat], Y: [Qty] }, { sort: { field: { Aggregation: { Expression: { Column: { Expression: { SourceRef: { Entity: "Sales" } }, Property: "Quantity" } }, Function: 0 } }, direction: 1 } }), asc);
+    visualCase("sort.value-asc", visualOf("clusteredColumnChart", { Category: [Cat], Y: [Qty] }, { sort: { field: { Aggregation: { Expression: { Column: { Expression: { SourceRef: { Entity: "Sales" } }, Property: "Quantity" } }, Function: 0 } }, direction: "Ascending" } }), asc);
     const desc = groupSum(joined, [cat], sumQty).slice().reverse();
-    visualCase("sort.category-desc", visualOf("clusteredColumnChart", { Category: [Cat], Y: [Qty] }, { sort: { field: { Column: { Expression: { SourceRef: { Entity: "Product" } }, Property: "Category" } }, direction: 2 } }), desc);
+    visualCase("sort.category-desc", visualOf("clusteredColumnChart", { Category: [Cat], Y: [Qty] }, { sort: { field: { Column: { Expression: { SourceRef: { Entity: "Product" } }, Property: "Category" } }, direction: "Descending" } }), desc);
   });
 
   it("pie, treemap and funnel group by one field", () => {
@@ -206,6 +206,16 @@ describe("visual queries (checked against values computed from the fixture CSV f
       groupSum(joined, [cat, country, chan], sumQty),
     ];
     cases.push({ id: "matrix.depths", dax: q.dax, expected: exp, ordered: true });
+  });
+
+  it("a point selected in a chart restricts a matrix whose rows contain the selected category (tuples keep their columns together)", () => {
+    const Ch = column("Sales", "Channel");
+    const v = visualOf("pivotTable", { Rows: [Cat], Columns: [Ch], Values: [Qty] });
+    const tuples: TupleFilter[] = [{ fields: [Cat, Ch], rows: [[lit.str("Bikes"), lit.str("Online")]] }];
+    const q = buildMatrixQuery(v, model, { filters: [], tuples })!;
+    const rows = joined.filter((j) => cat(j) === "Bikes" && j.s.Channel === "Online");
+    const chan = (j: J) => j.s.Channel;
+    cases.push({ id: "matrix.tuple-on-row-column", dax: q.dax, expected: [[[sumQty(rows)]], groupSum(rows, [chan], sumQty), groupSum(rows, [cat], sumQty), groupSum(rows, [cat, chan], sumQty)], ordered: true });
   });
 
   it("slicer values and range", () => {

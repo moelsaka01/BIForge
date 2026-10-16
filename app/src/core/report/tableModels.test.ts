@@ -36,7 +36,7 @@ describe("table", () => {
   });
 
   it("totals row, sort indicator", () => {
-    const v = visualOf("tableEx", { Values: [Cat, Qty] }, { sort: { field: { Column: { Expression: { SourceRef: { Entity: "Product" } }, Property: "Category" } }, direction: 2 } });
+    const v = visualOf("tableEx", { Values: [Cat, Qty] }, { sort: { field: { Column: { Expression: { SourceRef: { Entity: "Product" } }, Property: "Category" } }, direction: "Descending" } });
     const m = buildTable(v, grouped(v, [[t("Bikes"), n(10)]]), DEFAULT_THEME, dec([n(10)]));
     expect(m.totals).toEqual(["Total", "10"]);
     expect(m.columns[0].sort).toBe("desc");

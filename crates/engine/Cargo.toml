@@ -21,4 +21,5 @@ biforge-dax = { path = "../dax" }
 
 [dev-dependencies]
 tempfile = "3"
+biforge-model = { path = "../model" }
 rust_xlsxwriter = "0.79"

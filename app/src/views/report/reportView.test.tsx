@@ -13,6 +13,7 @@ import { fixtureProject } from "../../core/report/testFixture";
 import { getFormat, listPages, parsePage, visualKey } from "../../core/report/visualDoc";
 import { ReportView } from "./ReportView";
 import { FIELD_MIME } from "./VisualizationsPane";
+import * as echartsLib from "echarts/core";
 
 installDomStubs();
 afterEach(cleanup);
@@ -327,5 +328,74 @@ describe("ReportView: format, filters, bookmarks", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Pie chart" }));
     await waitFor(() => expect(t.page().visuals).toHaveLength(1));
     expect(t.errors).toEqual([]);
+  });
+});
+
+describe("ReportView: chart data points", () => {
+  function pointerAt(chart: HTMLElement, cat: string, value: number) {
+    const inst = echartsLib.getInstanceByDom(chart)!;
+    const px = inst.convertToPixel({ xAxisIndex: 0, yAxisIndex: 0 }, [cat, value]) as number[];
+    const root = chart.querySelector("svg")!;
+    return { x: px[0], y: px[1], root };
+  }
+
+  it("clicking a column selects its data point and filters a table", async () => {
+    const t = setup();
+    await t.run("report.visual.add", { page: "page1", type: "clusteredColumnChart", position: { x: 20, y: 20, width: 500, height: 300 }, fields: [{ role: "Category", field: Cat }, { role: "Y", field: Qty }] });
+    await t.run("report.visual.add", { page: "page1", type: "tableEx", position: { x: 600, y: 20, width: 400, height: 300 }, fields: [{ role: "Values", field: Country }, { role: "Values", field: Qty }] });
+    t.dax.handler = (q) =>
+      q.includes("TREATAS") ? { results: [result(["a", "b"], rows(["France", 7]))], elapsedMs: 1 } : q.includes("Customer[Country]") ? { results: [result(["a", "b"], rows(["France", 50], ["Canada", 30]))], elapsedMs: 1 } : q.includes("SUMMARIZECOLUMNS(\"m0\"") ? { results: [result(["m"], [[cell("80")]])], elapsedMs: 1 } : { results: [result(["a", "b"], rows(["Accessories", 278], ["Bikes", 270]))], elapsedMs: 1 };
+    render(<t.Host />);
+    const chart = await screen.findByTestId("chart");
+    await waitFor(() => expect(chart.textContent).toContain("Bikes"));
+    const { x, y, root } = pointerAt(chart, "Bikes", 100);
+    fireEvent.mouseMove(root, { clientX: x, clientY: y });
+    fireEvent.mouseDown(root, { clientX: x, clientY: y });
+    fireEvent.mouseUp(root, { clientX: x, clientY: y });
+    fireEvent.click(root, { clientX: x, clientY: y });
+    await waitFor(() => expect(t.session.report.getSnapshot().selection?.points[0].values).toEqual([lit.str("Bikes")]));
+    await waitFor(() => expect(t.dax.calls.some((c) => c.includes('TREATAS({"Bikes"}, Product[Category])'))).toBe(true));
+    await waitFor(() => expect(within(screen.getByRole("table", { name: "Table" })).getByText("7")).toBeTruthy());
+  });
+
+  it("right-click offers drillthrough to a page that accepts the point", async () => {
+    const t = setup();
+    await t.run("report.page.add", { name: "Category detail", type: "Drillthrough" });
+    const detail = t.session.report.getSnapshot().page!;
+    await t.run("report.page.setDrillthroughFields", { page: detail, fields: [Cat] });
+    await t.run("report.page.go", { page: "page1" });
+    await t.run("report.visual.add", { page: "page1", type: "clusteredColumnChart", position: { x: 20, y: 20, width: 500, height: 300 }, fields: [{ role: "Category", field: Cat }, { role: "Y", field: Qty }] });
+    t.dax.handler = () => ({ results: [result(["a", "b"], rows(["Accessories", 278], ["Bikes", 270]))], elapsedMs: 1 });
+    render(<t.Host />);
+    const chart = await screen.findByTestId("chart");
+    await waitFor(() => expect(chart.textContent).toContain("Bikes"));
+    const { x, y, root } = pointerAt(chart, "Bikes", 100);
+    fireEvent.mouseMove(root, { clientX: x, clientY: y });
+    fireEvent.contextMenu(root, { clientX: x, clientY: y });
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Drill through to Category detail" }));
+    await waitFor(() => expect(t.session.report.getSnapshot().page).toBe(detail));
+    expect(t.session.report.getSnapshot().drillthrough?.filters[0].cond).toEqual({ kind: "in", values: [lit.str("Bikes")] });
+    expect(await screen.findByText(/Drillthrough from another page/)).toBeTruthy();
+  });
+
+  it("hovering a point whose tooltip is a report page shows that page filtered to the point", async () => {
+    const t = setup();
+    await t.run("report.page.add", { name: "Tip", type: "Tooltip" });
+    const tip = t.session.report.getSnapshot().page!;
+    await t.run("report.visual.add", { page: tip, type: "card", position: { x: 10, y: 10, width: 120, height: 80 }, fields: [{ role: "Values", field: Qty }] });
+    await t.run("report.page.go", { page: "page1" });
+    await t.run("report.visual.add", { page: "page1", type: "clusteredColumnChart", position: { x: 20, y: 20, width: 500, height: 300 }, fields: [{ role: "Category", field: Cat }, { role: "Y", field: Qty }] });
+    const v = t.page().visuals[0].name;
+    await t.run("report.format.set", { page: "page1", visual: v, object: "visualTooltip", prop: "type", value: lit.str("ReportPage") });
+    await t.run("report.format.set", { page: "page1", visual: v, object: "visualTooltip", prop: "section", value: lit.str(tip) });
+    t.dax.handler = (q) => (q.includes("TREATAS") || q.includes('Product[Category] IN {"Bikes"}') ? { results: [result(["m"], [[cell("270")]])], elapsedMs: 1 } : q.includes("SUMMARIZECOLUMNS(Product[Category]") ? { results: [result(["a", "b"], rows(["Accessories", 278], ["Bikes", 270]))], elapsedMs: 1 } : { results: [result(["m"], [[cell("730")]])], elapsedMs: 1 });
+    render(<t.Host />);
+    const chart = await screen.findByTestId("chart");
+    await waitFor(() => expect(chart.textContent).toContain("Bikes"));
+    const { x, y, root } = pointerAt(chart, "Bikes", 100);
+    fireEvent.mouseMove(root, { clientX: x, clientY: y });
+    const overlay = await screen.findByTestId("tooltip-page");
+    await waitFor(() => expect(within(overlay).getByTestId("card-value").textContent).toBe("270"));
+    fireEvent.mouseOut(root, { clientX: 0, clientY: 0, relatedTarget: document.body });
   });
 });

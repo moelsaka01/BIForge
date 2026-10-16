@@ -343,7 +343,7 @@ export function setSort(p: Project, page: string, visual: string, sort: SortSpec
     delete j.visual.query.sortDefinition;
     return;
   }
-  j.visual.query.sortDefinition = { sort: [{ field: fieldToPbir(sort.field), direction: sort.dir === "asc" ? 1 : 2 }] };
+  j.visual.query.sortDefinition = { sort: [{ field: fieldToPbir(sort.field), direction: sort.dir === "asc" ? "Ascending" : "Descending" }] };
 }
 
 export function setVisualFormat(p: Project, page: string, visual: string, object: string, prop: string, value: Lit | null, selector?: string): void {

@@ -372,3 +372,29 @@ fn recovery_files_without_resources_still_load() {
     let back: Project = serde_json::from_value(v).unwrap();
     assert_eq!(back, p);
 }
+
+#[test]
+fn nested_report_files_round_trip_and_removed_ones_are_deleted() {
+    let (d, pbip) = sample_copy();
+    let mut p = Project::open(&pbip).unwrap();
+    let visual = serde_json::json!({"name": "v1", "position": {"x": 1, "y": 2, "width": 3, "height": 4}, "visual": {"visualType": "card"}});
+    p.report.files.insert("pages/p1/visuals/v1/visual.json".into(), visual);
+    p.report.files.insert("bookmarks/b1.bookmark.json".into(), serde_json::json!({"name": "b1", "displayName": "B"}));
+    p.save(d.path()).unwrap();
+    assert!(d.path().join("Retail.Report/definition/pages/p1/visuals/v1/visual.json").is_file());
+    assert_eq!(Project::open(&pbip).unwrap(), p);
+    p.report.files.remove("pages/p1/visuals/v1/visual.json");
+    let r = p.save(d.path()).unwrap();
+    assert!(r.deleted.iter().any(|x| x.ends_with("visual.json")));
+    assert_eq!(Project::open(&pbip).unwrap(), p);
+}
+
+#[test]
+fn a_new_project_has_a_schema_valid_theme_collection() {
+    let p = Project::new("X");
+    let t = &p.report.files["report.json"]["themeCollection"]["baseTheme"];
+    assert_eq!(t["type"], "SharedResources");
+    for k in ["visual", "page", "report"] {
+        assert!(t["reportVersionAtImport"][k].is_string(), "reportVersionAtImport.{k}");
+    }
+}
