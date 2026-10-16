@@ -1,5 +1,6 @@
-import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { FluentProvider, webDarkTheme, webLightTheme } from "@fluentui/react-components";
+import { resolveTheme } from "./core/shell/settings";
 import { createAppRuntime, type AppRuntime } from "./core/appRuntime";
 import { ClassicShell } from "./shells/classic/ClassicShell";
 import { ModernShell } from "./shells/modern/ModernShell";
@@ -17,6 +18,17 @@ export function AppView({ rt, files = browserFiles, editorFactory = createMonaco
   const { session, registry } = rt;
   const settings = useSyncExternalStore(session.shell.settings.subscribe, session.shell.settings.getSnapshot);
   const [error, setError] = useState<string | null>(null);
+  const shellState = useSyncExternalStore(session.shell.subscribe, session.shell.getSnapshot);
+
+  // "Use system setting" follows the Windows light/dark mode and changes with it
+  useEffect(() => {
+    const mq = typeof window !== "undefined" && typeof window.matchMedia === "function" ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+    if (!mq) return;
+    const sync = () => session.shell.setSystemDark(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, [session]);
 
   const run = useCallback(
     async (id: string, args?: unknown) => {
@@ -29,7 +41,7 @@ export function AppView({ rt, files = browserFiles, editorFactory = createMonaco
   const env: ShellEnv = useMemo(() => ({ session, registry, dax: rt.dax, tmdl: rt.tmdl, files, editorFactory, run, error, setError }), [session, registry, rt.dax, rt.tmdl, files, editorFactory, run, error]);
 
   return (
-    <FluentProvider theme={settings.theme === "dark" ? webDarkTheme : webLightTheme} style={{ background: "transparent" }}>
+    <FluentProvider theme={resolveTheme(settings.theme, shellState.systemDark) === "dark" ? webDarkTheme : webLightTheme} style={{ background: "transparent" }}>
       <ShellEnvContext.Provider value={env}>{settings.shell === "modern" ? <ModernShell /> : <ClassicShell />}</ShellEnvContext.Provider>
     </FluentProvider>
   );

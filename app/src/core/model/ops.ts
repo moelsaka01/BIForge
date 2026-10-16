@@ -203,3 +203,21 @@ export function listTables(p: Project): TableView[] {
       .map((c) => ({ name: c.name ?? "", expression: c.default?.text ?? "" })),
   }));
 }
+
+// ---- model settings (Options > Current File > Regional Settings) ----
+
+/** The culture (language) of the model, from `model.tmdl`; null when the file or property is missing. */
+export function getModelCulture(p: Project): string | null {
+  const n = p.model.tmdl[MODEL_FILE]?.nodes.find((x) => x.kind === "model");
+  return n ? textProp(n, "culture") : null;
+}
+
+export function setModelCulture(p: Project, raw: string): void {
+  const culture = raw.trim();
+  if (!/^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/.test(culture)) throw new ModelError("invalid-name", `"${raw}" is not a culture name such as en-US.`);
+  const n = p.model.tmdl[MODEL_FILE]?.nodes.find((x) => x.kind === "model");
+  if (!n) throw new ModelError("not-found", "The model has no model.tmdl.");
+  const prop = n.props.find((x) => x.key === "culture");
+  if (prop) prop.value = { Text: culture };
+  else n.props.unshift({ key: "culture", value: { Text: culture } });
+}

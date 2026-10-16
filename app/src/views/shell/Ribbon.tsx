@@ -71,7 +71,7 @@ function useKeytips(tabs: RibbonTab[], active: string, onTab: (id: string) => vo
     const up = (e: KeyboardEvent) => {
       if (e.key !== "Alt") return;
       if (altAlone) {
-        e.preventDefault();
+        // Alt alone toggles the key tips. The key is never cancelled: system keys (Alt+Tab, Print Screen, ...) must reach Windows.
         setState((s) => (s.mode === "off" ? { mode: "tabs", buf: "" } : { mode: "off" }));
       }
       altAlone = false;
@@ -133,7 +133,7 @@ function Btn({ control, ctx, layout, labels, tip, ui }: { control: RibbonControl
                 >
                   {m.checked?.(ctx) ? "✓ " : ""}
                   {m.label}
-                  {m.status ? ` (${m.status === "todo" ? "not implemented" : "deferred"})` : ""}
+                  {m.status ? " (not implemented)" : ""}
                 </MenuItem>
               </Fragment>
             ))}

@@ -17,6 +17,8 @@ export interface ProjectIO {
   writeRecovery(root: string, project: Project): Promise<void>;
   readRecovery(root: string): Promise<Project | null>;
   clearRecovery(root: string): Promise<void>;
+  /** Writes the data files of the sample project under `<root>/data` and returns their paths (Date, Customer, Product, Sales). */
+  writeSampleData?(root: string): Promise<string[]>;
 }
 
 export interface Dialogs {
@@ -156,6 +158,42 @@ export class Session {
       /* a stale recovery file is harmless: it equals the saved project */
     }
     this.set({ lastMessage: report.written.length ? `Saved ${report.written.length} file(s).` : "Saved (no changes on disk)." });
+    return report;
+  }
+
+  /**
+   * Save as: writes the project (and a copy of its data) into `newRoot` under `newName` and continues with the copy.
+   * With `copy` the new folder is only a copy and the open project stays as it is. The undo history is cleared by
+   * Save as (the document gets a new name), a copy keeps it.
+   */
+  async saveAs(newRoot: string, newName: string, copy = false): Promise<SaveReport> {
+    const root = this.snap.root;
+    const project = this.store.project;
+    if (!root || !project) throw new Error("There is no project to save.");
+    if (rootKey(newRoot) === rootKey(root)) throw new Error("Choose a different folder: that is where the project already is.");
+    const renamed: Project = { ...structuredClone(project), name: newName };
+    const report = await this.io.saveProject(newRoot, renamed);
+    if (this.engine) {
+      try {
+        await this.engine.copyStore(root, newRoot);
+        if (copy) await this.engine.openStore(root);
+      } catch (e) {
+        try {
+          await this.engine.openStore(root);
+        } catch {
+          /* the original store reopens on the next action */
+        }
+        throw new Error(`The project files were written to ${newRoot}, but its data could not be copied: ${errText(e)}`);
+      }
+    }
+    if (copy) {
+      this.set({ lastMessage: `Saved a copy as "${newName}" in ${newRoot}.` });
+      return report;
+    }
+    await this.discardUnsavedForExit().catch(() => undefined);
+    this.store.load(renamed);
+    this.set({ root: newRoot, pendingRecovery: null, lastMessage: `Saved as "${newName}" in ${newRoot}.` });
+    this.shell.settings.addRecent(joinPath(newRoot, `${newName}.pbip`), newName);
     return report;
   }
 

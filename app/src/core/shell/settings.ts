@@ -2,7 +2,11 @@
 // app's own storage (localStorage in the window), never in the document: switching shells never alters a project.
 
 export type ShellKind = "classic" | "modern";
-export type ThemeMode = "light" | "dark";
+export type ThemeMode = "light" | "dark" | "system";
+/** Light or dark after "system" has been looked up. */
+export type ResolvedTheme = "light" | "dark";
+export const resolveTheme = (mode: ThemeMode, systemDark: boolean): ResolvedTheme => (mode === "system" ? (systemDark ? "dark" : "light") : mode);
+export type OptionValue = boolean | number | string;
 export type RibbonMode = "multiline" | "singleline";
 export const PANE_IDS = ["filters", "visualizations", "data", "properties", "bookmarks"] as const;
 export type PaneId = (typeof PANE_IDS)[number];
@@ -30,6 +34,8 @@ export interface AppSettings {
   theme: ThemeMode;
   recent: RecentProject[];
   layouts: Record<ShellKind, ShellLayout>;
+  /** Global options of the Options dialog that are not shell, theme or layout (see core/options/schema.ts). */
+  options: Record<string, OptionValue>;
 }
 
 export interface KeyValueStorage {
@@ -39,6 +45,7 @@ export interface KeyValueStorage {
 
 export const SETTINGS_KEY = "biforge.settings.v1";
 export const MAX_RECENT = 20;
+const MAX_RECENT_LIMIT = 50;
 export const MIN_PANE_WIDTH = 180;
 export const MAX_PANE_WIDTH = 520;
 
@@ -58,7 +65,7 @@ export function defaultLayout(shell: ShellKind): ShellLayout {
 }
 
 export function defaultSettings(): AppSettings {
-  return { shell: "classic", theme: "light", recent: [], layouts: { classic: defaultLayout("classic"), modern: defaultLayout("modern") } };
+  return { shell: "classic", theme: "light", recent: [], options: {}, layouts: { classic: defaultLayout("classic"), modern: defaultLayout("modern") } };
 }
 
 const clampWidth = (w: unknown, fallback: number) => (typeof w === "number" && isFinite(w) ? Math.min(MAX_PANE_WIDTH, Math.max(MIN_PANE_WIDTH, Math.round(w))) : fallback);
@@ -87,14 +94,24 @@ export function sanitizeSettings(raw: unknown): AppSettings {
   const recent = Array.isArray(r.recent)
     ? r.recent
         .filter((x): x is RecentProject => !!x && typeof x.path === "string" && typeof x.name === "string" && typeof x.openedAt === "number")
-        .slice(0, MAX_RECENT)
+        .slice(0, MAX_RECENT_LIMIT)
     : [];
   return {
     shell: r.shell === "modern" ? "modern" : "classic",
-    theme: r.theme === "dark" ? "dark" : "light",
+    theme: r.theme === "dark" || r.theme === "system" ? r.theme : "light",
     recent,
+    options: sanitizeOptions(r.options),
     layouts: { classic: sanitizeLayout(r.layouts?.classic, "classic"), modern: sanitizeLayout(r.layouts?.modern, "modern") },
   };
+}
+
+function sanitizeOptions(raw: unknown): Record<string, OptionValue> {
+  const out: Record<string, OptionValue> = {};
+  if (!raw || typeof raw !== "object") return out;
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (k.length <= 80 && (typeof v === "boolean" || typeof v === "string" || (typeof v === "number" && isFinite(v)))) out[k] = v;
+  }
+  return out;
 }
 
 const samePath = (a: string, b: string) => a.replace(/\//g, "\\").toLowerCase() === b.replace(/\//g, "\\").toLowerCase();
@@ -139,9 +156,15 @@ export class SettingsStore {
     if (theme !== this.snap.theme) this.commit({ ...this.snap, theme });
   }
 
+  setOption(id: string, value: OptionValue): void {
+    if (this.snap.options[id] === value) return;
+    this.commit({ ...this.snap, options: { ...this.snap.options, [id]: value } });
+  }
+
   addRecent(path: string, name: string, now = Date.now()): void {
     const rest = this.snap.recent.filter((r) => !samePath(r.path, path));
-    this.commit({ ...this.snap, recent: [{ path, name, openedAt: now }, ...rest].slice(0, MAX_RECENT) });
+    const max = typeof this.snap.options["interface.recentCount"] === "number" ? Math.min(MAX_RECENT_LIMIT, Math.max(1, this.snap.options["interface.recentCount"] as number)) : MAX_RECENT;
+    this.commit({ ...this.snap, recent: [{ path, name, openedAt: now }, ...rest].slice(0, max) });
   }
 
   removeRecent(path: string): void {

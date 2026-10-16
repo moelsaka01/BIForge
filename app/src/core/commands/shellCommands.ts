@@ -1,6 +1,8 @@
 // Commands of the app frame: start screen and backstage, views, panes, theme, shell choice, dialogs. The shells and
 // the start screen only dispatch these ids; nothing here knows about components.
 import type { CommandRegistry } from "./registry";
+import { optionDef, optionValue } from "../options/schema";
+import { setModelCulture } from "../model/ops";
 import type { Session } from "../session/session";
 import { PANE_IDS, type PaneId, type ShellKind } from "../shell/settings";
 import { VIEW_IDS, type ViewId, type Zoom } from "../shell/shellStore";
@@ -13,6 +15,20 @@ export function registerShellCommands(r: CommandRegistry<Session>): void {
   r.register({ id: "app.backToDocument", label: "Back to the report", category: "File", isEnabled: hasProject, run: (s) => s.shell.setView(s.shell.getSnapshot().view) });
 
   r.register({ id: "file.newBlank", label: "Blank report", category: "File", run: (s) => s.shell.openDialog({ kind: "newProject" }) });
+  r.register({ id: "file.saveAs", label: "Save as", category: "File", isEnabled: hasProject, run: (s) => s.shell.openDialog({ kind: "saveAs" }) });
+  r.register({
+    id: "file.saveAs.run",
+    label: "Save the project under a new name or in a new folder",
+    category: "File",
+    isEnabled: hasProject,
+    async run(s, args) {
+      const a = (args ?? {}) as { name?: string; folder?: string; copy?: boolean };
+      if (!a.name || !a.folder) throw new Error("Missing name or folder.");
+      await s.saveAs(a.folder, a.name, a.copy === true);
+    },
+  });
+  r.register({ id: "file.importMenu", label: "Import", category: "File", isEnabled: hasProject, run: (s) => s.shell.openDialog({ kind: "importMenu" }) });
+  r.register({ id: "file.exportMenu", label: "Export", category: "File", isEnabled: hasProject, run: (s) => s.shell.openDialog({ kind: "exportMenu" }) });
   r.register({
     id: "file.close",
     label: "Close project",
@@ -77,7 +93,18 @@ export function registerShellCommands(r: CommandRegistry<Session>): void {
     id: "app.theme.toggle",
     label: "Switch between light and dark",
     category: "App",
-    run: (s) => s.shell.settings.setTheme(s.shell.settings.getSnapshot().theme === "dark" ? "light" : "dark"),
+    // the opposite of what is on screen now (also when the theme follows the system)
+    run: (s) => s.shell.settings.setTheme(s.shell.resolvedTheme() === "dark" ? "light" : "dark"),
+  });
+  r.register({
+    id: "app.theme.set",
+    label: "Set the theme",
+    category: "App",
+    run(s, args) {
+      const theme = (args as { theme?: string } | undefined)?.theme;
+      if (theme !== "light" && theme !== "dark" && theme !== "system") throw new Error("The theme must be light, dark or system.");
+      s.shell.settings.setTheme(theme);
+    },
   });
   r.register({
     id: "app.shell.set",
@@ -119,7 +146,32 @@ export function registerShellCommands(r: CommandRegistry<Session>): void {
       s.shell.settings.removeRecent(path);
     },
   });
-  r.register({ id: "app.options", label: "Options and settings", category: "App", run: (s) => s.shell.openDialog({ kind: "options" }) });
+  r.register({ id: "app.options", label: "Options and settings", category: "App", run: (s, args) => s.shell.openDialog({ kind: "options", page: (args as { page?: string } | undefined)?.page }) });
+  r.register({
+    id: "app.option.set",
+    label: "Change a setting",
+    category: "App",
+    run(s, args) {
+      const a = (args ?? {}) as { id?: string; value?: unknown };
+      const def = a.id ? optionDef(a.id) : undefined;
+      if (!def || !def.implemented) throw new Error("This setting is not available.");
+      const next = optionValue({ [def.id]: a.value as never }, def);
+      if (def.type !== "bool" && def.type !== "number" && def.type !== "enum" && def.type !== "text") throw new Error("This setting cannot be changed.");
+      if (next !== a.value && !(def.type === "number" && typeof a.value === "number")) throw new Error(`"${String(a.value)}" is not a valid value for "${def.label}".`);
+      s.shell.settings.setOption(def.id, next);
+    },
+  });
+  r.register({
+    id: "model.setCulture",
+    label: "Set the model language",
+    category: "Modeling",
+    isEnabled: hasProject,
+    run(s, args) {
+      const culture = (args as { culture?: string } | undefined)?.culture;
+      if (!culture) throw new Error("Missing culture.");
+      s.store.transact("Set model language", (p) => setModelCulture(p, culture));
+    },
+  });
   r.register({ id: "app.about", label: "About", category: "Help", run: (s) => s.shell.openDialog({ kind: "about" }) });
   r.register({ id: "app.shortcuts", label: "Keyboard shortcuts", category: "Help", run: (s) => s.shell.openDialog({ kind: "shortcuts" }) });
 

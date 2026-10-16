@@ -7,8 +7,8 @@ import { BUILTIN_THEMES } from "../report/theme";
 
 export type IconName =
   | "save" | "undo" | "redo" | "paste" | "cut" | "copy" | "formatPainter" | "database" | "excel" | "sql" | "table" | "enterData"
-  | "cloud" | "recent" | "transform" | "refresh" | "newVisual" | "textBox" | "moreVisuals" | "calc" | "measure" | "quickMeasure" | "column"
-  | "publish" | "sensitivity" | "newPage" | "duplicatePage" | "button" | "shapes" | "image" | "relationships" | "roles" | "viewAs"
+  | "recent" | "transform" | "refresh" | "newVisual" | "textBox" | "moreVisuals" | "calc" | "measure" | "quickMeasure" | "column"
+  | "newPage" | "duplicatePage" | "button" | "shapes" | "image" | "relationships" | "roles" | "viewAs"
   | "theme" | "pageView" | "gridlines" | "snap" | "lock" | "mobile" | "filters" | "visualizations" | "dataPane" | "bookmarks"
   | "selectionPane" | "syncSlicers" | "performance" | "about" | "keyboard" | "help" | "interactions" | "bringForward" | "sendBackward"
   | "align" | "group" | "drillUp" | "drillMode" | "nextLevel" | "expandAll" | "resetDrill" | "delete" | "run" | "format" | "code"
@@ -50,7 +50,7 @@ export interface RibbonMenuItem {
   separatorBefore?: boolean;
 }
 
-export type Unavailable = "todo" | "deferred";
+export type Unavailable = "todo";
 
 export interface RibbonControl {
   id: string;
@@ -90,12 +90,10 @@ export interface RibbonTab {
 
 export const STATUS_TEXT: Record<Unavailable, string> = {
   todo: "Not yet implemented",
-  deferred: "Deferred: needs online services or is planned for later",
 };
 
 // ---- builders ----
 const todo = (id: string, label: string, icon: IconName, extra: Partial<RibbonControl> = {}): RibbonControl => ({ id, label, icon, status: "todo", ...extra });
-const deferred = (id: string, label: string, icon: IconName, extra: Partial<RibbonControl> = {}): RibbonControl => ({ id, label, icon, status: "deferred", ...extra });
 const cmd = (id: string, label: string, icon: IconName, command: string, extra: Partial<RibbonControl> = {}): RibbonControl => ({ id, label, icon, command, ...extra });
 
 const hasVisual = (c: RibbonCtx) => c.visual !== null;
@@ -111,7 +109,6 @@ const getDataMenu: RibbonMenuItem[] = [
   { label: "PostgreSQL database", command: "data.getData", args: { source: "postgres" } },
   { label: "SQL Server", status: "todo", separatorBefore: true },
   { label: "Web", status: "todo" },
-  { label: "OneLake catalog", status: "deferred" },
   { label: "More…", command: "data.getData" },
 ];
 
@@ -141,7 +138,6 @@ const dataGroup = (): RibbonGroup => ({
     cmd("excel", "Excel workbook", "excel", "data.getData", { size: "large", args: { source: "excel" }, keytip: "X" }),
     todo("sqlServer", "SQL Server", "sql", { size: "large" }),
     todo("enterData", "Enter data", "enterData", { size: "large" }),
-    deferred("onelake", "OneLake catalog", "cloud", { size: "large" }),
     todo("recentSources", "Recent sources", "recent", { size: "large" }),
   ],
 });
@@ -175,8 +171,6 @@ const calculationsGroup = (): RibbonGroup => ({
   ],
 });
 
-const shareGroup = (): RibbonGroup => ({ id: "share", label: "Share", controls: [deferred("publish", "Publish", "publish", { size: "large" })] });
-const sensitivityGroup = (): RibbonGroup => ({ id: "sensitivity", label: "Sensitivity", controls: [deferred("sensitivity", "Sensitivity", "sensitivity", { size: "large" })] });
 
 const modelingCalculations = (): RibbonGroup => ({
   id: "calculations",
@@ -323,10 +317,7 @@ function reportTabs(shell: ShellKind): RibbonTab[] {
     id: "home",
     label: "Home",
     keytip: "H",
-    groups:
-      shell === "classic"
-        ? [...homeCommon(), insertGroup(), calculationsGroup(), sensitivityGroup(), shareGroup()]
-        : [...homeCommon(), insertGroup(), calculationsGroup(), shareGroup()],
+    groups: [...homeCommon(), insertGroup(), calculationsGroup()],
   };
   const insert: RibbonTab = {
     id: "insert",

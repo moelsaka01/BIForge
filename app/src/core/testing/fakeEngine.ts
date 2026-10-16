@@ -16,6 +16,11 @@ export class FakeEngine implements EngineApi {
     this.calls.push(`open:${root}`);
     return [...this.tables.keys()];
   }
+  async copyStore(srcRoot: string, dstRoot: string): Promise<string[]> {
+    this.calls.push(`copy:${srcRoot}->${dstRoot}`);
+    if (this.fail) throw new Error(this.fail);
+    return [...this.tables.keys()];
+  }
   async importSource(table: string, spec: SourceSpec): Promise<TableInfo> {
     this.calls.push(`import:${table}`);
     if (this.fail) throw new Error(this.fail);

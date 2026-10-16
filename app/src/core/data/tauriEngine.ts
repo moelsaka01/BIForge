@@ -4,6 +4,7 @@ import type { EngineApi, RelationshipHint, RowPage, SortSpec, SourceSpec, TableI
 /** EngineApi backed by the Rust engine through Tauri commands. */
 export const tauriEngine: EngineApi = {
   openStore: (root) => invoke<string[]>("engine_open_store", { root }),
+  copyStore: (srcRoot, dstRoot) => invoke<string[]>("engine_copy_store", { srcRoot, dstRoot }),
   importSource: (table, spec) => invoke<TableInfo>("engine_import", { table, spec }),
   tableInfo: (table) => invoke<TableInfo | null>("engine_table_info", { table }),
   dropTable: (table) => invoke<void>("engine_drop_table", { table }),

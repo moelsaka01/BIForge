@@ -6,6 +6,7 @@ import type { SourceSpec } from "../data/types";
 import { registerReportCommands } from "./reportCommands";
 import { registerQueryCommands } from "./queryCommands";
 import { registerShellCommands } from "./shellCommands";
+import { createSampleProject } from "../session/sample";
 
 function argsOf<T extends object>(args: unknown, required: (keyof T & string)[]): T {
   const a = (args ?? {}) as Record<string, unknown>;
@@ -46,6 +47,20 @@ export function createRegistry(session: Session): CommandRegistry<Session> {
       if (!folder) return;
       if (await askBeforeLeaving(s, "file.new", { name, folder }, args)) return;
       await s.newProject(folder, name);
+    },
+  });
+  r.register({ id: "file.newSample", label: "Learn with sample data", category: "File", isEnabled: (s) => s.engine !== null, run: (s) => s.shell.openDialog({ kind: "newProject", sample: true }) });
+  r.register({
+    id: "file.newSample.run",
+    label: "Create the sample project",
+    category: "File",
+    isEnabled: (s) => s.engine !== null,
+    async run(s, args) {
+      const { name } = argsOf<{ name: string }>(args, ["name"]);
+      const folder = (args as { folder?: string }).folder;
+      if (!folder) throw new Error("Missing folder.");
+      if (await askBeforeLeaving(s, "file.newSample.run", { name, folder }, args)) return;
+      await createSampleProject(s, folder, name);
     },
   });
   r.register({

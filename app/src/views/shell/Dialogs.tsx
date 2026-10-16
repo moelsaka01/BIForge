@@ -5,7 +5,10 @@ import { ImportDialog } from "../ImportDialog";
 import { APP_NAME, APP_VERSION, NOT_YET_IMPLEMENTED, WORKING_FEATURES } from "../../core/info";
 import { dirname, joinPath } from "../../core/session/session";
 import type { DialogRequest } from "../../core/shell/shellStore";
-import { useDoc, useEnv, useSettings, useShellState } from "./ShellContext";
+import { OptionsDialog } from "./OptionsDialog";
+import { resolveTheme } from "../../core/report/theme";
+import { themeToJson } from "../../core/report/theme";
+import { useDoc, useEnv, useSession, useSettings, useShellState } from "./ShellContext";
 
 const INVALID_NAME = /[\\/:*?"<>|]/;
 
@@ -46,7 +49,7 @@ function NewProjectDialog({ request }: { request: Extract<DialogRequest, { kind:
 
   const create = async () => {
     setBusy(true);
-    const ok = await env.run("file.new", { name: name.trim(), folder: joinPath(parent, name.trim()) });
+    const ok = await env.run(request.sample ? "file.newSample.run" : "file.new", { name: name.trim(), folder: joinPath(parent, name.trim()) });
     setBusy(false);
     // another question (unsaved changes) may have taken the dialog's place; only move on when this one is still showing
     if (ok && env.session.shell.getSnapshot().dialog?.kind === "newProject") {
@@ -57,7 +60,7 @@ function NewProjectDialog({ request }: { request: Extract<DialogRequest, { kind:
 
   return (
     <Shell
-      title="New blank report"
+      title={request.sample ? "Learn with sample data" : "New blank report"}
       label="New project"
       onClose={close}
       actions={
@@ -97,6 +100,118 @@ function NewProjectDialog({ request }: { request: Extract<DialogRequest, { kind:
           The project is created in {joinPath(parent, name.trim())}
         </div>
       )}
+    </Shell>
+  );
+}
+
+function SaveAsDialog({ request }: { request: Extract<DialogRequest, { kind: "saveAs" }> }) {
+  const env = useEnv();
+  const doc = useDoc();
+  const sess = useSession();
+  const copy = request.copy === true;
+  const [name, setName] = useState(doc.project?.name ?? "");
+  const [parent, setParent] = useState("");
+  const [busy, setBusy] = useState(false);
+  const problem = name.trim() === "" ? null : projectNameProblem(name);
+  const target = parent && name.trim() ? joinPath(parent, name.trim()) : "";
+  const ready = name.trim() !== "" && !problem && parent !== "";
+  const close = () => env.session.shell.closeDialog();
+  return (
+    <Shell
+      title={copy ? "Save a copy" : "Save as"}
+      label={copy ? "Save a copy" : "Save as"}
+      onClose={close}
+      actions={
+        <>
+          <Button onClick={close}>Cancel</Button>
+          <Button
+            appearance="primary"
+            disabled={!ready || busy}
+            onClick={async () => {
+              setBusy(true);
+              const ok = await env.run("file.saveAs.run", { name: name.trim(), folder: target, copy });
+              setBusy(false);
+              if (ok) close();
+            }}
+          >
+            {copy ? "Save a copy" : "Save"}
+          </Button>
+        </>
+      }
+    >
+      <label style={{ display: "grid", gap: 4 }}>
+        Project name
+        <Input aria-label="Project name" value={name} onChange={(_, d) => setName(d.value)} autoFocus />
+      </label>
+      {problem && (
+        <div role="alert" style={{ color: "var(--colorPaletteRedForeground1)", fontSize: 12 }}>
+          {problem}
+        </div>
+      )}
+      <div style={{ display: "grid", gap: 4 }}>
+        Save in
+        <div style={{ display: "flex", gap: 6 }}>
+          <Input aria-label="Location" readOnly value={parent} placeholder="Choose the folder to create the project folder in" style={{ flex: 1 }} />
+          <Button
+            onClick={async () => {
+              const f = await env.session.dialogs.pickFolder();
+              if (f) setParent(f);
+            }}
+          >
+            Browse…
+          </Button>
+        </div>
+      </div>
+      {ready && (
+        <div style={{ fontSize: 12, opacity: 0.75 }} data-testid="project-path">
+          The project and its data are written to {target}
+          {copy ? ". The open project stays where it is." : ", and you continue working there."}
+        </div>
+      )}
+      {sess.root && <div style={{ fontSize: 12, opacity: 0.75 }}>Now in {sess.root}.</div>}
+    </Shell>
+  );
+}
+
+function ExportDialog() {
+  const env = useEnv();
+  const doc = useDoc();
+  const close = () => env.session.shell.closeDialog();
+  return (
+    <Shell title="Export" onClose={close} actions={<Button appearance="primary" onClick={close}>Close</Button>}>
+      <Button
+        onClick={() => {
+          if (doc.project) {
+            const t = resolveTheme(doc.project);
+            env.files.save(`${t.name}.json`, JSON.stringify(themeToJson(t), null, 2));
+          }
+          close();
+        }}
+      >
+        Report theme (JSON)…
+      </Button>
+      <Button onClick={() => env.session.shell.openDialog({ kind: "saveAs", copy: true })}>Project copy (PBIP folder with its data)…</Button>
+      <div style={{ fontSize: 12, opacity: 0.75 }}>Not available yet: PDF, PNG, Power BI template (.pbit), visual data to CSV or Excel.</div>
+    </Shell>
+  );
+}
+
+function ImportMenuDialog() {
+  const env = useEnv();
+  const close = () => env.session.shell.closeDialog();
+  return (
+    <Shell title="Import" onClose={close} actions={<Button appearance="primary" onClick={close}>Close</Button>}>
+      <Button
+        onClick={async () => {
+          const text = await env.files.pickText(".json,application/json");
+          if (text === null) return;
+          if (await env.run("report.theme.apply", { json: text })) close();
+        }}
+      >
+        Report theme (JSON)…
+      </Button>
+      <Button onClick={() => void env.run("data.getData")}>Data from a file or database…</Button>
+      <div style={{ fontSize: 12, opacity: 0.75 }}>Not available yet: Power BI template (.pbit), Power BI file (.pbix).</div>
     </Shell>
   );
 }
@@ -187,50 +302,6 @@ function UnsavedDialog({ request }: { request: Extract<DialogRequest, { kind: "u
   );
 }
 
-function OptionsDialog() {
-  const env = useEnv();
-  const settings = useSettings();
-  const kind = settings.shell;
-  const layout = settings.layouts[kind];
-  const close = () => env.session.shell.closeDialog();
-  const radio = (name: string, value: string, label: string, checked: boolean, onChange: () => void) => (
-    <label style={{ display: "flex", gap: 6, alignItems: "center" }}>
-      <input type="radio" name={name} value={value} checked={checked} onChange={onChange} />
-      {label}
-    </label>
-  );
-  return (
-    <Shell title="Options and settings" label="Options" onClose={close} actions={<Button appearance="primary" onClick={close}>Close</Button>}>
-      <fieldset style={{ border: "1px solid var(--colorNeutralStroke2)", borderRadius: 4 }}>
-        <legend>Interface</legend>
-        {radio("shell", "classic", "Classic: multi-line ribbon, panes side by side on the right", kind === "classic", () => void env.run("app.shell.set", { shell: "classic" }))}
-        {radio("shell", "modern", "Modern: single-line ribbon, Data pane on the left, one pane switcher on the right", kind === "modern", () => void env.run("app.shell.set", { shell: "modern" }))}
-        <div style={{ fontSize: 12, opacity: 0.75, marginTop: 4 }}>Both open the same project; switching never changes it.</div>
-      </fieldset>
-      <fieldset style={{ border: "1px solid var(--colorNeutralStroke2)", borderRadius: 4 }}>
-        <legend>Theme</legend>
-        {radio("theme", "light", "Light", settings.theme === "light", () => settings.theme !== "light" && void env.run("app.theme.toggle"))}
-        {radio("theme", "dark", "Dark", settings.theme === "dark", () => settings.theme !== "dark" && void env.run("app.theme.toggle"))}
-      </fieldset>
-      <fieldset style={{ border: "1px solid var(--colorNeutralStroke2)", borderRadius: 4 }}>
-        <legend>Ribbon (this interface)</legend>
-        {radio("ribbon", "multiline", "Multi-line", layout.ribbonMode === "multiline", () => void env.run("app.ribbon.mode", { mode: "multiline" }))}
-        {radio("ribbon", "singleline", "Single line", layout.ribbonMode === "singleline", () => void env.run("app.ribbon.mode", { mode: "singleline" }))}
-        <div style={{ marginTop: 6 }}>
-          <Button size="small" onClick={() => void env.run("app.layout.reset")}>
-            Reset panes and ribbon of this interface
-          </Button>
-        </div>
-      </fieldset>
-      <fieldset style={{ border: "1px solid var(--colorNeutralStroke2)", borderRadius: 4 }}>
-        <legend>Preview features</legend>
-        <div style={{ fontSize: 12 }}>On-object interaction: not yet implemented (neither interface has it).</div>
-        <div style={{ fontSize: 12 }}>New Power Query experience: not yet implemented (one editor serves both interfaces).</div>
-      </fieldset>
-    </Shell>
-  );
-}
-
 function AboutDialog() {
   const env = useEnv();
   const close = () => env.session.shell.closeDialog();
@@ -300,7 +371,13 @@ export function Dialogs() {
     case "unsaved":
       return <UnsavedDialog request={dialog} />;
     case "options":
-      return <OptionsDialog />;
+      return <OptionsDialog page={dialog.page} />;
+    case "saveAs":
+      return <SaveAsDialog request={dialog} />;
+    case "exportMenu":
+      return <ExportDialog />;
+    case "importMenu":
+      return <ImportMenuDialog />;
     case "about":
       return <AboutDialog />;
     case "shortcuts":

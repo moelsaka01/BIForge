@@ -10,6 +10,7 @@ export const tauriIO: ProjectIO = {
   writeRecovery: (root, project) => invoke<void>("write_recovery", { root, project }),
   readRecovery: (root) => invoke<Project | null>("read_recovery", { root }),
   clearRecovery: (root) => invoke<void>("clear_recovery", { root }),
+  writeSampleData: (root) => invoke<string[]>("write_sample_data", { root }),
 };
 
 export const tauriDialogs: Dialogs = {

@@ -28,31 +28,30 @@ interface NavItem {
   label: string;
   icon: keyof typeof RIBBON_ICONS;
   command?: string;
-  note?: "Deferred" | "Not implemented";
   indent?: boolean;
 }
 
 function navItems(hasDoc: boolean): { top: NavItem[]; bottom: NavItem[] } {
   const top: NavItem[] = [
     { id: "home", label: "Home", icon: "home" },
+    { id: "new", label: "New", icon: "newVisual", command: "file.newBlank" },
     { id: "open", label: "Open", icon: "open", command: "file.open" },
   ];
+  // the File menu of the original: New, Open, Save, Save as, Get data, Import, Export, Options and settings, About, Exit
   if (hasDoc) {
     top.push(
       { id: "save", label: "Save", icon: "save", command: "file.save", indent: true },
-      { id: "saveAs", label: "Save as", icon: "save", note: "Not implemented", indent: true },
-      { id: "share", label: "Share", icon: "publish", note: "Deferred", indent: true },
+      { id: "saveAs", label: "Save as", icon: "save", command: "file.saveAs", indent: true },
       { id: "getData", label: "Get data", icon: "database", command: "data.getData", indent: true },
-      { id: "import", label: "Import", icon: "import", note: "Not implemented", indent: true },
-      { id: "export", label: "Export", icon: "export", note: "Not implemented", indent: true },
-      { id: "publish", label: "Publish", icon: "publish", note: "Deferred", indent: true },
+      { id: "import", label: "Import", icon: "import", command: "file.importMenu", indent: true },
+      { id: "export", label: "Export", icon: "export", command: "file.exportMenu", indent: true },
       { id: "close", label: "Close project", icon: "close", command: "file.close", indent: true },
     );
   }
   const bottom: NavItem[] = [
-    { id: "signin", label: "Sign in", icon: "roles", note: "Deferred" },
     { id: "options", label: "Options and settings", icon: "options", command: "app.options" },
     { id: "about", label: "About", icon: "about", command: "app.about" },
+    { id: "exit", label: "Exit", icon: "close", command: "app.exit" },
   ];
   return { top, bottom };
 }
@@ -62,7 +61,6 @@ export function StartScreen({ variant }: { variant: ShellKind }) {
   const env = useEnv();
   const doc = useDoc();
   const settings = useSettings();
-  const { startTab } = useShellState();
   const hasDoc = doc.project !== null;
   const [newOpen, setNewOpen] = useState(true);
   const [recoOpen, setRecoOpen] = useState(true);
@@ -70,6 +68,7 @@ export function StartScreen({ variant }: { variant: ShellKind }) {
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<RecentFilter>("all");
   const nav = navItems(hasDoc);
+  const showReco = settings.options["interface.showRecommended"] !== false;
 
   const recent = useMemo(() => {
     const now = Date.now();
@@ -92,23 +91,20 @@ export function StartScreen({ variant }: { variant: ShellKind }) {
         className={`sn-item${it.indent ? " indent" : ""}`}
         aria-current={it.id === "home" ? "page" : undefined}
         disabled={!enabled}
-        title={it.note ? `${it.label} - ${it.note}` : undefined}
         onClick={() => it.command && void env.run(it.command)}
       >
         {!it.indent && <Icon aria-hidden />}
         {it.label}
-        {it.note && <span className="badge">{it.note}</span>}
       </button>
     );
   };
 
-  const card = (id: string, label: string, icon: keyof typeof RIBBON_ICONS, command: string | null, args?: unknown, note?: "Deferred" | "Not implemented") => {
+  const card = (id: string, label: string, icon: keyof typeof RIBBON_ICONS, command: string, args?: unknown) => {
     const Icon = RIBBON_ICONS[icon];
     return (
-      <button key={id} type="button" className="card" data-card={id} disabled={!command || !env.registry.isEnabled(command)} title={note ? `${label} - ${note}` : label} onClick={() => command && void env.run(command, args)}>
+      <button key={id} type="button" className="card" data-card={id} disabled={!env.registry.isEnabled(command)} title={label} onClick={() => void env.run(command, args)}>
         <Icon aria-hidden />
         <span>{label}</span>
-        {note && <span className="badge">{note}</span>}
       </button>
     );
   };
@@ -144,21 +140,22 @@ export function StartScreen({ variant }: { variant: ShellKind }) {
         {newOpen && (
           <div className="cards" role="group" aria-label="New">
             {card("blank", "Blank report", "newVisual", "file.newBlank")}
-            {card("onelake", "OneLake catalog", "cloud", null, undefined, "Deferred")}
             {card("excel", "Excel workbook", "excel", "data.getData", { source: "excel" })}
-            {card("sql", "SQL Server", "sql", null, undefined, "Not implemented")}
-            {card("sample", "Learn with sample data", "text", null, undefined, "Not implemented")}
+            {card("sql", "SQL Server", "sql", "data.getData", { source: "sqlserver" })}
+            {card("sample", "Learn with sample data", "text", "file.newSample")}
             {card("other", "Get data from other sources", "database", "data.getData")}
           </div>
         )}
 
-        <h2 style={{ marginTop: 26 }}>
-          <button type="button" aria-label={recoOpen ? "Collapse recommended" : "Expand recommended"} aria-expanded={recoOpen} onClick={() => setRecoOpen(!recoOpen)}>
-            {recoOpen ? <UI_ICONS.down aria-hidden /> : <UI_ICONS.up aria-hidden />}
-          </button>
-          Recommended
-        </h2>
-        {recoOpen && (
+        {showReco && (
+          <h2 style={{ marginTop: 26 }}>
+            <button type="button" aria-label={recoOpen ? "Collapse recommended" : "Expand recommended"} aria-expanded={recoOpen} onClick={() => setRecoOpen(!recoOpen)}>
+              {recoOpen ? <UI_ICONS.down aria-hidden /> : <UI_ICONS.up aria-hidden />}
+            </button>
+            Recommended
+          </h2>
+        )}
+        {recoOpen && showReco && (
           <div className="reco" aria-label="Recommended">
             <div className="reco-nav">
               <button type="button" className="tb-btn" style={{ color: "inherit" }} aria-label="Previous tip" disabled={tip === 0} onClick={() => setTip(tip - 1)}>
@@ -179,11 +176,8 @@ export function StartScreen({ variant }: { variant: ShellKind }) {
         )}
 
         <div className="start-tabs" role="tablist" aria-label="Projects">
-          <button type="button" role="tab" className="pill" aria-selected={startTab === "recent"} onClick={() => env.session.shell.setStartTab("recent")}>
+          <button type="button" role="tab" className="pill" aria-selected>
             <RIBBON_ICONS.recent aria-hidden width={18} height={18} /> Recent
-          </button>
-          <button type="button" role="tab" className="pill" aria-selected={startTab === "shared"} disabled title="Shared with me - Deferred (no online services)">
-            Shared with me <span className="badge">Deferred</span>
           </button>
           <div className="start-filters">
             <input type="search" aria-label="Filter by keyword" placeholder="Filter by keyword" value={q} onChange={(e) => setQ(e.target.value)} />

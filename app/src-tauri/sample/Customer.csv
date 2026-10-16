@@ -1,0 +1,25 @@
+CustomerKey,Customer,City,Region,Segment
+1,Customer 01,Oslo,Nordic,Corporate
+2,Customer 02,Madrid,Iberia,Corporate
+3,Customer 03,Zurich,Alps,Retail
+4,Customer 04,Utrecht,Benelux,Corporate
+5,Customer 05,Riga,Baltic,Corporate
+6,Customer 06,Sofia,Balkans,Retail
+7,Customer 07,Oslo,Nordic,Retail
+8,Customer 08,Madrid,Iberia,Retail
+9,Customer 09,Zurich,Alps,Corporate
+10,Customer 10,Utrecht,Benelux,Corporate
+11,Customer 11,Riga,Baltic,Club
+12,Customer 12,Sofia,Balkans,Corporate
+13,Customer 13,Oslo,Nordic,Club
+14,Customer 14,Madrid,Iberia,Corporate
+15,Customer 15,Zurich,Alps,Corporate
+16,Customer 16,Utrecht,Benelux,Club
+17,Customer 17,Riga,Baltic,Retail
+18,Customer 18,Sofia,Balkans,Corporate
+19,Customer 19,Oslo,Nordic,Club
+20,Customer 20,Madrid,Iberia,Corporate
+21,Customer 21,Zurich,Alps,Retail
+22,Customer 22,Utrecht,Benelux,Club
+23,Customer 23,Riga,Baltic,Corporate
+24,Customer 24,Sofia,Balkans,Corporate

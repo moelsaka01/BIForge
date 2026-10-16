@@ -23,6 +23,13 @@ export class AutosaveController {
     this.timer = null;
   }
 
+  /** Options > Auto recovery: whether to write recovery copies, and after how many seconds of quiet. */
+  private get settings(): { enabled: boolean; delayMs: number } {
+    const o = this.session.shell.settings.getSnapshot().options;
+    const secs = typeof o["autosave.seconds"] === "number" ? Math.min(600, Math.max(1, o["autosave.seconds"] as number)) : null;
+    return { enabled: o["autosave.enabled"] !== false, delayMs: secs === null ? this.debounceMs : secs * 1000 };
+  }
+
   private onChange(): void {
     const snap = this.session.store.getSnapshot();
     if (!snap.isDirty || !this.session.root) {
@@ -33,10 +40,15 @@ export class AutosaveController {
       return;
     }
     if (this.timer) clearTimeout(this.timer);
+    const { enabled, delayMs } = this.settings;
+    if (!enabled) {
+      this.timer = null;
+      return;
+    }
     this.timer = setTimeout(() => {
       this.timer = null;
       void this.flush();
-    }, this.debounceMs);
+    }, delayMs);
   }
 
   /** Writes the snapshot now (also used on window close). Resolves when written. */

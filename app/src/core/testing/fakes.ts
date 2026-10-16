@@ -76,6 +76,10 @@ export class FakeIO implements ProjectIO {
     if (!p) throw new Error(`cannot access ${pbipPath}`);
     return structuredClone(p);
   }
+  async writeSampleData(root: string): Promise<string[]> {
+    this.calls.push(`sample:${root}`);
+    return ["Date", "Customer", "Product", "Sales"].map((n) => `${root}/data/${n}.csv`);
+  }
   async saveProject(root: string, project: Project): Promise<SaveReport> {
     this.calls.push(`save:${root}`);
     if (this.failSave) throw new Error("disk full");

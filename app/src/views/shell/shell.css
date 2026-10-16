@@ -164,3 +164,7 @@ body { background: var(--colorNeutralBackground1, #fff); }
 .tmdl-files button { display: block; width: 100%; text-align: left; border: none; background: transparent; color: inherit; padding: 4px 12px; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
 .tmdl-files button[aria-current="true"] { background: var(--colorNeutralBackground1Selected, var(--colorNeutralBackground1Hover)); font-weight: 600; }
 .tmdl-text { flex: 1 1 0; margin: 0; padding: 10px 14px; overflow: auto; font-family: Consolas, "Cascadia Mono", monospace; font-size: 13px; line-height: 1.45; white-space: pre; tab-size: 4; min-width: 0; }
+
+.opt-page { text-align: left; background: transparent; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; color: inherit; font: inherit; }
+.opt-page:hover { background: var(--colorSubtleBackgroundHover); }
+.opt-page[aria-selected="true"] { background: var(--colorSubtleBackgroundSelected); font-weight: 600; }

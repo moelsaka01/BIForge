@@ -24,6 +24,7 @@ const unsupported = () => Promise.reject(new Error("Not available in the harness
 
 const httpEngine: EngineApi = {
   openStore: () => post("/engine/open", {}),
+  copyStore: unsupported,
   importSource: (table, spec) => post("/engine/import", { table, spec }),
   tableInfo: (table) => post("/engine/tableInfo", { table }),
   dropTable: (table) => post("/engine/drop", { table }),

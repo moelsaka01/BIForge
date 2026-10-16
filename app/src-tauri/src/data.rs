@@ -56,6 +56,32 @@ impl DataService {
         Ok(names)
     }
 
+    /// Copies the data store of project `src_root` into `dst_root` (Save as) and keeps the copy open. The store is
+    /// closed while the file is copied so that DuckDB has flushed it; if the copy fails the original is reopened.
+    pub fn copy_store(&self, src_root: &str, dst_root: &str) -> Result<Vec<String>, String> {
+        {
+            let mut slot = self.engine.lock().map_err(|_| "The data store is unavailable.".to_string())?;
+            *slot = None;
+        }
+        let from = Path::new(src_root).join(".biforge").join("data.duckdb");
+        let copy = (|| -> Result<(), String> {
+            if !from.exists() {
+                return Ok(());
+            }
+            let dir = Path::new(dst_root).join(".biforge");
+            std::fs::create_dir_all(&dir).map_err(msg)?;
+            std::fs::copy(&from, dir.join("data.duckdb")).map_err(msg)?;
+            Ok(())
+        })();
+        match copy {
+            Ok(()) => self.open_store(dst_root),
+            Err(e) => {
+                let _ = self.open_store(src_root);
+                Err(format!("The data could not be copied: {e}"))
+            }
+        }
+    }
+
     pub fn import(&self, table: &str, spec: &SourceSpec) -> Result<TableInfo, String> {
         let creds = self.creds.clone();
         self.with(|e| e.import(table, spec, creds.as_ref()))
@@ -84,6 +110,10 @@ impl DataService {
 #[tauri::command]
 pub fn engine_open_store(state: tauri::State<DataService>, root: String) -> Result<Vec<String>, String> {
     state.open_store(&root)
+}
+#[tauri::command]
+pub fn engine_copy_store(state: tauri::State<DataService>, src_root: String, dst_root: String) -> Result<Vec<String>, String> {
+    state.copy_store(&src_root, &dst_root)
 }
 #[tauri::command]
 pub fn engine_import(state: tauri::State<DataService>, table: String, spec: SourceSpec) -> Result<TableInfo, String> {
@@ -171,5 +201,32 @@ mod tests {
 
         svc.drop_table("T").unwrap();
         assert!(svc.table_info("T").unwrap().is_none());
+    }
+
+    #[test]
+    fn copy_store_copies_the_data_keeps_the_copy_open_and_leaves_the_original_intact() {
+        let d = tempfile::tempdir().unwrap();
+        let (a, b) = (d.path().join("a"), d.path().join("b"));
+        let svc = DataService::new(Arc::new(MemoryCredentialStore::default()));
+        svc.open_store(&a.to_string_lossy()).unwrap();
+        let csv = d.path().join("t.csv");
+        std::fs::write(&csv, "k
+1
+2
+3
+").unwrap();
+        svc.import("T", &SourceSpec::Csv { path: csv.to_string_lossy().into_owned(), delimiter: None, header: None }).unwrap();
+
+        let names = svc.copy_store(&a.to_string_lossy(), &b.to_string_lossy()).unwrap();
+        assert_eq!(names, vec!["T"]);
+        assert_eq!(svc.table_info("T").unwrap().unwrap().row_count, 3);
+        assert!(b.join(".biforge/data.duckdb").exists() && a.join(".biforge/data.duckdb").exists());
+        // the copy is what is open now: dropping the table there leaves the original's data alone
+        svc.drop_table("T").unwrap();
+        assert_eq!(svc.open_store(&a.to_string_lossy()).unwrap(), vec!["T"]);
+
+        // a project without a data store copies to an empty store
+        let empty = d.path().join("empty");
+        assert!(svc.copy_store(&empty.to_string_lossy(), &d.path().join("c").to_string_lossy()).unwrap().is_empty());
     }
 }

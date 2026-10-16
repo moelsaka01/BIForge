@@ -33,21 +33,13 @@ describe("start screen", () => {
     expect("STATUS_NOTICE" in info).toBe(false);
   });
 
-  it("has the cards, with the cloud and unfinished ones visibly disabled and marked", () => {
+  it("has the data-source cards, all usable, and no cloud items at all", () => {
     render(makeApp().element);
     const card = (id: string) => document.querySelector(`[data-card="${id}"]`) as HTMLButtonElement;
-    expect(card("blank").disabled).toBe(false);
-    expect(card("excel").disabled).toBe(false);
-    expect(card("other").disabled).toBe(false);
-    expect(card("onelake").disabled).toBe(true);
-    expect(card("onelake").textContent).toMatch(/Deferred/);
-    expect(card("sql").disabled).toBe(true);
-    expect(card("sql").textContent).toMatch(/Not implemented/);
-    expect(card("sample").disabled).toBe(true);
-    const signIn = screen.getAllByRole("button").filter((b) => /^Sign in/.test(b.textContent ?? ""));
-    expect(signIn.length).toBeGreaterThan(0);
-    for (const b of signIn) expect((b as HTMLButtonElement).disabled).toBe(true);
-    expect((screen.getByRole("tab", { name: /Shared with me/ }) as HTMLButtonElement).disabled).toBe(true);
+    for (const id of ["blank", "excel", "sql", "sample", "other"]) expect(card(id).disabled, id).toBe(false);
+    expect(card("onelake")).toBeNull();
+    expect(document.body.textContent).not.toMatch(/OneLake|Sign in|Shared with me|Publish|Sensitivity|Deferred/i);
+    expect(screen.queryByRole("tab", { name: /Shared with me/ })).toBeNull();
   });
 
   it("Blank report asks for a name and a folder, creates the project in its own folder and enters the shell", async () => {
@@ -195,10 +187,7 @@ describe("ribbon", () => {
     const textBox = r.getByRole("button", { name: /Text box/ }) as HTMLButtonElement;
     expect(textBox.disabled).toBe(true);
     expect(textBox.title).toMatch(/Not yet implemented/);
-    const onelake = r.getByRole("button", { name: /OneLake catalog/ }) as HTMLButtonElement;
-    expect(onelake.disabled).toBe(true);
-    expect(onelake.title).toMatch(/Deferred/);
-    expect((r.getByRole("button", { name: /Publish/ }) as HTMLButtonElement).title).toMatch(/Deferred/);
+    for (const cloud of [/OneLake/, /Publish/, /Sensitivity/, /Share/, /Sign in/]) expect(r.queryByRole("button", { name: cloud })).toBeNull();
   });
 
   it("New measure opens the Measures tab of the DAX view; Manage relationships opens the Model view", async () => {
@@ -469,7 +458,6 @@ describe("Modern shell", () => {
     fireEvent.click(within(dlg).getByLabelText(/Modern:/));
     await waitFor(() => expect(document.querySelector(".app")!.getAttribute("data-shell")).toBe("modern"));
     const again = await screen.findByRole("dialog", { name: "Options" });
-    expect(within(again).getByText(/On-object interaction: not yet implemented/)).toBeTruthy();
     fireEvent.click(within(again).getByLabelText(/Classic:/));
     await waitFor(() => expect(document.querySelector(".app")!.getAttribute("data-shell")).toBe("classic"));
     expect(JSON.stringify(a.session.store.project)).toBe(before);

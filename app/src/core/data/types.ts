@@ -45,6 +45,8 @@ export interface RelationshipHint {
 export interface EngineApi {
   /** Opens the project's data store (under `<root>/.biforge`). */
   openStore(root: string): Promise<string[]>;
+  /** Save as: copies the data store of `srcRoot` into `dstRoot` and keeps the copy open. */
+  copyStore(srcRoot: string, dstRoot: string): Promise<string[]>;
   importSource(table: string, spec: SourceSpec): Promise<TableInfo>;
   tableInfo(table: string): Promise<TableInfo | null>;
   dropTable(table: string): Promise<void>;

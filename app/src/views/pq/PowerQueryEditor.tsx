@@ -54,7 +54,8 @@ export function PowerQueryEditor({ session, registry, factory = createMMonacoEdi
   const [deps, setDeps] = useState(false);
   const [confirmClose, setConfirmClose] = useState(false);
   const [showSettings, setShowSettings] = useState(true);
-  const [showFormula, setShowFormula] = useState(true);
+  // Options > Power Query Editor > Display the formula bar sets the starting state
+  const [showFormula, setShowFormula] = useState(session.shell.settings.getSnapshot().options["pq.formulaBar"] !== false);
   const [message, setMessage] = useState<{ intent: "error" | "info"; text: string } | null>(null);
   const [kinds, setKinds] = useState<Record<string, string>>({});
   const [otherCols, setOtherCols] = useState<Record<string, string[]>>({});

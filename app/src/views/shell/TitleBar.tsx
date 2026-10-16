@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { RibbonControl, RibbonCtx, RibbonTab } from "../../core/shell/ribbon";
-import type { ShellKind } from "../../core/shell/settings";
+import { resolveTheme, type ShellKind } from "../../core/shell/settings";
 import { RIBBON_ICONS, UI_ICONS } from "./icons";
-import { controlEnabled, runControl, useDoc, useEnv, useSession, useSettings } from "./ShellContext";
+import { controlEnabled, runControl, useDoc, useEnv, useSession, useSettings, useShellState } from "./ShellContext";
 
 /** Search over the commands of the current ribbon (what a user can click), run with the same arguments. */
 function CommandSearch({ tabs, ctx, ui }: { tabs: RibbonTab[]; ctx: RibbonCtx; ui: Parameters<typeof runControl>[3] }) {
@@ -74,7 +74,7 @@ function CommandSearch({ tabs, ctx, ui }: { tabs: RibbonTab[]; ctx: RibbonCtx; u
             return (
               <button key={h.control.id + i} role="option" aria-selected={i === sel} disabled={!enabled} onClick={() => pick(h)}>
                 {h.control.label}
-                <small>{h.control.status ? (h.control.status === "todo" ? "Not yet implemented" : "Deferred") : h.control.menu ? "Use the ribbon" : h.tab}</small>
+                <small>{h.control.status ? "Not yet implemented" : h.control.menu ? "Use the ribbon" : h.tab}</small>
               </button>
             );
           })}
@@ -96,6 +96,8 @@ export function TitleBar({ variant, tabs, ctx, ui }: TitleBarProps) {
   const doc = useDoc();
   const sess = useSession();
   const settings = useSettings();
+  const dark = useShellState().systemDark;
+  const resolved = resolveTheme(settings.theme, dark);
   const win = env.session.shell.window;
   const [maximized, setMaximized] = useState(false);
   useEffect(() => {
@@ -129,11 +131,8 @@ export function TitleBar({ variant, tabs, ctx, ui }: TitleBarProps) {
       <button type="button" className="tb-btn" aria-label="Options and settings" title="Options and settings" onClick={() => void env.run("app.options")}>
         <OptionsIcon aria-hidden />
       </button>
-      <button type="button" className="tb-btn" aria-label={settings.theme === "dark" ? "Switch to the light theme" : "Switch to the dark theme"} title="Light or dark theme" onClick={() => void env.run("app.theme.toggle")}>
-        {settings.theme === "dark" ? <UI_ICONS.sun aria-hidden /> : <UI_ICONS.moon aria-hidden />}
-      </button>
-      <button type="button" className="tb-btn" disabled title="Sign in: Deferred (no online services)" aria-label="Sign in (deferred)">
-        Sign in <UI_ICONS.person aria-hidden />
+      <button type="button" className="tb-btn" aria-label={resolved === "dark" ? "Switch to the light theme" : "Switch to the dark theme"} title="Light or dark theme" onClick={() => void env.run("app.theme.toggle")}>
+        {resolved === "dark" ? <UI_ICONS.sun aria-hidden /> : <UI_ICONS.moon aria-hidden />}
       </button>
       {win.available && (
         <>

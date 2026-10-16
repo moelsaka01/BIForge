@@ -1,4 +1,4 @@
-import { SettingsStore, type KeyValueStorage, type ShellKind } from "./settings";
+import { SettingsStore, resolveTheme, type KeyValueStorage, type ResolvedTheme, type ShellKind } from "./settings";
 import { noWindow, type WindowApi } from "./windowApi";
 
 export type ViewId = "report" | "data" | "model" | "dax" | "tmdl";
@@ -7,11 +7,14 @@ export type Zoom = "fit" | number;
 
 /** A dialog a command asked for. The shell draws it; the dialog's buttons dispatch commands again. */
 export type DialogRequest =
-  | { kind: "newProject"; /** open the import dialog (for this source) right after the project exists */ thenImport?: string | true }
+  | { kind: "newProject"; /** create the sample project instead of a blank one */ sample?: boolean; /** open the import dialog (for this source) right after the project exists */ thenImport?: string | true }
   | { kind: "import"; source?: string }
   | { kind: "newTable" }
   | { kind: "unsaved"; /** the command to run again (with discard: true) once the user has decided */ resume: { id: string; args?: Record<string, unknown> } }
-  | { kind: "options" }
+  | { kind: "options"; page?: string }
+  | { kind: "saveAs"; copy?: boolean }
+  | { kind: "exportMenu" }
+  | { kind: "importMenu" }
   | { kind: "about" }
   | { kind: "shortcuts" };
 
@@ -22,7 +25,6 @@ export interface ShellState {
   /** Ribbon tab per view; null = the first tab. */
   ribbonTab: Partial<Record<ViewId, string>>;
   daxTab: "query" | "measures";
-  startTab: "recent" | "shared";
   selectedVisual: { page: string; visual: string } | null;
   selectedTable: string | null;
   zoom: Zoom;
@@ -35,6 +37,7 @@ export interface ShellState {
   daxQuery: string;
   /** Modern shell: which pane the right-hand sidebar shows. */
   sideTab: "visualizations" | "filters" | "bookmarks";
+  systemDark: boolean;
 }
 
 const INITIAL: ShellState = {
@@ -42,7 +45,6 @@ const INITIAL: ShellState = {
   view: "report",
   ribbonTab: {},
   daxTab: "query",
-  startTab: "recent",
   selectedVisual: null,
   selectedTable: null,
   zoom: "fit",
@@ -51,6 +53,7 @@ const INITIAL: ShellState = {
   runQueryTick: 0,
   daxQuery: "",
   sideTab: "visualizations",
+  systemDark: false,
 };
 
 /** Transient UI state of the app frame (which screen, which view, which dialog) plus the persisted settings. */
@@ -64,6 +67,24 @@ export class ShellStore {
     readonly window: WindowApi = noWindow,
   ) {
     this.settings = new SettingsStore(storage);
+  }
+
+  /** Whether Windows is in dark mode (set by the host window; "Use system setting" follows it). */
+  private systemDarkNow = false;
+
+  get systemDark(): boolean {
+    return this.systemDarkNow;
+  }
+
+  setSystemDark(dark: boolean): void {
+    if (dark === this.systemDarkNow) return;
+    this.systemDarkNow = dark;
+    this.set({ systemDark: dark });
+  }
+
+  /** The theme in effect: the chosen one, or the system's when "Use system setting" is on. */
+  resolvedTheme(): ResolvedTheme {
+    return resolveTheme(this.settings.getSnapshot().theme, this.systemDarkNow);
   }
 
   getSnapshot = (): ShellState => this.snap;
@@ -107,10 +128,6 @@ export class ShellStore {
 
   setDaxTab(tab: "query" | "measures"): void {
     this.set({ daxTab: tab });
-  }
-
-  setStartTab(tab: "recent" | "shared"): void {
-    this.set({ startTab: tab });
   }
 
   selectVisual(v: { page: string; visual: string } | null): void {

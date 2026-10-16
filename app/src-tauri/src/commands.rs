@@ -39,6 +39,28 @@ pub fn clear_recovery(root: String) -> Result<(), String> {
     Project::clear_recovery(Path::new(&root)).map_err(msg)
 }
 
+/// The data files of the "Learn with sample data" project (our own synthetic cycle-shop data).
+const SAMPLE_FILES: [(&str, &str); 4] = [
+    ("Date.csv", include_str!("../sample/Date.csv")),
+    ("Customer.csv", include_str!("../sample/Customer.csv")),
+    ("Product.csv", include_str!("../sample/Product.csv")),
+    ("Sales.csv", include_str!("../sample/Sales.csv")),
+];
+
+/// Writes the sample data under `<root>/data/` and returns the file paths in table order (Date, Customer, Product, Sales).
+#[tauri::command]
+pub fn write_sample_data(root: String) -> Result<Vec<String>, String> {
+    let dir = Path::new(&root).join("data");
+    std::fs::create_dir_all(&dir).map_err(msg)?;
+    let mut paths = Vec::new();
+    for (name, text) in SAMPLE_FILES {
+        let p = dir.join(name);
+        std::fs::write(&p, text).map_err(msg)?;
+        paths.push(p.to_string_lossy().into_owned());
+    }
+    Ok(paths)
+}
+
 /// The TMDL text of each model file (the TMDL view shows it read-only).
 #[tauri::command]
 pub fn tmdl_print(documents: BTreeMap<String, Document>) -> BTreeMap<String, String> {
@@ -48,6 +70,16 @@ pub fn tmdl_print(documents: BTreeMap<String, Document>) -> BTreeMap<String, Str
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn sample_data_is_written_with_a_header_and_rows() {
+        let d = tempfile::tempdir().unwrap();
+        let paths = write_sample_data(d.path().to_string_lossy().into_owned()).unwrap();
+        assert_eq!(paths.len(), 4);
+        let sales = std::fs::read_to_string(&paths[3]).unwrap();
+        assert!(sales.starts_with("SalesKey,OrderDate,CustomerKey,ProductKey,Quantity,UnitPrice,Channel"));
+        assert_eq!(sales.lines().count(), 401);
+    }
 
     #[test]
     fn command_wrappers_round_trip_a_project_and_return_readable_errors() {
