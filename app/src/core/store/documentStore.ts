@@ -14,9 +14,12 @@ export interface StoreSnapshot {
   canRedo: boolean;
   undoLabel: string | null;
   redoLabel: string | null;
+  /** A shared report opened for viewing: no change can be made to it. */
+  readOnly: boolean;
 }
 
 const MAX_HISTORY = 100;
+export const READ_ONLY_MESSAGE = "This report is open for viewing only; it cannot be changed.";
 
 function deepEqual(a: unknown, b: unknown): boolean {
   if (a === b) return true;
@@ -39,6 +42,7 @@ export class DocumentStore {
   private undoStack: HistoryEntry[] = [];
   private redoStack: HistoryEntry[] = [];
   private revision = 0;
+  private readOnly = false;
   private listeners = new Set<() => void>();
   private snapshot: StoreSnapshot = this.makeSnapshot();
 
@@ -55,6 +59,7 @@ export class DocumentStore {
 
   /** Replaces the document and clears history. The loaded state counts as saved. */
   load(project: Project): void {
+    this.readOnly = false;
     this.current = project;
     this.saved = project;
     this.undoStack = [];
@@ -62,8 +67,16 @@ export class DocumentStore {
     this.bump();
   }
 
+  /** Opens a document that can only be read (viewing mode): transact, undo and redo refuse until the next load. */
+  loadReadOnly(project: Project): void {
+    this.load(project);
+    this.readOnly = true;
+    this.bump();
+  }
+
   /** Replaces the document but keeps it marked as unsaved (used when restoring a recovery file). */
   loadUnsaved(project: Project, savedBaseline: Project): void {
+    if (this.readOnly) throw new Error(READ_ONLY_MESSAGE);
     this.current = project;
     this.saved = savedBaseline;
     this.undoStack = [];
@@ -72,6 +85,7 @@ export class DocumentStore {
   }
 
   close(): void {
+    this.readOnly = false;
     this.current = null;
     this.saved = null;
     this.undoStack = [];
@@ -87,6 +101,7 @@ export class DocumentStore {
 
   /** Runs `edit` on a clone. Returns false (and records nothing) if it changed nothing. */
   transact(label: string, edit: (draft: Project) => void): boolean {
+    if (this.readOnly) throw new Error(READ_ONLY_MESSAGE);
     if (!this.current) throw new Error("No project is open.");
     const before = this.current;
     const draft = structuredClone(before);
@@ -101,6 +116,7 @@ export class DocumentStore {
   }
 
   undo(): boolean {
+    if (this.readOnly) return false;
     const e = this.undoStack.pop();
     if (!e) return false;
     this.redoStack.push(e);
@@ -110,6 +126,7 @@ export class DocumentStore {
   }
 
   redo(): boolean {
+    if (this.readOnly) return false;
     const e = this.redoStack.pop();
     if (!e) return false;
     this.undoStack.push(e);
@@ -127,6 +144,7 @@ export class DocumentStore {
       canRedo: this.redoStack.length > 0,
       undoLabel: this.undoStack.at(-1)?.label ?? null,
       redoLabel: this.redoStack.at(-1)?.label ?? null,
+      readOnly: this.readOnly,
     };
   }
 

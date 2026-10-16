@@ -9,6 +9,8 @@ import type { MApi } from "../queries/types";
 import { applyQueryLoad, expressionExists, listQueries, queryTexts, removeExpression, upsertExpression, userMTables } from "../queries/queries";
 import { findTable } from "../model/ops";
 import { ShellStore } from "../shell/shellStore";
+import type { OpenedPackage, PublishApi } from "../publish/types";
+import { PublishUi } from "../publish/publishUi";
 
 export interface ProjectIO {
   newProject(root: string, name: string): Promise<Project>;
@@ -28,8 +30,23 @@ export interface Dialogs {
   pickFile(name: string, extensions: string[]): Promise<string | null>;
 }
 
+/** A shared report opened in viewing mode (read-only, like a reading view). */
+export interface ViewingInfo {
+  packageId: string;
+  reportName: string;
+  publisherName: string;
+  keyId: string;
+  version: number;
+  access: "public" | "private";
+  createdAt: string;
+  /** Tables and columns the publisher chose to include. */
+  included: { table: string; columns: string[] }[];
+}
+
 export interface SessionSnapshot {
   root: string | null;
+  /** Set while a shared report is open for viewing; null for a normal project. */
+  viewing: ViewingInfo | null;
   pendingRecovery: Project | null;
   lastMessage: string | null;
   /** Names of tables that currently have data in the engine's store. */
@@ -66,7 +83,9 @@ export class Session {
   readonly report = new ReportRuntime();
   /** Editing state of the Power Query editor. */
   readonly queries = new QueryDraft();
-  private snap: SessionSnapshot = { root: null, pendingRecovery: null, lastMessage: null, dataTables: [], dataEpoch: 0 };
+  /** State of the Publish & Share dialog. */
+  readonly publishUi = new PublishUi(this);
+  private snap: SessionSnapshot = { root: null, viewing: null, pendingRecovery: null, lastMessage: null, dataTables: [], dataEpoch: 0 };
   private listeners = new Set<() => void>();
   /** Project roots whose recovery snapshot was written by this running app (not left behind by a crash). */
   private ownRecovery = new Set<string>();
@@ -80,6 +99,8 @@ export class Session {
     readonly m: MApi | null = null,
     /** Frame state (start screen / views / dialogs) and the app settings. */
     readonly shell: ShellStore = new ShellStore(null),
+    /** Publish & Share and viewing mode (null where the engine is not available). */
+    readonly publish: PublishApi | null = null,
   ) {}
 
   getSnapshot = (): SessionSnapshot => this.snap;
@@ -112,7 +133,7 @@ export class Session {
       /* harmless: it is overwritten by the next autosave */
     }
     const dataNote = await this.openDataStore(root, project);
-    this.set({ root, pendingRecovery: null, lastMessage: `Created project "${name}".${dataNote}` });
+    this.set({ root, viewing: null, pendingRecovery: null, lastMessage: `Created project "${name}".${dataNote}` });
     this.shell.settings.addRecent(joinPath(root, `${name}.pbip`), name);
     this.shell.enterWorkspace();
   }
@@ -139,6 +160,7 @@ export class Session {
     const dataNote = await this.openDataStore(root, project);
     this.set({
       root,
+      viewing: null,
       pendingRecovery: pending,
       lastMessage: (pending ? "Unsaved changes from an earlier session were found." : message) + dataNote,
     });
@@ -146,10 +168,54 @@ export class Session {
     this.shell.enterWorkspace();
   }
 
+  /**
+   * Opens an unpacked, verified package for viewing: the project is loaded read-only (no command and no direct edit
+   * can change it), its data snapshots are loaded into a store of their own, and nothing is added to the recent list
+   * or written back.
+   */
+  async openViewing(opened: OpenedPackage): Promise<void> {
+    const project = await this.io.openProject(opened.pbipPath);
+    this.store.loadReadOnly(project);
+    let dataNote = "";
+    let loaded: string[] = [];
+    if (this.engine) {
+      try {
+        await this.engine.openStore(opened.root);
+        for (const [table, path] of opened.dataFiles) {
+          await this.engine.importSource(table, { kind: "parquet", path });
+          loaded = [...loaded, table];
+        }
+      } catch (e) {
+        dataNote = ` The data could not be loaded: ${errText(e)}`;
+      }
+    }
+    const m = opened.manifest;
+    this.set({
+      root: opened.root,
+      viewing: {
+        packageId: m.packageId,
+        reportName: m.reportName,
+        publisherName: m.publisher.name,
+        keyId: m.publisher.keyId,
+        version: m.version,
+        access: m.access,
+        createdAt: m.createdAt,
+        included: m.included.map((t) => ({ table: t.table, columns: t.columns })),
+      },
+      pendingRecovery: null,
+      dataTables: loaded,
+      dataEpoch: this.snap.dataEpoch + 1,
+      lastMessage: `Viewing "${m.reportName}" (version ${m.version}), read only.${dataNote}`,
+    });
+    this.shell.enterWorkspace();
+    this.shell.setView("report");
+  }
+
   async save(): Promise<SaveReport> {
     const root = this.snap.root;
     const project = this.store.project;
     if (!root || !project) throw new Error("There is no project to save.");
+    if (this.snap.viewing) throw new Error("A report opened for viewing cannot be saved.");
     const report = await this.io.saveProject(root, project);
     this.store.markSaved(project);
     try {
@@ -263,7 +329,7 @@ export class Session {
 
   closeProject(): void {
     this.store.close();
-    this.set({ root: null, pendingRecovery: null, lastMessage: null, dataTables: [], dataEpoch: this.snap.dataEpoch + 1 });
+    this.set({ root: null, viewing: null, pendingRecovery: null, lastMessage: null, dataTables: [], dataEpoch: this.snap.dataEpoch + 1 });
     this.shell.leaveWorkspace();
   }
 

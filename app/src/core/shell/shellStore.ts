@@ -16,6 +16,9 @@ export type DialogRequest =
   | { kind: "exportMenu" }
   | { kind: "importMenu" }
   | { kind: "about" }
+  | { kind: "publish" }
+  | { kind: "openPackage"; /** the package file (from a link, a file association or the file picker) */ path?: string; fromLink?: boolean }
+  | { kind: "guide"; guideId: string; /** shows only when not hidden by the user */ once?: boolean }
   | { kind: "shortcuts" };
 
 export interface ShellState {

@@ -422,6 +422,7 @@ dependencies = [
  "biforge-engine",
  "biforge-m",
  "biforge-model",
+ "biforge-publish",
  "serde",
  "serde_json",
  "tauri",

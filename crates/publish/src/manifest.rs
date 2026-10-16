@@ -23,6 +23,9 @@ pub enum Role {
 pub struct IncludedTable {
     pub table: String,
     pub columns: Vec<String>,
+    /// Path of the table's Parquet snapshot inside the package (data/...); filled in when the package is built.
+    #[serde(default)]
+    pub data_file: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

@@ -4,12 +4,14 @@ mod commands;
 mod data;
 mod dax;
 mod pq;
+mod publish;
 mod syskeys;
 
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .manage(data::DataService::system())
+        .manage(publish::PublishService::system())
         .setup(|app| {
             // an Alt tap must not start Windows' menu mode, which swallows the next key (Print Screen)
             #[cfg(windows)]
@@ -56,6 +58,21 @@ fn main() {
             data::engine_sqlite_tables,
             data::engine_postgres_tables,
             data::engine_set_credential,
+            publish::publish_adapters,
+            publish::publish_targets,
+            publish::publish_put_target,
+            publish::publish_delete_target,
+            publish::publish_validate,
+            publish::publish_run,
+            publish::publish_unpublish,
+            publish::publish_share_link,
+            publish::publish_access_key,
+            publish::publish_status,
+            publish::publish_audit,
+            publish::package_peek,
+            publish::package_open,
+            publish::deep_link_parse,
+            publish::startup_open,
         ])
         .run(tauri::generate_context!())
         .expect("error while running BIForge");

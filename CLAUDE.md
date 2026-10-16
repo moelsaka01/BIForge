@@ -10,6 +10,9 @@ Excluded entirely (no UI, no disabled buttons, no menu entries; listed only unde
 Library rule: prefer a mature library (Apache-2.0/MIT/BSD only; check and record the license) over custom code when it gives the same result: tiberius (SQL Server, M source Sql.Database), odbc-api, DuckDB extensions, reqwest + quick-xml (Web, REST, OData, XML), calamine, ECharts (maps with Natural Earth boundaries, no online tiles), Monaco, WebView2 printing via Tauri, tauri-driver/WebDriver or Playwright for real-window UI tests.
 Never intercept system keys (Print Screen, Win+key, Alt+Tab, ...).
 
+## Online track (added 2026-10-17)
+BIForge's own sharing system (Publish & Share, viewing mode, `biforge://` links) is in scope and is separate from the excluded Microsoft cloud. Binding rules and phases O0 to O8 are in docs/ONLINE_PLAN.md: desktop-only viewers, zero cost and no payment card ever, no BIForge-operated servers, no Docker, Apache-2.0 and permissive dependencies only, additive code, RLS only on the backend method, secrets only in Windows Credential Manager. Online items are tracked in docs/COVERAGE.md. When a step needs the owner (a free provider registration or login), give click-by-click steps and continue with other work.
+
 ## Fixed decisions (ask the user before changing any)
 - Stack: Tauri 2 (Windows), React + TypeScript (Vite), Fluent UI React v9, Monaco (DAX/M editors), Apache ECharts, Rust core, DuckDB, Apache Arrow. No Polars, no SQLite metadata store.
 - DAX: custom parser + semantic engine in Rust. Compile measures to DuckDB SQL where semantics allow; filter context, context transition and blank semantics handled in the engine; hybrid evaluator where SQL cannot express behavior.
@@ -49,6 +52,7 @@ crates/engine        DuckDB integration, import
 crates/dax           DAX parser + semantic engine
 crates/m             M parser/evaluator
 crates/model         semantic model + project format (TMDL-like)
+crates/publish       online track: package (signed, encrypted), adapters, targets, audit, deep links
 tests/               conformance suites; tests/dax = expected-result cases
 research/            original notes; research/_raw/ is gitignored
 docs/                COVERAGE.md, ARCHITECTURE.md, PROGRESS.md

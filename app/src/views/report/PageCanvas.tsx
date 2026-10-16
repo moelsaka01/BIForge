@@ -65,6 +65,7 @@ export function PageCanvas(p: PageCanvasProps) {
     e.preventDefault();
     const v = page.visuals.find((x) => x.name === name)!;
     p.onSelect(name);
+    if (c.readOnly) return;
     root.current?.setPointerCapture?.(e.pointerId);
     setDrag({ name, mode, startX: e.clientX, startY: e.clientY, orig: v.position, cur: v.position, moved: false });
   };
@@ -83,6 +84,7 @@ export function PageCanvas(p: PageCanvasProps) {
 
   const onKey = (e: React.KeyboardEvent) => {
     if (!p.editing) return;
+    if (c.readOnly && e.key !== "Escape") return;
     if (e.key === "Escape") {
       if (c.snap.editInteractions) c.dispatch("report.interaction.edit", { source: null });
       else if (c.snap.selection) c.dispatch("report.view.clearSelection");

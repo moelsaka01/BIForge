@@ -18,6 +18,8 @@ export interface ReportCtx {
   snap: ViewSnapshot;
   /** Modern interface with On-object interaction: a selected visual shows formatting handles. */
   onObject: boolean;
+  /** A shared report opened for viewing: selecting and filtering work, moving, resizing, deleting and renaming do not. */
+  readOnly: boolean;
   /** Opens a card of the Format pane for a visual (on-object formatting). */
   focusFormat(visual: string, card: string): void;
   dispatch: Dispatch;

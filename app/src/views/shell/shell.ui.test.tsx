@@ -187,7 +187,7 @@ describe("ribbon", () => {
     const textBox = r.getByRole("button", { name: /Text box/ }) as HTMLButtonElement;
     expect(textBox.disabled).toBe(true);
     expect(textBox.title).toMatch(/Not yet implemented/);
-    for (const cloud of [/OneLake/, /Publish/, /Sensitivity/, /Share/, /Sign in/]) expect(r.queryByRole("button", { name: cloud })).toBeNull();
+    for (const cloud of [/OneLake/, /Publish to Power BI/, /Sensitivity/, /Shared with me/, /Sign in/]) expect(r.queryByRole("button", { name: cloud })).toBeNull();
   });
 
   it("New measure opens the Measures tab of the DAX view; Manage relationships opens the Model view", async () => {

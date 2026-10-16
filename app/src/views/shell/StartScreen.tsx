@@ -36,6 +36,7 @@ function navItems(hasDoc: boolean): { top: NavItem[]; bottom: NavItem[] } {
     { id: "home", label: "Home", icon: "home" },
     { id: "new", label: "New", icon: "newVisual", command: "file.newBlank" },
     { id: "open", label: "Open", icon: "open", command: "file.open" },
+    { id: "openShared", label: "Open shared report", icon: "open", command: "package.open" },
   ];
   // the File menu of the original: New, Open, Save, Save as, Get data, Import, Export, Options and settings, About, Exit
   if (hasDoc) {
@@ -45,6 +46,7 @@ function navItems(hasDoc: boolean): { top: NavItem[]; bottom: NavItem[] } {
       { id: "getData", label: "Get data", icon: "database", command: "data.getData", indent: true },
       { id: "import", label: "Import", icon: "import", command: "file.importMenu", indent: true },
       { id: "export", label: "Export", icon: "export", command: "file.exportMenu", indent: true },
+      { id: "publish", label: "Publish & Share", icon: "export", command: "publish.open", indent: true },
       { id: "close", label: "Close project", icon: "close", command: "file.close", indent: true },
     );
   }

@@ -13,6 +13,7 @@ import type { WindowApi } from "../../core/shell/windowApi";
 import { FakeDax, result } from "../../core/testing/fakeDax";
 import { FakeEngine } from "../../core/testing/fakeEngine";
 import { FakeM } from "../../core/testing/fakeM";
+import { FakePublish } from "../../core/testing/fakePublish";
 import { FakeDialogs, FakeIO } from "../../core/testing/fakes";
 import type { FileUi } from "./files";
 
@@ -57,7 +58,8 @@ export function makeApp(opts: { storage?: MemoryStorage; withProjectOnDisk?: boo
   if (opts.withProjectOnDisk !== false) io.disk.set(ROOT, fixtureProject());
   const dialogs = new FakeDialogs();
   const engine = new FakeEngine();
-  const session = new Session(io, dialogs, engine, new FakeM(), shell);
+  const publish = new FakePublish();
+  const session = new Session(io, dialogs, engine, new FakeM(), shell, publish);
   const registry = createRegistry(session);
   const dax = new FakeDax();
   dax.handler = () => ({ results: [result(["x"], [])], elapsedMs: 1 });
@@ -76,5 +78,5 @@ export function makeApp(opts: { storage?: MemoryStorage; withProjectOnDisk?: boo
     save: (name, text) => void files.saved.push({ name, text }),
   };
   const rt: AppRuntime = { session, registry, autosave: new AutosaveController(session, 1000), dax, tmdl };
-  return { rt, session, registry, shell, io, dialogs, engine, dax, storage, files, win: w, element: <AppView rt={rt} files={files} editorFactory={noEditor} /> };
+  return { rt, session, registry, shell, publish, io, dialogs, engine, dax, storage, files, win: w, element: <AppView rt={rt} files={files} editorFactory={noEditor} /> };
 }

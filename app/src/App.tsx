@@ -30,6 +30,11 @@ export function AppView({ rt, files = browserFiles, editorFactory = createMonaco
     return () => mq.removeEventListener("change", sync);
   }, [session]);
 
+  // a biforge:// link or .biforge file the app was started with opens the "open shared report" confirmation
+  useEffect(() => {
+    void registry.execute("package.startup");
+  }, [registry]);
+
   const run = useCallback(
     async (id: string, args?: unknown) => {
       const r = await registry.execute(id, args);

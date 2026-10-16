@@ -64,3 +64,6 @@ Each option's pop-up states where the refresh runs and what must stay on.
 - learn.microsoft.com Entra quickstarts (desktop, PKCE); nango.dev registration guide (third party)
 - dropboxforum.com threads on PKCE without secret
 Search results gave summaries, not full pages; items marked Unverified need a direct read of the vendor page before the adapter phase.
+
+## 5. License check of the O1 dependencies (cargo metadata, 2026-10-17)
+Direct: thiserror, serde, serde_json, sha2, base64, getrandom, zip, tempfile (MIT and/or Apache-2.0); ed25519-dalek and its curve25519-dalek, x25519-dalek, subtle (BSD-3-Clause); age (MIT OR Apache-2.0). The transitive closure of biforge-publish (no dev-dependencies) is 150-odd crates, all permissive: MIT, Apache-2.0, "MIT OR Apache-2.0", BSD-3-Clause, BSD-2-Clause, Zlib, Unicode-3.0, Unlicense OR MIT, 0BSD. One crate (`self_cell`) is "Apache-2.0 OR GPL-2.0-only"; BIForge uses it under Apache-2.0. Zlib, Unicode-3.0, 0BSD and Unlicense are not on the owner's literal list (Apache-2.0/MIT/BSD/ISC) but are permissive and compatible with Apache-2.0; flagged for the owner to confirm. No GPL/AGPL-only crate is in the closure.

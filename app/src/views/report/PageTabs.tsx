@@ -95,10 +95,10 @@ export function PageTabs({ pages, active }: { pages: PageModel[]; active: string
           onClick={() => c.dispatch("report.page.go", { page: p.name })}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") c.dispatch("report.page.go", { page: p.name });
-            if (e.key === "F2") setRenaming(p.name);
+            if (e.key === "F2" && !c.readOnly) setRenaming(p.name);
           }}
-          onDoubleClick={() => setRenaming(p.name)}
-          onContextMenu={(e) => menu(e, p, i)}
+          onDoubleClick={c.readOnly ? undefined : () => setRenaming(p.name)}
+          onContextMenu={c.readOnly ? undefined : (e) => menu(e, p, i)}
           style={{ padding: "4px 12px", cursor: "pointer", borderBottom: p.name === active ? "3px solid var(--colorBrandForeground1, #0f6cbd)" : "3px solid transparent", fontWeight: p.name === active ? 600 : 400, opacity: p.hidden ? 0.55 : 1, whiteSpace: "nowrap", fontSize: 13, display: "flex", gap: 4, alignItems: "center" }}
         >
           {p.type === "Tooltip" && <span title="Tooltip page">ⓘ</span>}
@@ -125,9 +125,9 @@ export function PageTabs({ pages, active }: { pages: PageModel[]; active: string
           )}
         </div>
       ))}
-      <Button size="small" appearance="subtle" aria-label="New page" onClick={() => c.dispatch("report.page.add")}>
+      {!c.readOnly && <Button size="small" appearance="subtle" aria-label="New page" onClick={() => c.dispatch("report.page.add")}>
         ＋
-      </Button>
+      </Button>}
       {dtPage && <DrillthroughFields page={dtPage} onClose={() => setDt(null)} />}
     </div>
   );

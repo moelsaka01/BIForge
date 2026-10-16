@@ -191,7 +191,7 @@ export function VisualFrame(p: FrameProps) {
       <div style={{ position: "absolute", left: pad, right: pad, top: titleH + pad, bottom: pad, overflow: "hidden" }}>
         {pos.width > 20 && <VisualContent page={page} visual={visual} width={Math.max(20, pos.width - pad * 2)} height={Math.max(20, pos.height - titleH - pad * 2)} />}
       </div>
-      {p.editing && showBar && !editingSource && (
+      {p.editing && !c.readOnly && showBar && !editingSource && (
         <div
           data-testid="visual-bar"
           onPointerDown={(e) => p.onPointerDownFrame?.(e, "move")}
@@ -222,7 +222,7 @@ export function VisualFrame(p: FrameProps) {
         </div>
       )}
       {interactionControls()}
-      {c.onObject && p.editing && p.selected && !editingSource && (
+      {c.onObject && p.editing && !c.readOnly && p.selected && !editingSource && (
         <div
           role="toolbar"
           aria-label="Format on the visual"
@@ -260,7 +260,7 @@ export function VisualFrame(p: FrameProps) {
           </button>
         </div>
       )}
-      {p.editing && p.selected && !editingSource &&
+      {p.editing && !c.readOnly && p.selected && !editingSource &&
         HANDLES.map((h) => (
           <div
             key={h}

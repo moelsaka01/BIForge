@@ -33,7 +33,7 @@ fn target(e: &Env, id: &str, access: AccessLevel) -> Target {
 }
 
 fn included() -> Vec<IncludedTable> {
-    vec![IncludedTable { table: "Sales".into(), columns: vec!["Amount".into(), "Date".into()] }]
+    vec![IncludedTable { table: "Sales".into(), columns: vec!["Amount".into(), "Date".into()], data_file: String::new() }]
 }
 
 fn request(target_id: &str, marker: &str) -> PublishRequest {
@@ -128,13 +128,13 @@ fn publishing_needs_the_exact_confirmation() {
     let e = env();
     e.store.put(target(&e, "t", AccessLevel::Public)).unwrap();
     let mut r = request("t", "x");
-    r.confirmed = vec![IncludedTable { table: "Sales".into(), columns: vec!["Amount".into()] }];
+    r.confirmed = vec![IncludedTable { table: "Sales".into(), columns: vec!["Amount".into()], data_file: String::new() }];
     assert!(matches!(publisher(&e).publish(&r), Err(Error::NotConfirmed)));
     r.confirmed = vec![];
     assert!(matches!(publisher(&e).publish(&r), Err(Error::NotConfirmed)));
     assert!(!e.share.exists(), "nothing was written before the confirmation matched");
     // order does not matter
-    r.included = vec![IncludedTable { table: "Sales".into(), columns: vec!["Date".into(), "Amount".into()] }];
+    r.included = vec![IncludedTable { table: "Sales".into(), columns: vec!["Date".into(), "Amount".into()], data_file: String::new() }];
     r.confirmed = included();
     publisher(&e).publish(&r).unwrap();
 }

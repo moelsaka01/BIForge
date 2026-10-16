@@ -51,7 +51,11 @@ export function eventToShortcut(e: KeyLike): string | null {
   return normalizeShortcut(parts.join("+"));
 }
 
+/** Returns why a command may not run right now (for example in viewing mode), or null when it may. */
+export type CommandGuard<Ctx> = (ctx: Ctx, id: string) => string | null;
+
 export class CommandRegistry<Ctx> {
+  private guard: CommandGuard<Ctx> | null = null;
   private commands = new Map<string, Command<Ctx>>();
   private shortcuts = new Map<string, string>();
 
@@ -77,9 +81,24 @@ export class CommandRegistry<Ctx> {
     return [...this.commands.values()];
   }
 
+  /** A rule checked before every command, whatever its own isEnabled says. */
+  setGuard(guard: CommandGuard<Ctx> | null): void {
+    this.guard = guard;
+  }
+
+  /** The reason the guard refuses a command now, or null. */
+  blockedReason(id: string): string | null {
+    try {
+      return this.guard ? this.guard(this.ctx, id) : null;
+    } catch {
+      return null;
+    }
+  }
+
   isEnabled(id: string): boolean {
     const c = this.commands.get(id);
     if (!c) return false;
+    if (this.blockedReason(id)) return false;
     try {
       return c.isEnabled ? c.isEnabled(this.ctx) : true;
     } catch {
@@ -96,6 +115,8 @@ export class CommandRegistry<Ctx> {
   async execute(id: string, args?: unknown): Promise<ExecuteResult> {
     const c = this.commands.get(id);
     if (!c) return { ok: false, reason: "unknown", message: `Unknown command "${id}".` };
+    const blocked = this.blockedReason(id);
+    if (blocked) return { ok: false, reason: "disabled", message: blocked };
     if (!this.isEnabled(id)) return { ok: false, reason: "disabled", message: `"${c.label}" is not available right now.` };
     try {
       await c.run(this.ctx, args);

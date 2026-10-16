@@ -25,7 +25,8 @@ describe("scope: no cloud features anywhere", () => {
     const a = makeApp();
     render(a.element);
     await openProject(a);
-    const cloud = /OneLake|Sign in|Shared with me|Publish|Sensitivity|Copilot|Dataverse|Fabric|datahub|\bShare\b/i;
+    // BIForge's own sharing ("Publish & Share", "Open shared report") is in scope; Microsoft's cloud is not
+    const cloud = /OneLake|Sign in|Shared with me|Publish to Power BI|Power BI service|Sensitivity|Copilot|Dataverse|Fabric|datahub/i;
     for (const view of ["report", "data", "model", "dax", "tmdl"] as const) {
       await act(async () => void a.registry.execute(`view.${view}`));
       expect(screen.getByTestId("ribbon").textContent, view).not.toMatch(cloud);
@@ -52,11 +53,11 @@ describe("File menu (backstage)", () => {
     }
   });
 
-  it("without a project the menu is New, Open, Options and settings, About, Exit", () => {
+  it("without a project the menu is New, Open, Open shared report, Options and settings, About, Exit", () => {
     render(makeApp().element);
     const nav = within(screen.getByRole("navigation", { name: "Start" }));
     const labels = names(nav.getAllByRole("button"));
-    expect(labels).toEqual(["Home", "New", "Open", "Options and settings", "About", "Exit"]);
+    expect(labels).toEqual(["Home", "New", "Open", "Open shared report", "Options and settings", "About", "Exit"]);
   });
 
   it("Exit asks about unsaved changes and then closes the window", async () => {

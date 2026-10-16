@@ -24,6 +24,7 @@ import { StatusBar } from "./StatusBar";
 import { TitleBar } from "./TitleBar";
 import { TmdlView } from "./TmdlView";
 import { ViewSwitcher } from "./ViewSwitcher";
+import { ViewingBar } from "./ViewingBar";
 import { eventToShortcut } from "../../core/commands/registry";
 
 /** A Data pane docked to the side the shell prefers, remembering its width and whether it is open. */
@@ -124,8 +125,9 @@ function ViewBody({ spec, onScale }: { spec: ShellSpec; onScale(s: number): void
             zoom={st.zoom}
             onScale={onScale}
             onSelectVisual={(page, visual) => session.shell.selectVisual(page && visual ? { page, visual } : null)}
-            docks={spec.reportDocks}
-            onObject={spec.kind === "modern" && settings.options["preview.onObject"] !== false}
+            docks={sess.viewing ? () => ({}) : spec.reportDocks}
+            onObject={spec.kind === "modern" && settings.options["preview.onObject"] !== false && !sess.viewing}
+            readOnly={sess.viewing !== null}
           />
         </div>
       );
@@ -260,7 +262,8 @@ export function Frame({ spec }: { spec: ShellSpec }) {
             : st.view === "dax"
               ? "DAX query view"
               : "TMDL view (read-only)";
-    return sess.lastMessage ? `${base}  ·  ${sess.lastMessage}` : base;
+    const shown = sess.viewing ? `Viewing (read only)  ·  ${base}` : base;
+    return sess.lastMessage ? `${shown}  ·  ${sess.lastMessage}` : shown;
   })();
 
   return (
@@ -270,6 +273,9 @@ export function Frame({ spec }: { spec: ShellSpec }) {
         <StartScreen variant={spec.kind} />
       ) : (
         <>
+          {sess.viewing ? (
+            <ViewingBar viewing={sess.viewing} />
+          ) : (
           <Ribbon
             variant={spec.kind}
             mode={layout.ribbonMode}
@@ -281,8 +287,9 @@ export function Frame({ spec }: { spec: ShellSpec }) {
             onToggleCollapsed={() => void env.run("app.ribbon.toggle")}
             ui={ui}
           />
+          )}
           <div className="workspace">
-            <ViewSwitcher variant={spec.kind} />
+            {!sess.viewing && <ViewSwitcher variant={spec.kind} />}
             <div className="view-main">
               {sess.pendingRecovery && (
                 <div className="notice-bar" role="status">

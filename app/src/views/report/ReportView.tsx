@@ -32,6 +32,8 @@ export interface ReportViewProps {
   docks?(api: ReportDockApi): { left?: React.ReactNode; right?: React.ReactNode };
   /** On-object formatting is on (Modern interface with the preview feature enabled). */
   onObject?: boolean;
+  /** Viewing mode: the canvas cannot be edited. */
+  readOnly?: boolean;
 }
 
 type Zoom = "fit" | number;
@@ -135,8 +137,8 @@ export function ReportView(p: ReportViewProps) {
   const onMenu = useCallback((items: CtxMenuItem[], x: number, y: number) => setMenu({ items, x, y }), []);
 
   const ctx: ReportCtx = useMemo(
-    () => ({ project: p.project, pages, theme, model, data, view, snap, onObject: p.onObject === true, focusFormat: (v: string, c: string) => p.runtime.focusFormat(v, c), dispatch: p.dispatch, onTooltip, onMenu }),
-    [p.project, pages, theme, model, data, view, snap, p.onObject, p.runtime, p.dispatch, onTooltip, onMenu],
+    () => ({ project: p.project, pages, theme, model, data, view, snap, onObject: p.onObject === true, readOnly: p.readOnly === true, focusFormat: (v: string, c: string) => p.runtime.focusFormat(v, c), dispatch: p.dispatch, onTooltip, onMenu }),
+    [p.project, pages, theme, model, data, view, snap, p.onObject, p.readOnly, p.runtime, p.dispatch, onTooltip, onMenu],
   );
 
   const fit = page ? Math.min(size.w / page.width, size.h / page.height) : 1;

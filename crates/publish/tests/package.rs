@@ -18,7 +18,7 @@ fn input(access: AccessLevel, recipients: Vec<String>) -> BuildInput {
         report_name: "Sales".into(),
         publisher_name: "Ann".into(),
         access,
-        included: vec![IncludedTable { table: "Sales".into(), columns: vec!["Amount".into(), "Date".into()] }],
+        included: vec![IncludedTable { table: "Sales".into(), columns: vec!["Amount".into(), "Date".into()], data_file: String::new() }],
         permissions: vec![Permission { principal: "anyone-with-key".into(), role: Role::Viewer }],
         created_at: "2026-10-17T10:00:00Z".into(),
         files: files(),

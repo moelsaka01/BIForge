@@ -155,6 +155,28 @@ Last updated: 2026-10-17, after the scope-change session was completed (see PROG
 | **Total** | **3008** | **569** | **228** | **2211** |
 <!-- inventory-status:end -->
 
+## Online track (Publish & Share; plan in docs/ONLINE_PLAN.md)
+Done = a passing automated test. Everything not listed as Done-tested is Not started.
+
+| Phase | Item | Status |
+| --- | --- | --- |
+| O0 | Reuse matrix, provider facts, license check (research/online-reuse.md) | Done (research note). Items marked Unverified there need a direct read of the vendor page before their phase |
+| O1 | Package build/read: signed (ed25519), encrypted (age) for Private, manifest with included tables/columns, secret scan, path and size guards | Done-tested (crates/publish/tests/package.rs, 11 tests: round trips, wrong key, no plaintext in a private package, payload/envelope/signature tampering, forged package under a pinned publisher, unsafe paths, secrets) |
+| O1 | Adapter trait with declared capabilities and limitations; known destinations listed, the unbuilt ones refuse everything | Done-tested (crates/publish/tests/publisher.rs: planned adapters refuse, RLS never claimed outside the backend method, every adapter states limits and free tier) |
+| O1 | Publication targets per report (several per report), audit log, confirmation of the exact table/column list, versions, key rotation, unpublish, share link without key | Done-tested (publisher.rs: end-to-end publish, open, update, revoke by key rotation, unpublish with audit; confirmation; several targets; failed publish recorded) |
+| O1 | Folder/file adapter (first real adapter) | Done-tested (publisher.rs, plus app/src-tauri publish::tests: publish, open in a fresh engine, same rows, only the chosen columns in the Parquet file) |
+| O1 | Viewing mode: read-only document store, command guard, viewing bar, no canvas editing | Done-tested (core/publish/publish.test.ts, views/shell/publish.ui.test.tsx, jsdom). Not run in the Tauri window by hand. Limits: the visual context menu still lists editing items (they are refused with a message); the Filters pane is hidden in viewing mode |
+| O1 | `biforge://open?src=file&path=...` deep links: parse, confirmation before opening, start-up argument | Done-tested (deeplink.rs unit tests, publish.ui.test.tsx). **OS registration of the scheme and a .biforge file association are not done** (installer, phase O8); a paste-a-link box and start-up arguments work today |
+| O1 | Publish & Share dialog driven by capabilities (destination, status, access level, account, last sync, limitations, errors); the model is pruned to the chosen tables/columns, with warnings | Done-tested (publish.ui.test.tsx, prune tests). Unbuilt destinations are listed as "not implemented (planned Ox)" |
+| O1 | Setup pop-ups: folder (real), static hosting, personal storage, P2P, backend hosting, backend connecting, scheduled refresh; Don't show again; free-tier limits from the adapter | Done-tested for wording, buttons and persistence (publish.test.ts, publish.ui.test.tsx). Buttons of unbuilt methods are disabled and name their phase |
+| O2 | Static hosting (GitHub Pages, Cloudflare Pages) | Not started |
+| O3 | Personal storage (Google Drive, OneDrive, Dropbox) | Not started (needs the owner to register OAuth apps) |
+| O4 | P2P (iroh) | Not started |
+| O5 | Host from this PC, biforge-server.exe | Not started |
+| O6 | Collaboration (comments, versions, co-editing) | Not started |
+| O7 | Scheduled refresh | Not started |
+| O8 | Integration, security review, docs, installer (deep-link registration) | Not started |
+
 ## Excluded (cloud)
 Removed from scope on 2026-10-16: no UI, no disabled buttons, no menu entries, no further work. They are not in INVENTORY.md.
 - Sign in / accounts; Publish; Share; OneLake catalog; Dataverse; Fabric and SQL databases in Fabric; datahub; Shared with me; Copilot and "Prep data for AI"; sensitivity labels; Power BI service features (dashboards, apps, subscriptions, comments, scorecards/metrics, usage metrics, Analyze in Excel, paginated report service, dataflows, deployment pipelines); cloud-only connectors; external semantic models from the service (live connection, byConnection).

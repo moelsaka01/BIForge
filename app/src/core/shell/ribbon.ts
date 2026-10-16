@@ -198,6 +198,15 @@ const securityGroup = (): RibbonGroup => ({
   controls: [todo("manageRoles", "Manage roles", "roles", { size: "large" }), todo("viewAs", "View as", "viewAs", { size: "large" })],
 });
 
+const shareGroup = (): RibbonGroup => ({
+  id: "share",
+  label: "Share",
+  controls: [
+    cmd("publishShare", "Publish & Share", "export", "publish.open", { size: "large", keytip: "PS" }),
+    cmd("openShared", "Open shared report", "open", "package.open", { size: "large", keytip: "OS" }),
+  ],
+});
+
 const homeCommon = (): RibbonGroup[] => [clipboard(), dataGroup(), queriesGroup()];
 
 const helpTab = (): RibbonTab => ({
@@ -319,7 +328,7 @@ function reportTabs(shell: ShellKind): RibbonTab[] {
     id: "home",
     label: "Home",
     keytip: "H",
-    groups: [...homeCommon(), insertGroup(), calculationsGroup()],
+    groups: [...homeCommon(), insertGroup(), calculationsGroup(), shareGroup()],
   };
   const insert: RibbonTab = {
     id: "insert",
