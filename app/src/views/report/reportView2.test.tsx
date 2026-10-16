@@ -171,25 +171,4 @@ describe("ReportView: Data pane, conditional formatting, themes", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     await waitFor(() => expect(screen.getByTestId("card-value").getAttribute("style")).toMatch(/color: rgb\(|color: #/));
   });
-
-  it("importing a theme file applies it and reports ignored settings", async () => {
-    const t = setup();
-    t.dax.handler = () => ({ results: [], elapsedMs: 1 });
-    render(<t.Host />);
-    const input = await screen.findByLabelText("Theme file");
-    const file = new File([JSON.stringify({ name: "Ocean", dataColors: ["#123456"], mystery: 1 })], "ocean.json", { type: "application/json" });
-    Object.defineProperty(file, "text", { value: async () => JSON.stringify({ name: "Ocean", dataColors: ["#123456"], mystery: 1 }) });
-    fireEvent.change(input, { target: { files: [file] } });
-    await waitFor(() => expect(resolveTheme(t.session.store.project!).name).toBe("Ocean"));
-    expect(t.session.getSnapshot().lastMessage).toMatch(/not supported.*mystery/);
-  });
-
-  it("themes menu lists the built-in themes", async () => {
-    const t = setup();
-    t.dax.handler = () => ({ results: [], elapsedMs: 1 });
-    render(<t.Host />);
-    fireEvent.click(await screen.findByRole("button", { name: "Themes" }));
-    fireEvent.click(await screen.findByRole("menuitem", { name: "BIForge Dark" }));
-    await waitFor(() => expect(resolveTheme(t.session.store.project!).dark).toBe(true));
-  });
 });

@@ -11,8 +11,9 @@ import { listBookmarks } from "../../core/report/bookmarks";
 import { agg, column, lit } from "../../core/report/fields";
 import { fixtureProject } from "../../core/report/testFixture";
 import { getFormat, listPages, parsePage, visualKey } from "../../core/report/visualDoc";
-import { ReportView } from "./ReportView";
-import { FIELD_MIME } from "./VisualizationsPane";
+import { ReportView, type ReportViewProps } from "./ReportView";
+import { BookmarksPane } from "./BookmarksPane";
+import { FIELD_MIME, VisualizationsPane } from "./VisualizationsPane";
 import * as echartsLib from "echarts/core";
 
 installDomStubs();
@@ -24,7 +25,7 @@ const Qty = agg("Sales", "Quantity", 0);
 const text = (v: string) => cell(v, "text");
 const rows = (...r: [string, number][]) => r.map(([a, b]) => [text(a), cell(String(b))]);
 
-function setup() {
+function setup(docks?: ReportViewProps["docks"]) {
   const session = new Session(new FakeIO(), new FakeDialogs());
   session.store.load(fixtureProject());
   const registry = createRegistry(session);
@@ -47,6 +48,7 @@ function setup() {
           })
         }
         dataEpoch={0}
+        docks={docks}
       />
     );
   }
@@ -308,11 +310,10 @@ describe("ReportView: format, filters, bookmarks", () => {
   });
 
   it("bookmarks: add and apply", async () => {
-    const t = setup();
+    const t = setup((api) => ({ right: <><div style={{ width: 240 }}><VisualizationsPane page={api.page} visual={api.visual} onAdded={api.onAdded} /></div><div style={{ width: 230 }}><BookmarksPane /></div></> }));
     await t.run("report.visual.add", { page: "page1", type: "slicer", fields: [{ role: "Values", field: Country }] });
     t.dax.handler = (q) => (q.includes("VALUES(") ? { results: [result(["c"], [[text("Canada")], [text("France")]])], elapsedMs: 1 } : { results: [result(["m"], [[cell("1")]])], elapsedMs: 1 });
     render(<t.Host />);
-    fireEvent.click(await screen.findByRole("button", { name: "Bookmarks" }));
     fireEvent.change(await screen.findByLabelText("Bookmark name"), { target: { value: "Before" } });
     fireEvent.click(screen.getByRole("button", { name: "Add" }));
     await waitFor(() => expect(listBookmarks(t.session.store.project!).map((b) => b.name)).toEqual(["Before"]));

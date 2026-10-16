@@ -64,8 +64,7 @@ export function VisualizationsPane(p: VisualizationsPaneProps) {
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }} aria-label="Visualizations pane">
       <div style={{ padding: "6px 8px 0" }}>
-        <strong>Visualizations</strong>
-        <TabList size="small" selectedValue={tab} onTabSelect={(_, d) => setTab(d.value as typeof tab)} style={{ marginTop: 4 }}>
+        <TabList size="small" selectedValue={tab} onTabSelect={(_, d) => setTab(d.value as typeof tab)}>
           <Tab value="build">Build visual</Tab>
           <Tab value="format" disabled={!visual}>
             Format visual

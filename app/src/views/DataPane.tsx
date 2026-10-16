@@ -46,7 +46,6 @@ export function DataPane(p: DataPaneProps) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6, padding: 8, height: "100%", overflow: "auto" }} aria-label="Data pane">
-      <strong>Data</strong>
       <Input size="small" placeholder="Search" aria-label="Search fields" value={q} onChange={(_, d) => setQ(d.value)} />
       <div style={{ display: "flex", gap: 4 }}>
         <Button size="small" disabled={!p.canImport} onClick={p.onImport}>

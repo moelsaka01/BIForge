@@ -10,8 +10,25 @@
     "frontendDist": "../dist"
   },
   "app": {
-    "windows": [{ "title": "BIForge", "width": 1280, "height": 800 }],
-    "security": { "csp": null }
+    "windows": [
+      {
+        "title": "BIForge",
+        "width": 1440,
+        "height": 900,
+        "minWidth": 1000,
+        "minHeight": 620,
+        "decorations": false,
+        "center": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
   },
-  "bundle": { "active": false, "icon": ["icons/icon.ico"] }
+  "bundle": {
+    "active": false,
+    "icon": [
+      "icons/icon.ico"
+    ]
+  }
 }

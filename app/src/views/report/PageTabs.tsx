@@ -85,7 +85,7 @@ export function PageTabs({ pages, active }: { pages: PageModel[]; active: string
   };
 
   return (
-    <div role="tablist" aria-label="Report pages" style={{ display: "flex", alignItems: "stretch", gap: 2, padding: "2px 8px", borderTop: "1px solid #ccc", overflowX: "auto", flex: "none" }}>
+    <div role="tablist" aria-label="Report pages" className="page-tabs">
       {pages.map((p, i) => (
         <div
           key={p.name}
@@ -99,7 +99,7 @@ export function PageTabs({ pages, active }: { pages: PageModel[]; active: string
           }}
           onDoubleClick={() => setRenaming(p.name)}
           onContextMenu={(e) => menu(e, p, i)}
-          style={{ padding: "4px 12px", cursor: "pointer", borderBottom: p.name === active ? "3px solid #0f6cbd" : "3px solid transparent", fontWeight: p.name === active ? 600 : 400, opacity: p.hidden ? 0.55 : 1, whiteSpace: "nowrap", fontSize: 13, display: "flex", gap: 4, alignItems: "center" }}
+          style={{ padding: "4px 12px", cursor: "pointer", borderBottom: p.name === active ? "3px solid var(--colorBrandForeground1, #0f6cbd)" : "3px solid transparent", fontWeight: p.name === active ? 600 : 400, opacity: p.hidden ? 0.55 : 1, whiteSpace: "nowrap", fontSize: 13, display: "flex", gap: 4, alignItems: "center" }}
         >
           {p.type === "Tooltip" && <span title="Tooltip page">ⓘ</span>}
           {p.type === "Drillthrough" && <span title="Drillthrough page">↳</span>}

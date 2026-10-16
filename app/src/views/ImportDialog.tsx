@@ -7,6 +7,8 @@ import { FILE_FILTERS, buildSpec, defaultTableName, emptyForm, type ImportForm, 
 
 export interface ImportDialogProps {
   open: boolean;
+  /** The source type the form starts on. */
+  initialKind?: SourceKind;
   engine: EngineApi;
   dialogs: Dialogs;
   /** Runs the import command; resolves to an error message or null. */
@@ -23,8 +25,8 @@ const KINDS: { kind: SourceKind; label: string }[] = [
   { kind: "postgres", label: "PostgreSQL database" },
 ];
 
-export function ImportDialog({ open, engine, dialogs, onSubmit, onClose }: ImportDialogProps) {
-  const [f, setF] = useState<ImportForm>(emptyForm());
+export function ImportDialog({ open, initialKind, engine, dialogs, onSubmit, onClose }: ImportDialogProps) {
+  const [f, setF] = useState<ImportForm>(emptyForm(initialKind));
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [choices, setChoices] = useState<string[]>([]);

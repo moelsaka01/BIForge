@@ -28,6 +28,8 @@ export class AutosaveController {
     if (!snap.isDirty || !this.session.root) {
       if (this.timer) clearTimeout(this.timer);
       this.timer = null;
+      // back in the saved state (every edit undone): the snapshot written earlier is stale
+      if (this.session.root && snap.project) void this.session.dropOwnRecoveryWhenClean().catch(() => undefined);
       return;
     }
     if (this.timer) clearTimeout(this.timer);

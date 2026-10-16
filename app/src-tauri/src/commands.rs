@@ -1,6 +1,8 @@
 //! Thin Tauri command wrappers around `biforge-model`. Errors are returned as readable strings.
 
 use biforge_model::project::{Project, SaveReport};
+use biforge_model::tmdl::{self, Document};
+use std::collections::BTreeMap;
 use std::path::Path;
 
 fn msg<E: std::fmt::Display>(e: E) -> String {
@@ -37,6 +39,12 @@ pub fn clear_recovery(root: String) -> Result<(), String> {
     Project::clear_recovery(Path::new(&root)).map_err(msg)
 }
 
+/// The TMDL text of each model file (the TMDL view shows it read-only).
+#[tauri::command]
+pub fn tmdl_print(documents: BTreeMap<String, Document>) -> BTreeMap<String, String> {
+    documents.into_iter().map(|(path, doc)| (path, tmdl::print(&doc))).collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -55,9 +63,14 @@ mod tests {
         assert!(save_project(root.clone(), back).unwrap().written.is_empty());
 
         write_recovery(root.clone(), p.clone()).unwrap();
-        assert_eq!(read_recovery(root.clone()).unwrap(), Some(p));
+        assert_eq!(read_recovery(root.clone()).unwrap(), Some(p.clone()));
         clear_recovery(root.clone()).unwrap();
         assert_eq!(read_recovery(root).unwrap(), None);
+
+        // the TMDL view prints the model files the project holds
+        let printed = tmdl_print(p.model.tmdl.clone());
+        assert_eq!(printed.len(), p.model.tmdl.len());
+        assert!(printed["model.tmdl"].starts_with("model Model"), "{}", printed["model.tmdl"]);
 
         let err = open_project(format!("{}/missing.pbip", d.path().display())).unwrap_err();
         assert!(err.contains("missing.pbip"), "{err}");

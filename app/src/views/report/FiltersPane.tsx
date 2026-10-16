@@ -275,7 +275,6 @@ export function FiltersPane({ page, visual }: { page: PageModel; visual: VisualM
   const vfields = visual ? Object.values(visual.roles).flat().map((x) => x.field) : [];
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: 8, height: "100%", overflow: "auto" }} aria-label="Filters pane">
-      <strong>Filters</strong>
       {visual && visual.visualType !== "slicer" && <Section title="Filters on this visual" scope={{ level: "visual", page: page.name, visual: visual.name }} defs={visual.filters.defs.filter((d) => d.name !== "slicer")} hint="Drag fields here or pick one below" visualFields={vfields} page={page} />}
       <Section title="Filters on this page" scope={{ level: "page", page: page.name }} defs={page.filters.defs.filter((d) => !d.name.startsWith("dt_"))} hint="Filters here apply to every visual on this page" visualFields={vfields} page={page} />
       <Section title="Filters on all pages" scope={{ level: "report" }} defs={reportDefs} hint="Filters here apply to every page" visualFields={vfields} page={page} />

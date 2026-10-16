@@ -8,6 +8,7 @@ import { QueryDraft } from "../queries/draft";
 import type { MApi } from "../queries/types";
 import { applyQueryLoad, expressionExists, listQueries, queryTexts, removeExpression, upsertExpression, userMTables } from "../queries/queries";
 import { findTable } from "../model/ops";
+import { ShellStore } from "../shell/shellStore";
 
 export interface ProjectIO {
   newProject(root: string, name: string): Promise<Project>;
@@ -31,6 +32,8 @@ export interface SessionSnapshot {
   lastMessage: string | null;
   /** Names of tables that currently have data in the engine's store. */
   dataTables: string[];
+  /** Bumped whenever table data is loaded, refreshed or dropped, so views know to reload. */
+  dataEpoch: number;
 }
 
 /** JSON with object keys sorted, so two equal projects compare equal whatever order their keys were built in. */
@@ -44,6 +47,11 @@ export function canonicalJson(v: unknown): string {
 
 const rootKey = (root: string) => root.replace(/\//g, "\\").replace(/\\+$/, "").toLowerCase();
 
+export function joinPath(folder: string, name: string): string {
+  const sep = folder.includes("/") && !folder.includes("\\") ? "/" : "\\";
+  return folder.replace(/[\\/]+$/, "") + sep + name;
+}
+
 export function dirname(path: string): string {
   const i = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
   return i <= 0 ? path : path.slice(0, i);
@@ -56,16 +64,20 @@ export class Session {
   readonly report = new ReportRuntime();
   /** Editing state of the Power Query editor. */
   readonly queries = new QueryDraft();
-  private snap: SessionSnapshot = { root: null, pendingRecovery: null, lastMessage: null, dataTables: [] };
+  private snap: SessionSnapshot = { root: null, pendingRecovery: null, lastMessage: null, dataTables: [], dataEpoch: 0 };
   private listeners = new Set<() => void>();
   /** Project roots whose recovery snapshot was written by this running app (not left behind by a crash). */
   private ownRecovery = new Set<string>();
+  /** Snapshot writes and clears run one after another, so a slow write cannot land after a later clear. */
+  private recoveryQueue: Promise<void> = Promise.resolve();
 
   constructor(
     readonly io: ProjectIO,
     readonly dialogs: Dialogs,
     readonly engine: EngineApi | null = null,
     readonly m: MApi | null = null,
+    /** Frame state (start screen / views / dialogs) and the app settings. */
+    readonly shell: ShellStore = new ShellStore(null),
   ) {}
 
   getSnapshot = (): SessionSnapshot => this.snap;
@@ -99,6 +111,8 @@ export class Session {
     }
     const dataNote = await this.openDataStore(root, project);
     this.set({ root, pendingRecovery: null, lastMessage: `Created project "${name}".${dataNote}` });
+    this.shell.settings.addRecent(joinPath(root, `${name}.pbip`), name);
+    this.shell.enterWorkspace();
   }
 
   async openProject(pbipPath: string): Promise<void> {
@@ -126,6 +140,8 @@ export class Session {
       pendingRecovery: pending,
       lastMessage: (pending ? "Unsaved changes from an earlier session were found." : message) + dataNote,
     });
+    this.shell.settings.addRecent(pbipPath, project.name);
+    this.shell.enterWorkspace();
   }
 
   async save(): Promise<SaveReport> {
@@ -135,7 +151,7 @@ export class Session {
     const report = await this.io.saveProject(root, project);
     this.store.markSaved(project);
     try {
-      await this.io.clearRecovery(root);
+      await this.clearRecoveryOf(root);
     } catch {
       /* a stale recovery file is harmless: it equals the saved project */
     }
@@ -146,10 +162,50 @@ export class Session {
   /** Writes the crash-recovery snapshot for the open project (used by autosave) and remembers that this run wrote it. */
   async writeRecovery(): Promise<void> {
     const root = this.snap.root;
-    const project = this.store.project;
-    if (!root || !project) return;
-    this.ownRecovery.add(rootKey(root));
-    await this.io.writeRecovery(root, project);
+    if (!root || !this.store.project) return;
+    await this.queueRecovery(async () => {
+      // re-check when this write's turn comes: the user may have saved or undone everything in the meantime
+      const project = this.store.project;
+      if (this.snap.root !== root || !project || !this.store.getSnapshot().isDirty) return;
+      this.ownRecovery.add(rootKey(root));
+      await this.io.writeRecovery(root, project);
+    });
+  }
+
+  private queueRecovery(task: () => Promise<void>): Promise<void> {
+    const run = this.recoveryQueue.then(task);
+    this.recoveryQueue = run.catch(() => undefined);
+    return run;
+  }
+
+  private clearRecoveryOf(root: string): Promise<void> {
+    return this.queueRecovery(async () => {
+      await this.io.clearRecovery(root);
+      this.ownRecovery.delete(rootKey(root));
+    });
+  }
+
+  /**
+   * Called when the document is back in its saved state (everything undone): the snapshot this run wrote no longer
+   * describes unsaved work. A snapshot offered from an earlier run is left alone until the user decides.
+   */
+  async dropOwnRecoveryWhenClean(): Promise<void> {
+    const root = this.snap.root;
+    if (!root || this.snap.pendingRecovery || !this.ownRecovery.has(rootKey(root))) return;
+    await this.clearRecoveryOf(root);
+  }
+
+  /** The user leaves on purpose without saving: the snapshot is not a crash recovery and must not be offered later. */
+  async discardUnsavedForExit(): Promise<void> {
+    const root = this.snap.root;
+    if (!root || this.snap.pendingRecovery) return;
+    await this.clearRecoveryOf(root);
+  }
+
+  /** Closes the project and drops the snapshot of its unsaved edits (the user chose not to keep them). */
+  async closeProjectDiscarding(): Promise<void> {
+    await this.discardUnsavedForExit().catch(() => undefined);
+    this.closeProject();
   }
 
   /** Loads the recovery snapshot as unsaved edits on top of the on-disk project. */
@@ -163,13 +219,14 @@ export class Session {
 
   async discardRecovery(): Promise<void> {
     const root = this.snap.root;
-    if (root) await this.io.clearRecovery(root);
+    if (root) await this.clearRecoveryOf(root);
     this.set({ pendingRecovery: null, lastMessage: "Discarded recovered changes." });
   }
 
   closeProject(): void {
     this.store.close();
-    this.set({ root: null, pendingRecovery: null, lastMessage: null, dataTables: [] });
+    this.set({ root: null, pendingRecovery: null, lastMessage: null, dataTables: [], dataEpoch: this.snap.dataEpoch + 1 });
+    this.shell.leaveWorkspace();
   }
 
   /** Opens the project's data store and drops stored tables that are no longer in the model. Never throws. */
@@ -183,11 +240,11 @@ export class Session {
         if (inModel.has(n.toLowerCase())) keep.push(n);
         else await this.engine.dropTable(n);
       }
-      this.set({ dataTables: keep });
+      this.set({ dataTables: keep, dataEpoch: this.snap.dataEpoch + 1 });
       const missing = [...importedTables(project), ...userMTables(project)].filter((t) => !keep.some((k) => k.toLowerCase() === t.toLowerCase()));
       return missing.length ? ` Data for ${missing.length} table(s) is not loaded; use Refresh all.` : "";
     } catch (e) {
-      this.set({ dataTables: [] });
+      this.set({ dataTables: [], dataEpoch: this.snap.dataEpoch + 1 });
       return ` The data store could not be opened: ${errText(e)}`;
     }
   }
@@ -200,7 +257,7 @@ export class Session {
 
   private markLoaded(name: string): void {
     const rest = this.snap.dataTables.filter((t) => t.toLowerCase() !== name.toLowerCase());
-    this.set({ dataTables: [...rest, name] });
+    this.set({ dataTables: [...rest, name], dataEpoch: this.snap.dataEpoch + 1 });
   }
 
   /** Imports (or re-imports) a source into table `name`. The document only changes if the engine import succeeds. */
@@ -297,7 +354,7 @@ export class Session {
     });
     for (const r of removedDone) {
       if (!snap.queries.some((q) => q.name === r)) await engine.dropTable(r).catch(() => undefined);
-      this.set({ dataTables: this.snap.dataTables.filter((t) => t.toLowerCase() !== r.toLowerCase()) });
+      this.set({ dataTables: this.snap.dataTables.filter((t) => t.toLowerCase() !== r.toLowerCase()), dataEpoch: this.snap.dataEpoch + 1 });
     }
     for (const { name } of loaded) this.markLoaded(name);
     draft.markApplied([...loaded.map((l) => l.name), ...applied], removedDone);

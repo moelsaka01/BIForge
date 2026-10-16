@@ -5,6 +5,7 @@ import * as rel from "../model/relationships";
 import type { SourceSpec } from "../data/types";
 import { registerReportCommands } from "./reportCommands";
 import { registerQueryCommands } from "./queryCommands";
+import { registerShellCommands } from "./shellCommands";
 
 function argsOf<T extends object>(args: unknown, required: (keyof T & string)[]): T {
   const a = (args ?? {}) as Record<string, unknown>;
@@ -15,6 +16,20 @@ function argsOf<T extends object>(args: unknown, required: (keyof T & string)[])
 }
 
 const hasProject = (s: Session) => s.store.project !== null;
+
+/**
+ * Replacing the open project with unsaved edits asks first. Returns true when the command must stop here (the
+ * question is showing); with discard: true the old project's recovery snapshot is dropped and the command goes on.
+ */
+async function askBeforeLeaving(s: Session, id: string, args: Record<string, unknown>, given: unknown): Promise<boolean> {
+  if (!s.store.getSnapshot().isDirty) return false;
+  if ((given as { discard?: boolean } | undefined)?.discard !== true) {
+    s.shell.openDialog({ kind: "unsaved", resume: { id, args: { ...args, discard: true } } });
+    return true;
+  }
+  await s.discardUnsavedForExit().catch(() => undefined);
+  return false;
+}
 
 /** Registers the Phase 1 commands. Shells reference these ids; they contain no logic themselves. */
 export function createRegistry(session: Session): CommandRegistry<Session> {
@@ -29,6 +44,7 @@ export function createRegistry(session: Session): CommandRegistry<Session> {
       const { name } = argsOf<{ name: string }>(args, ["name"]);
       const folder = (args as { folder?: string }).folder ?? (await s.dialogs.pickFolder());
       if (!folder) return;
+      if (await askBeforeLeaving(s, "file.new", { name, folder }, args)) return;
       await s.newProject(folder, name);
     },
   });
@@ -40,6 +56,7 @@ export function createRegistry(session: Session): CommandRegistry<Session> {
     async run(s, args) {
       const path = (args as { path?: string } | undefined)?.path ?? (await s.dialogs.pickPbip());
       if (!path) return;
+      if (await askBeforeLeaving(s, "file.open", { path }, args)) return;
       await s.openProject(path);
     },
   });
@@ -212,6 +229,7 @@ export function createRegistry(session: Session): CommandRegistry<Session> {
 
   registerReportCommands(r);
   registerQueryCommands(r);
+  registerShellCommands(r);
 
   return r;
 }

@@ -16,6 +16,7 @@ fn main() {
             commands::write_recovery,
             commands::read_recovery,
             commands::clear_recovery,
+            commands::tmdl_print,
             dax::dax_catalog,
             dax::dax_check,
             dax::dax_query,

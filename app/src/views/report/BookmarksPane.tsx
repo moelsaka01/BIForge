@@ -11,7 +11,6 @@ export function BookmarksPane() {
   const selected = list.find((b) => b.id === sel);
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: 8, height: "100%", overflow: "auto" }} aria-label="Bookmarks pane">
-      <strong>Bookmarks</strong>
       <div style={{ display: "flex", gap: 4 }}>
         <Input size="small" style={{ flex: 1 }} aria-label="Bookmark name" placeholder="New bookmark name" value={name} onChange={(_, d) => setName(d.value)} />
         <Button

@@ -1,14 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { Button, Menu, MenuItem, MenuList, MenuPopover, MenuTrigger, Select, ToggleButton } from "@fluentui/react-components";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { Button } from "@fluentui/react-components";
 import type { DaxApi } from "../../core/dax/types";
 import type { Project } from "../../core/model/types";
 import { ReportData, type ViewState } from "../../core/report/dataLoader";
 import type { SelectedPoint } from "../../core/report/interactions";
 import { modelInfo } from "../../core/report/modelInfo";
 import type { ReportRuntime } from "../../core/report/runtime";
-import { BUILTIN_THEMES, resolveTheme, themeToJson } from "../../core/report/theme";
-import { activePageName, listPages, type PageModel } from "../../core/report/visualDoc";
-import { BookmarksPane } from "./BookmarksPane";
+import { resolveTheme } from "../../core/report/theme";
+import { activePageName, listPages, type PageModel, type VisualModel } from "../../core/report/visualDoc";
 import { ContextMenu } from "./ContextMenu";
 import { FiltersPane } from "./FiltersPane";
 import { PageCanvas } from "./PageCanvas";
@@ -25,16 +24,53 @@ export interface ReportViewProps {
   dataEpoch: number;
   /** Notified when the user selects a visual (the Data pane shows which fields it uses). */
   onSelectVisual?(page: string | null, visual: string | null): void;
+  /** Page zoom: "fit" or a scale (1 = 100%). */
+  zoom?: Zoom;
+  /** Reports the scale the page is drawn at (the status bar shows it). */
+  onScale?(scale: number): void;
+  /** Panes docked left and right of the canvas. Without it the Filters and Visualizations panes sit on the right. */
+  docks?(api: ReportDockApi): { left?: React.ReactNode; right?: React.ReactNode };
 }
 
 type Zoom = "fit" | number;
 
+/** What the docked panes need to know about the canvas. */
+export interface ReportDockApi {
+  page: PageModel;
+  visual: VisualModel | null;
+  /** A pane added a visual: select it. */
+  onAdded(name: string | null): void;
+}
+
+/** Fixed Filters and Visualizations panes on the right (used by the harness and tests; the shells draw their own). */
+export function plainDocks(api: ReportDockApi): { left?: React.ReactNode; right?: React.ReactNode } {
+  return {
+    right: (
+      <>
+        <div style={{ width: 240, flex: "none", borderLeft: "1px solid #ddd", overflow: "hidden" }}>
+          <FiltersPane page={api.page} visual={api.visual} />
+        </div>
+        <div style={{ width: 290, flex: "none", borderLeft: "1px solid #ddd", overflow: "hidden" }}>
+          <VisualizationsPane page={api.page} visual={api.visual} onAdded={api.onAdded} />
+        </div>
+      </>
+    ),
+  };
+}
+
 function useSize(ref: React.RefObject<HTMLElement | null>): { w: number; h: number } {
   const [s, setS] = useState({ w: 900, h: 560 });
-  useEffect(() => {
+  // measured before the first paint, so the page does not flash at a wrong scale
+  useLayoutEffect(() => {
     const el = ref.current;
-    if (!el || typeof ResizeObserver === "undefined") return;
-    const ro = new ResizeObserver(([e]) => setS({ w: Math.max(100, e.contentRect.width), h: Math.max(100, e.contentRect.height) }));
+    if (!el) return;
+    const measure = (w: number, h: number) => (w > 0 && h > 0 ? setS({ w: Math.max(100, w), h: Math.max(100, h) }) : undefined);
+    const cs = getComputedStyle(el);
+    const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight) || 0;
+    const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom) || 0;
+    measure(el.clientWidth - padX, el.clientHeight - padY);
+    if (typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(([e]) => measure(e.contentRect.width, e.contentRect.height));
     ro.observe(el);
     return () => ro.disconnect();
   }, [ref]);
@@ -60,72 +96,6 @@ function TooltipOverlay({ page, point, x, y }: { page: PageModel; point: Selecte
   );
 }
 
-function Toolbar(p: { zoom: Zoom; setZoom(z: Zoom): void; panes: Record<string, boolean>; togglePane(k: string): void; selected: string | null; editing: boolean }) {
-  const c = useReport();
-  const file = useRef<HTMLInputElement>(null);
-  const importTheme = async (f: File | undefined) => {
-    if (!f) return;
-    c.dispatch("report.theme.apply", { json: await f.text() });
-  };
-  const exportTheme = () => {
-    const blob = new Blob([JSON.stringify(themeToJson(c.theme), null, 2)], { type: "application/json" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `${c.theme.name}.json`;
-    a.click();
-    URL.revokeObjectURL(a.href);
-  };
-  return (
-    <div role="toolbar" aria-label="Report tools" style={{ display: "flex", gap: 6, alignItems: "center", padding: "4px 8px", borderBottom: "1px solid #ddd", flexWrap: "wrap" }}>
-      <Menu>
-        <MenuTrigger disableButtonEnhancement>
-          <Button size="small" aria-label="Themes">
-            Themes ▾
-          </Button>
-        </MenuTrigger>
-        <MenuPopover>
-          <MenuList>
-            {BUILTIN_THEMES.map((t) => (
-              <MenuItem key={t.name} onClick={() => c.dispatch("report.theme.apply", { builtin: t.name })}>
-                {c.theme.name === t.name ? "✓ " : ""}
-                {t.name}
-              </MenuItem>
-            ))}
-            <MenuItem onClick={() => file.current?.click()}>Import theme file…</MenuItem>
-            <MenuItem onClick={exportTheme}>Export the current theme…</MenuItem>
-            <MenuItem onClick={() => c.dispatch("report.theme.reset")}>Reset to the default theme</MenuItem>
-          </MenuList>
-        </MenuPopover>
-      </Menu>
-      <input ref={file} type="file" accept=".json,application/json" hidden aria-label="Theme file" onChange={(e) => void importTheme(e.target.files?.[0]).then(() => (e.target.value = ""))} />
-      <ToggleButton size="small" checked={!!c.snap.editInteractions} disabled={!p.selected} onClick={() => c.dispatch("report.interaction.edit", { source: c.snap.editInteractions ? null : p.selected })}>
-        Edit interactions
-      </ToggleButton>
-      <Button size="small" disabled={!c.snap.selection} onClick={() => c.dispatch("report.view.clearSelection")}>
-        Clear selection
-      </Button>
-      {c.snap.drillthrough && (
-        <Button size="small" appearance="primary" onClick={() => c.dispatch("report.view.back")}>
-          ← Back
-        </Button>
-      )}
-      <span style={{ flex: 1 }} />
-      <Select size="small" aria-label="Zoom" value={String(p.zoom)} onChange={(_, d) => p.setZoom(d.value === "fit" ? "fit" : Number(d.value))} style={{ width: 120 }}>
-        <option value="fit">Fit to page</option>
-        <option value="0.5">50%</option>
-        <option value="0.75">75%</option>
-        <option value="1">100%</option>
-        <option value="1.5">150%</option>
-      </Select>
-      {(["filters", "visualizations", "bookmarks"] as const).map((k) => (
-        <ToggleButton key={k} size="small" checked={p.panes[k]} onClick={() => p.togglePane(k)}>
-          {k === "filters" ? "Filters" : k === "visualizations" ? "Visualizations" : "Bookmarks"}
-        </ToggleButton>
-      ))}
-    </div>
-  );
-}
-
 /** The report canvas with page tabs and the Visualizations, Filters and Bookmarks panes. */
 export function ReportView(p: ReportViewProps) {
   const snap = useSyncExternalStore(p.runtime.subscribe, p.runtime.getSnapshot);
@@ -134,8 +104,7 @@ export function ReportView(p: ReportViewProps) {
   const model = useMemo(() => modelInfo(p.project), [p.project]);
   const data = useMemo(() => new ReportData(p.dax), [p.dax]);
   const [selected, setSelected] = useState<string | null>(null);
-  const [zoom, setZoom] = useState<Zoom>("fit");
-  const [panes, setPanes] = useState({ filters: true, visualizations: true, bookmarks: false });
+  const zoom = p.zoom ?? "fit";
   const [menu, setMenu] = useState<{ items: CtxMenuItem[]; x: number; y: number } | null>(null);
   const [tip, setTip] = useState<{ page: PageModel; point: SelectedPoint; x: number; y: number } | null>(null);
   const area = useRef<HTMLDivElement>(null);
@@ -164,42 +133,43 @@ export function ReportView(p: ReportViewProps) {
     [p.project, pages, theme, model, data, view, snap, p.dispatch, onTooltip, onMenu],
   );
 
+  const fit = page ? Math.min(size.w / page.width, size.h / page.height) : 1;
+  const scale = zoom === "fit" ? Math.max(0.2, Math.min(1.5, fit)) : zoom;
+  const onScale = p.onScale;
+  useEffect(() => onScale?.(scale), [scale, onScale]);
+
   if (!page) return <div style={{ padding: 16 }}>This report has no pages.</div>;
   const selectedVisual = page.visuals.find((v) => v.name === selected) ?? null;
-  const fit = Math.min((size.w - 24) / page.width, (size.h - 24) / page.height);
-  const scale = zoom === "fit" ? Math.max(0.2, Math.min(1.5, fit)) : zoom;
   const drillthroughNote = snap.drillthrough && page.type === "Drillthrough";
+  const docks = (p.docks ?? plainDocks)({ page, visual: selectedVisual, onAdded: setSelected });
 
   return (
     <ReportContext.Provider value={ctx}>
-      <div style={{ display: "flex", height: "100%", minWidth: 0 }} aria-label="Report">
-        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
-          <Toolbar zoom={zoom} setZoom={setZoom} panes={panes} togglePane={(k) => setPanes((s) => ({ ...s, [k]: !s[k as keyof typeof s] }))} selected={selected} editing />
-          {drillthroughNote && (
-            <div role="status" style={{ fontSize: 12, padding: "2px 8px", background: "#eef5fc", color: "#123" }}>
-              Drillthrough from another page is applied to this page.
+      <div className="report-root" aria-label="Report">
+        {docks.left}
+        <div className="report-main">
+          {(snap.drillthrough || snap.selection) && (
+            <div role="status" className="notice-bar">
+              {drillthroughNote ? "Drillthrough from another page is applied to this page." : snap.drillthrough ? "Showing a drillthrough." : "Data points are selected."}
+              <span style={{ flex: 1 }} />
+              {snap.selection && (
+                <Button size="small" onClick={() => p.dispatch("report.view.clearSelection")}>
+                  Clear selection
+                </Button>
+              )}
+              {snap.drillthrough && (
+                <Button size="small" appearance="primary" onClick={() => p.dispatch("report.view.back")}>
+                  ← Back
+                </Button>
+              )}
             </div>
           )}
-          <div ref={area} style={{ flex: 1, minHeight: 0, overflow: "auto", background: "#e9e9e9", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: 12, boxSizing: "border-box" }}>
+          <div ref={area} className="report-canvas">
             <PageCanvas page={page} scale={scale} editing selected={selected} onSelect={setSelected} />
           </div>
           <PageTabs pages={pages} active={page.name} />
         </div>
-        {panes.filters && (
-          <div style={{ width: 240, flex: "none", borderLeft: "1px solid #ddd", overflow: "hidden" }}>
-            <FiltersPane page={page} visual={selectedVisual} />
-          </div>
-        )}
-        {panes.visualizations && (
-          <div style={{ width: 290, flex: "none", borderLeft: "1px solid #ddd", overflow: "hidden" }}>
-            <VisualizationsPane page={page} visual={selectedVisual} onAdded={setSelected} />
-          </div>
-        )}
-        {panes.bookmarks && (
-          <div style={{ width: 230, flex: "none", borderLeft: "1px solid #ddd", overflow: "hidden" }}>
-            <BookmarksPane />
-          </div>
-        )}
+        {docks.right}
       </div>
       {menu && <ContextMenu items={menu.items} x={menu.x} y={menu.y} onClose={() => setMenu(null)} />}
       {tip && <TooltipOverlay page={tip.page} point={tip.point} x={tip.x} y={tip.y} />}

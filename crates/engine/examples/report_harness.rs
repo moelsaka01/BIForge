@@ -4,6 +4,7 @@
 //!     cargo run -p biforge-engine --example report_harness [port]      (default 1431)
 //!
 //! GET  /project  -> the fixture Project (model with measures and relationships, one empty report page)
+//! POST /tmdl     -> body {"documents": {path: Document}} printed as TMDL text per path
 //! POST /dax      -> body {"documents": [...TMDL documents...], "query": "..."} answered like the Tauri command dax_query
 //! Not part of the product: it listens on 127.0.0.1 only and exists for manual checks and screenshots.
 
@@ -110,6 +111,16 @@ fn main() {
         match (method.as_str(), path.as_str()) {
             ("OPTIONS", _) => respond(stream, "204 No Content", ""),
             ("GET", "/project") => respond(stream, "200 OK", &project),
+            ("POST", "/tmdl") => {
+                let out = serde_json::from_slice::<serde_json::Value>(&body)
+                    .map_err(|e| e.to_string())
+                    .and_then(|v| serde_json::from_value::<std::collections::BTreeMap<String, Document>>(v["documents"].clone()).map_err(|e| e.to_string()))
+                    .map(|docs| json!(docs.iter().map(|(p, d)| (p.clone(), tmdl::print(d))).collect::<std::collections::BTreeMap<_, _>>()).to_string());
+                match out {
+                    Ok(b) => respond(stream, "200 OK", &b),
+                    Err(e) => respond(stream, "400 Bad Request", &json!({"error": e}).to_string()),
+                }
+            }
             ("POST", "/dax") => {
                 let out = (|| -> Result<String, String> {
                     let v: serde_json::Value = serde_json::from_slice(&body).map_err(|e| e.to_string())?;
