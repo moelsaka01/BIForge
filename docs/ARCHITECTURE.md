@@ -1,6 +1,6 @@
-# Architecture (planned)
+# Architecture
 
-Status: design only; no code exists yet.
+Status: implemented through Phase 6; see the notes per phase below.
 
 ## Layers
 1. **UI (`app/`)** – React + Fluent UI v9. `core/` holds the command registry, document store client and state; `shells/classic` and `shells/modern` contain only layout/ribbon/panel components that dispatch commands. Per-shell layout is persisted separately from the document.
@@ -39,3 +39,9 @@ Status: design only; no code exists yet.
 - The app side: `core/queries` (project queries, draft, dialogs and ribbon as data, M language), `core/commands/queryCommands.ts` (the `query.*` commands), `views/pq` (the editor). `Session` owns the `QueryDraft` and `applyQueries`.
 - Queries in the document: a loaded query is a table with an M partition (`source =` expression), others are TMDL `expression` objects in `expressions.tmdl`. The marker annotation `BIForge.GeneratedM` says BIForge wrote the M; editing removes it and the table then refreshes by running its M.
 - Development harness: `cargo run -p biforge-engine --example pq_harness` + `app/pq-harness.html` (the real engine behind the real editor in a browser).
+
+## Phase 6 implementation notes (2026-10-16): start screen and shells
+- `app/src/core/shell`: `settings.ts` (shell, theme, recent projects, per-shell layout; sanitized localStorage JSON), `shellStore.ts` (screen, view, dialog, selection and zoom state; `Session.shell`), `ribbon.ts` (ribbons as data per shell and view; controls name command ids), `windowApi.ts` / `tauriWindow.ts` (window buttons and close guard behind an interface). `core/commands/shellCommands.ts` registers the frame commands (`app.*`, `view.*`, `pane.toggle`, `data.getData`, `file.newBlank`, `file.close`, `app.exit`, `dax.*`, `model.newMeasure`, ...). `file.new`, `file.open`, `file.close` and `app.exit` ask about unsaved changes through a dialog request that re-runs the command with `discard: true`.
+- `app/src/views/shell`: `Frame` (title bar, start screen or ribbon + view switcher + view + panes, status bar, dialogs), `StartScreen`, `TitleBar` (with command search), `Ribbon` (renders the data, key tips), `PaneFrame` (collapse to rail, resize), `ViewSwitcher`, `StatusBar`, `Dialogs`, `DaxQueryView`, `TmdlView`, `DataPaneHost`, `shell.css`. `shells/classic` and `shells/modern` only say where the panes go (`ShellSpec`) and wrap `Frame`. `ReportView` takes `zoom`, `onScale` and `docks` instead of drawing its own toolbar and panes.
+- Layout per shell is stored apart from the document; recovery snapshots are written and cleared through one queue in `Session` (see recoveryLifecycle.test.ts).
+- Development: `app/shell-harness.html` with `cargo run -p biforge-engine --example report_harness`.
