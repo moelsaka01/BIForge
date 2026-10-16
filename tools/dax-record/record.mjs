@@ -14,9 +14,10 @@ import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
-const casesDir = join(root, 'tests', 'dax', 'cases');
 const args = process.argv.slice(2);
 const opt = (n) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : undefined; };
+// --dir holdout records tests/dax/holdout instead of tests/dax/cases
+const casesDir = join(root, 'tests', 'dax', opt('--dir') ?? 'cases');
 
 // One case per few lines: keeps diffs reviewable.
 export function serialize(doc) {

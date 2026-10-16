@@ -1,0 +1,190 @@
+{
+  "area": "edge",
+  "fixture": "tests/dax/fixtures",
+  "recordedWith": "local Analysis Services of Power BI Desktop 2.158.1304.0",
+  "cases": [
+    {"id": "h.ed.01", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), Product[Category] = \"Nothing\"))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [null]
+        ]}},
+    {"id": "h.ed.04", "query": "EVALUATE ROW(\"v\", CALCULATE(COUNTROWS(Sales), ISBLANK(Sales[ProductKey])))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [1]
+        ]}},
+    {"id": "h.ed.06", "query": "EVALUATE ROW(\"v\", CALCULATE(COUNTROWS(Sales), Sales[ShipDate] = BLANK()))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [2]
+        ]}},
+    {"id": "h.ed.08", "query": "EVALUATE ROW(\"v\", CALCULATE(COUNTROWS(Sales), Sales[Discount] = 0))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [138]
+        ]}},
+    {"id": "h.ed.10", "query": "EVALUATE ROW(\"a\", COUNTBLANK(Sales[Discount]), \"b\", COUNT(Sales[Discount]), \"c\", COUNTA(Sales[Discount]), \"d\", COUNTROWS(Sales))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]","[d]"], "types": ["int","int","int","int"],
+        "rows": [
+          [85,156,156,241]
+        ]}},
+    {"id": "h.ed.11", "query": "EVALUATE ROW(\"a\", COUNTBLANK(Sales[ShipDate]), \"b\", COUNTBLANK(Sales[Quantity]), \"c\", COUNTBLANK(Customer[Segment]), \"d\", COUNTBLANK(Customer[BirthDate]))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]","[d]"], "types": ["int","int","int","int"],
+        "rows": [
+          [2,1,1,1]
+        ]}},
+    {"id": "h.ed.13", "query": "EVALUATE ROW(\"a\", BLANK() & \"x\", \"b\", BLANK() = 0, \"c\", BLANK() = \"\", \"d\", ISBLANK(BLANK() + BLANK()))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]","[d]"], "types": ["text","bool","bool","bool"],
+        "rows": [
+          ["x",true,true,true]
+        ]}},
+    {"id": "h.ed.14", "query": "EVALUATE ROW(\"a\", 1 / 0, \"b\", DIVIDE(1, 0), \"c\", DIVIDE(1, 0, -1), \"d\", DIVIDE(BLANK(), 5))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]","[d]"], "types": ["real","real","real","real"],
+        "rows": [
+          ["Infinity",null,-1,null]
+        ]}},
+    {"id": "h.ed.15", "query": "EVALUATE ROW(\"v\", IFERROR(1 / 0, -1))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["real"],
+        "rows": [
+          [-1]
+        ]}},
+    {"id": "h.ed.19", "query": "EVALUATE ROW(\"a\", IF(BLANK(), \"t\", \"f\"), \"b\", IF(BLANK() = 0, \"t\", \"f\"), \"c\", IF(ISBLANK(BLANK()), \"t\", \"f\"))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]"], "types": ["text","text","text"],
+        "rows": [
+          ["f","t","t"]
+        ]}},
+    {"id": "h.ed.20", "query": "EVALUATE ROW(\"a\", SWITCH(TRUE(), 1 > 2, \"a\", 2 > 1, \"b\", \"c\"), \"b\", SWITCH(3, 1, \"one\", 2, \"two\"), \"c\", SWITCH(BLANK(), 0, \"zero\", BLANK(), \"blank\", \"other\"))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]"], "types": ["text","text","text"],
+        "rows": [
+          ["b",null,"blank"]
+        ]}},
+    {"id": "h.ed.22", "query": "EVALUATE ROW(\"a\", MAX(Sales[Discount]), \"b\", MIN(Sales[Discount]), \"c\", MAX(Customer[Segment]), \"d\", MIN(Customer[BirthDate]))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]","[d]"], "types": ["real","real","text","datetime"],
+        "rows": [
+          [0.1,0,"Home Office","1970-12-31T00:00:00"]
+        ]}},
+    {"id": "h.ed.23", "query": "EVALUATE ROW(\"a\", MAX(1, BLANK()), \"b\", MIN(1, BLANK()), \"c\", MAX(BLANK(), BLANK()))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]"], "types": ["int","int","int"],
+        "rows": [
+          [1,null,null]
+        ]}},
+    {"id": "h.ed.25", "query": "EVALUATE ROW(\"a\", ROUND(BLANK(), 2), \"b\", INT(BLANK()), \"c\", ABS(BLANK()), \"d\", SQRT(BLANK()))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]","[d]"], "types": ["int","int","int","real"],
+        "rows": [
+          [null,null,null,null]
+        ]}},
+    {"id": "h.ed.27", "query": "EVALUATE ROW(\"v\", SQRT(-4))", "source": "recorded", "expected": {"error": "Exception calling \"Read\" with \"0\" argument(s): \"Query (1, 19) An argument of function 'SQRT' has the wrong data type or the result is too large or too small.\""}},
+    {"id": "h.ed.32", "query": "EVALUATE ROW(\"v\", LEFT(\"abc\", -1))", "source": "recorded", "expected": {"error": "Exception calling \"Read\" with \"0\" argument(s): \"Query (1, 19) An argument of function 'LEFT' has the wrong data type or has an invalid value.\""}},
+    {"id": "h.ed.35", "query": "EVALUATE ROW(\"v\", FIND(\"z\", \"abc\"))", "source": "recorded", "expected": {"error": "Exception calling \"Read\" with \"0\" argument(s): \"Query (1, 19) The search Text provided to function 'FIND' could not be found in the given text.\""}},
+    {"id": "h.ed.36", "query": "EVALUATE ROW(\"a\", FORMAT(1234.5, \"#,0.00\"), \"b\", FORMAT(0.256, \"0.0%\"), \"c\", FORMAT(DATE(2024, 3, 5), \"yyyy-MM-dd\"), \"d\", FORMAT(BLANK(), \"0\"))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]","[d]"], "types": ["text","text","text","text"],
+        "rows": [
+          ["1,234.50","25.6%","2024-03-05",""]
+        ]}},
+    {"id": "h.ed.37", "query": "EVALUATE ROW(\"a\", FORMAT(5, \"000\"), \"b\", FORMAT(-5, \"0;(0)\"), \"c\", FORMAT(DATE(2024, 3, 5), \"dddd\"), \"d\", FORMAT(1E6, \"0.0E+0\"))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]","[d]"], "types": ["text","text","text","text"],
+        "rows": [
+          ["005","(5)","Tuesday","1.0E+6"]
+        ]}},
+    {"id": "h.ed.39", "query": "EVALUATE ROW(\"v\", VALUE(\"1,2,3\"))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["real"],
+        "rows": [
+          [123]
+        ]}},
+    {"id": "h.ed.40", "query": "EVALUATE ROW(\"a\", DATE(2024, 14, 1), \"b\", DATE(2024, 0, 15), \"c\", DATE(2024, 1, 0), \"d\", EDATE(DATE(2024, 1, 31), 1))", "source": "recorded", "expected": {"error": "Exception calling \"Read\" with \"0\" argument(s): \"Query (1, 67) An argument of function 'DATE' has the wrong data type or the result is too large or too small.\""}},
+    {"id": "h.ed.41", "query": "EVALUATE ROW(\"a\", EOMONTH(DATE(2024, 1, 31), -2), \"b\", DATEDIFF(DATE(2024, 1, 31), DATE(2024, 2, 29), MONTH), \"c\", DATEDIFF(DATE(2024, 3, 1), DATE(2024, 1, 1), DAY), \"d\", WEEKDAY(DATE(2024, 3, 3), 2))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]","[d]"], "types": ["datetime","int","int","int"],
+        "rows": [
+          ["2023-11-30T00:00:00",1,-60,7]
+        ]}},
+    {"id": "h.ed.42", "query": "EVALUATE ROW(\"v\", DATEDIFF(DATE(2024, 1, 1), BLANK(), DAY))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [null]
+        ]}},
+    {"id": "h.ed.45", "query": "EVALUATE ROW(\"a\", CALCULATE(HASONEVALUE(Product[Category])), \"b\", CALCULATE(HASONEVALUE(Product[Category]), Product[Category] = \"Bikes\"), \"c\", CALCULATE(ISFILTERED(Product[Category]), Product[Category] = \"Bikes\"), \"d\", CALCULATE(ISCROSSFILTERED(Product[Color]), Customer[Country] = \"France\"))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]","[d]"], "types": ["bool","bool","bool","bool"],
+        "rows": [
+          [false,true,true,false]
+        ]}},
+    {"id": "h.ed.46", "query": "EVALUATE ROW(\"a\", SELECTEDVALUE(Product[Category]), \"b\", SELECTEDVALUE(Product[Category], \"many\"), \"c\", CALCULATE(SELECTEDVALUE(Product[Category], \"many\"), Product[Category] = \"Bikes\"), \"d\", CALCULATE(SELECTEDVALUE(Product[Color]), Product[Product] = \"Kids Bike\"))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]","[d]"], "types": ["text","text","text","text"],
+        "rows": [
+          [null,"many","Bikes",""]
+        ]}},
+    {"id": "h.ed.50", "query": "EVALUATE ROW(\"v\", LOOKUPVALUE(Customer[Customer], Customer[CustomerKey], 3))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["text"],
+        "rows": [
+          ["Chen"]
+        ]}},
+    {"id": "h.ed.51", "query": "EVALUATE ROW(\"a\", LOOKUPVALUE(Customer[Customer], Customer[CustomerKey], 99), \"b\", LOOKUPVALUE(Customer[Customer], Customer[CustomerKey], 99, \"none\"))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]"], "types": ["text","text"],
+        "rows": [
+          [null,"none"]
+        ]}},
+    {"id": "h.ed.53", "query": "EVALUATE ROW(\"a\", CONTAINS(Customer, Customer[Country], \"France\", Customer[City], \"Paris\"), \"b\", CONTAINS(Customer, Customer[Country], \"France\", Customer[City], \"Toronto\"), \"c\", CONTAINSROW({1, 2, 3}, 2))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]"], "types": ["bool","bool","bool"],
+        "rows": [
+          [true,false,true]
+        ]}},
+    {"id": "h.ed.56", "query": "EVALUATE ROW(\"v\", 1 = \"1\")", "source": "recorded", "expected": {"error": "Exception calling \"ExecuteReader\" with \"0\" argument(s): \"Query (1, 19) DAX comparison operations do not support comparing values of type Integer with values of type Text. Consider using the VALUE or FORMAT function to convert one of the values.\""}},
+    {"id": "h.ed.57", "query": "EVALUATE ROW(\"a\", \"5\" + 3, \"b\", \"5\" & 3, \"c\", TRUE() + 1, \"d\", -TRUE())", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]","[d]"], "types": ["real","text","int","int"],
+        "rows": [
+          [8,"53",2,-1]
+        ]}},
+    {"id": "h.ed.58", "query": "EVALUATE ROW(\"v\", \"a\" + 1)", "source": "recorded", "expected": {"error": "Exception calling \"Read\" with \"0\" argument(s): \"Query (1, 19) Cannot convert value 'a' of type Text to type Number.\""}},
+    {"id": "h.ed.59", "query": "EVALUATE ROW(\"a\", VAR x = 5 VAR y = x * 2 RETURN y + x, \"b\", VAR z = BLANK() RETURN z + 1)", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]"], "types": ["int","int"],
+        "rows": [
+          [15,1]
+        ]}},
+    {"id": "h.ed.61", "query": "EVALUATE ROW(\"v\", VAR c = COUNTROWS(Sales) RETURN CALCULATE(c, Product[Category] = \"Bikes\"))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [241]
+        ]}},
+    {"id": "h.ed.63", "query": "EVALUATE ROW(\"a\", DIVIDE(SUM(Sales[Quantity]), CALCULATE(SUM(Sales[Quantity]), ALL(Product))), \"b\", DIVIDE(CALCULATE(SUM(Sales[Quantity]), Product[Category] = \"Bikes\"), CALCULATE(SUM(Sales[Quantity]), ALL(Product))))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]"], "types": ["real","real"],
+        "rows": [
+          [1,0.3698630136986301]
+        ]}},
+    {"id": "h.ed.65", "query": "EVALUATE ROW(\"a\", CALCULATE(SUM(Sales[Quantity]), Product[Color] <> \"Red\"), \"b\", CALCULATE(SUM(Sales[Quantity]), Product[Color] <> BLANK()), \"c\", CALCULATE(SUM(Sales[Quantity]), NOT ISBLANK(Product[Color])))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]"], "types": ["int","int","int"],
+        "rows": [
+          [541,634,729]
+        ]}},
+    {"id": "h.ed.67", "query": "EVALUATE ROW(\"a\", CALCULATE(COUNTROWS(Customer), Customer[Segment] = BLANK()), \"b\", CALCULATE(COUNTROWS(Customer), ISBLANK(Customer[BirthDate])), \"c\", CALCULATE(COUNTROWS(Customer), Customer[BirthDate] > DATE(1990, 1, 1)))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]"], "types": ["int","int","int"],
+        "rows": [
+          [1,1,4]
+        ]}},
+    {"id": "h.ed.69", "query": "EVALUATE ROW(\"a\", SUMX(GENERATESERIES(1, 5), [Value] * [Value]), \"b\", COUNTROWS(GENERATESERIES(5, 1)), \"c\", COUNTROWS(GENERATESERIES(1, 2, 0.5)))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]"], "types": ["int","int","int"],
+        "rows": [
+          [55,null,3]
+        ]}},
+    {"id": "h.ed.71", "query": "EVALUATE TOPN(5, Sales, Sales[Quantity], DESC, Sales[SalesKey], ASC)", "source": "recorded",
+      "expected": {"columns": ["Sales[SalesKey]","Sales[OrderDate]","Sales[ShipDate]","Sales[CustomerKey]","Sales[ProductKey]","Sales[PromotionKey]","Sales[Quantity]","Sales[UnitPrice]","Sales[Discount]","Sales[Channel]"], "types": ["int","datetime","datetime","int","int","int","int","real","real","text"],
+        "rows": [
+          [19,"2024-02-01T00:00:00","2024-02-03T00:00:00",1,5,1,5,8.97,null,"Online"],
+          [8,"2024-09-05T00:00:00","2024-09-09T00:00:00",6,1,1,5,1287.09,null,"Online"],
+          [3,"2024-08-07T00:00:00","2024-08-12T00:00:00",3,8,1,5,18.27,null,"Store"],
+          [6,"2024-03-03T00:00:00","2024-03-05T00:00:00",8,2,1,5,834.47,0.05,"Online"],
+          [5,"2023-03-21T00:00:00","2023-03-26T00:00:00",9,3,1,5,305.11,0.05,"Online"]
+        ]}},
+    {"id": "h.ed.72", "query": "EVALUATE TOPN(2, ALL(Customer[Country]), Customer[Country], ASC)", "source": "recorded",
+      "expected": {"columns": ["Customer[Country]"], "types": ["text"],
+        "rows": [
+          ["Canada"],
+          [null]
+        ]}},
+    {"id": "h.ed.75", "query": "EVALUATE DATATABLE(\"a\", INTEGER, \"b\", STRING, {{1, \"x\"}, {2, BLANK()}, {BLANK(), \"z\"}}) ORDER BY [a]", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]"], "types": ["int","text"],
+        "rows": [
+          [null,"z"],
+          [1,"x"],
+          [2,null]
+        ]}}
+  ]
+}

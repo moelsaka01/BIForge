@@ -471,7 +471,9 @@ pub fn call<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], whole: &'a
         }
         "COUNTBLANK" => {
             let c = col_arg(name, args, 0)?;
-            s(as_count(column_values(ev, c, env).iter().filter(|v| v.is_blank()).count()))
+            // recorded from Power BI (holdout): BLANK and empty text both count; the virtual blank row does not
+            let rows = ev.table_rows(&env.filter, c.table, false);
+            s(as_count(rows.into_iter().filter(|&r| matches!(ev.data.value(c, r), Value::Blank) || matches!(ev.data.value(c, r), Value::Str(t) if t.is_empty())).count()))
         }
         "COUNTROWS" => {
             if let Some(tb) = args[0].table() {

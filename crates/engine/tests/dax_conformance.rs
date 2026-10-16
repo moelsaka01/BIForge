@@ -32,6 +32,11 @@ fn cases_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../tests/dax/cases")
 }
 
+/// Independent validation set, recorded and reported separately (see tests/dax/README.md).
+fn holdout_dir() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../tests/dax/holdout")
+}
+
 /// Converts a JSON cell to a value; `ty` is the column type recorded next to the rows.
 fn cell(j: &Json, ty: &str) -> Result<Value, String> {
     Ok(match j {
@@ -201,8 +206,19 @@ fn comparison_rules() {
 
 #[test]
 fn conformance_cases() {
+    run_suite("conformance", cases_dir(), "BIFORGE_DAX_REPORT");
+}
+
+/// The holdout set: cases written without looking at the engine and recorded afterwards. Its pass rate is
+/// reported on its own; set BIFORGE_HOLDOUT_REPORT_ONLY=1 to print the numbers (and failures) without failing.
+#[test]
+fn holdout_cases() {
+    run_suite("holdout", holdout_dir(), "BIFORGE_HOLDOUT_REPORT");
+}
+
+fn run_suite(label: &str, dir: PathBuf, report_var: &str) {
     let (_store, dax) = fixture::setup();
-    let mut files: Vec<PathBuf> = std::fs::read_dir(cases_dir()).map(|d| d.filter_map(|e| e.ok()).map(|e| e.path()).filter(|p| p.extension().is_some_and(|x| x == "json")).collect()).unwrap_or_default();
+    let mut files: Vec<PathBuf> = std::fs::read_dir(dir).map(|d| d.filter_map(|e| e.ok()).map(|e| e.path()).filter(|p| p.extension().is_some_and(|x| x == "json")).collect()).unwrap_or_default();
     files.sort();
     let verbose = std::env::var("BIFORGE_DAX_VERBOSE").is_ok();
     let (mut pass, mut skip, mut pending, mut known) = (0usize, 0usize, 0usize, 0usize);
@@ -235,7 +251,7 @@ fn conformance_cases() {
         }
     }
     let recorded = pass + skip + known + failures.len();
-    println!("conformance: {pass}/{recorded} pass, {} fail, {known} known differences, {skip} skipped (not implemented), {pending} pending (no expected result recorded)", failures.len());
+    println!("{label}: {pass}/{recorded} pass, {} fail, {known} known differences, {skip} skipped (not implemented), {pending} pending (no expected result recorded)", failures.len());
     println!("pending cases on which BIForge reports an error: {}", pending_err.len());
     if verbose {
         for s in &pending_err {
@@ -245,8 +261,14 @@ fn conformance_cases() {
     for s in skipped_names.iter().take(20) {
         println!("  skipped {s}");
     }
-    if let Ok(path) = std::env::var("BIFORGE_DAX_REPORT") {
+    if let Ok(path) = std::env::var(report_var) {
         let _ = std::fs::write(path, format!("{pass} {recorded} {} {skip} {pending}\n", failures.len()));
+    }
+    if label == "holdout" && std::env::var("BIFORGE_HOLDOUT_REPORT_ONLY").is_ok() {
+        for f in &failures {
+            println!("  FAIL {f}");
+        }
+        return;
     }
     assert!(failures.is_empty(), "{} conformance case(s) failed:\n{}", failures.len(), failures.join("\n"));
 }

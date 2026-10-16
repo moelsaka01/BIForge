@@ -10,9 +10,11 @@ import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
-const [area, list] = process.argv.slice(2);
+const dirIdx = process.argv.indexOf('--dir');
+const dir = dirIdx >= 0 ? process.argv[dirIdx + 1] : 'cases';
+const [area, list] = process.argv.slice(2).filter((a, i, all) => a !== '--dir' && all[i - 1] !== '--dir');
 if (!area || !list) { console.error('usage: add-cases.mjs <area> <list.txt>'); process.exit(2); }
-const path = join(root, 'tests', 'dax', 'cases', `${area}.json`);
+const path = join(root, 'tests', 'dax', dir, `${area}.json`);
 const doc = existsSync(path) ? JSON.parse(readFileSync(path, 'utf8')) : { area, fixture: 'tests/dax/fixtures', cases: [] };
 const have = new Set(doc.cases.map((c) => c.id));
 let added = 0;
@@ -28,5 +30,5 @@ for (const raw of readFileSync(list, 'utf8').split(/\r?\n/)) {
   added++;
 }
 writeFileSync(path, JSON.stringify(doc));
-spawnSync('node', [join(root, 'tools', 'dax-record', 'record.mjs'), '--format'], { stdio: 'inherit' });
+spawnSync('node', [join(root, 'tools', 'dax-record', 'record.mjs'), '--format', '--dir', dir], { stdio: 'inherit' });
 console.log(`${added} case(s) added to ${area}.json (${doc.cases.length} total)`);

@@ -131,6 +131,16 @@
           ["Accessories",null,18],
           ["Bikes",1,28],
           ["Clothing",null,23]
+        ]}},
+    {"id": "text.format.bool.general", "query": "EVALUATE ROW(\"a\", FORMAT(TRUE(), \"General\"))", "source": "recorded", "knownDifference": "Desktop treats an unknown format string as a custom pattern, so FORMAT(TRUE(), \"General\") is \"Ge0eral\" (the letter n is the minute token of a date pattern; the value is read as serial 0). BIForge returns \"True\". Not reproduced: the quirk is an accident of the pattern parser, not documented behavior.",
+      "expected": {"columns": ["[a]"], "types": ["text"],
+        "rows": [
+          ["Ge0eral"]
+        ]}},
+    {"id": "text.format.bool.named", "query": "EVALUATE ROW(\"a\", FORMAT(TRUE(), \"Yes/No\"), \"b\", FORMAT(TRUE(), \"True/False\"), \"c\", FORMAT(FALSE(), \"On/Off\"))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]"], "types": ["text","text","text"],
+        "rows": [
+          ["Yes","True","Off"]
         ]}}
   ]
 }

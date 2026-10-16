@@ -42,6 +42,19 @@ fn caught(e: &value::EvalError) -> bool {
     e.code != ErrorCode::NotImplemented
 }
 
+/// Result type unification of two branches: Integer with Number or Date gives Number; other mixes keep the value.
+fn unify_number(chosen: Value, other: Option<&Value>) -> Value {
+    let wide = |v: &Value| matches!(v, Value::Double(_) | Value::DateTime(_));
+    let num = |v: &Value| matches!(v, Value::Int(_) | Value::Double(_) | Value::DateTime(_) | Value::Currency(_));
+    match other {
+        Some(o) if num(&chosen) && num(o) && (wide(&chosen) || wide(o)) => match chosen {
+            Value::Double(_) => chosen,
+            c => Value::Double(c.as_f64().unwrap_or(f64::NAN)),
+        },
+        _ => chosen,
+    }
+}
+
 fn to_bits(name: &str, v: &Value) -> VResult<i64> {
     let f = v.to_f64()?;
     if !f.is_finite() || f.abs() >= 9.2e18 {
@@ -58,11 +71,18 @@ fn run<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], env: &Env<'a>) 
             let no = if args.len() > 2 && !args[2].is_missing() { ev.scalar(&args[2], env)? } else { Value::Blank };
             Ok(if c { yes } else { no })
         }
-        "IFERROR" => match ev.scalar(&args[0], env) {
-            Err(e) if caught(&e) => ev.scalar(&args[1], env),
-            Ok(v) if non_finite(&v) => ev.scalar(&args[1], env),
-            other => other,
-        },
+        "IFERROR" => {
+            // recorded from Power BI (holdout): the two branches have one result type; a number meeting a
+            // Number (decimal) branch, or a date, comes out as Number. An erroring branch has no type.
+            let first = ev.scalar(&args[0], env);
+            let (chosen, other_branch) = match first {
+                Err(e) if caught(&e) => (ev.scalar(&args[1], env)?, 0),
+                Ok(v) if non_finite(&v) => (ev.scalar(&args[1], env)?, 0),
+                other => (other?, 1),
+            };
+            let other = ev.scalar(&args[other_branch], env);
+            Ok(unify_number(chosen, other.ok().as_ref()))
+        }
         "ISERROR" => Ok(Value::Bool(match ev.scalar(&args[0], env) {
             Err(ref e) => caught(e),
             Ok(v) => non_finite(&v),

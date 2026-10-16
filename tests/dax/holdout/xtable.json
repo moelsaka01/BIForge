@@ -1,0 +1,183 @@
+{
+  "area": "xtable",
+  "fixture": "tests/dax/fixtures",
+  "recordedWith": "local Analysis Services of Power BI Desktop 2.158.1304.0",
+  "cases": [
+    {"id": "h.xt.01", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), FILTER(ALL(Customer[Country], Product[Category]), Customer[Country] = \"France\" && Product[Category] = \"Bikes\")))", "source": "recorded", "expected": {"error": "Exception calling \"ExecuteReader\" with \"0\" argument(s): \"Query (1, 81) All column arguments of the ALL/ALLNOBLANKROW/ALLSELECTED/REMOVEFILTERS function must be from the same table.\""}},
+    {"id": "h.xt.02", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), FILTER(CROSSJOIN(VALUES(Customer[Country]), VALUES(Product[Category])), Customer[Country] = \"France\" && Product[Category] = \"Bikes\")))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [50]
+        ]}},
+    {"id": "h.xt.04", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), TREATAS({(\"France\", \"Bikes\"), (\"Canada\", \"Clothing\")}, Customer[Country], Product[Category])))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [92]
+        ]}},
+    {"id": "h.xt.05", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), TREATAS({(\"France\", \"Bikes\"), (\"Canada\", \"Clothing\"), (\"Japan\", \"Nothing\")}, Customer[Country], Product[Category])))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [92]
+        ]}},
+    {"id": "h.xt.06", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), TREATAS({(\"Online\", 2024), (\"Store\", 2023)}, Sales[Channel], 'Date'[Year])))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [402]
+        ]}},
+    {"id": "h.xt.08", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), TREATAS(SELECTCOLUMNS(FILTER(Budget, Budget[BudgetAmount] > 10000), \"c\", Budget[Category], \"y\", Budget[Year]), Product[Category], 'Date'[Year])))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [270]
+        ]}},
+    {"id": "h.xt.09", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), FILTER(Sales, RELATED(Customer[Country]) = \"France\" && RELATED(Product[Category]) = \"Bikes\")))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [50]
+        ]}},
+    {"id": "h.xt.10", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), FILTER(Sales, RELATED(Customer[Country]) = \"France\" || RELATED(Product[Category]) = \"Bikes\")))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [379]
+        ]}},
+    {"id": "h.xt.12", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), FILTER(ALL(Sales[Channel], Product[Category]), Sales[Channel] = \"Store\" && Product[Category] = \"Accessories\")))", "source": "recorded", "expected": {"error": "Exception calling \"ExecuteReader\" with \"0\" argument(s): \"Query (1, 78) All column arguments of the ALL/ALLNOBLANKROW/ALLSELECTED/REMOVEFILTERS function must be from the same table.\""}},
+    {"id": "h.xt.14", "query": "EVALUATE ROW(\"v\", COUNTROWS(FILTER(CROSSJOIN(Customer, Product), Customer[Country] = \"France\" && Product[Category] = \"Bikes\")))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [6]
+        ]}},
+    {"id": "h.xt.17", "query": "EVALUATE ROW(\"v\", COUNTROWS(SUMMARIZE(Sales, Customer[Country], Product[Category])))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [14]
+        ]}},
+    {"id": "h.xt.18", "query": "EVALUATE ROW(\"v\", COUNTROWS(SUMMARIZE(Sales, Customer[Country], Product[Category], 'Date'[Year])))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [26]
+        ]}},
+    {"id": "h.xt.20", "query": "EVALUATE SUMMARIZE(Sales, Customer[Country], Product[Category], \"q\", SUM(Sales[Quantity])) ORDER BY Customer[Country], Product[Category]", "source": "recorded",
+      "expected": {"columns": ["Customer[Country]","Product[Category]","[q]"], "types": ["text","text","int"],
+        "rows": [
+          [null,"Accessories",2],
+          ["Canada","Accessories",48],
+          ["Canada","Bikes",70],
+          ["Canada","Clothing",42],
+          ["France","Accessories",72],
+          ["France","Bikes",50],
+          ["France","Clothing",37],
+          ["Germany","Accessories",59],
+          ["Germany","Bikes",44],
+          ["Germany","Clothing",56],
+          ["United States",null,1],
+          ["United States","Accessories",97],
+          ["United States","Bikes",106],
+          ["United States","Clothing",46]
+        ]}},
+    {"id": "h.xt.21", "query": "EVALUATE SUMMARIZECOLUMNS(Customer[Country], 'Date'[Year], FILTER(ALL(Product[Category]), Product[Category] <> \"Bikes\"), \"q\", SUM(Sales[Quantity])) ORDER BY Customer[Country], 'Date'[Year]", "source": "recorded",
+      "expected": {"columns": ["Customer[Country]","Date[Year]","[q]"], "types": ["text","int","int"],
+        "rows": [
+          [null,2024,2],
+          ["Canada",2023,51],
+          ["Canada",2024,39],
+          ["France",2023,51],
+          ["France",2024,58],
+          ["Germany",2023,82],
+          ["Germany",2024,33],
+          ["United States",2023,75],
+          ["United States",2024,69]
+        ]}},
+    {"id": "h.xt.22", "query": "EVALUATE SUMMARIZECOLUMNS(Customer[Country], Product[Category], \"q\", CALCULATE(SUM(Sales[Quantity]), Sales[Channel] = \"Online\")) ORDER BY Customer[Country], Product[Category]", "source": "recorded",
+      "expected": {"columns": ["Customer[Country]","Product[Category]","[q]"], "types": ["text","text","int"],
+        "rows": [
+          [null,"Accessories",2],
+          ["Canada","Accessories",40],
+          ["Canada","Bikes",54],
+          ["Canada","Clothing",20],
+          ["France","Accessories",53],
+          ["France","Bikes",23],
+          ["France","Clothing",23],
+          ["Germany","Accessories",38],
+          ["Germany","Bikes",34],
+          ["Germany","Clothing",34],
+          ["United States",null,1],
+          ["United States","Accessories",77],
+          ["United States","Bikes",67],
+          ["United States","Clothing",40]
+        ]}},
+    {"id": "h.xt.23", "query": "EVALUATE SUMMARIZECOLUMNS(Customer[Segment], Promotion[Promotion], \"n\", COUNTROWS(Sales)) ORDER BY Customer[Segment], Promotion[Promotion]", "source": "recorded",
+      "expected": {"columns": ["Customer[Segment]","Promotion[Promotion]","[n]"], "types": ["text","text","int"],
+        "rows": [
+          [null,"Black Friday",1],
+          ["","Black Friday",5],
+          ["","No Promotion",14],
+          ["","Spring Sale",6],
+          ["Consumer","Black Friday",26],
+          ["Consumer","No Promotion",54],
+          ["Consumer","Spring Sale",18],
+          ["Corporate","Black Friday",10],
+          ["Corporate","No Promotion",56],
+          ["Corporate","Spring Sale",18],
+          ["Home Office","Black Friday",9],
+          ["Home Office","No Promotion",14],
+          ["Home Office","Spring Sale",10]
+        ]}},
+    {"id": "h.xt.25", "query": "EVALUATE ROW(\"v\", CALCULATE(COUNTROWS(Customer), Promotion[Promotion] = \"Spring Sale\"))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [10]
+        ]}},
+    {"id": "h.xt.27", "query": "EVALUATE ROW(\"v\", CALCULATE(COUNTROWS(Product), Customer[Country] = \"Japan\", ALL(Sales)))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [9]
+        ]}},
+    {"id": "h.xt.29", "query": "EVALUATE ROW(\"v\", COUNTROWS(CALCULATETABLE(VALUES(Product[Category]), Customer[Country] = \"France\", 'Date'[Year] = 2023)))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [4]
+        ]}},
+    {"id": "h.xt.30", "query": "EVALUATE CALCULATETABLE(VALUES(Product[Category]), Customer[Country] = \"Canada\", Sales[Channel] = \"Store\") ORDER BY Product[Category]", "source": "recorded",
+      "expected": {"columns": ["Product[Category]"], "types": ["text"],
+        "rows": [
+          [null],
+          ["Accessories"],
+          ["Bikes"],
+          ["Clothing"]
+        ]}},
+    {"id": "h.xt.31", "query": "EVALUATE CALCULATETABLE(SUMMARIZE(Sales, Product[Category], Customer[Country]), 'Date'[Year] = 2023, Sales[Quantity] > 3) ORDER BY Product[Category], Customer[Country]", "source": "recorded",
+      "expected": {"columns": ["Product[Category]","Customer[Country]"], "types": ["text","text"],
+        "rows": [
+          ["Accessories","Canada"],
+          ["Accessories","France"],
+          ["Accessories","Germany"],
+          ["Accessories","United States"],
+          ["Bikes","Canada"],
+          ["Bikes","France"],
+          ["Bikes","Germany"],
+          ["Bikes","United States"],
+          ["Clothing","Canada"],
+          ["Clothing","France"],
+          ["Clothing","Germany"]
+        ]}},
+    {"id": "h.xt.32", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), ALLEXCEPT(Sales, Sales[Channel]), Product[Category] = \"Bikes\"))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [270]
+        ]}},
+    {"id": "h.xt.33", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), ALL(Sales[Channel], Sales[Quantity]), Product[Category] = \"Bikes\"))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [270]
+        ]}},
+    {"id": "h.xt.34", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), ALL(Customer), Customer[Country] = \"France\"))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [159]
+        ]}},
+    {"id": "h.xt.35", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), ALL(Customer), ALL(Product), ALL('Date')))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [730]
+        ]}}
+  ]
+}

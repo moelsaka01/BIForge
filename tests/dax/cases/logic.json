@@ -113,6 +113,16 @@
       "expected": {"columns": ["[a]","[b]","[c]","[d]","[e]"], "types": ["bool","bool","bool","bool","bool"],
         "rows": [
           [false,false,true,true,true]
+        ]}},
+    {"id": "logic.iferror.errbranch", "query": "EVALUATE ROW(\"a\", IFERROR(5, 1/0), \"b\", IFERROR(DATE(2024, 1, 1), 0), \"c\", IFERROR(TRUE(), 0), \"d\", IFERROR(\"t\", 1))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]","[d]"], "types": ["real","real","mixed","mixed"],
+        "rows": [
+          [5,45292,true,"t"]
+        ]}},
+    {"id": "logic.iferror.arith", "query": "EVALUATE ROW(\"a\", IFERROR(5, 1/0) / 2, \"b\", IFERROR(7, 2) / 2, \"c\", INT(IFERROR(7, 2.5) / 2))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]"], "types": ["real","real","int"],
+        "rows": [
+          [2.5,3.5,3]
         ]}}
   ]
 }

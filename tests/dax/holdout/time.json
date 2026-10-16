@@ -1,0 +1,212 @@
+{
+  "area": "time",
+  "fixture": "tests/dax/fixtures",
+  "recordedWith": "local Analysis Services of Power BI Desktop 2.158.1304.0",
+  "cases": [
+    {"id": "h.ti.01", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), DATESYTD('Date'[Date]), 'Date'[YearMonth] = 202406))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [15]
+        ]}},
+    {"id": "h.ti.02", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), DATESQTD('Date'[Date]), 'Date'[YearMonth] = 202405))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [null]
+        ]}},
+    {"id": "h.ti.03", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), DATESMTD('Date'[Date]), 'Date'[Date] = DATE(2024, 7, 15)))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [null]
+        ]}},
+    {"id": "h.ti.04", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), DATESYTD('Date'[Date], \"6/30\"), 'Date'[YearMonth] = 202409))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [54]
+        ]}},
+    {"id": "h.ti.06", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), SAMEPERIODLASTYEAR('Date'[Date]), 'Date'[YearMonth] = 202404))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [null]
+        ]}},
+    {"id": "h.ti.07", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), SAMEPERIODLASTYEAR('Date'[Date]), 'Date'[Year] = 2024))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [null]
+        ]}},
+    {"id": "h.ti.08", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), SAMEPERIODLASTYEAR('Date'[Date]), 'Date'[Quarter] = \"Q2\", 'Date'[Year] = 2024))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [null]
+        ]}},
+    {"id": "h.ti.09", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), DATEADD('Date'[Date], -1, QUARTER), 'Date'[Quarter] = \"Q3\", 'Date'[Year] = 2024))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [107]
+        ]}},
+    {"id": "h.ti.11", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), DATEADD('Date'[Date], -7, DAY), 'Date'[Date] >= DATE(2024, 5, 1), 'Date'[Date] <= DATE(2024, 5, 14)))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [8]
+        ]}},
+    {"id": "h.ti.12", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), DATEADD('Date'[Date], -2, YEAR), 'Date'[Year] = 2024))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [null]
+        ]}},
+    {"id": "h.ti.13", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), DATEADD('Date'[Date], -1, MONTH), 'Date'[Date] >= DATE(2024, 3, 15), 'Date'[Date] <= DATE(2024, 4, 20)))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [23]
+        ]}},
+    {"id": "h.ti.14", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), PARALLELPERIOD('Date'[Date], -3, MONTH), 'Date'[YearMonth] = 202405))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [13]
+        ]}},
+    {"id": "h.ti.16", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), PARALLELPERIOD('Date'[Date], -1, YEAR), 'Date'[YearMonth] = 202402))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [null]
+        ]}},
+    {"id": "h.ti.17", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), DATESINPERIOD('Date'[Date], DATE(2024, 6, 30), -3, MONTH)))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [59]
+        ]}},
+    {"id": "h.ti.18", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), DATESINPERIOD('Date'[Date], DATE(2024, 6, 30), -30, DAY)))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [15]
+        ]}},
+    {"id": "h.ti.20", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), DATESBETWEEN('Date'[Date], DATE(2023, 12, 15), DATE(2024, 1, 15))))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [12]
+        ]}},
+    {"id": "h.ti.21", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), PREVIOUSMONTH('Date'[Date]), 'Date'[YearMonth] = 202401))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [null]
+        ]}},
+    {"id": "h.ti.22", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), NEXTMONTH('Date'[Date]), 'Date'[YearMonth] = 202312))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [null]
+        ]}},
+    {"id": "h.ti.23", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), PREVIOUSQUARTER('Date'[Date]), 'Date'[Quarter] = \"Q1\", 'Date'[Year] = 2024))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [null]
+        ]}},
+    {"id": "h.ti.25", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), PREVIOUSYEAR('Date'[Date]), 'Date'[Year] = 2024))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [null]
+        ]}},
+    {"id": "h.ti.27", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), PREVIOUSDAY('Date'[Date]), 'Date'[Date] = DATE(2024, 3, 1)))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [null]
+        ]}},
+    {"id": "h.ti.30", "query": "EVALUATE ROW(\"v\", TOTALYTD(SUM(Sales[Quantity]), 'Date'[Date]))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [346]
+        ]}},
+    {"id": "h.ti.31", "query": "EVALUATE ROW(\"v\", CALCULATE(TOTALYTD(SUM(Sales[Quantity]), 'Date'[Date]), 'Date'[YearMonth] = 202403))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [70]
+        ]}},
+    {"id": "h.ti.34", "query": "EVALUATE ROW(\"v\", CALCULATE(TOTALYTD(SUM(Sales[Quantity]), 'Date'[Date], Product[Category] = \"Bikes\"), 'Date'[YearMonth] = 202412))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [145]
+        ]}},
+    {"id": "h.ti.35", "query": "EVALUATE ROW(\"v\", CALCULATE(TOTALYTD(SUM(Sales[Quantity]), 'Date'[Date], \"6/30\"), 'Date'[YearMonth] = 202405))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [309]
+        ]}},
+    {"id": "h.ti.36", "query": "DEFINE MEASURE Sales[Qty] = SUM(Sales[Quantity]) MEASURE Sales[YTD] = TOTALYTD([Qty], 'Date'[Date]) MEASURE Sales[PY] = CALCULATE([Qty], SAMEPERIODLASTYEAR('Date'[Date])) EVALUATE SUMMARIZECOLUMNS('Date'[Year], 'Date'[Quarter], \"q\", [Qty], \"ytd\", [YTD], \"py\", [PY]) ORDER BY 'Date'[Year], 'Date'[Quarter]", "source": "recorded",
+      "expected": {"columns": ["Date[Year]","Date[Quarter]","[q]","[ytd]","[py]"], "types": ["int","text","int","int","int"],
+        "rows": [
+          [2023,"Q1",119,119,null],
+          [2023,"Q2",70,189,null],
+          [2023,"Q3",111,300,null],
+          [2023,"Q4",84,384,null],
+          [2024,"Q1",70,70,119],
+          [2024,"Q2",59,129,70],
+          [2024,"Q3",107,236,111],
+          [2024,"Q4",110,346,84]
+        ]}},
+    {"id": "h.ti.37", "query": "DEFINE MEASURE Sales[Qty] = SUM(Sales[Quantity]) MEASURE Sales[R3] = CALCULATE([Qty], DATESINPERIOD('Date'[Date], MAX('Date'[Date]), -3, MONTH)) EVALUATE SUMMARIZECOLUMNS('Date'[YearMonth], \"q\", [Qty], \"r3\", [R3]) ORDER BY 'Date'[YearMonth]", "source": "recorded",
+      "expected": {"columns": ["Date[YearMonth]","[q]","[r3]"], "types": ["int","int","int"],
+        "rows": [
+          [202301,64,64],
+          [202302,18,82],
+          [202303,37,119],
+          [202304,33,88],
+          [202305,18,88],
+          [202306,19,70],
+          [202307,33,70],
+          [202308,39,91],
+          [202309,39,111],
+          [202310,25,103],
+          [202311,41,105],
+          [202312,18,84],
+          [202401,17,76],
+          [202402,24,59],
+          [202403,29,70],
+          [202404,31,84],
+          [202405,13,73],
+          [202406,15,59],
+          [202407,33,61],
+          [202408,20,68],
+          [202409,54,107],
+          [202410,31,105],
+          [202411,43,128],
+          [202412,36,110]
+        ]}},
+    {"id": "h.ti.39", "query": "EVALUATE ROW(\"a\", CALCULATE(OPENINGBALANCEMONTH(SUM(Sales[Quantity]), 'Date'[Date]), 'Date'[YearMonth] = 202406), \"b\", CALCULATE(CLOSINGBALANCEMONTH(SUM(Sales[Quantity]), 'Date'[Date]), 'Date'[YearMonth] = 202406))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]"], "types": ["int","int"],
+        "rows": [
+          [null,null]
+        ]}},
+    {"id": "h.ti.40", "query": "EVALUATE ROW(\"a\", CALCULATE(CLOSINGBALANCEQUARTER(SUM(Sales[Quantity]), 'Date'[Date]), 'Date'[Quarter] = \"Q2\", 'Date'[Year] = 2024), \"b\", CALCULATE(CLOSINGBALANCEYEAR(SUM(Sales[Quantity]), 'Date'[Date]), 'Date'[Year] = 2023))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]"], "types": ["int","int"],
+        "rows": [
+          [null,null]
+        ]}},
+    {"id": "h.ti.41", "query": "EVALUATE ROW(\"a\", CALCULATE(STARTOFQUARTER('Date'[Date]), 'Date'[YearMonth] = 202405), \"b\", CALCULATE(ENDOFQUARTER('Date'[Date]), 'Date'[YearMonth] = 202405), \"c\", CALCULATE(STARTOFYEAR('Date'[Date]), 'Date'[YearMonth] = 202405), \"d\", CALCULATE(ENDOFYEAR('Date'[Date]), 'Date'[YearMonth] = 202405))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]","[d]"], "types": ["datetime","datetime","datetime","datetime"],
+        "rows": [
+          ["2024-04-01T00:00:00","2024-06-30T00:00:00","2024-01-01T00:00:00","2024-12-31T00:00:00"]
+        ]}},
+    {"id": "h.ti.42", "query": "EVALUATE ROW(\"a\", CALCULATE(FIRSTDATE(Sales[OrderDate]), Product[Category] = \"Clothing\"), \"b\", CALCULATE(LASTDATE(Sales[OrderDate]), Product[Category] = \"Clothing\"))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]"], "types": ["datetime","datetime"],
+        "rows": [
+          ["2023-01-02T00:00:00","2024-12-31T00:00:00"]
+        ]}},
+    {"id": "h.ti.43", "query": "EVALUATE ROW(\"a\", CALCULATE(FIRSTNONBLANK('Date'[Date], CALCULATE(SUM(Sales[Quantity]))), 'Date'[YearMonth] = 202401), \"b\", CALCULATE(LASTNONBLANK('Date'[Date], CALCULATE(SUM(Sales[Quantity]))), 'Date'[YearMonth] = 202401))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]"], "types": ["datetime","datetime"],
+        "rows": [
+          ["2024-01-01T00:00:00","2024-01-26T00:00:00"]
+        ]}},
+    {"id": "h.ti.48", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), DATESYTD('Date'[Date]), USERELATIONSHIP(Sales[ShipDate], 'Date'[Date]), 'Date'[YearMonth] = 202412))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [32]
+        ]}},
+    {"id": "h.ti.49", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), SAMEPERIODLASTYEAR('Date'[Date]), 'Date'[Date] = DATE(2024, 2, 29)))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [null]
+        ]}},
+    {"id": "h.ti.50", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), DATEADD('Date'[Date], -1, YEAR), 'Date'[Date] = DATE(2024, 2, 29)))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [null]
+        ]}}
+  ]
+}
