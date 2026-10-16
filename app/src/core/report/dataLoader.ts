@@ -76,6 +76,13 @@ export class ReportData {
     return p;
   }
 
+  /** Distinct values of a column (Filters pane lists), ordered like a slicer. */
+  async distinct(project: Project, field: import("./fields").FieldRef, epoch: number, model: ModelInfo = modelInfo(project)): Promise<Value[]> {
+    const q = buildSlicerQuery(field, model, []);
+    const [res] = await this.run(project, epoch, q.dax);
+    return res.rows.map((r) => decodeCell(r[0]));
+  }
+
   /** Queries for one visual, given the current view state. Never throws: failures come back as `error`. */
   async load(project: Project, page: PageModel, visual: VisualModel, view: ViewState, model: ModelInfo = modelInfo(project)): Promise<Loaded> {
     try {

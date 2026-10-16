@@ -3,8 +3,19 @@ import { Button, Input, Tree, TreeItem, TreeItemLayout } from "@fluentui/react-c
 import type { Project } from "../core/model/types";
 import { listTables } from "../core/model/ops";
 import { getTableSource } from "../core/model/tables";
+import type { FieldRef } from "../core/report/fields";
+import { FIELD_MIME } from "./report/VisualizationsPane";
+
+export interface FieldUse {
+  /** True when the field is used by the selected visual. */
+  isUsed(f: FieldRef): boolean;
+  /** Adds the field to the selected visual (or to a new one), or removes it when it is used. */
+  onToggle(f: FieldRef): void;
+}
 
 export interface DataPaneProps {
+  /** Present while the report is open: fields get a checkbox and can be dragged onto visuals. */
+  fieldUse?: FieldUse;
   project: Project;
   /** Tables that currently have data in the engine. */
   dataTables: string[];
@@ -75,16 +86,14 @@ export function DataPane(p: DataPaneProps) {
                 {t.columns.map((c) => (
                   <TreeItem key={`c-${c.name}`} itemType="leaf" value={`${t.name}.${c.name}`}>
                     <TreeItemLayout>
-                      <span style={{ opacity: 0.6, marginRight: 6 }}>{typeGlyph(c.dataType)}</span>
-                      {c.name}
+                      <FieldLabel p={p} field={{ kind: "column", table: t.name, name: c.name }} glyph={typeGlyph(c.dataType)} />
                     </TreeItemLayout>
                   </TreeItem>
                 ))}
                 {t.measures.map((m) => (
                   <TreeItem key={`m-${m.name}`} itemType="leaf" value={`${t.name}.[${m.name}]`}>
                     <TreeItemLayout>
-                      <span style={{ opacity: 0.6, marginRight: 6 }}>fx</span>
-                      {m.name}
+                      <FieldLabel p={p} field={{ kind: "measure", table: t.name, name: m.name }} glyph="fx" />
                     </TreeItemLayout>
                   </TreeItem>
                 ))}
@@ -95,5 +104,33 @@ export function DataPane(p: DataPaneProps) {
       </Tree>
       {tables.length === 0 && <div style={{ fontSize: 12, opacity: 0.7 }}>{needle ? "No matching fields." : "No tables yet. Choose Import data."}</div>}
     </div>
+  );
+}
+
+/** A field row: a checkbox (when a report is open) and a drag source for the report canvas. */
+function FieldLabel({ p, field, glyph }: { p: DataPaneProps; field: FieldRef; glyph: string }) {
+  const use = p.fieldUse;
+  return (
+    <span
+      draggable={!!use}
+      onDragStart={(e) => {
+        e.dataTransfer.setData(FIELD_MIME, JSON.stringify(field));
+        e.dataTransfer.effectAllowed = "copy";
+      }}
+      style={{ display: "inline-flex", alignItems: "center" }}
+    >
+      {use && (
+        <input
+          type="checkbox"
+          aria-label={`Use ${field.name} in the selected visual`}
+          checked={use.isUsed(field)}
+          onChange={() => use.onToggle(field)}
+          onClick={(e) => e.stopPropagation()}
+          style={{ marginRight: 4 }}
+        />
+      )}
+      <span style={{ opacity: 0.6, marginRight: 6 }}>{glyph}</span>
+      {field.name}
+    </span>
   );
 }

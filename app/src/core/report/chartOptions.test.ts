@@ -112,7 +112,7 @@ describe("cartesian charts", () => {
     setFormat(v.json, "valueAxis", "start", lit.num(10));
     setFormat(v.json, "valueAxis", "gridlineShow", lit.bool(false));
     const o = build(v, grouped(v, [[c("Bikes"), c(120)]])).option;
-    expect(o.legend.show).toBe(false); // a legend with one series and no series field stays hidden
+    expect(o.legend.show).toBe(true); // switched on by the user
     expect(o.series[0].itemStyle.color).toBe("#123456");
     expect(o.series[0].label.show).toBe(true);
     expect(o.yAxis[0].min).toBe(10);

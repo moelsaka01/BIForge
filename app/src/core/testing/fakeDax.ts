@@ -23,6 +23,8 @@ export class FakeDax implements DaxApi {
   diagnostics = new Map<string, EditorDiagnostic[]>();
   /** Answers by a substring of the query; the first match wins. */
   answers: { match: string; outcome: QueryOutcome | Error }[] = [];
+  /** Computes an answer for a query; consulted before `answers`. */
+  handler?: (query: string) => QueryOutcome | Error | undefined;
   calls: string[] = [];
   checkedDocuments: TmdlDocument[][] = [];
 
@@ -37,6 +39,9 @@ export class FakeDax implements DaxApi {
   }
   async query(_documents: TmdlDocument[], query: string): Promise<QueryOutcome> {
     this.calls.push(`query:${query}`);
+    const h = this.handler?.(query);
+    if (h instanceof Error) throw h;
+    if (h) return h;
     const a = this.answers.find((x) => query.includes(x.match));
     if (!a) throw new Error("no answer programmed");
     if (a.outcome instanceof Error) throw a.outcome;

@@ -49,7 +49,7 @@ function legendBlock(f: FormatReader, theme: Theme, show: boolean): O {
   const pos = f.str("legend", "position", "Top");
   const horizontal = pos.startsWith("Top") || pos.startsWith("Bottom");
   return {
-    show: f.bool("legend", "show", show) && show,
+    show: f.bool("legend", "show", show),
     type: "scroll",
     [pos.startsWith("Bottom") ? "bottom" : pos.startsWith("Left") ? "left" : pos.startsWith("Right") ? "right" : "top"]: 0,
     orient: horizontal ? "horizontal" : "vertical",
@@ -228,7 +228,7 @@ function cartesian(inp: ChartInput): ChartBuild {
   const option: O = {
     animation: false,
     textStyle: { fontFamily: theme.textClasses.label.fontFace },
-    grid: gridFor(f, legendShown),
+    grid: gridFor(f, f.bool("legend", "show", legendShown)),
     legend: legendBlock(f, theme, legendShown),
     tooltip: {
       trigger: "axis",
@@ -444,7 +444,7 @@ function scatter(inp: ChartInput): ChartBuild {
   const option: O = {
     animation: false,
     legend: legendBlock(f, theme, !!ser),
-    grid: gridFor(f, !!ser),
+    grid: gridFor(f, f.bool("legend", "show", !!ser)),
     tooltip: { trigger: "item", confine: true, formatter: (pa: O) => `${pa.marker}${pa.data[3] || pa.seriesName}<br/>${xc?.label}: <b>${formatNumber(pa.data[0], xc?.format ?? null)}</b><br/>${yc?.label}: <b>${formatNumber(pa.data[1], yc?.format ?? null)}</b>${sc ? `<br/>${sc.label}: <b>${formatNumber(pa.data[2], sc.format ?? null)}</b>` : ""}` },
     xAxis: axis("categoryAxis", xc),
     yAxis: axis("valueAxis", yc),
