@@ -177,9 +177,10 @@ fn sorting_paging_and_names_with_quotes() {
     assert_eq!(desc.total, 3);
     let second = e.fetch_page("My \"T\"", 2, 5, None).unwrap();
     assert_eq!(second.rows.len(), 1);
-    // NULLs sort last in both directions
+    // The empty field is "" (Power Query behavior), which sorts first; real NULLs would sort last.
     let by_text = e.fetch_page("My \"T\"", 0, 10, Some(&SortSpec { column: "we\"ird".into(), descending: false })).unwrap();
-    assert_eq!(by_text.rows.last().unwrap()[1], None);
+    assert_eq!(by_text.rows[0][1].as_deref(), Some(""));
+    assert_eq!(by_text.rows.last().unwrap()[1].as_deref(), Some("c"));
     assert!(e.fetch_page("My \"T\"", 0, 1, Some(&SortSpec { column: "zzz".into(), descending: false })).is_err());
 }
 
@@ -279,4 +280,19 @@ fn postgres_import_against_a_real_server() {
     let bad = MemoryCredentialStore::default();
     bad.set(&spec.credential_key().unwrap(), "wrong-password").unwrap();
     assert!(e.import("PgT2", &spec, &bad).is_err());
+}
+
+#[test]
+fn csv_empty_text_fields_load_as_empty_string_like_power_query() {
+    let d = tempfile::tempdir().unwrap();
+    let f = p(d.path(), "t.csv");
+    std::fs::write(&f, "id,name,amount,when\n1,Ann,1.5,2024-01-02\n2,,,\n3,Cy,2,2024-03-04\n").unwrap();
+    let e = Engine::in_memory().unwrap();
+    e.import("T", &csv_spec(f), &creds()).unwrap();
+    let page = e.fetch_page("T", 0, 10, None).unwrap();
+    assert_eq!(page.rows[1][1].as_deref(), Some(""), "text field: empty string");
+    assert_eq!(page.rows[1][2], None, "number field stays blank");
+    assert_eq!(page.rows[1][3], None, "date field stays blank");
+    let (rows, nonnull, _) = e.column_stats("T", "name").unwrap();
+    assert_eq!((rows, nonnull), (3, 3));
 }

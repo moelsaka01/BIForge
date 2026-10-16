@@ -7,7 +7,7 @@ Last updated: 2026-10-16, end of the Phase 4 work (see PROGRESS.md). Phases 1 to
 | --- | --- | --- |
 | Platform | Tauri window launches | Done-tested (app/src-tauri/tests/window_smoke.rs, local + CI) |
 | Platform | CI build + tests on Windows | Done-tested (workflow green on windows-latest) |
-| Connectivity | CSV import (auto types, delimiter, header option) | Done-tested (crates/engine/tests/import.rs) |
+| Connectivity | CSV import (auto types, delimiter, header option) | Done-tested (crates/engine/tests/import.rs). Empty text fields load as "" (numbers, dates, booleans stay blank), like Power Query |
 | Connectivity | Excel import (sheet pick, header row, dates, duplicate headers) | Done-tested for .xlsx (calamine also reads .xls/.xlsb/.ods through the same code, untested) |
 | Connectivity | JSON / Parquet import | Done-tested (JSON array of objects; Parquet written by DuckDB itself) |
 | Connectivity | SQLite connector (pick table, import) | Done-tested |
@@ -21,12 +21,12 @@ Last updated: 2026-10-16, end of the Phase 4 work (see PROGRESS.md). Phases 1 to
 | Power Query | M evaluator folding to DuckDB SQL | Not started |
 | Power Query | Query editor UI + applied steps | Not started |
 | Power Query | Two editor UIs: Modern shell uses the "New Power Query experience" editor, Classic the current editor (both are Desktop 2.158 options, new one off by default; see research/ui-modes.md) | Not started (Phase 5 follow-up) |
-| Power Query | **PRIORITY (Phase 5):** imported tables get TMDL partitions with M source expressions, so Power BI Desktop can open BIForge projects | Not started |
+| Power Query | **PRIORITY (Phase 5):** imported tables get TMDL partitions with M source expressions, so Power BI Desktop can open BIForge projects | Partial: partitions are generated for all six sources and printed in the form Desktop writes (app/src/core/model/partitionM.ts, tables.test.ts, tmdl_roundtrip.rs). **Not yet opened in Power BI Desktop** (owner to verify, steps in PROGRESS.md). Limits: CSV delimiter is assumed "," when auto-detected; SQLite needs the SQLite ODBC driver; Postgres has no credentials in the project; M text is never parsed or evaluated by BIForge yet 
 | Modeling | Tables / columns / data types (read from TMDL, listed in UI tree) | Partial (read-only listing tested in ops.test.ts; no column editing) |
 | Modeling | Add / delete table (with model ref + relationship cleanup) | Done-tested (ops.test.ts, session.test.ts); UI input only manually checked |
 | Modeling | Add / edit / delete measure (DAX text only, not evaluated) | Done-tested (ops.test.ts); expression is stored, never parsed or run |
 | Modeling | Rename table/column/measure, add/edit columns, hierarchies | Not started |
-| Modeling | Imported tables get typed columns + a source annotation (BIForge.Source); refresh keeps user edits and measures and drops relationships on vanished columns | Done-tested (tables.test.ts, TMDL round trip in tmdl_roundtrip.rs). Imported tables have no partition, so Power BI Desktop is not expected to load them (interop untested) |
+| Modeling | Imported tables get typed columns + a source annotation (BIForge.Source); refresh keeps user edits and measures and drops relationships on vanished columns | Done-tested (tables.test.ts, TMDL round trip in tmdl_roundtrip.rs). Imported tables get a generated M partition (marker annotation BIForge.GeneratedM; a partition without the marker is treated as user-edited and kept on refresh) |
 | Modeling | Relationships: create, edit cardinality, cross-filter direction, active/inactive, delete; ambiguity check | Done-tested (relationships.test.ts, dataSession.test.ts). Many-to-many is stored; its semantics wait for the DAX engine |
 | Modeling | Relationship cardinality detected from the data | Done-tested (engine suggest_relationship, ModelView test) |
 | DAX | Lexer + parser (expressions, Name = formula, queries with DEFINE/EVALUATE/ORDER BY/START AT; all token types and the 16 syntax error codes of research/dax-parser.md) | Done-tested (crates/dax/tests/parser.rs, lexer unit tests). List separator is "," only (no ";" locale form) |

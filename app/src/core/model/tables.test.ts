@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { sampleProject } from "../testing/fakes";
 import { applyImport, getTableSource, importedTables } from "./tables";
+import { partitionM } from "./partitionM";
 import { listRelationships } from "./relationships";
 import { listTables } from "./ops";
 import type { SourceSpec, TableInfo } from "../data/types";
@@ -56,5 +57,67 @@ describe("applyImport", () => {
     const p = sampleProject();
     expect(importedTables(p)).toEqual([]);
     expect(getTableSource(p, "Sales")).toBeNull();
+  });
+});
+
+describe("import partitions (M source)", () => {
+  const cols = (...c: [string, TableInfo["columns"][0]["biType"], string?][]): TableInfo => ({
+    name: "Orders",
+    rowCount: 1,
+    columns: c.map(([n, t, d]) => ({ name: n, biType: t, duckdbType: d ?? "X" })),
+  });
+  const partitionOf = (p: ReturnType<typeof sampleProject>, table: string) =>
+    p.model.tmdl[Object.keys(p.model.tmdl).find((k) => k.endsWith(`${table}.tmdl`))!].nodes[0].children.filter((c) => c.kind === "partition");
+  const sourceText = (n: ReturnType<typeof partitionOf>[0]) => {
+    const v = n.props.find((x) => x.key === "source")!.value as { Expr: { text: string } };
+    return v.Expr.text;
+  };
+
+  it("adds a partition named after the table with the M query of a CSV file", () => {
+    const p = sampleProject();
+    applyImport(p, cols(["Id", "int64", "BIGINT"], ["Name", "string", "VARCHAR"], ["When", "dateTime", "DATE"], ["Amt", "double", "DOUBLE"]), csv, ids());
+    const parts = partitionOf(p, "Orders");
+    expect(parts).toHaveLength(1);
+    expect(parts[0].name).toBe("Orders");
+    expect(parts[0].default?.text).toBe("m");
+    expect(parts[0].props.find((x) => x.key === "mode")?.value).toEqual({ Text: "import" });
+    expect(sourceText(parts[0])).toBe(
+      [
+        "let",
+        '\tSource = Csv.Document(File.Contents("C:' + "\\data\\a" + ' ""q"".csv"), [Delimiter=",", Columns=4, Encoding=65001, QuoteStyle=QuoteStyle.Csv]),',
+        '\t#"Promoted Headers" = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),',
+        '\t#"Changed Type" = Table.TransformColumnTypes(#"Promoted Headers", {{"Id", Int64.Type}, {"Name", type text}, {"When", type date}, {"Amt", type number}}, "en-US")',
+        "in",
+        '\t#"Changed Type"',
+      ].join("\n"),
+    );
+  });
+
+  it("refresh rebuilds a generated partition but keeps one the user edited", () => {
+    const p = sampleProject();
+    applyImport(p, cols(["Id", "int64"]), csv, ids());
+    applyImport(p, cols(["Id", "int64"], ["B", "string"]), csv, ids());
+    expect(partitionOf(p, "Orders")).toHaveLength(1);
+    expect(sourceText(partitionOf(p, "Orders")[0])).toContain("Columns=2");
+
+    const part = partitionOf(p, "Orders")[0];
+    part.children = []; // marker removed = the user edited the query
+    part.props = part.props.map((x) => (x.key === "source" ? { key: "source", value: { Expr: { text: "let Source = 1 in Source", verbatim: false } } } : x));
+    applyImport(p, cols(["Id", "int64"], ["B", "string"], ["C", "string"]), csv, ids());
+    expect(partitionOf(p, "Orders")).toHaveLength(1);
+    expect(sourceText(partitionOf(p, "Orders")[0])).toBe("let Source = 1 in Source");
+  });
+
+  it("covers every source kind", () => {
+    const c = cols(["A", "int64"]).columns;
+    const m = (s: SourceSpec) => partitionM(s, c);
+    expect(m({ kind: "excel", path: "C:\b.xlsx", sheet: "Sheet 1" })).toContain('Source{[Item="Sheet 1", Kind="Sheet"]}[Data]');
+    expect(m({ kind: "excel", path: "C:\b.xlsx" })).toContain("Source{0}[Data]");
+    expect(m({ kind: "json", path: "C:\b.json" })).toContain("Table.FromRecords(Source)");
+    expect(m({ kind: "parquet", path: "C:\b.parquet" })).toContain("Parquet.Document(File.Contents(");
+    expect(m({ kind: "postgres", host: "h", database: "d", user: "u", schema: "s", table: "t" })).toContain('PostgreSQL.Database("h:5432", "d")');
+    expect(m({ kind: "postgres", host: "h", database: "d", user: "u", schema: "s", table: "t" })).toContain('[Schema="s", Item="t"]');
+    expect(m({ kind: "sqlite", path: "C:/x.db", table: "t" })).toContain("Odbc.Query(");
+    expect(m({ kind: "csv", path: "C:/x.txt", delimiter: ";", header: false })).toContain('Table.RenameColumns(Source, {{"Column1", "A"}})');
   });
 });

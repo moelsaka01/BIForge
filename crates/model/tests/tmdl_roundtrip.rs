@@ -244,3 +244,27 @@ fn relationship_with_cardinality_and_inactive_flag_round_trips() {
     assert_eq!(doc.nodes[0].text_prop("isActive"), Some("false"));
     assert_eq!(tmdl::print(&doc), src);
 }
+
+#[test]
+fn import_partition_prints_in_the_form_power_bi_desktop_writes() {
+    use biforge_model::tmdl::{Expr, Node, Prop};
+    let mut part = Node::new("partition", Some("Orders"));
+    part.default = Some(Expr { text: "m".into(), verbatim: false });
+    part.props.push(Prop { key: "mode".into(), value: PropValue::Text("import".into()) });
+    part.props.push(Prop {
+        key: "source".into(),
+        value: PropValue::Expr(Expr {
+            text: "let\n\tSource = Csv.Document(File.Contents(\"C:/data/a.csv\"), [Delimiter=\",\"]),\n\t#\"Promoted Headers\" = Table.PromoteHeaders(Source)\nin\n\t#\"Promoted Headers\"".into(),
+            verbatim: false,
+        }),
+    });
+    let mut marker = Node::new("annotation", Some("BIForge.GeneratedM"));
+    marker.default = Some(Expr { text: "true".into(), verbatim: false });
+    part.children.push(marker);
+    let mut table = Node::new("table", Some("Orders"));
+    table.children.push(part);
+    let printed = tmdl::print(&tmdl::Document { nodes: vec![table] });
+    let expected = "table Orders\n\n\tpartition Orders = m\n\t\tmode: import\n\t\tsource =\n\t\t\tlet\n\t\t\t\tSource = Csv.Document(File.Contents(\"C:/data/a.csv\"), [Delimiter=\",\"]),\n\t\t\t\t#\"Promoted Headers\" = Table.PromoteHeaders(Source)\n\t\t\tin\n\t\t\t\t#\"Promoted Headers\"\n\n\t\tannotation 'BIForge.GeneratedM' = true\n";
+    assert_eq!(printed, expected);
+    assert_eq!(tmdl::parse(&printed).unwrap().nodes[0], tmdl::parse(expected).unwrap().nodes[0]);
+}

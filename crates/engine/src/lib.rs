@@ -152,7 +152,8 @@ impl Engine {
                 }
                 self.conn
                     .execute_batch(&format!("CREATE TABLE {} AS SELECT * FROM read_csv({}, {opts})", q(STAGE), lit(path)))
-                    .map_err(|e| src_err(&format!("CSV file \"{path}\""), e))
+                    .map_err(|e| src_err(&format!("CSV file \"{path}\""), e))?;
+                self.empty_text_fields_to_empty_string()
             }
             SourceSpec::Json { path } => {
                 require_file(path)?;
@@ -179,6 +180,23 @@ impl Engine {
                 sources::load(&self.conn, STAGE, &raw)
             }
         }
+    }
+
+    /// Power Query's CSV reader gives "" (not null) for an empty field of a text column, while numbers, dates and
+    /// booleans become null. DuckDB reads every empty field as NULL, so text columns of the stage are fixed up.
+    fn empty_text_fields_to_empty_string(&self) -> Result<()> {
+        let mut st = self.conn.prepare(&format!("DESCRIBE {}", q(STAGE)))?;
+        let text_cols = st
+            .query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))?
+            .collect::<std::result::Result<Vec<_>, _>>()?
+            .into_iter()
+            .filter(|(_, t)| BiType::from_duckdb(t) == BiType::String)
+            .map(|(n, _)| n)
+            .collect::<Vec<_>>();
+        for c in text_cols {
+            self.conn.execute_batch(&format!("UPDATE {s} SET {c} = '' WHERE {c} IS NULL", s = q(STAGE), c = q(&c)))?;
+        }
+        Ok(())
     }
 
     fn require_column(&self, info: &TableInfo, column: &str) -> Result<()> {
