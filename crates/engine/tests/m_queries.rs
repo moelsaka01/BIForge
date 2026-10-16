@@ -428,3 +428,30 @@ fn m_over_imported_fixture_tables_by_query_name() {
     got.sort();
     assert_eq!(got, direct);
 }
+
+#[test]
+fn desktop_check_cases_give_what_the_readme_says() {
+    // the queries of tests/m/README.md (to be compared with Power BI Desktop by hand)
+    let cases: &[(&str, &[&str], &[&[&str]])] = &[
+        ("let S = #table({\"a\"}, {{1},{null},{3}}), F = Table.SelectRows(S, each [a] > 1) in F", &["a"], &[&["3"]]),
+        ("let S = #table({\"a\"}, {{1},{null}}), F = Table.SelectRows(S, each [a] <> 1) in F", &["a"], &[&["~"]]),
+        ("let S = #table({\"a\"}, {{\"7.6\"},{\"-7.5\"},{\"\"}}), T = Table.TransformColumnTypes(S, {{\"a\", Int64.Type}}) in T", &["a"], &[&["8"], &["-8"], &["~"]]),
+        ("let S = #table({\"a\"}, {{\"1,234.5\"}}), T = Table.TransformColumnTypes(S, {{\"a\", type number}}, \"en-US\") in T", &["a"], &[&["1234.5"]]),
+        ("let S = #table({\"a\"}, {{0.5},{1.5},{2.5},{3.5}}), T = Table.TransformColumns(S, {{\"a\", each Number.Round(_), type number}}) in T", &["a"], &[&["0"], &["2"], &["2"], &["4"]]),
+        ("let S = #table({\"a\"}, {{\"B\"},{\"a\"},{null},{\"A\"}}), T = Table.Sort(S, {{\"a\", Order.Ascending}}) in T", &["a"], &[&["~"], &["A"], &["B"], &["a"]]),
+        ("let S = #table({\"k\",\"v\"}, {{\"x\",1},{\"y\",null}}), T = Table.Group(S, {\"k\"}, {{\"s\", each List.Sum([v]), type nullable number}, {\"n\", each List.Count([v]), Int64.Type}}) in T", &["k", "s", "n"], &[&["x", "1", "1"], &["y", "~", "1"]]),
+        ("let S = #table({\"r\",\"y\",\"v\"}, {{\"n\",\"2023\",1},{\"s\",\"2024\",2}}), P = Table.Pivot(S, {\"2023\",\"2024\"}, \"y\", \"v\", List.Count) in P", &["r", "2023", "2024"], &[&["n", "1", "~"], &["s", "~", "1"]]),
+        ("let S = #table({\"id\",\"a\",\"b\"}, {{\"x\",1,null}}), U = Table.UnpivotOtherColumns(S, {\"id\"}, \"k\", \"v\") in U", &["id", "k", "v"], &[&["x", "a", "1"]]),
+        ("let A = #table({\"k\"}, {{null},{1}}), B = #table({\"k\",\"v\"}, {{null,\"z\"}}), N = Table.NestedJoin(A, {\"k\"}, B, {\"k\"}, \"b\", JoinKind.LeftOuter), E = Table.ExpandTableColumn(N, \"b\", {\"v\"}) in E", &["k", "v"], &[&["~", "z"], &["1", "~"]]),
+        ("let S = #table({\"a\"}, {{\"x\"}}), D = Table.DuplicateColumn(S, \"a\", \"b\") in D", &["a", "b"], &[&["x", "x"]]),
+        ("let S = #table({\"d\"}, {{#date(2024,1,2)}}), T = Table.TransformColumnTypes(S, {{\"d\", type text}}) in T", &["d"], &[&["1/2/2024"]]),
+        ("let S = #table({\"a\"}, {{\" x \"},{\"x\"}}), T = Table.TransformColumns(S, {{\"a\", Text.Trim, type text}}) in T", &["a"], &[&["x"], &["x"]]),
+    ];
+    for (q, cols, rows) in cases {
+        let (c, r) = run(q);
+        assert_eq!(c, *cols, "{q}");
+        assert_eq!(r, t(rows), "{q}");
+    }
+    // Table.Join of two tables that both have a column "k" is refused
+    assert!(fails("let A = #table({\"k\"}, {{1}}), B = #table({\"k\",\"v\"}, {{1,\"z\"}}), J = Table.Join(A, {\"k\"}, B, {\"k\"}, JoinKind.LeftOuter) in J").contains("both tables"));
+}

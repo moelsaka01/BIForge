@@ -11,6 +11,6 @@ describe("app info", () => {
     for (const f of WORKING_FEATURES) expect(STATUS_NOTICE).toContain(f);
     for (const f of NOT_YET_IMPLEMENTED) expect(STATUS_NOTICE).toContain(f);
     expect(STATUS_NOTICE).toMatch(/data import/i);
-    expect(STATUS_NOTICE).toMatch(/Not yet implemented:.*report canvas/);
+    expect(STATUS_NOTICE).toMatch(/Not yet implemented:.*Power Query web/);
   });
 });

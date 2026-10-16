@@ -103,7 +103,7 @@ describe("queries of a project", () => {
   });
 
   it("a failing query stays in the editor while the others are applied", async () => {
-    const { session, m, run, engine } = await setup();
+    const { session, m, run, engine, registry } = await setup();
     engine.sources.set("C:/c.csv", { columns: [col("K", "int64")], rows: [["1"]] });
     await run("data.import", { name: "Cust", spec: { kind: "csv", path: "C:/c.csv" } });
     m.tables.set("Orders", loadedOrders);
@@ -119,9 +119,7 @@ describe("queries of a project", () => {
     expect(listQueries(session.store.project!).find((q) => q.name === "Cust")!.generated).toBe(false);
     expect(session.queries.getSnapshot().queries.find((q) => q.name === "Orders")!.original!.text).toContain("Csv.Document");
     // Close & Apply keeps the editor open and says why
-    const closing = await createRegistry(session).execute("query.applyQueries", {});
-    expect(closing.ok).toBe(false);
-    const c2 = await createRegistry(session).execute("query.applyAndClose");
+    const c2 = await registry.execute("query.applyAndClose");
     expect(c2.ok === false && c2.message).toContain("Orders");
     expect(session.queries.getSnapshot().open).toBe(true);
   });

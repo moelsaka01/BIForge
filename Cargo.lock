@@ -312,6 +312,7 @@ version = "0.0.1"
 dependencies = [
  "biforge-dax",
  "biforge-engine",
+ "biforge-m",
  "biforge-model",
  "serde",
  "serde_json",
@@ -339,6 +340,7 @@ name = "biforge-engine"
 version = "0.0.1"
 dependencies = [
  "biforge-dax",
+ "biforge-m",
  "biforge-model",
  "calamine",
  "chrono",
@@ -356,6 +358,10 @@ dependencies = [
 [[package]]
 name = "biforge-m"
 version = "0.0.1"
+dependencies = [
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "biforge-model"

@@ -14,4 +14,6 @@ Original notes about the behavior of Power BI Desktop and related formats, writt
 - [ui-modes.md](ui-modes.md) – Classic vs Modern mapping: user settings and feature switches.
 - [pbip-tmdl-format.md](pbip-tmdl-format.md) – PBIP/PBIR/TMDL layout and rules from public docs, plus gaps.
 - [dax-parser.md](dax-parser.md) – DAX token set, query keywords, function metadata model and named functions (managed analysis).
+- [m-parser-license.md](m-parser-license.md) – license check of Microsoft's open-source M parser and the decision not to embed it.
+- [m-semantics.md](m-semantics.md) – what the M engine implements, how it folds to SQL, and the readings that still need a check in Desktop.
 - [dax-harness-design.md](dax-harness-design.md) – proposed black-box harness for DAX expected results (design only, not built).

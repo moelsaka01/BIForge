@@ -7,10 +7,12 @@ export const WORKING_FEATURES = [
   "Data view",
   "Model view with relationships",
   "DAX measures (editor with IntelliSense, evaluated over the imported data)",
+  "report canvas with the first set of visuals",
+  "Power Query editor (CSV, Excel, JSON, Parquet, folder and SQLite sources)",
 ] as const;
 
 /** Major areas that are visibly missing. */
-export const NOT_YET_IMPLEMENTED = ["DAX window, financial and parent-child functions", "report canvas and visuals", "Power Query", "ribbons and the Classic/Modern shells"] as const;
+export const NOT_YET_IMPLEMENTED = ["DAX window, financial and parent-child functions", "report visuals beyond the first set", "Power Query web and database sources and some transforms", "ribbons and the Classic/Modern shells"] as const;
 
 export const STATUS_NOTICE =
   `Early development. Working: ${WORKING_FEATURES.join("; ")}. ` +

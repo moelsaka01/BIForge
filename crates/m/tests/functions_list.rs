@@ -1,5 +1,6 @@
 //! app/src/core/queries/mFunctions.json (completions in the M editor) must list exactly what the engine supports.
-//! Run with BLESS=1 to rewrite the file after changing the library.
+//! Run with BLESS=1 to rewrite the file after changing the library. Compared as JSON values, so key order does not matter
+//! (serde_json's key order depends on which crates of the workspace enable `preserve_order`).
 use biforge_m::stdlib::{supported_functions, NOT_SUPPORTED};
 
 #[test]
@@ -7,10 +8,10 @@ fn the_apps_function_list_matches_the_library() {
     let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../app/src/core/queries/mFunctions.json");
     let mut not_supported: Vec<&str> = NOT_SUPPORTED.to_vec();
     not_supported.sort_unstable();
-    let want = serde_json::to_string_pretty(&serde_json::json!({ "supported": supported_functions(), "notSupported": not_supported })).unwrap() + "\n";
+    let want = serde_json::json!({ "supported": supported_functions(), "notSupported": not_supported });
     if std::env::var("BLESS").is_ok() {
-        std::fs::write(&path, &want).unwrap();
+        std::fs::write(&path, serde_json::to_string_pretty(&want).unwrap() + "\n").unwrap();
     }
-    let have = std::fs::read_to_string(&path).unwrap_or_default().replace("\r\n", "\n");
+    let have: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap_or_default()).unwrap_or(serde_json::Value::Null);
     assert_eq!(have, want, "run `BLESS=1 cargo test -p biforge-m --test functions_list` to rewrite {}", path.display());
 }
