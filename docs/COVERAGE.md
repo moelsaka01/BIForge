@@ -1,7 +1,7 @@
 # Feature coverage
 
 Status values: **Not started** / **Partial** / **Done-tested** (done requires a passing automated test) / **Deferred** (with reason).
-Last updated: 2026-10-16, end of Phase 6 (start screen, Classic and Modern shells, see PROGRESS.md). Phases 1 to 6 exist.
+Last updated: 2026-10-17, after the scope-change session was completed (see PROGRESS.md). Phases 1 to 6 exist.
 
 | Area | Feature | Status |
 | --- | --- | --- |
@@ -19,7 +19,7 @@ Last updated: 2026-10-16, end of Phase 6 (start screen, Classic and Modern shell
 | Connectivity | ODBC / other database sources | Not started |
 | Power Query | M parser (license check first) | Done-tested (crates/m/tests/parse.rs). License check recorded in research/m-parser-license.md: Microsoft's powerquery-parser is MIT but TypeScript, so BIForge has its own Rust parser; it is not embedded. Not covered: `section` documents, function types, implicit projection `[[a],[b]]`. Not compared with Microsoft's parser on a corpus |
 | Power Query | M evaluator folding to DuckDB SQL (symbolic scalars, CTE chains with a row-order column) | Partial, tested: 40 `Table.*` functions plus `#table` and 90 scalar, list and source functions (research/m-semantics.md), crates/engine/tests/m_queries.rs (23 tests, hand-computed rows), m_transforms.rs (7), m_partitions.rs (the M the app writes for Sales, Customer and Date gives exactly the CSV import). **Several semantics are readings, not checked against Desktop** (null comparison, rounding, pivot/unpivot nulls, ...): the cases to check are in tests/m/README.md. Not supported: Transpose, Merge Columns, error handling (no cell errors), GroupKind.Local, nested tables, custom functions over tables |
-| Power Query | M sources | Partial: Csv.Document, Excel.Workbook (sheets), Parquet.Document, Json.Document (array of objects), Folder.Files / Folder.Contents, SQLite through Odbc.Query. **Not supported:** Web, SQL Server, PostgreSQL, OData and other connectors (clear error; tables imported from PostgreSQL keep refreshing through their import source) |
+| Power Query | M sources | Partial: Csv.Document, Excel.Workbook (sheets), Parquet.Document, Json.Document (array of objects), Folder.Files / Folder.Contents, SQLite through Odbc.Query. **Not supported:** Web, PostgreSQL, OData and other connectors (clear error; tables imported from PostgreSQL keep refreshing through their import source) |
 | Power Query | Applied Steps model (parse the `let` into steps; insert in the middle, delete, rename, move, delete until end, edit a step; references rewired) | Done-tested (crates/m/tests/steps.rs, queries.test.ts, pq.test.tsx). Rebuilding the text drops comments between steps |
 | Power Query | Transforms from the ribbon: change type, filter rows (12 operators), sort, keep/remove top/bottom/range rows, remove duplicates and blank rows, choose/remove/keep/reorder/rename/duplicate columns, replace values, split column (delimiter, positions, lengths, repeated length), group by (8 aggregations), merge (6 join kinds, 5 offered), append, pivot, unpivot (3 forms), fill down/up, custom/conditional/index columns, text format, round, use headers | Done-tested (crates/engine/tests/m_transforms.rs runs the M each one writes; dialogs.test.ts checks the forms). Date/time and number-statistics transforms, extract, parse, merge columns, column from examples and detect data type are shown disabled with "Not implemented" |
 | Power Query | Query editor UI: queries pane (new, duplicate, rename, delete, enable load), Applied Steps pane, formula bar, preview grid with column menus, ribbon (Home, Transform, Add Column, View) built from the command inventory, dialogs for every transform, Close & Apply / Apply / discard | Partial, tested with jsdom (app/src/views/pq/pq.test.tsx, 14 tests) and looked at in a browser against the real engine (`pq_harness`: filter, merge + expand, Advanced Editor with real Monaco, Apply loads 99 rows). **Not run inside the Tauri window by hand.** Limits: preview is the first 1000 rows, no column quality/distribution/profile, no drag to reorder columns, a loaded query cannot be renamed (renaming a table is not implemented), no parameters, no query groups, no data source settings |
@@ -97,40 +97,45 @@ Last updated: 2026-10-16, end of Phase 6 (start screen, Classic and Modern shell
 | UI | Data view: virtualized grid, column types, sort | Done-tested (jsdom, 100,000-row fake engine). Single-column sort, read-only; no column resize. Decimal numbers use the default General format (format.test.ts); dates still show DuckDB text, not the Power BI locale format |
 | UI | Model view: table cards, drag-to-create relationship, edit panel | Done-tested (jsdom drag events). Cards sit in an automatic grid: no moving, zoom or hiding columns |
 | UI | Report view (canvas, page tabs, Filters, Visualizations, Data panes) laid out like the Desktop reference | Done-tested (jsdom: shell.ui.test.tsx, reportView*.test.tsx) and looked at in a browser against the real engine. Panes collapse to a rail with the » and « arrows, resize from their edge (pointer or arrow keys) and are remembered per shell. Docking is fixed per shell (Classic: three panes on the right; Modern: Data left, one switcher sidebar right); dragging a pane to another side is not implemented |
-| UI | Ribbon bound to command ids | Done-tested (core/shell/ribbon.ts, shell.test.ts, shell.ui.test.tsx). Tabs, groups and controls are data; every control names a registered command or says why it does nothing (Not yet implemented / Deferred) and is drawn disabled. Real: Home, Insert, Modeling, View, Help, Design (Modern), Format and Data / Drill (visual selected), Table tools, plus the Model, DAX query and TMDL views. Alt key tips for tabs and the main controls. Not implemented (shown disabled): Cut/Copy/Paste, Format painter, Enter data, SQL Server, Recent sources, Text box, buttons, shapes, images, more visuals, quick measure, new column, calculation groups, roles, Q&A, gridlines, snap, lock, mobile layout, Selection and Sync slicers panes, Performance analyzer, Align, Group, Mark as date table, Save as, Import, Export. Deferred: OneLake, Publish, Share, Sensitivity, Sign in. No Optimize tab. Ribbon search (title bar) finds the commands of the current ribbon |
+| UI | Ribbon bound to command ids | Done-tested (core/shell/ribbon.ts, shell.test.ts, shell.ui.test.tsx). Tabs, groups and controls are data; every control names a registered command or says why it does nothing (Not yet implemented / Deferred) and is drawn disabled. Real: Home, Insert, Modeling, View, Help, Design (Modern), Format and Data / Drill (visual selected), Table tools, plus the Model, DAX query and TMDL views. Alt key tips for tabs and the main controls. Not implemented (shown disabled): Cut/Copy/Paste, Format painter, Enter data, Recent sources, Text box, buttons, shapes, images, more visuals, quick measure, new column, calculation groups, roles, Q&A, gridlines, snap, lock, mobile layout, Selection and Sync slicers panes, Performance analyzer, Align, Group, Mark as date table. Save as, Import (theme), Export (project copy, theme) and the Optimize tab (pause / refresh visuals) work. Cloud items are excluded, not shown. Ribbon search (title bar) finds the commands of the current ribbon |
 | UI | Classic shell | Done-tested (shell.ui.test.tsx): multi-line ribbon, Filters, Visualizations and Data panes side by side on the right, dark title bar. Layout only: it uses the same commands, views and document as Modern |
 | UI | Modern shell | Done-tested (shell.ui.test.tsx): single-line ribbon (labels shown only on wide windows) with a Design tab that holds the themes, Data pane on the left, one sidebar with Visualizations / Filters / Bookmarks tabs, light title bar. **On-object formatting, which Desktop turns on with this layout, is not implemented**, and the Modern Power Query editor is not started (see above) |
 | UI | Per-shell layout persistence | Done-tested (shell.test.ts, shell.ui.test.tsx): ribbon collapsed, ribbon mode, pane open state and widths, shell choice, theme and recent projects are stored in the window's local storage, separately for each shell, never in the project. Switching shell or theme leaves the document untouched (tested). Only the real window's storage was not tried by hand |
-| UI | Frameless window: own title bar (save, undo, redo, document name and state, command search, options, light/dark toggle, sign-in placeholder, minimize / maximize / close), window dragging, minimum size 1000 x 620 | Done-tested in jsdom with a fake window (buttons, Close going through Exit). **Not tried by hand in the Tauri window** (drag region, window permissions in capabilities/default.json); the window smoke test passes |
+| UI | Frameless window: own title bar (save, undo, redo, document name and state, command search, options, light/dark toggle, minimize / maximize / close), window dragging, minimum size 1000 x 620 | Done-tested in jsdom with a fake window (buttons, Close going through Exit). **Not tried by hand in the Tauri window** (drag region, window permissions in capabilities/default.json); the window smoke test passes |
 | UI | Close guard: closing the window, Exit, Close project, New and Open ask about unsaved changes (Save, Don't save, Cancel); Don't save also deletes the recovery snapshot | Done-tested (shell.ui.test.tsx, recoveryLifecycle.test.ts) |
 | UI | Light and dark theme (Fluent web themes) | Done-tested for the choice and its storage; looked at in a browser. Some older report panes still use fixed light colors for small details (field wells, borders) |
 | UI | DAX query view (EVALUATE editor with Monaco, Run, result tables) | Done-tested (shell.ui.test.tsx with the plain-text fallback editor); Monaco itself was looked at in a browser. No error squiggles for queries (only measure expressions are checked). Found while looking: `TOPN(n, table)` without an order-by is rejected by the engine, although DAX allows it |
 | UI | TMDL view (read-only text of every model file, printed by the Rust printer) | Done-tested (Rust tmdl_print test, shell.ui.test.tsx with a fake printer); editing TMDL is not implemented |
 | UI | Context menus bound to commands | Partial: the report canvas, visuals, pages and fields have menus that dispatch commands (Phase 4); the Table and Model views have none |
-| UI | Properties pane, Selection pane | Not started: the Model view keeps its own relationship panel instead of a Properties pane. Bookmarks opens from View > Show panes in both shells |
-| UI | Start screen (Phase 6; layout from Desktop 2.158, see MASTER_PLAN.md) | Done-tested (shell.ui.test.tsx): Home and Open, Sign in / Options and settings / About at the bottom; the cards Blank report, Excel workbook and Get data from other sources create a project (name and folder dialog, project in its own folder) and then open the import dialog; a collapsible Recommended carousel (five original tips); Recent with keyword filter, a date filter and Remove; with a project open it doubles as the File backstage (Save, Close project, Get data, Back arrow). Disabled and marked: OneLake catalog, Shared with me, Sign in (Deferred); SQL Server, Learn with sample data, Save as, Import, Export (Not implemented). A missing recent project reports the error and can be removed |
-| UI | Cloud items on the start screen: OneLake catalog, Sign in, Shared with me | Deferred (no service connectivity; shown disabled and marked) |
+| UI | Properties pane (Model view), field icons, unclipped table cards | Done-tested (tableModel.ui.test.tsx, jsdom). Selection pane: Not started. Bookmarks opens from View > Show panes in both shells |
+| UI | Start screen (layout from Desktop 2.158, see MASTER_PLAN.md) | Done-tested (shell.ui.test.tsx, scope.ui.test.tsx): Home and Open, Options and settings, About; cards Blank report, Excel workbook, SQL Server, Learn with sample data, Get data from other sources; collapsible Recommended carousel; Recent with filters and Remove; with a project open it doubles as the File backstage. No cloud items |
+| UI | Cloud items (OneLake catalog, Sign in, Shared with me) | Excluded (cloud): removed from the UI on 2026-10-16, no disabled entries (scope.ui.test.tsx checks none is rendered) |
 | UI | Options > Preview features check of Classic/Modern switches in the real Desktop app | Done (checked by the owner in Desktop 2.158; recorded in research/ui-modes.md). Research item, no code |
+| UI | File menu: New, Open, Save, Save as, Get data, Import, Export, Options, About, Exit | Done-tested (scope.ui.test.tsx). Import/Export cover the project copy and the report theme only (.pbit, .pbix, PDF not started) |
+| UI | Options dialog (every Global and Current File page listed) and "Use system setting" theme following Windows | Partial, tested (scope.ui.test.tsx): only settings with an effect are enabled; the rest are listed and marked Not implemented |
+| UI | System keys (Print Screen, Win+key, Alt+Tab) are never intercepted; an Alt tap no longer enters Windows menu mode and swallows the next key | Done-tested for key tips (scope.ui.test.tsx) and the Rust filter predicate (syskeys.rs). The real-window fix was checked by hand: 5 of 5 failures before, 0 of 5 after |
+| UI | Editable TMDL view (undoable) and on-object formatting handles (Modern) | Done-tested in jsdom (scope.ui.test.tsx) |
+| Connectivity | SQL Server connector (tiberius) | Partial: code and UI exist; **never run against a real SQL Server** (crates/engine/tests/import.rs is gated by BIFORGE_TEST_MSSQL and skips otherwise), so it is not Done-tested |
 
 ## Inventory status (generated by `node tools/inventory/build.mjs` from docs/INVENTORY.md's sources; every item's status is in docs/INVENTORY.md)
 <!-- inventory-status:begin -->
 | Inventory area | Items | Done-tested | Partial | Not started |
 | --- | ---: | ---: | ---: | ---: |
 | Start screen | 12 | 7 | 1 | 4 |
-| Title bar and window | 13 | 8 | 0 | 5 |
-| File menu and backstage | 20 | 7 | 1 | 12 |
+| Title bar and window | 13 | 9 | 0 | 4 |
+| File menu and backstage | 20 | 10 | 1 | 9 |
 | Report view ribbon: Home tab | 19 | 5 | 0 | 14 |
 | Report view ribbon: Insert tab | 19 | 2 | 0 | 17 |
 | Report view ribbon: Modeling tab | 22 | 3 | 0 | 19 |
 | Report view ribbon: View tab | 19 | 7 | 1 | 11 |
-| Report view ribbon: Optimize tab | 4 | 0 | 0 | 4 |
+| Report view ribbon: Optimize tab | 4 | 2 | 0 | 2 |
 | Report view ribbon: Help tab | 5 | 1 | 0 | 4 |
 | Report view ribbon: External Tools tab | 2 | 0 | 0 | 2 |
 | Report view contextual tabs | 35 | 9 | 0 | 26 |
 | Report canvas and page features | 53 | 17 | 0 | 36 |
 | Visuals | 76 | 24 | 0 | 52 |
 | Table view | 18 | 3 | 0 | 15 |
-| Model view | 23 | 3 | 1 | 19 |
+| Model view | 23 | 3 | 2 | 18 |
 | DAX query view | 15 | 2 | 0 | 13 |
 | TMDL view | 8 | 1 | 0 | 7 |
 | Modeling features | 48 | 6 | 0 | 42 |
@@ -141,13 +146,13 @@ Last updated: 2026-10-16, end of Phase 6 (start screen, Classic and Modern shell
 | Options dialog: Global | 61 | 4 | 0 | 57 |
 | Options dialog: Current File | 23 | 0 | 0 | 23 |
 | Dialogs | 48 | 10 | 0 | 38 |
-| Keyboard shortcuts | 37 | 3 | 0 | 34 |
+| Keyboard shortcuts | 37 | 4 | 0 | 33 |
 | Export, print and file formats | 15 | 2 | 0 | 13 |
 | Accessibility and platform | 12 | 1 | 0 | 11 |
 | Format pane cards per visual | 1264 | 0 | 222 | 1042 |
 | DAX functions | 317 | 268 | 0 | 49 |
 | M standard library | 652 | 120 | 0 | 532 |
-| **Total** | **3008** | **562** | **227** | **2219** |
+| **Total** | **3008** | **569** | **228** | **2211** |
 <!-- inventory-status:end -->
 
 ## Excluded (cloud)

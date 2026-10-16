@@ -20,7 +20,7 @@ D | Document title with saved/unsaved state
 D | Command search box (finds ribbon commands)
 D | Light/dark theme toggle
 D | Theme choice: Light, Dark
-N | Theme choice: Use system setting (follows Windows light/dark)
+D | Theme choice: Use system setting (follows Windows light/dark)
 D | Window buttons minimize / maximize / close, drag region, minimum size
 D | Close guard for unsaved changes (Save, Don't save, Cancel)
 N | Window size, position and state remembered between runs
@@ -34,16 +34,16 @@ N | Page navigation arrows
 D | New
 D | Open
 D | Save
-N | Save as
+D | Save as
 N | Save a copy
 D | Close project
 P | Get data
 N | Import: Power BI template (.pbit)
 N | Import: Power BI file (.pbix, read-only)
-N | Import: report theme
+D | Import: report theme
 N | Export: Power BI template (.pbit)
 N | Export: PDF
-N | Export: PBIP project copy
+D | Export: PBIP project copy
 N | Print
 D | Options and settings: Options
 N | Options and settings: Data source settings
@@ -154,8 +154,8 @@ N | Keyboard-focus indicator
 N | Show visuals as tables (Ctrl+Shift+F11)
 N | High-contrast support
 ## 8. Report view ribbon: Optimize tab
-N | Pause visuals
-N | Refresh visuals
+D | Pause visuals
+D | Refresh visuals
 N | Optimization presets
 N | Performance analyzer (start recording, stop, refresh visuals, clear, export)
 ## 9. Report view ribbon: Help tab

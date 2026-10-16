@@ -103,7 +103,7 @@ D | Table cards in a grid
 D | Drag to create relationships
 D | Relationship edit pane (cardinality, cross-filter direction, active)
 P | Cards not clipped, Power BI-style field icons (Σ, calendar)
-N | Properties pane (collapsible) for table, column, measure, relationship, multi-selection
+P | Properties pane (collapsible) for table, column, measure, relationship, multi-selection
 N | Move cards, zoom, fit to screen, 100%, minimap
 N | Layout tabs (All tables, additional layouts)
 N | Show/hide fields, hidden fields display
@@ -580,7 +580,7 @@ N | F1 help
 D | Monaco shortcuts in DAX, M and TMDL editors (Ctrl+Space, Ctrl+F, Ctrl+/ ...)
 N | Ctrl+Enter / F5 run query in DAX query view
 N | F2 rename in Model and Table view
-N | Print Screen / system keys never intercepted (tested)
+D | Print Screen / system keys never intercepted (tested)
 ## 27. Export, print and file formats
 N | Export report to PDF
 N | Export page to PNG
