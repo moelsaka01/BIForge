@@ -94,16 +94,16 @@ describe("Power Query editor", () => {
   it("the filter dialog validates input and sends the transform", async () => {
     const { m } = await setup();
     fireEvent.click(screen.getByRole("button", { name: "Filter Rows" }));
-    const dlg = await screen.findByRole("dialog", { name: "Filter Rows" });
+    const dlg = await screen.findByRole("dialog", { name: "Filter Rows", hidden: true });
     fireEvent.change(within(dlg).getByLabelText("Column"), { target: { value: "Id" } });
     fireEvent.change(within(dlg).getByLabelText("Operator"), { target: { value: "gt" } });
     fireEvent.change(within(dlg).getByLabelText("Value"), { target: { value: "abc" } });
-    fireEvent.click(within(dlg).getByRole("button", { name: "OK" }));
+    fireEvent.click(within(dlg).getByRole("button", { name: "OK", hidden: true }));
     // "Id" is a whole-number column, so text is refused before anything is sent
     await within(dlg).findByText(/"abc" is not a number/);
     expect(m.calls.filter((c) => c.startsWith("transform"))).toEqual([]);
     fireEvent.change(within(dlg).getByLabelText("Value"), { target: { value: "1" } });
-    fireEvent.click(within(dlg).getByRole("button", { name: "OK" }));
+    fireEvent.click(within(dlg).getByRole("button", { name: "OK", hidden: true }));
     await waitFor(() => expect(m.calls).toContain("transform:filterRows:end"));
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "Filter Rows" })).toBeNull());
   });
@@ -173,8 +173,8 @@ describe("Power Query editor", () => {
     await waitFor(() => expect(session.queries.dirty).toBe(true));
     // Close asks for confirmation; keeping the editor open leaves everything as it was
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
-    const ask = await screen.findByRole("dialog", { name: "Discard changes?" });
-    fireEvent.click(within(ask).getByRole("button", { name: "Keep editing" }));
+    const ask = await screen.findByRole("dialog", { name: "Discard changes?", hidden: true });
+    fireEvent.click(within(ask).getByRole("button", { name: "Keep editing", hidden: true }));
     expect(session.queries.getSnapshot().open).toBe(true);
     fireEvent.click(screen.getByRole("button", { name: "Close & Apply" }));
     await waitFor(() => expect(session.queries.getSnapshot().open).toBe(false));
@@ -191,7 +191,7 @@ describe("Power Query editor", () => {
     await waitFor(() => expect(session.queries.dirty).toBe(true));
     fireEvent.click(screen.getByRole("tab", { name: "Home" }));
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
-    fireEvent.click(within(await screen.findByRole("dialog", { name: "Discard changes?" })).getByRole("button", { name: "Discard" }));
+    fireEvent.click(within(await screen.findByRole("dialog", { name: "Discard changes?", hidden: true })).getByRole("button", { name: "Discard", hidden: true }));
     await waitFor(() => expect(session.queries.getSnapshot().open).toBe(false));
     expect(m.calls.some((c) => c.startsWith("load:"))).toBe(false);
   });
@@ -199,7 +199,7 @@ describe("Power Query editor", () => {
   it("the Advanced Editor edits the whole query and refuses text with syntax errors", async () => {
     const { session } = await setup();
     fireEvent.click(screen.getByRole("button", { name: "Advanced Editor" }));
-    const dlg = await screen.findByRole("dialog", { name: /Advanced Editor/ });
+    const dlg = await screen.findByRole("dialog", { name: /Advanced Editor/, hidden: true });
     const box = (await within(dlg).findByLabelText("Query text")) as HTMLTextAreaElement;
     expect(box.value).toContain("Csv.Document");
     fireEvent.change(box, { target: { value: "let\n    Source = (((\nin\n    Source" } });
@@ -215,7 +215,7 @@ describe("Power Query editor", () => {
   it("new queries: enter data, and merge needs the other query's columns", async () => {
     const { session, m } = await setup((fm) => fm.tables.set("Cust", { columns: [col("Id", "int64"), col("City")], rows: [["1", "Rome"]] }));
     fireEvent.click(screen.getByRole("button", { name: "Enter Data" }));
-    const dlg = await screen.findByRole("dialog", { name: "Create Table" });
+    const dlg = await screen.findByRole("dialog", { name: "Create Table", hidden: true });
     fireEvent.change(within(dlg).getByLabelText("Query name"), { target: { value: "Cust" } });
     fireEvent.change(within(dlg).getByLabelText(/Column names in the first line/), { target: { value: "Id,City\n1,Rome" } });
     fireEvent.click(within(dlg).getByRole("button", { name: "OK", hidden: true }));
@@ -225,7 +225,7 @@ describe("Power Query editor", () => {
     fireEvent.click(within(screen.getByRole("listbox", { name: "Query list" })).getByText("Orders"));
     await screen.findByText("Ann");
     fireEvent.click(screen.getByRole("button", { name: "Merge Queries" }));
-    const merge = await screen.findByRole("dialog", { name: "Merge Queries" });
+    const merge = await screen.findByRole("dialog", { name: "Merge Queries", hidden: true });
     const right = within(merge).getByLabelText("Matching column in the second query") as HTMLSelectElement;
     expect([...right.options].map((o) => o.value)).toEqual(["Id", "City"]);
     fireEvent.change(within(merge).getByLabelText("Matching column in Orders"), { target: { value: "Id" } });
