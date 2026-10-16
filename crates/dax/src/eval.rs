@@ -269,7 +269,7 @@ impl<'e> Evaluator<'e> {
             BKind::TableCtor(rows) => {
                 let width = rows.first().map(|r| r.len()).unwrap_or(0);
                 let cols = (0..width)
-                    .map(|i| TCol { name: if width == 1 { "Value".into() } else { format!("Value{}", i + 1) }, lineage: None })
+                    .map(|i| TCol { name: if width == 1 { "Value".into() } else { format!("Value{}", i + 1) }, lineage: None, renamed: false })
                     .collect();
                 let vals = rows.iter().map(|r| r.iter().map(|x| self.scalar(x, env)).collect::<VResult<Vec<_>>>()).collect::<VResult<Vec<_>>>()?;
                 Val::T(TableVal::mat(cols, vals))
@@ -463,6 +463,9 @@ impl<'e> Evaluator<'e> {
             }
             let (inner, keep) = match &f.kind {
                 BKind::Call { name, args } if name == "KEEPFILTERS" => (&args[0], true),
+                // NONVISUAL(filter) is a value filter of SUMMARIZECOLUMNS; the visual totals it exists for
+                // are not modelled, so it filters like its argument
+                BKind::Call { name, args } if name == "NONVISUAL" => (&args[0], false),
                 _ => (f, false),
             };
             match &inner.kind {
@@ -570,16 +573,25 @@ impl<'e> Evaluator<'e> {
                     RemoveSpec::SelectedCols(cols) => ctx.restore_selected(self.data, &g, Some(&cols.iter().copied().collect())),
                     RemoveSpec::SelectedTable(t) => ctx.restore_selected(self.data, &g, Some(&g.expanded_columns(self.data, *t).into_iter().collect())),
                     RemoveSpec::CrossTable(t) => {
-                        // every table connected to t by any relationship, in either direction
+                        // the table and every table that filters it: through one-to-many relationships downwards and
+                        // through bidirectional ones upwards (recorded from Power BI: a filter on a table that only
+                        // reaches the same fact table, like Customer for Product, stays)
                         let mut seen = HashSet::from([*t]);
                         let mut grew = true;
                         while grew {
                             grew = false;
-                            for r in &self.data.model.relationships {
-                                let (a, b) = (r.from.table, r.to.table);
-                                if seen.contains(&a) != seen.contains(&b) {
-                                    seen.insert(a);
-                                    seen.insert(b);
+                            for (i, r) in self.data.model.relationships.iter().enumerate() {
+                                let st = g.states[i];
+                                if !st.active {
+                                    continue;
+                                }
+                                let (many, one) = (r.from.table, r.to.table);
+                                if seen.contains(&many) && st.to_filters_from && !seen.contains(&one) {
+                                    seen.insert(one);
+                                    grew = true;
+                                }
+                                if seen.contains(&one) && st.from_filters_to && !seen.contains(&many) {
+                                    seen.insert(many);
                                     grew = true;
                                 }
                             }
@@ -668,7 +680,7 @@ impl<'e> Evaluator<'e> {
             return Err(EvalError::new(ErrorCode::InvalidParameter, "The expression contains columns from multiple tables, but only columns from a single table can be used in a True/False expression that is used as a table filter expression."));
         }
         let all = self.distinct_combos(&cols, &self.all_rows(t, true));
-        let mat = Rc::new(MatTable { cols: cols.iter().map(|&c| TCol { name: self.data.model.column(c).name.clone(), lineage: Some(c) }).collect(), rows: all });
+        let mat = Rc::new(MatTable { cols: cols.iter().map(|&c| TCol { name: self.data.model.column(c).name.clone(), lineage: Some(c), renamed: false }).collect(), rows: all });
         let mut set = HashSet::new();
         for r in 0..mat.rows.len() {
             let e2 = env.push_row(RowRef::Mat { t: mat.clone(), row: r });

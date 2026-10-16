@@ -71,6 +71,18 @@ function Convert-Type([type]$t) {
   }
 }
 
+function ToJson($v) {
+  if ($null -eq $v) { return "null" }
+  if ($v -is [PSObject]) { $v = $v.PSObject.BaseObject }
+  if ($v -is [string]) { return $ser.Serialize($v) }
+  if ($v -is [bool]) { return $(if ($v) { "true" } else { "false" }) }
+  if ($v -is [double] -or $v -is [single]) { return $v.ToString("R", [Globalization.CultureInfo]::InvariantCulture) }
+  if ($v -is [int] -or $v -is [long] -or $v -is [decimal]) { return $v.ToString([Globalization.CultureInfo]::InvariantCulture) }
+  if ($v -is [System.Collections.IDictionary]) { return "{" + (($v.Keys | ForEach-Object { $ser.Serialize([string]$_) + ":" + (ToJson $v[$_]) }) -join ",") + "}" }
+  if ($v -is [System.Collections.IEnumerable]) { return "[" + ((@($v) | ForEach-Object { ToJson $_ }) -join ",") + "]" }
+  return $ser.Serialize([string]$v)
+}
+
 $reqs = $ser.DeserializeObject((Get-Content $Requests -Raw -Encoding UTF8))
 $results = New-Object System.Collections.ArrayList
 foreach ($q in $reqs) {
@@ -99,6 +111,6 @@ foreach ($q in $reqs) {
   [void]$results.Add($res)
 }
 $conn.Close()
-$json = $ser.Serialize(@{ engine = "local Analysis Services of Power BI Desktop $version"; results = $results })
+$json = ToJson @{ engine = "local Analysis Services of Power BI Desktop $version"; results = $results }
 [System.IO.File]::WriteAllText($Out, $json, (New-Object System.Text.UTF8Encoding($false)))
 Write-Host "Ran $($results.Count) queries against localhost:$Port."

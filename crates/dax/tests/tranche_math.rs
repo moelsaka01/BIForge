@@ -27,8 +27,12 @@ fn abs_sign_and_integer_types() {
     assert_eq!(ev(&e, "SIGN(-3)"), i(-1));
     assert_eq!(ev(&e, "SIGN(0)"), i(0));
     assert_eq!(ev(&e, "SIGN(2.5)"), i(1));
-    // BLANK counts as 0 in numeric functions (harness)
-    assert_eq!(ev(&e, "ABS(BLANK())"), i(0));
+    // recorded from Power BI: a BLANK argument gives BLANK when the result would be 0, otherwise f(0)
+    assert_eq!(ev(&e, "ABS(BLANK())"), B);
+    assert_eq!(ev(&e, "SIN(BLANK())"), B);
+    assert_eq!(ev(&e, "COS(BLANK())"), f(1.0));
+    assert_eq!(ev(&e, "EXP(BLANK())"), f(1.0));
+    assert_eq!(ev(&e, "FACT(BLANK())"), i(1));
 }
 
 #[test]
@@ -55,15 +59,22 @@ fn rounding_rounds_half_away_from_zero() {
 #[test]
 fn ceiling_floor_and_multiples() {
     let e = engine();
-    assert_eq!(ev(&e, "CEILING(2.1, 1)"), f(3.0));
-    assert_eq!(ev(&e, "CEILING(-2.5, 1)"), f(-2.0));
+    assert_eq!(ev(&e, "CEILING(2.1, 1)"), i(3));
+    assert_eq!(ev(&e, "CEILING(-2.5, 1)"), i(-2));
+    assert_eq!(ev(&e, "CEILING(-2.5, -1)"), i(-3));
+    assert_eq!(ev(&e, "CEILING(2.5, 0)"), i(0));
+    fails(&e, "CEILING(2.5, -1)");
+    fails(&e, "FLOOR(2.5, -1)");
+    fails(&e, "FLOOR(7, 0)");
+    assert_eq!(ev(&e, "FLOOR(-2.5, -1)"), i(-2));
     assert_eq!(ev(&e, "CEILING(2.1, 0.5)"), f(2.5));
     assert_eq!(ev(&e, "CEILING(4, 3)"), i(6));
-    assert_eq!(ev(&e, "FLOOR(-2.5, 1)"), f(-3.0));
+    assert_eq!(ev(&e, "FLOOR(-2.5, 1)"), i(-3));
     assert_eq!(ev(&e, "FLOOR(2.7, 0.5)"), f(2.5));
-    assert_eq!(ev(&e, "ISO.CEILING(4.3)"), f(5.0));
-    assert_eq!(ev(&e, "MROUND(10, 3)"), f(9.0));
-    assert_eq!(ev(&e, "MROUND(-10, -3)"), f(-9.0));
+    assert_eq!(ev(&e, "ISO.CEILING(4.3)"), i(5));
+    assert_eq!(ev(&e, "MROUND(10, 3)"), i(9));
+    assert_eq!(ev(&e, "MROUND(5, 0)"), i(0));
+    assert_eq!(ev(&e, "MROUND(-10, -3)"), i(-9));
     fails(&e, "MROUND(5, -2)");
     assert_eq!(ev(&e, "EVEN(1.5)"), i(2));
     assert_eq!(ev(&e, "EVEN(3)"), i(4));

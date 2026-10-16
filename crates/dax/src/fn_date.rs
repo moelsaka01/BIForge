@@ -71,16 +71,15 @@ fn dt(name: &str, serial: f64) -> VResult<NaiveDateTime> {
 }
 
 fn from_ymd(name: &str, y: i64, m: i64, d: i64) -> VResult<f64> {
-    let y = if (0..1900).contains(&y) { y + 1900 } else { y };
     let months = y * 12 + (m - 1);
     let (yy, mm) = (months.div_euclid(12), months.rem_euclid(12) + 1);
-    if !(1900..=9999).contains(&yy) {
-        return Err(err(ErrorCode::InvalidValue, format!("The function {name} produced a year outside 1900-9999.")));
+    if !(100..=9999).contains(&yy) {
+        return Err(err(ErrorCode::InvalidValue, format!("The function {name} produced a year outside 100-9999.")));
     }
     let first = NaiveDate::from_ymd_opt(yy as i32, mm as u32, 1).unwrap();
     let date = first.checked_add_signed(chrono::Duration::days(d - 1)).ok_or_else(|| err(ErrorCode::InvalidValue, format!("The function {name} produced an invalid date.")))?;
-    if date.year() < 1900 || date.year() > 9999 {
-        return Err(err(ErrorCode::InvalidValue, format!("The function {name} produced a year outside 1900-9999.")));
+    if date.year() < 100 || date.year() > 9999 {
+        return Err(err(ErrorCode::InvalidValue, format!("The function {name} produced a year outside 100-9999.")));
     }
     Ok(datetime_to_serial(date.and_time(NaiveTime::MIN)))
 }
@@ -123,14 +122,8 @@ fn weekend_days(weekend: &Option<Value>) -> VResult<[bool; 7]> {
             w[5] = true;
             w[6] = true;
         }
-        Some(Value::Str(s)) => {
-            if s.len() != 7 || !s.chars().all(|c| c == '0' || c == '1') || s.chars().all(|c| c == '1') {
-                return Err(err(ErrorCode::InvalidValue, "NETWORKDAYS: the weekend string must have 7 characters of 0 and 1, not all 1."));
-            }
-            for (i, c) in s.chars().enumerate() {
-                w[i] = c == '1';
-            }
-        }
+        // recorded from Power BI: only the codes 1 to 7 and 11 to 17 are accepted, not the "0000011" form
+        Some(Value::Str(_)) => return Err(err(ErrorCode::InvalidValue, "The third argument of NETWORKDAYS function (Weekend) can only be 1 ~ 7 or 11 ~ 17.")),
         Some(v) => match v.to_f64()?.trunc() as i64 {
             n @ 1..=7 => {
                 let a = (n - 1) as usize; // 1 = Sat+Sun, 2 = Sun+Mon, 3 = Mon+Tue ...
@@ -233,16 +226,34 @@ fn run<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], env: &Env<'a>) 
                 if !f.is_finite() || f.abs() > 1.0e10 {
                     return Err(err(ErrorCode::InvalidValue, format!("The function {name} cannot use an argument of this size.")));
                 }
-                Ok(f.trunc() as i64)
+                Ok(f.round() as i64)
             }
         }
     };
     match name {
-        "DATE" => Ok(Value::DateTime(from_ymd(name, int(0, 0)?, int(1, 1)?, int(2, 1)?)?)),
-        "TIME" => {
-            let secs = int(0, 0)? * 3600 + int(1, 0)? * 60 + int(2, 0)?;
-            Ok(Value::DateTime(secs.rem_euclid(86400) as f64 / 86400.0))
+        "DATE" => {
+            let (y, mo, d) = (int(0, 0)?, int(1, 1)?, int(2, 1)?);
+            // recorded from Power BI: a day of 0 is an error (negative days count back)
+            if d == 0 {
+                return Err(err(ErrorCode::InvalidValue, "An argument of function 'DATE' has the wrong data type or the result is too large or too small."));
+            }
+            // two-digit years: 0..29 are 2000..2029, 30..99 are 1930..1999; 100..1899 are taken literally
+            let y = match y {
+                0..=29 => y + 2000,
+                30..=99 => y + 1900,
+                _ => y,
+            };
+            Ok(Value::DateTime(from_ymd(name, y, mo, d)?))
         }
+        "TIME" => {
+            let (h, mi, s) = (int(0, 0)?, int(1, 0)?, int(2, 0)?);
+            // recorded from Power BI: every argument must be 0..32767
+            if [h, mi, s].iter().any(|x| !(0..=32767).contains(x)) {
+                return Err(err(ErrorCode::InvalidValue, "An argument of function 'TIME' has the wrong data type or the result is too large or too small."));
+            }
+            Ok(Value::DateTime((h * 3600 + mi * 60 + s).rem_euclid(86400) as f64 / 86400.0))
+        }
+        "YEAR" | "MONTH" | "DAY" | "QUARTER" | "HOUR" | "MINUTE" | "SECOND" if matches!(arg(0), None | Some(Value::Blank)) => Ok(Value::Blank),
         "YEAR" => Ok(Value::Int(dt(name, serial0()?)?.year() as i64)),
         "MONTH" => Ok(Value::Int(dt(name, serial0()?)?.month() as i64)),
         "DAY" => Ok(Value::Int(dt(name, serial0()?)?.day() as i64)),
@@ -276,7 +287,8 @@ fn run<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], env: &Env<'a>) 
             }
             let moved = add_months(name, serial0()?, months)?;
             if name == "EDATE" {
-                Ok(Value::DateTime(datetime_to_serial(moved)))
+                // recorded from Power BI: the result is a date without a time of day
+                Ok(Value::DateTime(datetime_to_serial(moved.date().and_time(NaiveTime::MIN))))
             } else {
                 let last = NaiveDate::from_ymd_opt(moved.year(), moved.month(), days_in_month(moved.year(), moved.month())).unwrap();
                 Ok(Value::DateTime(datetime_to_serial(last.and_time(NaiveTime::MIN))))

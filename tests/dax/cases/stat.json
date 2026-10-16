@@ -1,40 +1,145 @@
 {
   "area": "stat",
   "fixture": "tests/dax/fixtures",
+  "recordedWith": "local Analysis Services of Power BI Desktop 2.158.1304.0",
   "cases": [
-    {"id": "stat.aggregates", "query": "EVALUATE ROW(\"med\", MEDIAN(Sales[Quantity]), \"gm\", GEOMEAN(Sales[UnitPrice]), \"vp\", VAR.P(Sales[Quantity]), \"vs\", VAR.S(Sales[Quantity]), \"sp\", STDEV.P(Sales[Quantity]), \"ss\", STDEV.S(Sales[Quantity]))", "source": "pending", "expected": null},
-    {"id": "stat.aggregates.types", "query": "EVALUATE ROW(\"med_int\", MEDIAN(Sales[Quantity]), \"med_dec\", MEDIAN(Sales[UnitPrice]), \"med_date\", MEDIAN(Sales[OrderDate]), \"med_bool\", MEDIAN('Date'[IsWeekend]))", "source": "pending", "expected": null},
-    {"id": "stat.aggregates.text", "query": "EVALUATE ROW(\"a\", MEDIAN(Product[Color]))", "source": "pending", "expected": null},
-    {"id": "stat.aggregates.ctx", "query": "EVALUATE SUMMARIZECOLUMNS(Product[Category], \"med\", MEDIAN(Sales[Quantity]), \"gm\", GEOMEAN(Sales[Quantity]), \"sd\", STDEV.S(Sales[Quantity]), \"vp\", VAR.P(Sales[Quantity])) ORDER BY Product[Category]", "source": "pending", "expected": null},
-    {"id": "stat.aggregates.empty", "query": "EVALUATE ROW(\"a\", CALCULATE(MEDIAN(Sales[Quantity]), Product[Color] = \"Purple\"), \"b\", CALCULATE(VAR.S(Sales[Quantity]), Sales[SalesKey] = 1), \"c\", CALCULATE(VAR.P(Sales[Quantity]), Sales[SalesKey] = 1), \"d\", CALCULATE(STDEV.S(Sales[Quantity]), Sales[SalesKey] = 1), \"e\", CALCULATE(STDEV.P(Sales[Quantity]), Sales[SalesKey] = 1), \"f\", CALCULATE(GEOMEAN(Sales[Quantity]), Sales[SalesKey] = 1))", "source": "pending", "expected": null},
-    {"id": "stat.geomean.neg", "query": "EVALUATE ROW(\"a\", GEOMEAN(Sales[Quantity]))", "source": "pending", "expected": null},
-    {"id": "stat.geomeanx.zero", "query": "EVALUATE ROW(\"a\", GEOMEANX(Product, Product[ListPrice] - 1200))", "source": "pending", "expected": null},
-    {"id": "stat.percentile", "query": "EVALUATE ROW(\"i50\", PERCENTILE.INC(Sales[Quantity], 0.5), \"i25\", PERCENTILE.INC(Sales[Quantity], 0.25), \"i90\", PERCENTILE.INC(Sales[Quantity], 0.9), \"i0\", PERCENTILE.INC(Sales[Quantity], 0), \"i1\", PERCENTILE.INC(Sales[Quantity], 1), \"e50\", PERCENTILE.EXC(Sales[Quantity], 0.5), \"e25\", PERCENTILE.EXC(Sales[Quantity], 0.25), \"e75\", PERCENTILE.EXC(Sales[Quantity], 0.75))", "source": "pending", "expected": null},
-    {"id": "stat.percentile.exc.range", "query": "EVALUATE ROW(\"a\", PERCENTILE.EXC(Sales[Quantity], 0.001))", "source": "pending", "expected": null},
-    {"id": "stat.percentile.inc.range", "query": "EVALUATE ROW(\"a\", PERCENTILE.INC(Sales[Quantity], 1.5))", "source": "pending", "expected": null},
-    {"id": "stat.percentilex", "query": "EVALUATE ROW(\"a\", PERCENTILEX.INC(Product, Product[ListPrice], 0.5), \"b\", PERCENTILEX.EXC(Product, Product[ListPrice], 0.5), \"c\", PERCENTILEX.INC(Product, Product[ListPrice], 0.3), \"d\", PERCENTILEX.EXC(Product, Product[ListPrice], 0.3))", "source": "pending", "expected": null},
-    {"id": "stat.xaggregates", "query": "EVALUATE ROW(\"med\", MEDIANX(Product, Product[ListPrice]), \"vs\", VARX.S(Product, Product[ListPrice]), \"vp\", VARX.P(Product, Product[ListPrice]), \"ss\", STDEVX.S(Product, Product[ListPrice]), \"sp\", STDEVX.P(Product, Product[ListPrice]), \"gm\", GEOMEANX(Product, Product[ListPrice]))", "source": "pending", "expected": null},
-    {"id": "stat.xaggregates.measure", "query": "EVALUATE ROW(\"a\", MEDIANX(VALUES(Product[Category]), CALCULATE(SUM(Sales[Quantity]))), \"b\", STDEVX.P(VALUES(Product[Category]), CALCULATE(SUM(Sales[Quantity]))), \"c\", VARX.S(ALL(Customer[Country]), CALCULATE(SUM(Sales[Quantity]))))", "source": "pending", "expected": null},
-    {"id": "stat.rankx", "query": "EVALUATE ADDCOLUMNS(VALUES(Product[Category]), \"r\", RANKX(ALL(Product[Category]), CALCULATE(SUM(Sales[Quantity]))), \"asc\", RANKX(ALL(Product[Category]), CALCULATE(SUM(Sales[Quantity])), , ASC), \"dense\", RANKX(ALL(Product[Category]), CALCULATE(SUM(Sales[Quantity])), , DESC, DENSE))", "source": "pending", "expected": null},
-    {"id": "stat.rankx.ties", "query": "EVALUATE ROW(\"a\", RANKX({1, 2, 2, 3}, [Value], 3), \"b\", RANKX({1, 2, 2, 3}, [Value], 2), \"c\", RANKX({1, 2, 2, 3}, [Value], 1), \"d\", RANKX({1, 2, 2, 3}, [Value], 1, , DENSE), \"e\", RANKX({1, 2, 2, 3}, [Value], 1, ASC), \"f\", RANKX({1, 2, 2, 3}, [Value], 7), \"g\", RANKX({1, 2, 2, 3}, [Value], 2.5), \"h\", RANKX({1, 2, 2, 3}, [Value], 3, 1), \"i\", RANKX({1, 2, 2, 3}, [Value], BLANK()))", "source": "pending", "expected": null},
-    {"id": "stat.rankx.skip", "query": "EVALUATE ROW(\"a\", RANKX({10, 20, 20, 20, 30}, [Value], 10, , SKIP), \"b\", RANKX({10, 20, 20, 20, 30}, [Value], 10, , DENSE), \"c\", RANKX({10, 20, 20, 20, 30}, [Value], 20, , SKIP), \"d\", RANKX({10, 20, 20, 20, 30}, [Value], 20, , DENSE))", "source": "pending", "expected": null},
-    {"id": "stat.rankx.blank", "query": "EVALUATE ROW(\"a\", RANKX({1, BLANK(), 3}, [Value], 1), \"b\", RANKX({1, BLANK(), 3}, [Value], 0), \"c\", RANKX({1, 2}, [Value], 0))", "source": "pending", "expected": null},
-    {"id": "stat.rankx.customer", "query": "EVALUATE ADDCOLUMNS(FILTER(VALUES(Customer[Customer]), CALCULATE(SUM(Sales[Quantity])) > 0), \"rank\", RANKX(ALLSELECTED(Customer[Customer]), CALCULATE(SUM(Sales[Quantity]))))", "source": "pending", "expected": null},
-    {"id": "stat.rankeq", "query": "EVALUATE ROW(\"a\", RANK.EQ(2, Sales[Quantity]), \"b\", RANK.EQ(2, Sales[Quantity], 1), \"c\", RANK.EQ(5, Sales[Quantity]), \"d\", RANK.EQ(4, Sales[Quantity]), \"e\", RANK.EQ(1, Sales[Quantity], 1), \"f\", RANK.EQ(BLANK(), Sales[Quantity]))", "source": "pending", "expected": null},
-    {"id": "stat.normal", "query": "EVALUATE ROW(\"sd1\", NORM.S.DIST(1.96, TRUE()), \"sd2\", NORM.S.DIST(0, FALSE()), \"nd1\", NORM.DIST(110, 100, 15, TRUE()), \"nd2\", NORM.DIST(100, 100, 15, FALSE()), \"si\", NORM.S.INV(0.975), \"si2\", NORM.S.INV(0.5), \"ni\", NORM.INV(0.975, 100, 15), \"far\", NORM.S.DIST(-8, TRUE()), \"far2\", NORM.S.INV(0.000001))", "source": "pending", "expected": null},
-    {"id": "stat.normal.errors", "query": "EVALUATE ROW(\"a\", NORM.S.INV(0))", "source": "pending", "expected": null},
-    {"id": "stat.normal.sd", "query": "EVALUATE ROW(\"a\", NORM.DIST(1, 0, 0, TRUE()))", "source": "pending", "expected": null},
-    {"id": "stat.expon.poisson", "query": "EVALUATE ROW(\"e1\", EXPON.DIST(1, 2, TRUE()), \"e2\", EXPON.DIST(1, 2, FALSE()), \"p1\", POISSON.DIST(2, 3, FALSE()), \"p2\", POISSON.DIST(2, 3, TRUE()), \"p3\", POISSON.DIST(2.9, 3, FALSE()), \"p4\", POISSON.DIST(0, 0, TRUE()))", "source": "pending", "expected": null},
-    {"id": "stat.expon.neg", "query": "EVALUATE ROW(\"a\", EXPON.DIST(-1, 2, TRUE()))", "source": "pending", "expected": null},
-    {"id": "stat.t", "query": "EVALUATE ROW(\"d1\", T.DIST(2, 10, TRUE()), \"d2\", T.DIST(0, 5, FALSE()), \"rt\", T.DIST.RT(2, 10), \"t2\", T.DIST.2T(2, 10), \"i1\", T.INV(0.975, 10), \"i2\", T.INV.2T(0.05, 10), \"i3\", T.INV(0.5, 3), \"i4\", T.INV(0.025, 10), \"df\", T.DIST(2, 10.9, TRUE()), \"neg\", T.DIST(-2, 10, TRUE()))", "source": "pending", "expected": null},
-    {"id": "stat.t.errors", "query": "EVALUATE ROW(\"a\", T.DIST.2T(-1, 10))", "source": "pending", "expected": null},
-    {"id": "stat.t.errors2", "query": "EVALUATE ROW(\"a\", T.INV(1.5, 10))", "source": "pending", "expected": null},
-    {"id": "stat.chisq", "query": "EVALUATE ROW(\"i\", CHISQ.INV(0.95, 4), \"irt\", CHISQ.INV.RT(0.05, 4), \"d\", CHISQ.DIST(9.487729036781154, 4, TRUE()), \"rt\", CHISQ.DIST.RT(9.487729036781154, 4), \"pdf\", CHISQ.DIST(2, 2, FALSE()), \"d0\", CHISQ.DIST(0, 3, TRUE()), \"i0\", CHISQ.INV(0, 3))", "source": "pending", "expected": null},
-    {"id": "stat.chisq.errors", "query": "EVALUATE ROW(\"a\", CHISQ.DIST(-1, 3, TRUE()))", "source": "pending", "expected": null},
-    {"id": "stat.beta", "query": "EVALUATE ROW(\"c\", BETA.DIST(0.4, 2, 3, TRUE()), \"p\", BETA.DIST(0.4, 2, 3, FALSE()), \"i\", BETA.INV(0.5248, 2, 3), \"ab\", BETA.DIST(3, 2, 3, TRUE(), 2, 4), \"abi\", BETA.INV(0.6875, 2, 3, 2, 4))", "source": "pending", "expected": null},
-    {"id": "stat.beta.errors", "query": "EVALUATE ROW(\"a\", BETA.DIST(2, 2, 3, TRUE()))", "source": "pending", "expected": null},
-    {"id": "stat.confidence", "query": "EVALUATE ROW(\"n\", CONFIDENCE.NORM(0.05, 2.5, 50), \"t\", CONFIDENCE.T(0.05, 2.5, 50), \"n2\", CONFIDENCE.NORM(0.01, 1, 100))", "source": "pending", "expected": null},
-    {"id": "stat.confidence.errors", "query": "EVALUATE ROW(\"a\", CONFIDENCE.NORM(0, 2.5, 50))", "source": "pending", "expected": null},
-    {"id": "stat.confidence.t.errors", "query": "EVALUATE ROW(\"a\", CONFIDENCE.T(0.05, 2.5, 1))", "source": "pending", "expected": null}
+    {"id": "stat.aggregates", "query": "EVALUATE ROW(\"med\", MEDIAN(Sales[Quantity]), \"gm\", GEOMEAN(Sales[UnitPrice]), \"vp\", VAR.P(Sales[Quantity]), \"vs\", VAR.S(Sales[Quantity]), \"sp\", STDEV.P(Sales[Quantity]), \"ss\", STDEV.S(Sales[Quantity]))", "source": "recorded",
+      "expected": {"columns": ["[med]","[gm]","[vp]","[vs]","[sp]","[ss]"], "types": ["mixed","real","real","real","real","real"],
+        "rows": [
+          [3,77.97539318390967,2.0732638888888886,2.081938633193864,1.4398832900234966,1.4428924537864436]
+        ]}},
+    {"id": "stat.aggregates.types", "query": "EVALUATE ROW(\"med_int\", MEDIAN(Sales[Quantity]), \"med_dec\", MEDIAN(Sales[UnitPrice]), \"med_date\", MEDIAN(Sales[OrderDate]), \"med_bool\", MEDIAN('Date'[IsWeekend]))", "source": "recorded", "expected": {"error": "Exception calling \"ExecuteReader\" with \"0\" argument(s): \"Query (1, 144) MEDIAN does not support expressions of type string/Boolean/date.\""}},
+    {"id": "stat.aggregates.text", "query": "EVALUATE ROW(\"a\", MEDIAN(Product[Color]))", "source": "recorded", "expected": {"error": "Exception calling \"ExecuteReader\" with \"0\" argument(s): \"Query (1, 26) MEDIAN does not support expressions of type string/Boolean/date.\""}},
+    {"id": "stat.aggregates.ctx", "query": "EVALUATE SUMMARIZECOLUMNS(Product[Category], \"med\", MEDIAN(Sales[Quantity]), \"gm\", GEOMEAN(Sales[Quantity]), \"sd\", STDEV.S(Sales[Quantity]), \"vp\", VAR.P(Sales[Quantity])) ORDER BY Product[Category]", "source": "recorded",
+      "expected": {"columns": ["Product[Category]","[med]","[gm]","[sd]","[vp]"], "types": ["text","mixed","real","real","real"],
+        "rows": [
+          [null,1,1,"NaN",0],
+          ["Accessories",3,2.4476430264940814,1.4406947541274822,2.054203422255288],
+          ["Bikes",3,3.1016677137810413,1.3263367223074434,1.736901137638199],
+          ["Clothing",3,-2.5501543488468124,1.507958067056922,2.2378432854623327]
+        ]}},
+    {"id": "stat.aggregates.empty", "query": "EVALUATE ROW(\"a\", CALCULATE(MEDIAN(Sales[Quantity]), Product[Color] = \"Purple\"), \"b\", CALCULATE(VAR.S(Sales[Quantity]), Sales[SalesKey] = 1), \"c\", CALCULATE(VAR.P(Sales[Quantity]), Sales[SalesKey] = 1), \"d\", CALCULATE(STDEV.S(Sales[Quantity]), Sales[SalesKey] = 1), \"e\", CALCULATE(STDEV.P(Sales[Quantity]), Sales[SalesKey] = 1), \"f\", CALCULATE(GEOMEAN(Sales[Quantity]), Sales[SalesKey] = 1))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]","[d]","[e]","[f]"], "types": ["mixed","real","real","real","real","real"],
+        "rows": [
+          [null,"NaN",0,"NaN",0,2]
+        ]}},
+    {"id": "stat.geomean.neg", "query": "EVALUATE ROW(\"a\", GEOMEAN(Sales[Quantity]))", "source": "recorded",
+      "expected": {"columns": ["[a]"], "types": ["real"],
+        "rows": [
+          ["NaN"]
+        ]}},
+    {"id": "stat.geomeanx.zero", "query": "EVALUATE ROW(\"a\", GEOMEANX(Product, Product[ListPrice] - 1200))", "source": "recorded",
+      "expected": {"columns": ["[a]"], "types": ["real"],
+        "rows": [
+          [0]
+        ]}},
+    {"id": "stat.percentile", "query": "EVALUATE ROW(\"i50\", PERCENTILE.INC(Sales[Quantity], 0.5), \"i25\", PERCENTILE.INC(Sales[Quantity], 0.25), \"i90\", PERCENTILE.INC(Sales[Quantity], 0.9), \"i0\", PERCENTILE.INC(Sales[Quantity], 0), \"i1\", PERCENTILE.INC(Sales[Quantity], 1), \"e50\", PERCENTILE.EXC(Sales[Quantity], 0.5), \"e25\", PERCENTILE.EXC(Sales[Quantity], 0.25), \"e75\", PERCENTILE.EXC(Sales[Quantity], 0.75))", "source": "recorded",
+      "expected": {"columns": ["[i50]","[i25]","[i90]","[i0]","[i1]","[e50]","[e25]","[e75]"], "types": ["mixed","mixed","mixed","mixed","mixed","mixed","mixed","mixed"],
+        "rows": [
+          [3,2,5,-2,5,3,2,4]
+        ]}},
+    {"id": "stat.percentile.exc.range", "query": "EVALUATE ROW(\"a\", PERCENTILE.EXC(Sales[Quantity], 0.001))", "source": "recorded", "expected": {"error": "Exception calling \"ExecuteReader\" with \"0\" argument(s): \"Query (1, 19) The percentile value should be in the range 1/(N+1)..N/(N+1) inclusive, where N is the number of data values.\""}},
+    {"id": "stat.percentile.inc.range", "query": "EVALUATE ROW(\"a\", PERCENTILE.INC(Sales[Quantity], 1.5))", "source": "recorded", "expected": {"error": "Exception calling \"ExecuteReader\" with \"0\" argument(s): \"Query (1, 19) The percentile value should be in the range 0..1, inclusive.\""}},
+    {"id": "stat.percentilex", "query": "EVALUATE ROW(\"a\", PERCENTILEX.INC(Product, Product[ListPrice], 0.5), \"b\", PERCENTILEX.EXC(Product, Product[ListPrice], 0.5), \"c\", PERCENTILEX.INC(Product, Product[ListPrice], 0.3), \"d\", PERCENTILEX.EXC(Product, Product[ListPrice], 0.3))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]","[d]"], "types": ["real","real","real","real"],
+        "rows": [
+          [59.99,59.99,33.396,25]
+        ]}},
+    {"id": "stat.xaggregates", "query": "EVALUATE ROW(\"med\", MEDIANX(Product, Product[ListPrice]), \"vs\", VARX.S(Product, Product[ListPrice]), \"vp\", VARX.P(Product, Product[ListPrice]), \"ss\", STDEVX.S(Product, Product[ListPrice]), \"sp\", STDEVX.P(Product, Product[ListPrice]), \"gm\", GEOMEANX(Product, Product[ListPrice]))", "source": "recorded",
+      "expected": {"columns": ["[med]","[vs]","[vp]","[ss]","[sp]","[gm]"], "types": ["real","real","real","real","real","real"],
+        "rows": [
+          [59.99,188183.44002500002,167274.1689111111,433.8011526321709,408.9916489503314,92.19524593397279]
+        ]}},
+    {"id": "stat.xaggregates.measure", "query": "EVALUATE ROW(\"a\", MEDIANX(VALUES(Product[Category]), CALCULATE(SUM(Sales[Quantity]))), \"b\", STDEVX.P(VALUES(Product[Category]), CALCULATE(SUM(Sales[Quantity]))), \"c\", VARX.S(ALL(Customer[Country]), CALCULATE(SUM(Sales[Quantity]))))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]"], "types": ["mixed","real","real"],
+        "rows": [
+          [225.5,111.49103102940613,8021.5]
+        ]}},
+    {"id": "stat.rankx", "query": "EVALUATE ADDCOLUMNS(VALUES(Product[Category]), \"r\", RANKX(ALL(Product[Category]), CALCULATE(SUM(Sales[Quantity]))), \"asc\", RANKX(ALL(Product[Category]), CALCULATE(SUM(Sales[Quantity])), , ASC), \"dense\", RANKX(ALL(Product[Category]), CALCULATE(SUM(Sales[Quantity])), , DESC, DENSE))", "source": "recorded",
+      "expected": {"columns": ["Product[Category]","[r]","[asc]","[dense]"], "types": ["text","int","int","int"],
+        "rows": [
+          ["Bikes",2,3,2],
+          ["Accessories",1,4,1],
+          ["Clothing",3,2,3],
+          [null,4,1,4]
+        ]}},
+    {"id": "stat.rankx.ties", "query": "EVALUATE ROW(\"a\", RANKX({1, 2, 2, 3}, [Value], 3), \"b\", RANKX({1, 2, 2, 3}, [Value], 2), \"c\", RANKX({1, 2, 2, 3}, [Value], 1), \"d\", RANKX({1, 2, 2, 3}, [Value], 1, , DENSE), \"e\", RANKX({1, 2, 2, 3}, [Value], 1, ASC), \"f\", RANKX({1, 2, 2, 3}, [Value], 7), \"g\", RANKX({1, 2, 2, 3}, [Value], 2.5), \"h\", RANKX({1, 2, 2, 3}, [Value], 3, 1), \"i\", RANKX({1, 2, 2, 3}, [Value], BLANK()))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]","[d]","[e]","[f]","[g]","[h]","[i]"], "types": ["int","int","int","int","int","int","int","int","int"],
+        "rows": [
+          [1,2,4,3,1,1,2,4,5]
+        ]}},
+    {"id": "stat.rankx.skip", "query": "EVALUATE ROW(\"a\", RANKX({10, 20, 20, 20, 30}, [Value], 10, , SKIP), \"b\", RANKX({10, 20, 20, 20, 30}, [Value], 10, , DENSE), \"c\", RANKX({10, 20, 20, 20, 30}, [Value], 20, , SKIP), \"d\", RANKX({10, 20, 20, 20, 30}, [Value], 20, , DENSE))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]","[d]"], "types": ["int","int","int","int"],
+        "rows": [
+          [5,3,2,2]
+        ]}},
+    {"id": "stat.rankx.blank", "query": "EVALUATE ROW(\"a\", RANKX({1, BLANK(), 3}, [Value], 1), \"b\", RANKX({1, BLANK(), 3}, [Value], 0), \"c\", RANKX({1, 2}, [Value], 0))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]"], "types": ["int","int","int"],
+        "rows": [
+          [2,3,3]
+        ]}},
+    {"id": "stat.rankx.customer", "query": "EVALUATE ADDCOLUMNS(FILTER(VALUES(Customer[Customer]), CALCULATE(SUM(Sales[Quantity])) > 0), \"rank\", RANKX(ALLSELECTED(Customer[Customer]), CALCULATE(SUM(Sales[Quantity]))))", "source": "recorded",
+      "expected": {"columns": ["Customer[Customer]","[rank]"], "types": ["text","int"],
+        "rows": [
+          [null,10],
+          ["Alice",7],
+          ["Bruno",3],
+          ["Chen",9],
+          ["Dana",1],
+          ["Émile",5],
+          ["Farah",2],
+          ["Goran",3],
+          ["Hana",5],
+          ["Ivan",8]
+        ]}},
+    {"id": "stat.rankeq", "query": "EVALUATE ROW(\"a\", RANK.EQ(2, Sales[Quantity]), \"b\", RANK.EQ(2, Sales[Quantity], 1), \"c\", RANK.EQ(5, Sales[Quantity]), \"d\", RANK.EQ(4, Sales[Quantity]), \"e\", RANK.EQ(1, Sales[Quantity], 1), \"f\", RANK.EQ(BLANK(), Sales[Quantity]))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]","[d]","[e]","[f]"], "types": ["int","int","int","int","int","int"],
+        "rows": [
+          [154,49,1,50,2,null]
+        ]}},
+    {"id": "stat.normal", "query": "EVALUATE ROW(\"sd1\", NORM.S.DIST(1.96, TRUE()), \"sd2\", NORM.S.DIST(0, FALSE()), \"nd1\", NORM.DIST(110, 100, 15, TRUE()), \"nd2\", NORM.DIST(100, 100, 15, FALSE()), \"si\", NORM.S.INV(0.975), \"si2\", NORM.S.INV(0.5), \"ni\", NORM.INV(0.975, 100, 15), \"far\", NORM.S.DIST(-8, TRUE()), \"far2\", NORM.S.INV(0.000001))", "source": "recorded",
+      "expected": {"columns": ["[sd1]","[sd2]","[nd1]","[nd2]","[si]","[si2]","[ni]","[far]","[far2]"], "types": ["real","real","real","real","real","real","real","real","real"],
+        "rows": [
+          [0.9750021048517795,0.3989422804014327,0.7475074624530771,0.02659615202676218,1.9599639845400536,0,129.3994597681008,6.220960574271738e-16,-4.753424308822899]
+        ]}},
+    {"id": "stat.normal.errors", "query": "EVALUATE ROW(\"a\", NORM.S.INV(0))", "source": "recorded", "expected": {"error": "Exception calling \"Read\" with \"0\" argument(s): \"Query (1, 19) An argument of function 'NORM.S.INV' has the wrong data type or the result is too large or too small. If the argument is expected to be a date, that date must be between March 1, 1900 and December 31, 9999.\""}},
+    {"id": "stat.normal.sd", "query": "EVALUATE ROW(\"a\", NORM.DIST(1, 0, 0, TRUE()))", "source": "recorded", "expected": {"error": "Exception calling \"Read\" with \"0\" argument(s): \"Query (1, 19) An argument of function 'NORM.DIST' has the wrong data type or the result is too large or too small. If the argument is expected to be a date, that date must be between March 1, 1900 and December 31, 9999.\""}},
+    {"id": "stat.expon.poisson", "query": "EVALUATE ROW(\"e1\", EXPON.DIST(1, 2, TRUE()), \"e2\", EXPON.DIST(1, 2, FALSE()), \"p1\", POISSON.DIST(2, 3, FALSE()), \"p2\", POISSON.DIST(2, 3, TRUE()), \"p3\", POISSON.DIST(2.9, 3, FALSE()), \"p4\", POISSON.DIST(0, 0, TRUE()))", "source": "recorded",
+      "expected": {"columns": ["[e1]","[e2]","[p1]","[p2]","[p3]","[p4]"], "types": ["real","real","real","real","real","real"],
+        "rows": [
+          [0.8646647167633873,0.2706705664732254,0.22404180765538775,0.4231900811268434,0.22404180765538778,1]
+        ]}},
+    {"id": "stat.expon.neg", "query": "EVALUATE ROW(\"a\", EXPON.DIST(-1, 2, TRUE()))", "source": "recorded", "expected": {"error": "Exception calling \"Read\" with \"0\" argument(s): \"Query (1, 19) An argument of function 'EXPON.DIST' has the wrong data type or the result is too large or too small. If the argument is expected to be a date, that date must be between March 1, 1900 and December 31, 9999.\""}},
+    {"id": "stat.t", "query": "EVALUATE ROW(\"d1\", T.DIST(2, 10, TRUE()), \"d2\", T.DIST(0, 5, FALSE()), \"rt\", T.DIST.RT(2, 10), \"t2\", T.DIST.2T(2, 10), \"i1\", T.INV(0.975, 10), \"i2\", T.INV.2T(0.05, 10), \"i3\", T.INV(0.5, 3), \"i4\", T.INV(0.025, 10), \"neg\", T.DIST(-2, 10, TRUE()))", "source": "recorded",
+      "expected": {"columns": ["[d1]","[d2]","[rt]","[t2]","[i1]","[i2]","[i3]","[i4]","[neg]"], "types": ["real","real","real","real","real","real","real","real","real"],
+        "rows": [
+          [0.9633059826146297,0.3796066898224945,0.0366940173853702,0.0733880347707404,2.2281388519862744,2.2281388519862744,0,-2.2281388519862744,0.0366940173853702]
+        ]}},
+    {"id": "stat.t.errors", "query": "EVALUATE ROW(\"a\", T.DIST.2T(-1, 10))", "source": "recorded", "expected": {"error": "Exception calling \"Read\" with \"0\" argument(s): \"Query (1, 19) An argument of function 'T.DIST.2T' has the wrong data type or the result is too large or too small. If the argument is expected to be a date, that date must be between March 1, 1900 and December 31, 9999.\""}},
+    {"id": "stat.t.errors2", "query": "EVALUATE ROW(\"a\", T.INV(1.5, 10))", "source": "recorded", "expected": {"error": "Exception calling \"Read\" with \"0\" argument(s): \"Query (1, 19) An argument of function 'T.INV' has the wrong data type or the result is too large or too small. If the argument is expected to be a date, that date must be between March 1, 1900 and December 31, 9999.\""}},
+    {"id": "stat.chisq", "query": "EVALUATE ROW(\"i\", CHISQ.INV(0.95, 4), \"irt\", CHISQ.INV.RT(0.05, 4), \"d\", CHISQ.DIST(9.487729036781154, 4, TRUE()), \"rt\", CHISQ.DIST.RT(9.487729036781154, 4), \"pdf\", CHISQ.DIST(2, 2, FALSE()), \"d0\", CHISQ.DIST(0, 3, TRUE()), \"i0\", CHISQ.INV(0, 3))", "source": "recorded",
+      "expected": {"columns": ["[i]","[irt]","[d]","[rt]","[pdf]","[d0]","[i0]"], "types": ["real","real","real","real","real","real","real"],
+        "rows": [
+          [9.487729036781158,9.487729036781158,0.95,0.05000000000000005,0.18393972058572117,0,0]
+        ]}},
+    {"id": "stat.chisq.errors", "query": "EVALUATE ROW(\"a\", CHISQ.DIST(-1, 3, TRUE()))", "source": "recorded", "expected": {"error": "Exception calling \"Read\" with \"0\" argument(s): \"Query (1, 19) An argument of function 'CHISQ.DIST' has the wrong data type or the result is too large or too small. If the argument is expected to be a date, that date must be between March 1, 1900 and December 31, 9999.\""}},
+    {"id": "stat.beta", "query": "EVALUATE ROW(\"c\", BETA.DIST(0.4, 2, 3, TRUE()), \"p\", BETA.DIST(0.4, 2, 3, FALSE()), \"i\", BETA.INV(0.5248, 2, 3), \"ab\", BETA.DIST(3, 2, 3, TRUE(), 2, 4), \"abi\", BETA.INV(0.6875, 2, 3, 2, 4))", "source": "recorded",
+      "expected": {"columns": ["[c]","[p]","[i]","[ab]","[abi]"], "types": ["real","real","real","real","real"],
+        "rows": [
+          [0.5248,1.728,0.4,0.6875,3]
+        ]}},
+    {"id": "stat.beta.errors", "query": "EVALUATE ROW(\"a\", BETA.DIST(2, 2, 3, TRUE()))", "source": "recorded", "expected": {"error": "Exception calling \"Read\" with \"0\" argument(s): \"Query (1, 19) An argument of function 'BETA.DIST' has the wrong data type or the result is too large or too small. If the argument is expected to be a date, that date must be between March 1, 1900 and December 31, 9999.\""}},
+    {"id": "stat.confidence", "query": "EVALUATE ROW(\"n\", CONFIDENCE.NORM(0.05, 2.5, 50), \"t\", CONFIDENCE.T(0.05, 2.5, 50), \"n2\", CONFIDENCE.NORM(0.01, 1, 100))", "source": "recorded",
+      "expected": {"columns": ["[n]","[t]","[n2]"], "types": ["real","real","real"],
+        "rows": [
+          [0.6929519121748386,0.7104921387393245,0.25758293035489]
+        ]}},
+    {"id": "stat.confidence.errors", "query": "EVALUATE ROW(\"a\", CONFIDENCE.NORM(0, 2.5, 50))", "source": "recorded", "expected": {"error": "Exception calling \"Read\" with \"0\" argument(s): \"Query (1, 19) An argument of function 'CONFIDENCE.NORM' has the wrong data type or the result is too large or too small. If the argument is expected to be a date, that date must be between March 1, 1900 and December 31, 9999.\""}},
+    {"id": "stat.confidence.t.errors", "query": "EVALUATE ROW(\"a\", CONFIDENCE.T(0.05, 2.5, 1))", "source": "recorded", "expected": {"error": "Exception calling \"Read\" with \"0\" argument(s): \"Query (1, 19) An argument of function 'CONFIDENCE.T' has the wrong data type or the result is too large or too small. If the argument is expected to be a date, that date must be between March 1, 1900 and December 31, 9999.\""}},
+    {"id": "stat.t.fractional.df", "query": "EVALUATE ROW(\"a\", T.DIST(2, 10.9, TRUE()), \"b\", T.INV(0.9, 5.9), \"c\", CHISQ.DIST(3, 2.9, TRUE()))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]"], "types": ["real","real","real"],
+        "rows": [
+          [0.9645980224659828,1.439755747265148,0.6083748237289112]
+        ]}}
   ]
 }

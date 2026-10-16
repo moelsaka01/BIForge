@@ -47,7 +47,9 @@ fn allselected_without_arguments_restores_every_column() {
 fn allcrossfiltered_clears_the_connected_tables() {
     let e = engine();
     assert_eq!(ev(&e, "CALCULATE(CALCULATE(SUM(Sales[Qty]), ALLCROSSFILTERED(Product)), Product[Color] = \"Red\")"), i(14));
-    assert_eq!(ev(&e, "CALCULATE(CALCULATE(SUM(Sales[Qty]), ALLCROSSFILTERED(Product)), Customer[Country] = \"US\")"), i(14));
+    // Customer only reaches Product through the fact table, so its filter stays (recorded from Power BI)
+    assert_eq!(ev(&e, "CALCULATE(CALCULATE(SUM(Sales[Qty]), ALLCROSSFILTERED(Product)), Customer[Country] = \"US\")"), i(8));
+    assert_eq!(ev(&e, "CALCULATE(CALCULATE(SUM(Sales[Qty]), ALLCROSSFILTERED(Sales)), Customer[Country] = \"US\")"), i(14));
     assert_eq!(ev(&e, "CALCULATE(CALCULATE(SUM(Sales[Qty]), ALL(Product)), Customer[Country] = \"US\")"), i(8));
 }
 
@@ -69,7 +71,8 @@ fn generateseries() {
     assert_eq!(ev(&e, "SUMX(GENERATESERIES(1, 5), [Value])"), i(15));
     assert_eq!(ev(&e, "COUNTROWS(GENERATESERIES(1, 2, 0.5))"), i(3));
     assert_eq!(ev(&e, "SUMX(GENERATESERIES(1, 2, 0.5), [Value])"), f(4.5));
-    assert_eq!(ev(&e, "COUNTROWS(GENERATESERIES(5, 1, -1))"), i(5));
+    assert!(e.eval_scalar("COUNTROWS(GENERATESERIES(5, 1, -1))").is_err());
+    assert!(e.eval_scalar("COUNTROWS(GENERATESERIES(1, 5, 0))").is_err());
     assert_eq!(ev(&e, "COUNTROWS(GENERATESERIES(5, 1))"), B);
     assert_eq!(ev(&e, "COUNTROWS(GENERATESERIES(DATE(2024, 1, 1), DATE(2024, 1, 5)))"), i(5));
     assert_eq!(ev(&e, "MAXX(GENERATESERIES(DATE(2024, 1, 1), DATE(2024, 1, 5)), [Value])"), d(2024, 1, 5));
@@ -89,7 +92,8 @@ fn set_functions() {
 #[test]
 fn generate_and_generateall() {
     let e = engine();
-    assert_eq!(ev(&e, "COUNTROWS(GENERATE({1, 2}, {10, 20}))"), i(4));
+    // two columns with the same name are refused (recorded from Power BI)
+    fails(&e, "COUNTROWS(GENERATE({1, 2}, {10, 20}))");
     assert_eq!(ev(&e, "SUMX(GENERATE(SELECTCOLUMNS({1, 2}, \"a\", [Value]), SELECTCOLUMNS({10, 20}, \"b\", [Value])), [a] * [b])"), i(90));
     let right = "FILTER(SELECTCOLUMNS({10, 20}, \"b\", [Value]), [b] > [a] * 10)";
     assert_eq!(ev(&e, &format!("COUNTROWS(GENERATE(SELECTCOLUMNS({{1, 2}}, \"a\", [Value]), {right}))")), i(1));
@@ -155,6 +159,9 @@ fn summarize_with_added_columns() {
 fn pass_through_functions() {
     let e = engine();
     assert_eq!(ev(&e, "EVALUATEANDLOG(5)"), i(5));
-    assert_eq!(ev(&e, "CALCULATE(NONVISUAL(SUM(Sales[Qty])), Product[Color] = \"Red\")"), i(2));
+    // NONVISUAL only works as a value filter of SUMMARIZECOLUMNS (recorded from Power BI)
+    fails(&e, "CALCULATE(NONVISUAL(SUM(Sales[Qty])), Product[Color] = \"Red\")");
+    let r = rows(&e, "EVALUATE SUMMARIZECOLUMNS(Product[Category], NONVISUAL(FILTER(ALL(Product[Category]), Product[Category] = \"Bikes\")), \"q\", SUM(Sales[Qty]))");
+    assert_eq!(r, vec![vec![s("Bikes"), i(2)]]);
     let _: Value = B;
 }

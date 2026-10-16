@@ -187,8 +187,10 @@ fn table_filters_filter_the_expanded_table() {
     assert_eq!(ev(&e, "CALCULATE(SUM(Sales[Qty]), FILTER(Product, Product[ListPrice] > 50))"), i(2));
     // a table variable used as a filter
     assert_eq!(ev(&e, "VAR reds = FILTER(Product, Product[Color] = \"Red\") RETURN CALCULATE(SUM(Sales[Qty]), reds)"), i(2));
-    // a fact-table filter overrides dimension filters (harness)
-    assert_eq!(ev(&e, "CALCULATE(CALCULATE(COUNTROWS(Product), FILTER(Sales, TRUE())), Product[Color] = \"Red\")"), i(5));
+    // a fact-table filter also restricts the dimension to the products its rows reference (recorded from Power BI):
+    // the sales are evaluated under the Red filter first, so only the Bike remains
+    assert_eq!(ev(&e, "CALCULATE(CALCULATE(COUNTROWS(Product), FILTER(Sales, TRUE())), Product[Color] = \"Red\")"), i(1));
+    assert_eq!(ev(&e, "CALCULATE(COUNTROWS(Product), FILTER(ALL(Sales), TRUE()))"), i(3));
 }
 
 #[test]

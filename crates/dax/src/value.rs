@@ -150,7 +150,7 @@ impl Value {
     pub fn to_text(&self) -> String {
         match self {
             Value::Blank => String::new(),
-            Value::Bool(b) => if *b { "True" } else { "False" }.into(),
+            Value::Bool(b) => if *b { "TRUE" } else { "FALSE" }.into(),
             Value::Int(i) => i.to_string(),
             Value::Double(d) => format_general(*d),
             Value::Currency(c) => format_general(*c as f64 / CURRENCY_SCALE as f64),
@@ -272,10 +272,21 @@ pub fn parse_datetime_literal(s: &str) -> Option<f64> {
 // ---------------------------------------------------------------------------------------------------------
 // Comparison
 
+/// Lower case without accents (letters sort next to their base letter, like the culture-aware ordering of the
+/// reference engine).
+fn fold(s: &str) -> String {
+    use unicode_normalization::UnicodeNormalization;
+    s.nfd().filter(|c| !('\u{300}'..='\u{36f}').contains(c)).collect::<String>().to_lowercase()
+}
+
 fn cmp_text(a: &str, b: &str) -> Ordering {
     let la = a.to_lowercase();
     let lb = b.to_lowercase();
-    la.cmp(&lb)
+    if la == lb {
+        return Ordering::Equal;
+    }
+    // accents only break ties between texts that are otherwise equal
+    fold(a).cmp(&fold(b)).then_with(|| la.cmp(&lb))
 }
 
 /// Orders two values for `<`, `>`, `=`: BLANK takes the "zero" of the other side's type.
@@ -457,17 +468,11 @@ pub fn concat(a: &Value, b: &Value) -> Value {
 
 /// `&&` with BLANK semantics.
 pub fn and(a: &Value, b: &Value) -> VResult<Value> {
-    if a.is_blank() && b.is_blank() {
-        return Ok(Value::Blank);
-    }
     Ok(Value::Bool(a.to_bool()? && b.to_bool()?))
 }
 
 /// `||` with BLANK semantics.
 pub fn or(a: &Value, b: &Value) -> VResult<Value> {
-    if a.is_blank() && b.is_blank() {
-        return Ok(Value::Blank);
-    }
     Ok(Value::Bool(a.to_bool()? || b.to_bool()?))
 }
 
@@ -502,8 +507,9 @@ mod tests {
         assert_eq!(and(&f, &Blank).unwrap(), f);
         assert_eq!(or(&t, &Blank).unwrap(), t);
         assert_eq!(and(&t, &Blank).unwrap(), f);
-        assert_eq!(or(&Blank, &Blank).unwrap(), Blank);
-        assert_eq!(and(&Blank, &Blank).unwrap(), Blank);
+        // recorded from Power BI: BLANK || BLANK and BLANK && BLANK are FALSE
+        assert_eq!(or(&Blank, &Blank).unwrap(), f);
+        assert_eq!(and(&Blank, &Blank).unwrap(), f);
     }
 
     #[test]
@@ -556,7 +562,7 @@ mod tests {
         assert_eq!(concat(&Int(1), &s("a")), s("1a"));
         assert_eq!(concat(&Blank, &s("a")), s("a"));
         assert_eq!(concat(&Blank, &Blank), Blank);
-        assert_eq!(concat(&Bool(true), &Double(0.1 + 0.2)), s("True0.3"));
+        assert_eq!(concat(&Bool(true), &Double(0.1 + 0.2)), s("TRUE0.3"));
         assert!(Int(2).to_bool().unwrap());
         assert!(!Blank.to_bool().unwrap());
     }

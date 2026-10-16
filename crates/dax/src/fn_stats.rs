@@ -304,8 +304,12 @@ fn percentile(name: &str, v: Vec<f64>, k: f64, exclusive: bool) -> VResult<Value
 
 fn variance(v: &[f64], sample: bool) -> Option<f64> {
     let n = v.len();
-    if n == 0 || (sample && n < 2) {
+    if n == 0 {
         return None;
+    }
+    if sample && n < 2 {
+        // recorded from Power BI: VAR.S / STDEV.S over a single value is NaN, not BLANK
+        return Some(f64::NAN);
     }
     let mean = v.iter().sum::<f64>() / n as f64;
     let ss: f64 = v.iter().map(|x| (x - mean) * (x - mean)).sum();
@@ -316,10 +320,15 @@ fn geomean(name: &str, v: Vec<f64>) -> VResult<Value> {
     if v.is_empty() {
         return Ok(Value::Blank);
     }
-    if v.iter().any(|x| *x <= 0.0) {
-        return Err(domain(name, "all values must be positive"));
+    // recorded from Power BI: no error for zero or negative values: a zero gives 0, a negative product gives the
+    // real root when the count is odd and NaN when it is even
+    let _ = name;
+    if v.iter().any(|x| *x == 0.0) {
+        return Ok(Value::Double(0.0));
     }
-    Ok(Value::Double((v.iter().map(|x| x.ln()).sum::<f64>() / v.len() as f64).exp()))
+    let negatives = v.iter().filter(|x| **x < 0.0).count();
+    let root = (v.iter().map(|x| x.abs().ln()).sum::<f64>() / v.len() as f64).exp();
+    Ok(Value::Double(if negatives % 2 == 0 { root } else if v.len() % 2 == 1 { -root } else { f64::NAN }))
 }
 
 /// Evaluates `expr` for each row of the table argument.
@@ -346,6 +355,14 @@ fn aggregate(name: &str, base: &str, v: Vec<f64>, k: Option<f64>) -> VResult<Val
     })
 }
 
+fn median_type_check(t: crate::model::DataType) -> VResult<()> {
+    use crate::model::DataType::*;
+    if matches!(t, String | Boolean | DateTime) {
+        return Err(err(ErrorCode::TypeMismatch, "MEDIAN does not support expressions of type string/Boolean/date."));
+    }
+    Ok(())
+}
+
 fn bool_arg(v: &Option<Value>) -> VResult<bool> {
     v.as_ref().map(|v| v.to_bool()).transpose().map(|b| b.unwrap_or(false))
 }
@@ -354,6 +371,9 @@ fn run<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], env: &Env<'a>) 
     match name {
         "MEDIAN" | "GEOMEAN" | "STDEV.S" | "STDEV.P" | "VAR.S" | "VAR.P" => {
             let c = col_arg(name, args, 0)?;
+            if name == "MEDIAN" {
+                median_type_check(ev.data.model.column(c).data_type)?;
+            }
             return aggregate(name, name, numbers(column_values(ev, c, env).into_iter()), None);
         }
         "PERCENTILE.INC" | "PERCENTILE.EXC" => {
@@ -362,7 +382,11 @@ fn run<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], env: &Env<'a>) 
             return aggregate(name, name, numbers(column_values(ev, c, env).into_iter()), Some(k));
         }
         "MEDIANX" | "GEOMEANX" | "STDEVX.S" | "STDEVX.P" | "VARX.S" | "VARX.P" => {
-            let v = numbers(x_values(ev, &args[0], &args[1], env)?.into_iter());
+            let vals = x_values(ev, &args[0], &args[1], env)?;
+            if name == "MEDIANX" && vals.iter().any(|v| matches!(v, Value::Str(_) | Value::Bool(_) | Value::DateTime(_))) {
+                return Err(err(ErrorCode::TypeMismatch, "MEDIANX does not support expressions of type string/Boolean/date."));
+            }
+            let v = numbers(vals.into_iter());
             let base = name.replace("X.", ".").replace("MEDIANX", "MEDIAN").replace("GEOMEANX", "GEOMEAN");
             return aggregate(name, &base, v, None);
         }
@@ -445,21 +469,21 @@ fn run<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], env: &Env<'a>) 
             d(if bool_arg(&opt(2))? { gamma_q(x + 1.0, mean) } else { pmf(x) })
         }
         "T.DIST" => {
-            let (x, df) = (n(0)?, n(1)?.trunc());
+            let (x, df) = (n(0)?, n(1)?.round());
             if df < 1.0 {
                 return Err(domain(name, "the degrees of freedom must be 1 or more"));
             }
             d(if bool_arg(&opt(2))? { t_cdf(x, df) } else { t_pdf(x, df) })
         }
         "T.DIST.RT" | "T.DIST.2T" => {
-            let (x, df) = (n(0)?, n(1)?.trunc());
+            let (x, df) = (n(0)?, n(1)?.round());
             if df < 1.0 || (name == "T.DIST.2T" && x < 0.0) {
                 return Err(domain(name, "invalid arguments"));
             }
             d(if name == "T.DIST.RT" { 1.0 - t_cdf(x, df) } else { 2.0 * (1.0 - t_cdf(x, df)) })
         }
         "T.INV" | "T.INV.2T" => {
-            let (mut p, df) = (n(0)?, n(1)?.trunc());
+            let (mut p, df) = (n(0)?, n(1)?.round());
             if p <= 0.0 || p >= 1.0 || df < 1.0 {
                 return Err(domain(name, "the probability must be between 0 and 1 and the degrees of freedom 1 or more"));
             }
@@ -472,7 +496,7 @@ fn run<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], env: &Env<'a>) 
             d(invert(|x| t_cdf(x, df), p, -10.0, 10.0, None))
         }
         "CHISQ.DIST" | "CHISQ.DIST.RT" => {
-            let (x, df) = (n(0)?, n(1)?.trunc());
+            let (x, df) = (n(0)?, n(1)?.round());
             if x < 0.0 || df < 1.0 {
                 return Err(domain(name, "x must not be negative and the degrees of freedom must be 1 or more"));
             }
@@ -483,7 +507,7 @@ fn run<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], env: &Env<'a>) 
             }
         }
         "CHISQ.INV" | "CHISQ.INV.RT" => {
-            let (mut p, df) = (n(0)?, n(1)?.trunc());
+            let (mut p, df) = (n(0)?, n(1)?.round());
             if !(0.0..1.0).contains(&p) || df < 1.0 {
                 return Err(domain(name, "the probability must be between 0 and 1 and the degrees of freedom 1 or more"));
             }
@@ -518,7 +542,8 @@ fn run<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], env: &Env<'a>) 
             }
         }
         "CONFIDENCE.NORM" | "CONFIDENCE.T" => {
-            let (alpha, sd, size) = (n(0)?, n(1)?, n(2)?.trunc());
+            // recorded from Power BI: degrees of freedom and the size are rounded, not truncated (T.DIST(2, 10.9) = T.DIST(2, 11))
+            let (alpha, sd, size) = (n(0)?, n(1)?, n(2)?.round());
             if alpha <= 0.0 || alpha >= 1.0 || sd <= 0.0 || size < 1.0 || (name == "CONFIDENCE.T" && size < 2.0) {
                 return Err(domain(name, "alpha must be between 0 and 1, the standard deviation positive and the size large enough"));
             }
@@ -533,9 +558,7 @@ fn run<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], env: &Env<'a>) 
 fn rankx<'a>(ev: &'a Evaluator<'a>, args: &'a [BExpr], env: &Env<'a>) -> VResult<Value> {
     let values = x_values(ev, &args[0], &args[1], env)?;
     let value = if args.len() > 2 && !args[2].is_missing() { ev.scalar(&args[2], env)? } else { ev.scalar(&args[1], env)? };
-    if value.is_blank() {
-        return Ok(Value::Blank);
-    }
+    // recorded from Power BI: a BLANK value is compared like 0 (RANKX({1, 2, 2, 3}, [Value], BLANK()) is 5)
     let mut asc = false;
     if let Some(a) = args.get(3).filter(|a| !a.is_missing()) {
         asc = match &a.kind {

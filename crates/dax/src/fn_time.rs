@@ -63,7 +63,10 @@ fn add_months(d: NaiveDate, n: i64) -> VResult<NaiveDate> {
     if !(1..=9999).contains(&y) {
         return Err(err(ErrorCode::InvalidValue, "The shifted date is out of range."));
     }
-    Ok(NaiveDate::from_ymd_opt(y, m, d.day().min(last_dom(y, m))).unwrap())
+    // recorded from Power BI: the last day of a month moves to the last day of the target month (Jun 30 - 6 months is
+    // Dec 31, Jan 31 + 1 month is Feb 29)
+    let day = if d.day() == last_dom(d.year(), d.month()) { last_dom(y, m) } else { d.day().min(last_dom(y, m)) };
+    Ok(NaiveDate::from_ymd_opt(y, m, day).unwrap())
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -241,7 +244,7 @@ fn date_set<'a>(ev: &'a Evaluator<'a>, arg: &'a BExpr, env: &Env<'a>) -> VResult
 impl DateSet {
     fn table(&self, keep: impl Fn(i64) -> bool) -> TableVal {
         let rows = self.universe.iter().filter(|(d, _)| keep(*d)).map(|(_, v)| vec![v.clone()]).collect();
-        TableVal::mat(vec![TCol { name: self.name.clone(), lineage: self.col }], rows)
+        TableVal::mat(vec![TCol { name: self.name.clone(), lineage: self.col, renamed: false }], rows)
     }
 
     fn between(&self, from: i64, to: i64) -> TableVal {
@@ -251,7 +254,7 @@ impl DateSet {
     fn one(&self, day: i64) -> TableVal {
         let v = self.universe.iter().find(|(d, _)| *d == day).map(|(_, v)| v.clone());
         let rows = v.into_iter().map(|v| vec![v]).collect();
-        TableVal::mat(vec![TCol { name: self.name.clone(), lineage: self.col }], rows)
+        TableVal::mat(vec![TCol { name: self.name.clone(), lineage: self.col, renamed: false }], rows)
     }
 
     fn first(&self) -> VResult<NaiveDate> {
@@ -325,11 +328,24 @@ fn date_table<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], ye_arg: 
         "DATEADD" | "SAMEPERIODLASTYEAR" => {
             let ds = ds_()?;
             let (n, iv) = if name == "DATEADD" { (int_arg(ev, &args[1], env)?, interval_arg(name, &args[2])?) } else { (-1, Interval::Year) };
-            let mut set = std::collections::HashSet::new();
-            for &d in &ds.ctx {
-                set.insert(day_of(shift(date_of(d)?, n, iv)?));
+            if ds.ctx.is_empty() {
+                return Ok(Some(empty_like(&ds)));
             }
-            ds.table(|d| set.contains(&d))
+            let (first, last) = (*ds.ctx.first().unwrap(), *ds.ctx.last().unwrap());
+            // recorded from Power BI: when the context dates are a continuous run of the column (no date of the
+            // column between the first and the last is missing) the result is the whole shifted interval,
+            // otherwise each date is moved on its own
+            let in_run = ds.universe.iter().filter(|(d, _)| *d >= first && *d <= last).count();
+            if in_run == ds.ctx.len() {
+                let (from, to) = (day_of(shift(date_of(first)?, n, iv)?), day_of(shift(date_of(last)?, n, iv)?));
+                ds.between(from, to)
+            } else {
+                let mut set = std::collections::HashSet::new();
+                for &d in &ds.ctx {
+                    set.insert(day_of(shift(date_of(d)?, n, iv)?));
+                }
+                ds.table(|d| set.contains(&d))
+            }
         }
         "PARALLELPERIOD" => {
             let ds = ds_()?;
@@ -363,21 +379,18 @@ fn date_table<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], ye_arg: 
                 _ => Interval::Year,
             };
             let ye = if iv == Interval::Year { year_end_arg(ev, ye_arg, env)? } else { YearEnd::DEC31 };
-            let (ps, pe) = period_range(ds.last()?, iv, ye);
-            let inside: Vec<i64> = ds.ctx.iter().copied().filter(|&d| d >= day_of(ps) && d <= day_of(pe)).collect();
-            let pick = if name.starts_with("START") { inside.first() } else { inside.last() };
-            match pick {
-                Some(&d) => ds.one(d),
-                None => empty_like(&ds),
-            }
+            // recorded from Power BI: STARTOF* is the first date of the period of the first context date, ENDOF* the last
+            // date of the period of the last context date, taken from the whole date column
+            let target = if name.starts_with("START") { period_range(ds.first()?, iv, ye).0 } else { period_range(ds.last()?, iv, ye).1 };
+            ds.one(day_of(target))
         }
         "PREVIOUSDAY" | "NEXTDAY" => {
             let ds = ds_()?;
             if ds.ctx.is_empty() {
                 return Ok(Some(empty_like(&ds)));
             }
-            let anchor = day_of(ds.first()?);
-            ds.one(if name == "PREVIOUSDAY" { anchor - 1 } else { anchor + 1 })
+            // recorded from Power BI: PREVIOUSDAY looks at the first context date, NEXTDAY at the last one
+            ds.one(if name == "PREVIOUSDAY" { day_of(ds.first()?) - 1 } else { day_of(ds.last()?) + 1 })
         }
         "PREVIOUSMONTH" | "PREVIOUSQUARTER" | "PREVIOUSYEAR" | "NEXTMONTH" | "NEXTQUARTER" | "NEXTYEAR" => {
             let ds = ds_()?;
@@ -391,7 +404,8 @@ fn date_table<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], ye_arg: 
             };
             let ye = if iv == Interval::Year { year_end_arg(ev, ye_arg, env)? } else { YearEnd::DEC31 };
             let n = if name.starts_with("PREVIOUS") { -1 } else { 1 };
-            let anchor = ds.first()?;
+            // recorded from Power BI: PREVIOUS* anchors on the first context date, NEXT* on the last one
+            let anchor = if n < 0 { ds.first()? } else { ds.last()? };
             let (ps, pe) = period_range(anchor, iv, ye);
             let (from, to) = if iv == Interval::Year {
                 // fiscal years: shift the boundaries of the containing year
@@ -421,7 +435,7 @@ fn run<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], env: &Env<'a>) 
                 return Err(err(ErrorCode::InvalidValue, "CALENDAR would produce too many rows."));
             }
             let rows = (s..=e).map(|d| vec![Value::DateTime(d as f64)]).collect();
-            Ok(Val::T(TableVal::mat(vec![TCol { name: "Date".into(), lineage: None }], rows)))
+            Ok(Val::T(TableVal::mat(vec![TCol { name: "Date".into(), lineage: None, renamed: false }], rows)))
         }
         "CALENDARAUTO" => {
             let fy = if args.is_empty() || args[0].is_missing() { 12 } else { int_arg(ev, &args[0], env)? };
@@ -455,7 +469,7 @@ fn run<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], env: &Env<'a>) 
             let start = NaiveDate::from_ymd_opt(start_year, start_month, 1).unwrap();
             let end = NaiveDate::from_ymd_opt(end_year, fy, last_dom(end_year, fy)).unwrap();
             let rows = (day_of(start)..=day_of(end)).map(|d| vec![Value::DateTime(d as f64)]).collect();
-            Ok(Val::T(TableVal::mat(vec![TCol { name: "Date".into(), lineage: None }], rows)))
+            Ok(Val::T(TableVal::mat(vec![TCol { name: "Date".into(), lineage: None, renamed: false }], rows)))
         }
         "FIRSTNONBLANK" | "LASTNONBLANK" | "FIRSTNONBLANKVALUE" | "LASTNONBLANKVALUE" => {
             let c = crate::functions::col_arg(name, args, 0)?;
@@ -472,11 +486,11 @@ fn run<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], env: &Env<'a>) 
                     return Ok(if name.ends_with("VALUE") {
                         Val::S(r)
                     } else {
-                        Val::T(TableVal::mat(vec![TCol { name: ev.data.model.column(c).name.clone(), lineage: Some(c) }], vec![vec![v]]))
+                        Val::T(TableVal::mat(vec![TCol { name: ev.data.model.column(c).name.clone(), lineage: Some(c), renamed: false }], vec![vec![v]]))
                     });
                 }
             }
-            Ok(if name.ends_with("VALUE") { Val::S(Value::Blank) } else { Val::T(TableVal::mat(vec![TCol { name: ev.data.model.column(c).name.clone(), lineage: Some(c) }], vec![])) })
+            Ok(if name.ends_with("VALUE") { Val::S(Value::Blank) } else { Val::T(TableVal::mat(vec![TCol { name: ev.data.model.column(c).name.clone(), lineage: Some(c), renamed: false }], vec![])) })
         }
         "TOTALMTD" | "TOTALQTD" | "TOTALYTD" => {
             // TOTALxTD(expression, dates, [filter], [year_end_date]) = CALCULATE(expression, DATESxTD(dates), filter)
@@ -498,19 +512,13 @@ fn run<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], env: &Env<'a>) 
                     _ => Interval::Year,
                 };
                 let ye = if iv == Interval::Year { year_end_arg(ev, year_end_split(true, args).1, env)? } else { YearEnd::DEC31 };
-                let (ps, pe) = period_range(ds.last()?, iv, ye);
-                let inside: Vec<i64> = ds.ctx.iter().copied().filter(|&d| d >= day_of(ps) && d <= day_of(pe)).collect();
+                // recorded from Power BI: closing = the last date of the period of the last context date (from the whole
+                // column, not only the visible dates); opening = the day before the first date of the period of the
+                // first context date
                 if opening {
-                    // the day before the first date of the period in context
-                    match inside.first() {
-                        Some(&d) => ds.one(d - 1),
-                        None => empty_like(&ds),
-                    }
+                    ds.one(day_of(period_range(ds.first()?, iv, ye).0) - 1)
                 } else {
-                    match inside.last() {
-                        Some(&d) => ds.one(d),
-                        None => empty_like(&ds),
-                    }
+                    ds.one(day_of(period_range(ds.last()?, iv, ye).1))
                 }
             };
             eval_with_tables(ev, &args[0], vec![table], year_end_split(true, args).0, env)

@@ -22,7 +22,11 @@ fn slicing() {
     fails(&e, "LEFT(\"Hello\", -1)");
     fails(&e, "MID(\"Hello\", 0, 1)");
     assert_eq!(ev(&e, "LEN(\"héllo\")"), i(5));
-    assert_eq!(ev(&e, "LEN(BLANK())"), i(0));
+    // BLANK in, BLANK out (recorded from Power BI)
+    assert_eq!(ev(&e, "LEN(BLANK())"), B);
+    assert_eq!(ev(&e, "LEFT(BLANK(), 2)"), B);
+    assert_eq!(ev(&e, "REPLACE(BLANK(), 1, 1, \"X\")"), s("X"));
+    assert_eq!(ev(&e, "REPT(\"x\", 2.9)"), s("xxx"));
     assert_eq!(ev(&e, "LEN(12345)"), i(5));
 }
 
@@ -77,15 +81,18 @@ fn unicode() {
     let e = engine();
     assert_eq!(ev(&e, "UNICODE(\"A\")"), i(65));
     assert_eq!(ev(&e, "UNICHAR(66)"), s("B"));
-    fails(&e, "UNICODE(\"\")");
+    assert_eq!(ev(&e, "UNICODE(\"\")"), B);
 }
 
 #[test]
 fn value_and_fixed() {
     let e = engine();
-    assert_eq!(ev(&e, "VALUE(\"42\")"), i(42));
+    // VALUE always returns a Number (recorded from Power BI)
+    assert_eq!(ev(&e, "VALUE(\"42\")"), f(42.0));
     assert_eq!(ev(&e, "VALUE(\"1,234.5\")"), f(1234.5));
-    assert_eq!(ev(&e, "VALUE(\"50%\")"), f(0.5));
+    fails(&e, "VALUE(\"50%\")");
+    fails(&e, "VALUE(TRUE())");
+    assert_eq!(ev(&e, "VALUE(\"12:00\")"), f(0.5));
     fails(&e, "VALUE(\"abc\")");
     assert_eq!(ev(&e, "FIXED(1234.567, 1)"), s("1,234.6"));
     assert_eq!(ev(&e, "FIXED(1234.567, 0, TRUE())"), s("1235"));
@@ -103,7 +110,9 @@ fn format_numbers_and_dates() {
     assert_eq!(ev(&e, "FORMAT(MIN('Date'[Date]), \"yyyy-MM-dd\")"), s("2023-01-01"));
     assert_eq!(ev(&e, "FORMAT(MIN('Date'[Date]), \"MMMM d, yyyy\")"), s("January 1, 2023"));
     assert_eq!(ev(&e, "FORMAT(MIN('Date'[Date]), \"Short Date\")"), s("1/1/2023"));
-    assert_eq!(ev(&e, "FORMAT(\"abc\", \">\")"), s("ABC"));
+    // "<" and ">" leave the text unchanged (recorded from Power BI)
+    assert_eq!(ev(&e, "FORMAT(\"abc\", \">\")"), s("abc"));
+    assert_eq!(ev(&e, "FORMAT(TRUE(), \"0\")"), s("-1"));
     assert_eq!(ev(&e, "FORMAT(1234, \"General Number\")"), s("1234"));
 }
 

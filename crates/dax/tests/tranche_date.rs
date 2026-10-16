@@ -18,12 +18,20 @@ fn building_dates() {
     let e = engine();
     assert_eq!(ev(&e, "DATE(2024, 2, 29)"), date(2024, 2, 29));
     assert_eq!(ev(&e, "DATE(2024, 14, 1)"), date(2025, 2, 1));
-    assert_eq!(ev(&e, "DATE(2024, 1, 0)"), date(2023, 12, 31));
+    assert_eq!(ev(&e, "DATE(2024, 1, -5)"), date(2023, 12, 26));
+    // a day of 0 is an error; two-digit years: 0..29 -> 2000.., 30..99 -> 1930..; 100..1899 are literal (recorded)
+    assert!(e.eval_scalar("DATE(2024, 1, 0)").is_err());
+    assert_eq!(ev(&e, "DATE(29, 1, 1)"), date(2029, 1, 1));
+    assert_eq!(ev(&e, "DATE(30, 1, 1)"), date(1930, 1, 1));
+    assert_eq!(ev(&e, "DATE(1000, 1, 1)"), date(1000, 1, 1));
     assert_eq!(ev(&e, "DATE(2024, 3, 35)"), date(2024, 4, 4));
     assert_eq!(ev(&e, "DATE(99, 1, 1)"), date(1999, 1, 1));
     assert!(e.eval_scalar("DATE(10000, 1, 1)").is_err());
     assert_eq!(ev(&e, "TIME(14, 30, 0)"), Value::DateTime(52200.0 / 86400.0));
     assert_eq!(ev(&e, "TIME(25, 0, 0)"), Value::DateTime(3600.0 / 86400.0));
+    assert!(e.eval_scalar("TIME(0, 0, 86400)").is_err());
+    assert!(e.eval_scalar("TIME(-1, 0, 0)").is_err());
+    assert_eq!(ev(&e, "TIME(1.9, 0, 0)"), Value::DateTime(7200.0 / 86400.0));
     assert_eq!(ev(&e, "DATEVALUE(\"2024-03-05\")"), date(2024, 3, 5));
     assert_eq!(ev(&e, "DATEVALUE(\"3/5/2024\")"), date(2024, 3, 5));
     assert_eq!(ev(&e, "TIMEVALUE(\"2:30 PM\")"), ev(&e, "TIME(14, 30, 0)"));
@@ -42,8 +50,8 @@ fn date_parts() {
     assert_eq!(ev(&e, "SECOND(DATE(2024, 3, 5) + TIME(14, 30, 15))"), i(15));
     // text converts to a date
     assert_eq!(ev(&e, "YEAR(\"2024-03-05\")"), i(2024));
-    // BLANK is serial 0 (harness)
-    assert_eq!(ev(&e, "YEAR(BLANK())"), i(1899));
+    // BLANK in, BLANK out (recorded from Power BI)
+    assert_eq!(ev(&e, "YEAR(BLANK())"), B);
     assert_eq!(ev(&e, "YEAR(MIN('Date'[Date]))"), i(2023));
 }
 
@@ -96,7 +104,8 @@ fn working_days_and_year_fractions() {
     let e = engine();
     assert_eq!(ev(&e, "NETWORKDAYS(DATE(2024, 1, 1), DATE(2024, 1, 7))"), i(5));
     assert_eq!(ev(&e, "NETWORKDAYS(DATE(2024, 1, 1), DATE(2024, 1, 7), 11)"), i(6));
-    assert_eq!(ev(&e, "NETWORKDAYS(DATE(2024, 1, 1), DATE(2024, 1, 7), \"0000011\")"), i(5));
+    // the string form of the weekend is refused (recorded from Power BI)
+    assert!(e.eval_scalar("NETWORKDAYS(DATE(2024, 1, 1), DATE(2024, 1, 7), \"0000011\")").is_err());
     assert_eq!(ev(&e, "NETWORKDAYS(DATE(2024, 1, 1), DATE(2024, 1, 7), 1, {DATE(2024, 1, 3)})"), i(4));
     assert_eq!(ev(&e, "NETWORKDAYS(DATE(2024, 1, 7), DATE(2024, 1, 1))"), i(-5));
     assert_eq!(ev(&e, "YEARFRAC(DATE(2024, 1, 1), DATE(2024, 7, 1))"), f(0.5));

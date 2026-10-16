@@ -1,50 +1,412 @@
 {
   "area": "time",
   "fixture": "tests/dax/fixtures",
+  "recordedWith": "local Analysis Services of Power BI Desktop 2.158.1304.0",
   "cases": [
-    {"id": "time.datesbetween", "query": "EVALUATE ROW(\"n\", COUNTROWS(DATESBETWEEN('Date'[Date], DATE(2024, 3, 10), DATE(2024, 3, 20))), \"open\", COUNTROWS(DATESBETWEEN('Date'[Date], DATE(2024, 12, 1), BLANK())), \"open2\", COUNTROWS(DATESBETWEEN('Date'[Date], BLANK(), DATE(2023, 1, 10))), \"rev\", COUNTROWS(DATESBETWEEN('Date'[Date], DATE(2024, 3, 20), DATE(2024, 3, 10))), \"out\", COUNTROWS(DATESBETWEEN('Date'[Date], DATE(2025, 1, 1), DATE(2025, 2, 1))))", "source": "pending", "expected": null},
-    {"id": "time.datesbetween.sales", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), DATESBETWEEN('Date'[Date], DATE(2024, 3, 10), DATE(2024, 3, 20))))", "source": "pending", "expected": null},
-    {"id": "time.datesinperiod", "query": "EVALUATE ROW(\"a\", COUNTROWS(DATESINPERIOD('Date'[Date], DATE(2024, 3, 31), -1, MONTH)), \"b\", COUNTROWS(DATESINPERIOD('Date'[Date], DATE(2024, 1, 31), 1, MONTH)), \"c\", COUNTROWS(DATESINPERIOD('Date'[Date], DATE(2024, 3, 15), -7, DAY)), \"d\", COUNTROWS(DATESINPERIOD('Date'[Date], DATE(2024, 12, 31), -1, YEAR)), \"e\", COUNTROWS(DATESINPERIOD('Date'[Date], DATE(2024, 6, 30), -2, QUARTER)), \"f\", COUNTROWS(DATESINPERIOD('Date'[Date], DATE(2024, 3, 15), 0, DAY)))", "source": "pending", "expected": null},
-    {"id": "time.datesinperiod.sales", "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], 'Date'[MonthNumber], \"r3\", CALCULATE(SUM(Sales[Quantity]), DATESINPERIOD('Date'[Date], MAX('Date'[Date]), -3, MONTH))) ORDER BY 'Date'[Year], 'Date'[MonthNumber]", "source": "pending", "expected": null},
-    {"id": "time.ytd.day", "query": "EVALUATE ROW(\"ytd\", CALCULATE(CALCULATE(SUM(Sales[Quantity]), DATESYTD('Date'[Date])), 'Date'[Date] = DATE(2024, 3, 15)), \"mtd\", CALCULATE(CALCULATE(SUM(Sales[Quantity]), DATESMTD('Date'[Date])), 'Date'[Date] = DATE(2024, 3, 15)), \"qtd\", CALCULATE(CALCULATE(SUM(Sales[Quantity]), DATESQTD('Date'[Date])), 'Date'[Date] = DATE(2024, 5, 20)))", "source": "pending", "expected": null},
-    {"id": "time.ytd.rows", "query": "EVALUATE ROW(\"ytd\", COUNTROWS(CALCULATETABLE(DATESYTD('Date'[Date]), 'Date'[Date] = DATE(2024, 3, 15))), \"mtd\", COUNTROWS(CALCULATETABLE(DATESMTD('Date'[Date]), 'Date'[Date] = DATE(2024, 3, 15))), \"qtd\", COUNTROWS(CALCULATETABLE(DATESQTD('Date'[Date]), 'Date'[Date] = DATE(2024, 5, 20))), \"all\", COUNTROWS(DATESYTD('Date'[Date])))", "source": "pending", "expected": null},
-    {"id": "time.ytd.month", "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], 'Date'[MonthNumber], \"ytd\", CALCULATE(SUM(Sales[Quantity]), DATESYTD('Date'[Date])), \"mtd\", CALCULATE(SUM(Sales[Quantity]), DATESMTD('Date'[Date])), \"qtd\", CALCULATE(SUM(Sales[Quantity]), DATESQTD('Date'[Date]))) ORDER BY 'Date'[Year], 'Date'[MonthNumber]", "source": "pending", "expected": null},
-    {"id": "time.ytd.span", "query": "EVALUATE ROW(\"v\", CALCULATE(CALCULATE(COUNTROWS(DATESYTD('Date'[Date])), DATESBETWEEN('Date'[Date], DATE(2024, 3, 10), DATE(2024, 3, 20)))))", "source": "pending", "expected": null},
-    {"id": "time.ytd.fiscal", "query": "EVALUATE ROW(\"a\", CALCULATE(CALCULATE(COUNTROWS(DATESYTD('Date'[Date], \"6/30\")), 'Date'[Date] = DATE(2024, 3, 15))), \"b\", CALCULATE(CALCULATE(COUNTROWS(DATESYTD('Date'[Date], \"6/30\")), 'Date'[Date] = DATE(2024, 8, 15))), \"c\", CALCULATE(CALCULATE(COUNTROWS(DATESYTD('Date'[Date], \"6/30\")), 'Date'[Date] = DATE(2024, 7, 1))), \"d\", CALCULATE(CALCULATE(COUNTROWS(DATESYTD('Date'[Date], \"3/31\")), 'Date'[Date] = DATE(2024, 3, 31))))", "source": "pending", "expected": null},
-    {"id": "time.ytd.empty", "query": "EVALUATE ROW(\"v\", COUNTROWS(CALCULATETABLE(DATESYTD('Date'[Date]), 'Date'[Date] = DATE(2030, 1, 1))))", "source": "pending", "expected": null},
-    {"id": "time.total", "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], 'Date'[MonthNumber], \"tytd\", TOTALYTD(SUM(Sales[Quantity]), 'Date'[Date]), \"tmtd\", TOTALMTD(SUM(Sales[Quantity]), 'Date'[Date]), \"tqtd\", TOTALQTD(SUM(Sales[Quantity]), 'Date'[Date]), \"fy\", TOTALYTD(SUM(Sales[Quantity]), 'Date'[Date], \"6/30\")) ORDER BY 'Date'[Year], 'Date'[MonthNumber]", "source": "pending", "expected": null},
-    {"id": "time.total.filter", "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], \"ytd\", TOTALYTD(SUM(Sales[Quantity]), 'Date'[Date], Product[Category] = \"Bikes\"), \"ytd2\", TOTALYTD(SUM(Sales[Quantity]), 'Date'[Date], Product[Category] = \"Bikes\", \"6/30\")) ORDER BY 'Date'[Year]", "source": "pending", "expected": null},
-    {"id": "time.marked", "query": "EVALUATE ROW(\"marked\", CALCULATE(CALCULATE(SUM(Sales[Quantity]), DATESYTD('Date'[Date])), 'Date'[Date] = DATE(2024, 3, 15), 'Date'[MonthNumber] = 3), \"outer\", CALCULATE(CALCULATE(SUM(Sales[Quantity]), 'Date'[Date] = DATE(2024, 3, 15)), 'Date'[MonthNumber] = 5), \"outer2\", CALCULATE(CALCULATE(SUM(Sales[Quantity]), 'Date'[Date] >= DATE(2024, 3, 1)), 'Date'[Year] = 2023), \"outer3\", CALCULATE(CALCULATE(SUM(Sales[Quantity]), 'Date'[Year] = 2024), 'Date'[Date] = DATE(2023, 3, 15)))", "source": "pending", "expected": null},
-    {"id": "time.marked.table", "query": "EVALUATE ROW(\"a\", CALCULATE(SUM(Sales[Quantity]), FILTER(ALL('Date'[Date]), 'Date'[Date] = DATE(2024, 3, 15))), \"b\", CALCULATE(CALCULATE(SUM(Sales[Quantity]), FILTER(ALL('Date'[Date]), 'Date'[Date] >= DATE(2024, 1, 1))), 'Date'[Year] = 2023), \"c\", CALCULATE(CALCULATE(SUM(Sales[Quantity]), VALUES('Date'[Date])), 'Date'[Year] = 2023), \"d\", CALCULATE(CALCULATE(SUM(Sales[Quantity]), KEEPFILTERS('Date'[Date] >= DATE(2024, 1, 1))), 'Date'[Year] = 2023))", "source": "pending", "expected": null},
-    {"id": "time.sameperiod", "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], 'Date'[MonthNumber], \"cur\", SUM(Sales[Quantity]), \"py\", CALCULATE(SUM(Sales[Quantity]), SAMEPERIODLASTYEAR('Date'[Date]))) ORDER BY 'Date'[Year], 'Date'[MonthNumber]", "source": "pending", "expected": null},
-    {"id": "time.sameperiod.leap", "query": "EVALUATE ROW(\"feb\", CALCULATE(CALCULATE(COUNTROWS(SAMEPERIODLASTYEAR('Date'[Date])), DATESBETWEEN('Date'[Date], DATE(2024, 2, 1), DATE(2024, 2, 29)))), \"feb29\", CALCULATE(CALCULATE(COUNTROWS(SAMEPERIODLASTYEAR('Date'[Date])), 'Date'[Date] = DATE(2024, 2, 29))), \"mar\", CALCULATE(CALCULATE(COUNTROWS(SAMEPERIODLASTYEAR('Date'[Date])), DATESBETWEEN('Date'[Date], DATE(2024, 3, 1), DATE(2024, 3, 31)))))", "source": "pending", "expected": null},
-    {"id": "time.dateadd", "query": "EVALUATE ROW(\"feb\", CALCULATE(CALCULATE(COUNTROWS(DATEADD('Date'[Date], 1, MONTH)), DATESBETWEEN('Date'[Date], DATE(2024, 2, 1), DATE(2024, 2, 29)))), \"mar\", CALCULATE(CALCULATE(COUNTROWS(DATEADD('Date'[Date], -1, MONTH)), DATESBETWEEN('Date'[Date], DATE(2024, 3, 1), DATE(2024, 3, 31)))), \"day\", CALCULATE(CALCULATE(COUNTROWS(DATEADD('Date'[Date], 1, DAY)), DATESBETWEEN('Date'[Date], DATE(2024, 3, 1), DATE(2024, 3, 31)))), \"qtr\", CALCULATE(CALCULATE(COUNTROWS(DATEADD('Date'[Date], -1, QUARTER)), DATESBETWEEN('Date'[Date], DATE(2024, 3, 1), DATE(2024, 3, 31)))), \"yr\", CALCULATE(CALCULATE(COUNTROWS(DATEADD('Date'[Date], 1, YEAR)), DATESBETWEEN('Date'[Date], DATE(2023, 3, 1), DATE(2023, 3, 31)))), \"gap\", CALCULATE(CALCULATE(COUNTROWS(DATEADD('Date'[Date], -1, MONTH)), 'Date'[Date] IN {DATE(2024, 3, 5), DATE(2024, 3, 20)})))", "source": "pending", "expected": null},
-    {"id": "time.dateadd.full", "query": "EVALUATE ROW(\"q1\", CALCULATE(CALCULATE(COUNTROWS(DATEADD('Date'[Date], -1, QUARTER)), DATESBETWEEN('Date'[Date], DATE(2024, 4, 1), DATE(2024, 6, 30)))), \"y\", CALCULATE(CALCULATE(COUNTROWS(DATEADD('Date'[Date], -1, YEAR)), DATESBETWEEN('Date'[Date], DATE(2024, 1, 1), DATE(2024, 12, 31)))), \"m31\", CALCULATE(CALCULATE(COUNTROWS(DATEADD('Date'[Date], 1, MONTH)), DATESBETWEEN('Date'[Date], DATE(2024, 1, 31), DATE(2024, 1, 31)))))", "source": "pending", "expected": null},
-    {"id": "time.dateadd.sales", "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], 'Date'[MonthNumber], \"prev\", CALCULATE(SUM(Sales[Quantity]), DATEADD('Date'[Date], -1, MONTH))) ORDER BY 'Date'[Year], 'Date'[MonthNumber]", "source": "pending", "expected": null},
-    {"id": "time.parallel", "query": "EVALUATE ROW(\"y\", CALCULATE(CALCULATE(COUNTROWS(PARALLELPERIOD('Date'[Date], -1, YEAR)), 'Date'[Date] = DATE(2024, 3, 15))), \"m\", CALCULATE(CALCULATE(COUNTROWS(PARALLELPERIOD('Date'[Date], -1, MONTH)), 'Date'[Date] = DATE(2024, 3, 15))), \"q\", CALCULATE(CALCULATE(COUNTROWS(PARALLELPERIOD('Date'[Date], -1, QUARTER)), 'Date'[Date] = DATE(2024, 3, 15))), \"fwd\", CALCULATE(CALCULATE(COUNTROWS(PARALLELPERIOD('Date'[Date], 1, YEAR)), 'Date'[Date] = DATE(2024, 3, 15))), \"span\", CALCULATE(CALCULATE(COUNTROWS(PARALLELPERIOD('Date'[Date], -1, MONTH)), DATESBETWEEN('Date'[Date], DATE(2024, 3, 10), DATE(2024, 5, 20)))))", "source": "pending", "expected": null},
-    {"id": "time.parallel.day", "query": "EVALUATE ROW(\"v\", COUNTROWS(PARALLELPERIOD('Date'[Date], 1, DAY)))", "source": "pending", "expected": null},
-    {"id": "time.previous", "query": "EVALUATE ROW(\"day\", CALCULATE(CALCULATE(COUNTROWS(PREVIOUSDAY('Date'[Date])), 'Date'[Date] = DATE(2024, 3, 15))), \"month\", CALCULATE(CALCULATE(COUNTROWS(PREVIOUSMONTH('Date'[Date])), 'Date'[Date] = DATE(2024, 3, 15))), \"quarter\", CALCULATE(CALCULATE(COUNTROWS(PREVIOUSQUARTER('Date'[Date])), 'Date'[Date] = DATE(2024, 3, 15))), \"year\", CALCULATE(CALCULATE(COUNTROWS(PREVIOUSYEAR('Date'[Date])), 'Date'[Date] = DATE(2024, 3, 15))), \"fy\", CALCULATE(CALCULATE(COUNTROWS(PREVIOUSYEAR('Date'[Date], \"6/30\")), 'Date'[Date] = DATE(2024, 3, 15))))", "source": "pending", "expected": null},
-    {"id": "time.next", "query": "EVALUATE ROW(\"day\", CALCULATE(CALCULATE(COUNTROWS(NEXTDAY('Date'[Date])), 'Date'[Date] = DATE(2024, 3, 15))), \"month\", CALCULATE(CALCULATE(COUNTROWS(NEXTMONTH('Date'[Date])), 'Date'[Date] = DATE(2024, 3, 15))), \"quarter\", CALCULATE(CALCULATE(COUNTROWS(NEXTQUARTER('Date'[Date])), 'Date'[Date] = DATE(2024, 3, 15))), \"year\", CALCULATE(CALCULATE(COUNTROWS(NEXTYEAR('Date'[Date])), 'Date'[Date] = DATE(2024, 3, 15))), \"year23\", CALCULATE(CALCULATE(COUNTROWS(NEXTYEAR('Date'[Date])), 'Date'[Date] = DATE(2023, 3, 15))), \"fy\", CALCULATE(CALCULATE(COUNTROWS(NEXTYEAR('Date'[Date], \"6/30\")), 'Date'[Date] = DATE(2023, 3, 15))))", "source": "pending", "expected": null},
-    {"id": "time.previous.span", "query": "EVALUATE ROW(\"day\", CALCULATE(CALCULATE(MAXX(PREVIOUSDAY('Date'[Date]), [Date])), DATESBETWEEN('Date'[Date], DATE(2024, 3, 10), DATE(2024, 3, 20))), \"nday\", CALCULATE(CALCULATE(MAXX(NEXTDAY('Date'[Date]), [Date])), DATESBETWEEN('Date'[Date], DATE(2024, 3, 10), DATE(2024, 3, 20))), \"month\", CALCULATE(CALCULATE(MAXX(PREVIOUSMONTH('Date'[Date]), [Date])), DATESBETWEEN('Date'[Date], DATE(2024, 3, 10), DATE(2024, 5, 20))), \"nmonth\", CALCULATE(CALCULATE(MAXX(NEXTMONTH('Date'[Date]), [Date])), DATESBETWEEN('Date'[Date], DATE(2024, 3, 10), DATE(2024, 5, 20))))", "source": "pending", "expected": null},
-    {"id": "time.previous.sales", "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], 'Date'[MonthNumber], \"pm\", CALCULATE(SUM(Sales[Quantity]), PREVIOUSMONTH('Date'[Date])), \"pq\", CALCULATE(SUM(Sales[Quantity]), PREVIOUSQUARTER('Date'[Date])), \"py\", CALCULATE(SUM(Sales[Quantity]), PREVIOUSYEAR('Date'[Date]))) ORDER BY 'Date'[Year], 'Date'[MonthNumber]", "source": "pending", "expected": null},
-    {"id": "time.firstlast", "query": "EVALUATE ROW(\"first\", CALCULATE(CALCULATE(MAXX(FIRSTDATE('Date'[Date]), [Date])), DATESBETWEEN('Date'[Date], DATE(2024, 3, 10), DATE(2024, 3, 20))), \"last\", CALCULATE(CALCULATE(MAXX(LASTDATE('Date'[Date]), [Date])), DATESBETWEEN('Date'[Date], DATE(2024, 3, 10), DATE(2024, 3, 20))), \"all1\", MAXX(FIRSTDATE('Date'[Date]), [Date]), \"all2\", MAXX(LASTDATE('Date'[Date]), [Date]))", "source": "pending", "expected": null},
-    {"id": "time.firstlast.cols", "query": "EVALUATE FIRSTDATE('Date'[Date])", "source": "pending", "expected": null},
-    {"id": "time.startof", "query": "EVALUATE ROW(\"sm\", CALCULATE(CALCULATE(MAXX(STARTOFMONTH('Date'[Date]), [Date])), DATESBETWEEN('Date'[Date], DATE(2024, 3, 10), DATE(2024, 3, 20))), \"em\", CALCULATE(CALCULATE(MAXX(ENDOFMONTH('Date'[Date]), [Date])), DATESBETWEEN('Date'[Date], DATE(2024, 3, 10), DATE(2024, 3, 20))), \"sq\", CALCULATE(CALCULATE(MAXX(STARTOFQUARTER('Date'[Date]), [Date])), DATESBETWEEN('Date'[Date], DATE(2024, 3, 10), DATE(2024, 3, 20))), \"sy\", CALCULATE(CALCULATE(MAXX(STARTOFYEAR('Date'[Date]), [Date])), DATESBETWEEN('Date'[Date], DATE(2024, 3, 10), DATE(2024, 3, 20))), \"ey\", CALCULATE(CALCULATE(MAXX(ENDOFYEAR('Date'[Date]), [Date])), DATESBETWEEN('Date'[Date], DATE(2024, 3, 10), DATE(2024, 3, 20))), \"eq\", CALCULATE(CALCULATE(MAXX(ENDOFQUARTER('Date'[Date]), [Date])), DATESBETWEEN('Date'[Date], DATE(2024, 3, 10), DATE(2024, 3, 20))))", "source": "pending", "expected": null},
-    {"id": "time.startof.span", "query": "EVALUATE ROW(\"sm\", CALCULATE(CALCULATE(MAXX(STARTOFMONTH('Date'[Date]), [Date])), DATESBETWEEN('Date'[Date], DATE(2024, 1, 15), DATE(2024, 3, 20))), \"em\", CALCULATE(CALCULATE(MAXX(ENDOFMONTH('Date'[Date]), [Date])), DATESBETWEEN('Date'[Date], DATE(2024, 1, 15), DATE(2024, 3, 20))), \"sy\", CALCULATE(CALCULATE(MAXX(STARTOFYEAR('Date'[Date]), [Date])), DATESBETWEEN('Date'[Date], DATE(2023, 6, 15), DATE(2024, 3, 20))), \"ey\", CALCULATE(CALCULATE(MAXX(ENDOFYEAR('Date'[Date]), [Date])), DATESBETWEEN('Date'[Date], DATE(2023, 6, 15), DATE(2024, 3, 20))), \"all\", MAXX(STARTOFYEAR('Date'[Date]), [Date]), \"allq\", MAXX(STARTOFQUARTER('Date'[Date]), [Date]), \"alle\", MAXX(ENDOFMONTH('Date'[Date]), [Date]))", "source": "pending", "expected": null},
-    {"id": "time.startof.single", "query": "EVALUATE ROW(\"sm\", CALCULATE(CALCULATE(MAXX(STARTOFMONTH('Date'[Date]), [Date])), 'Date'[Date] = DATE(2024, 3, 15)), \"em\", CALCULATE(CALCULATE(MAXX(ENDOFMONTH('Date'[Date]), [Date])), 'Date'[Date] = DATE(2024, 3, 15)), \"sy\", CALCULATE(CALCULATE(MAXX(STARTOFYEAR('Date'[Date]), [Date])), 'Date'[Date] = DATE(2024, 3, 15)))", "source": "pending", "expected": null},
-    {"id": "time.startof.month", "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], 'Date'[MonthNumber], \"sm\", MAXX(STARTOFMONTH('Date'[Date]), [Date]), \"em\", MAXX(ENDOFMONTH('Date'[Date]), [Date]), \"sy\", MAXX(STARTOFYEAR('Date'[Date]), [Date])) ORDER BY 'Date'[Year], 'Date'[MonthNumber]", "source": "pending", "expected": null},
-    {"id": "time.balance", "query": "EVALUATE ROW(\"cm\", CALCULATE(CLOSINGBALANCEMONTH(SUM(Sales[Quantity]), 'Date'[Date]), DATESBETWEEN('Date'[Date], DATE(2024, 3, 10), DATE(2024, 3, 20))), \"om\", CALCULATE(OPENINGBALANCEMONTH(SUM(Sales[Quantity]), 'Date'[Date]), DATESBETWEEN('Date'[Date], DATE(2024, 3, 10), DATE(2024, 3, 20))), \"cq\", CALCULATE(CLOSINGBALANCEQUARTER(SUM(Sales[Quantity]), 'Date'[Date]), DATESBETWEEN('Date'[Date], DATE(2024, 3, 10), DATE(2024, 3, 20))), \"oq\", CALCULATE(OPENINGBALANCEQUARTER(SUM(Sales[Quantity]), 'Date'[Date]), DATESBETWEEN('Date'[Date], DATE(2024, 3, 10), DATE(2024, 3, 20))), \"cy\", CALCULATE(CLOSINGBALANCEYEAR(SUM(Sales[Quantity]), 'Date'[Date]), DATESBETWEEN('Date'[Date], DATE(2024, 3, 10), DATE(2024, 3, 20))), \"oy\", CALCULATE(OPENINGBALANCEYEAR(SUM(Sales[Quantity]), 'Date'[Date]), DATESBETWEEN('Date'[Date], DATE(2024, 3, 10), DATE(2024, 3, 20))))", "source": "pending", "expected": null},
-    {"id": "time.balance.month", "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], 'Date'[MonthNumber], \"close\", CLOSINGBALANCEMONTH(SUM(Sales[Quantity]), 'Date'[Date]), \"open\", OPENINGBALANCEMONTH(SUM(Sales[Quantity]), 'Date'[Date]), \"cy\", CLOSINGBALANCEYEAR(SUM(Sales[Quantity]), 'Date'[Date]), \"oy\", OPENINGBALANCEYEAR(SUM(Sales[Quantity]), 'Date'[Date])) ORDER BY 'Date'[Year], 'Date'[MonthNumber]", "source": "pending", "expected": null},
-    {"id": "time.balance.filter", "query": "EVALUATE ROW(\"a\", CALCULATE(CLOSINGBALANCEMONTH(SUM(Sales[Quantity]), 'Date'[Date], Product[Category] = \"Bikes\"), DATESBETWEEN('Date'[Date], DATE(2024, 3, 1), DATE(2024, 3, 31))), \"b\", CALCULATE(CLOSINGBALANCEYEAR(SUM(Sales[Quantity]), 'Date'[Date], ALL(Product), \"6/30\"), DATESBETWEEN('Date'[Date], DATE(2024, 3, 1), DATE(2024, 3, 31))))", "source": "pending", "expected": null},
-    {"id": "time.nonblank", "query": "EVALUATE ROW(\"first\", MAXX(FIRSTNONBLANK('Date'[Date], CALCULATE(SUM(Sales[Quantity]))), [Date]), \"last\", MAXX(LASTNONBLANK('Date'[Date], CALCULATE(SUM(Sales[Quantity]))), [Date]), \"fv\", FIRSTNONBLANKVALUE('Date'[Date], SUM(Sales[Quantity])), \"lv\", LASTNONBLANKVALUE('Date'[Date], SUM(Sales[Quantity])))", "source": "pending", "expected": null},
-    {"id": "time.nonblank.ctx", "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], \"first\", MAXX(FIRSTNONBLANK('Date'[Date], CALCULATE(COUNTROWS(Sales))), [Date]), \"last\", MAXX(LASTNONBLANK('Date'[Date], CALCULATE(COUNTROWS(Sales))), [Date]), \"lv\", LASTNONBLANKVALUE('Date'[Date], CALCULATE(COUNTROWS(Sales)))) ORDER BY 'Date'[Year]", "source": "pending", "expected": null},
-    {"id": "time.nonblank.other", "query": "EVALUATE ROW(\"p\", MAXX(FIRSTNONBLANK(Product[Product], CALCULATE(SUM(Sales[Quantity]))), Product[Product]), \"q\", MAXX(LASTNONBLANK(Product[ListPrice], CALCULATE(SUM(Sales[Quantity]))), Product[ListPrice]), \"none\", FIRSTNONBLANKVALUE(Product[Product], BLANK()))", "source": "pending", "expected": null},
-    {"id": "time.calendar", "query": "EVALUATE ROW(\"a\", COUNTROWS(CALENDAR(DATE(2024, 1, 1), DATE(2024, 1, 5))), \"b\", MAXX(CALENDAR(DATE(2024, 1, 1), DATE(2024, 2, 29)), [Date]), \"c\", COUNTROWS(CALENDAR(DATE(2024, 1, 1), DATE(2024, 1, 1))), \"d\", COUNTROWS(CALENDAR(\"2024-01-01\", \"2024-01-31\")))", "source": "pending", "expected": null},
-    {"id": "time.calendar.rev", "query": "EVALUATE ROW(\"a\", COUNTROWS(CALENDAR(DATE(2024, 1, 5), DATE(2024, 1, 1))))", "source": "pending", "expected": null},
-    {"id": "time.calendar.cols", "query": "EVALUATE CALENDAR(DATE(2024, 1, 30), DATE(2024, 2, 2))", "source": "pending", "expected": null},
-    {"id": "time.calendarauto", "query": "EVALUATE ROW(\"n\", COUNTROWS(CALENDARAUTO()), \"lo\", MINX(CALENDARAUTO(), [Date]), \"hi\", MAXX(CALENDARAUTO(), [Date]), \"fylo\", MINX(CALENDARAUTO(6), [Date]), \"fyhi\", MAXX(CALENDARAUTO(6), [Date]), \"fyn\", COUNTROWS(CALENDARAUTO(6)))", "source": "pending", "expected": null},
-    {"id": "time.userel", "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], \"ship\", CALCULATE(SUM(Sales[Quantity]), USERELATIONSHIP(Sales[ShipDate], 'Date'[Date]), DATESYTD('Date'[Date])), \"order\", CALCULATE(SUM(Sales[Quantity]), DATESYTD('Date'[Date]))) ORDER BY 'Date'[Year]", "source": "pending", "expected": null},
-    {"id": "time.quarter.sales", "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], 'Date'[Quarter], \"ytd\", CALCULATE(SUM(Sales[Quantity]), DATESYTD('Date'[Date])), \"prevq\", CALCULATE(SUM(Sales[Quantity]), PREVIOUSQUARTER('Date'[Date]))) ORDER BY 'Date'[Year], 'Date'[Quarter]", "source": "pending", "expected": null},
-    {"id": "time.other.datecol", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), DATESBETWEEN(Sales[OrderDate], DATE(2024, 3, 1), DATE(2024, 3, 31))), \"w\", CALCULATE(SUM(Sales[Quantity]), SAMEPERIODLASTYEAR(Sales[OrderDate])))", "source": "pending", "expected": null}
+    {"id": "time.datesbetween", "query": "EVALUATE ROW(\"n\", COUNTROWS(DATESBETWEEN('Date'[Date], DATE(2024, 3, 10), DATE(2024, 3, 20))), \"open\", COUNTROWS(DATESBETWEEN('Date'[Date], DATE(2024, 12, 1), BLANK())), \"open2\", COUNTROWS(DATESBETWEEN('Date'[Date], BLANK(), DATE(2023, 1, 10))), \"rev\", COUNTROWS(DATESBETWEEN('Date'[Date], DATE(2024, 3, 20), DATE(2024, 3, 10))), \"out\", COUNTROWS(DATESBETWEEN('Date'[Date], DATE(2025, 1, 1), DATE(2025, 2, 1))))", "source": "recorded",
+      "expected": {"columns": ["[n]","[open]","[open2]","[rev]","[out]"], "types": ["int","int","int","int","int"],
+        "rows": [
+          [11,31,10,null,null]
+        ]}},
+    {"id": "time.datesbetween.sales", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), DATESBETWEEN('Date'[Date], DATE(2024, 3, 10), DATE(2024, 3, 20))))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [7]
+        ]}},
+    {"id": "time.datesinperiod", "query": "EVALUATE ROW(\"a\", COUNTROWS(DATESINPERIOD('Date'[Date], DATE(2024, 3, 31), -1, MONTH)), \"b\", COUNTROWS(DATESINPERIOD('Date'[Date], DATE(2024, 1, 31), 1, MONTH)), \"c\", COUNTROWS(DATESINPERIOD('Date'[Date], DATE(2024, 3, 15), -7, DAY)), \"d\", COUNTROWS(DATESINPERIOD('Date'[Date], DATE(2024, 12, 31), -1, YEAR)), \"e\", COUNTROWS(DATESINPERIOD('Date'[Date], DATE(2024, 6, 30), -2, QUARTER)), \"f\", COUNTROWS(DATESINPERIOD('Date'[Date], DATE(2024, 3, 15), 0, DAY)))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]","[d]","[e]","[f]"], "types": ["int","int","int","int","int","int"],
+        "rows": [
+          [31,29,7,366,182,null]
+        ]}},
+    {"id": "time.datesinperiod.sales", "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], 'Date'[MonthNumber], \"r3\", CALCULATE(SUM(Sales[Quantity]), DATESINPERIOD('Date'[Date], MAX('Date'[Date]), -3, MONTH))) ORDER BY 'Date'[Year], 'Date'[MonthNumber]", "source": "recorded",
+      "expected": {"columns": ["Date[Year]","Date[MonthNumber]","[r3]"], "types": ["int","int","int"],
+        "rows": [
+          [2023,1,64],
+          [2023,2,82],
+          [2023,3,119],
+          [2023,4,88],
+          [2023,5,88],
+          [2023,6,70],
+          [2023,7,70],
+          [2023,8,91],
+          [2023,9,111],
+          [2023,10,103],
+          [2023,11,105],
+          [2023,12,84],
+          [2024,1,76],
+          [2024,2,59],
+          [2024,3,70],
+          [2024,4,84],
+          [2024,5,73],
+          [2024,6,59],
+          [2024,7,61],
+          [2024,8,68],
+          [2024,9,107],
+          [2024,10,105],
+          [2024,11,128],
+          [2024,12,110]
+        ]}},
+    {"id": "time.ytd.day", "query": "EVALUATE ROW(\"ytd\", CALCULATE(CALCULATE(SUM(Sales[Quantity]), DATESYTD('Date'[Date])), 'Date'[Date] = DATE(2024, 3, 15)), \"mtd\", CALCULATE(CALCULATE(SUM(Sales[Quantity]), DATESMTD('Date'[Date])), 'Date'[Date] = DATE(2024, 3, 15)), \"qtd\", CALCULATE(CALCULATE(SUM(Sales[Quantity]), DATESQTD('Date'[Date])), 'Date'[Date] = DATE(2024, 5, 20)))", "source": "recorded",
+      "expected": {"columns": ["[ytd]","[mtd]","[qtd]"], "types": ["int","int","int"],
+        "rows": [
+          [62,21,39]
+        ]}},
+    {"id": "time.ytd.rows", "query": "EVALUATE ROW(\"ytd\", COUNTROWS(CALCULATETABLE(DATESYTD('Date'[Date]), 'Date'[Date] = DATE(2024, 3, 15))), \"mtd\", COUNTROWS(CALCULATETABLE(DATESMTD('Date'[Date]), 'Date'[Date] = DATE(2024, 3, 15))), \"qtd\", COUNTROWS(CALCULATETABLE(DATESQTD('Date'[Date]), 'Date'[Date] = DATE(2024, 5, 20))), \"all\", COUNTROWS(DATESYTD('Date'[Date])))", "source": "recorded",
+      "expected": {"columns": ["[ytd]","[mtd]","[qtd]","[all]"], "types": ["int","int","int","int"],
+        "rows": [
+          [75,15,50,366]
+        ]}},
+    {"id": "time.ytd.month", "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], 'Date'[MonthNumber], \"ytd\", CALCULATE(SUM(Sales[Quantity]), DATESYTD('Date'[Date])), \"mtd\", CALCULATE(SUM(Sales[Quantity]), DATESMTD('Date'[Date])), \"qtd\", CALCULATE(SUM(Sales[Quantity]), DATESQTD('Date'[Date]))) ORDER BY 'Date'[Year], 'Date'[MonthNumber]", "source": "recorded",
+      "expected": {"columns": ["Date[Year]","Date[MonthNumber]","[ytd]","[mtd]","[qtd]"], "types": ["int","int","int","int","int"],
+        "rows": [
+          [2023,1,64,64,64],
+          [2023,2,82,18,82],
+          [2023,3,119,37,119],
+          [2023,4,152,33,33],
+          [2023,5,170,18,51],
+          [2023,6,189,19,70],
+          [2023,7,222,33,33],
+          [2023,8,261,39,72],
+          [2023,9,300,39,111],
+          [2023,10,325,25,25],
+          [2023,11,366,41,66],
+          [2023,12,384,18,84],
+          [2024,1,17,17,17],
+          [2024,2,41,24,41],
+          [2024,3,70,29,70],
+          [2024,4,101,31,31],
+          [2024,5,114,13,44],
+          [2024,6,129,15,59],
+          [2024,7,162,33,33],
+          [2024,8,182,20,53],
+          [2024,9,236,54,107],
+          [2024,10,267,31,31],
+          [2024,11,310,43,74],
+          [2024,12,346,36,110]
+        ]}},
+    {"id": "time.ytd.span", "query": "EVALUATE ROW(\"v\", CALCULATE(CALCULATE(COUNTROWS(DATESYTD('Date'[Date])), DATESBETWEEN('Date'[Date], DATE(2024, 3, 10), DATE(2024, 3, 20)))))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [80]
+        ]}},
+    {"id": "time.ytd.fiscal", "query": "EVALUATE ROW(\"a\", CALCULATE(CALCULATE(COUNTROWS(DATESYTD('Date'[Date], \"6/30\")), 'Date'[Date] = DATE(2024, 3, 15))), \"b\", CALCULATE(CALCULATE(COUNTROWS(DATESYTD('Date'[Date], \"6/30\")), 'Date'[Date] = DATE(2024, 8, 15))), \"c\", CALCULATE(CALCULATE(COUNTROWS(DATESYTD('Date'[Date], \"6/30\")), 'Date'[Date] = DATE(2024, 7, 1))), \"d\", CALCULATE(CALCULATE(COUNTROWS(DATESYTD('Date'[Date], \"3/31\")), 'Date'[Date] = DATE(2024, 3, 31))))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]","[d]"], "types": ["int","int","int","int"],
+        "rows": [
+          [259,46,1,366]
+        ]}},
+    {"id": "time.ytd.empty", "query": "EVALUATE ROW(\"v\", COUNTROWS(CALCULATETABLE(DATESYTD('Date'[Date]), 'Date'[Date] = DATE(2030, 1, 1))))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [null]
+        ]}},
+    {"id": "time.total", "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], 'Date'[MonthNumber], \"tytd\", TOTALYTD(SUM(Sales[Quantity]), 'Date'[Date]), \"tmtd\", TOTALMTD(SUM(Sales[Quantity]), 'Date'[Date]), \"tqtd\", TOTALQTD(SUM(Sales[Quantity]), 'Date'[Date]), \"fy\", TOTALYTD(SUM(Sales[Quantity]), 'Date'[Date], \"6/30\")) ORDER BY 'Date'[Year], 'Date'[MonthNumber]", "source": "recorded",
+      "expected": {"columns": ["Date[Year]","Date[MonthNumber]","[tytd]","[tmtd]","[tqtd]","[fy]"], "types": ["int","int","int","int","int","int"],
+        "rows": [
+          [2023,1,64,64,64,64],
+          [2023,2,82,18,82,82],
+          [2023,3,119,37,119,119],
+          [2023,4,152,33,33,152],
+          [2023,5,170,18,51,170],
+          [2023,6,189,19,70,189],
+          [2023,7,222,33,33,33],
+          [2023,8,261,39,72,72],
+          [2023,9,300,39,111,111],
+          [2023,10,325,25,25,136],
+          [2023,11,366,41,66,177],
+          [2023,12,384,18,84,195],
+          [2024,1,17,17,17,212],
+          [2024,2,41,24,41,236],
+          [2024,3,70,29,70,265],
+          [2024,4,101,31,31,296],
+          [2024,5,114,13,44,309],
+          [2024,6,129,15,59,324],
+          [2024,7,162,33,33,33],
+          [2024,8,182,20,53,53],
+          [2024,9,236,54,107,107],
+          [2024,10,267,31,31,138],
+          [2024,11,310,43,74,181],
+          [2024,12,346,36,110,217]
+        ]}},
+    {"id": "time.total.filter", "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], \"ytd\", TOTALYTD(SUM(Sales[Quantity]), 'Date'[Date], Product[Category] = \"Bikes\"), \"ytd2\", TOTALYTD(SUM(Sales[Quantity]), 'Date'[Date], Product[Category] = \"Bikes\", \"6/30\")) ORDER BY 'Date'[Year]", "source": "recorded",
+      "expected": {"columns": ["Date[Year]","[ytd]","[ytd2]"], "types": ["int","int","int"],
+        "rows": [
+          [2023,125,51],
+          [2024,145,91]
+        ]}},
+    {"id": "time.marked", "query": "EVALUATE ROW(\"marked\", CALCULATE(CALCULATE(SUM(Sales[Quantity]), DATESYTD('Date'[Date])), 'Date'[Date] = DATE(2024, 3, 15), 'Date'[MonthNumber] = 3), \"outer\", CALCULATE(CALCULATE(SUM(Sales[Quantity]), 'Date'[Date] = DATE(2024, 3, 15)), 'Date'[MonthNumber] = 5), \"outer2\", CALCULATE(CALCULATE(SUM(Sales[Quantity]), 'Date'[Date] >= DATE(2024, 3, 1)), 'Date'[Year] = 2023), \"outer3\", CALCULATE(CALCULATE(SUM(Sales[Quantity]), 'Date'[Year] = 2024), 'Date'[Date] = DATE(2023, 3, 15)))", "source": "recorded",
+      "expected": {"columns": ["[marked]","[outer]","[outer2]","[outer3]"], "types": ["int","int","int","int"],
+        "rows": [
+          [62,null,305,null]
+        ]}},
+    {"id": "time.marked.table", "query": "EVALUATE ROW(\"a\", CALCULATE(SUM(Sales[Quantity]), FILTER(ALL('Date'[Date]), 'Date'[Date] = DATE(2024, 3, 15))), \"b\", CALCULATE(CALCULATE(SUM(Sales[Quantity]), FILTER(ALL('Date'[Date]), 'Date'[Date] >= DATE(2024, 1, 1))), 'Date'[Year] = 2023), \"c\", CALCULATE(CALCULATE(SUM(Sales[Quantity]), VALUES('Date'[Date])), 'Date'[Year] = 2023), \"d\", CALCULATE(CALCULATE(SUM(Sales[Quantity]), KEEPFILTERS('Date'[Date] >= DATE(2024, 1, 1))), 'Date'[Year] = 2023))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]","[d]"], "types": ["int","int","int","int"],
+        "rows": [
+          [null,346,384,null]
+        ]}},
+    {"id": "time.sameperiod", "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], 'Date'[MonthNumber], \"cur\", SUM(Sales[Quantity]), \"py\", CALCULATE(SUM(Sales[Quantity]), SAMEPERIODLASTYEAR('Date'[Date]))) ORDER BY 'Date'[Year], 'Date'[MonthNumber]", "source": "recorded",
+      "expected": {"columns": ["Date[Year]","Date[MonthNumber]","[cur]","[py]"], "types": ["int","int","int","int"],
+        "rows": [
+          [2023,1,64,null],
+          [2023,2,18,null],
+          [2023,3,37,null],
+          [2023,4,33,null],
+          [2023,5,18,null],
+          [2023,6,19,null],
+          [2023,7,33,null],
+          [2023,8,39,null],
+          [2023,9,39,null],
+          [2023,10,25,null],
+          [2023,11,41,null],
+          [2023,12,18,null],
+          [2024,1,17,64],
+          [2024,2,24,18],
+          [2024,3,29,37],
+          [2024,4,31,33],
+          [2024,5,13,18],
+          [2024,6,15,19],
+          [2024,7,33,33],
+          [2024,8,20,39],
+          [2024,9,54,39],
+          [2024,10,31,25],
+          [2024,11,43,41],
+          [2024,12,36,18]
+        ]}},
+    {"id": "time.sameperiod.leap", "query": "EVALUATE ROW(\"feb\", CALCULATE(CALCULATE(COUNTROWS(SAMEPERIODLASTYEAR('Date'[Date])), DATESBETWEEN('Date'[Date], DATE(2024, 2, 1), DATE(2024, 2, 29)))), \"feb29\", CALCULATE(CALCULATE(COUNTROWS(SAMEPERIODLASTYEAR('Date'[Date])), 'Date'[Date] = DATE(2024, 2, 29))), \"mar\", CALCULATE(CALCULATE(COUNTROWS(SAMEPERIODLASTYEAR('Date'[Date])), DATESBETWEEN('Date'[Date], DATE(2024, 3, 1), DATE(2024, 3, 31)))))", "source": "recorded",
+      "expected": {"columns": ["[feb]","[feb29]","[mar]"], "types": ["int","int","int"],
+        "rows": [
+          [28,1,31]
+        ]}},
+    {"id": "time.dateadd", "query": "EVALUATE ROW(\"feb\", CALCULATE(CALCULATE(COUNTROWS(DATEADD('Date'[Date], 1, MONTH)), DATESBETWEEN('Date'[Date], DATE(2024, 2, 1), DATE(2024, 2, 29)))), \"mar\", CALCULATE(CALCULATE(COUNTROWS(DATEADD('Date'[Date], -1, MONTH)), DATESBETWEEN('Date'[Date], DATE(2024, 3, 1), DATE(2024, 3, 31)))), \"day\", CALCULATE(CALCULATE(COUNTROWS(DATEADD('Date'[Date], 1, DAY)), DATESBETWEEN('Date'[Date], DATE(2024, 3, 1), DATE(2024, 3, 31)))), \"qtr\", CALCULATE(CALCULATE(COUNTROWS(DATEADD('Date'[Date], -1, QUARTER)), DATESBETWEEN('Date'[Date], DATE(2024, 3, 1), DATE(2024, 3, 31)))), \"yr\", CALCULATE(CALCULATE(COUNTROWS(DATEADD('Date'[Date], 1, YEAR)), DATESBETWEEN('Date'[Date], DATE(2023, 3, 1), DATE(2023, 3, 31)))), \"gap\", CALCULATE(CALCULATE(COUNTROWS(DATEADD('Date'[Date], -1, MONTH)), 'Date'[Date] IN {DATE(2024, 3, 5), DATE(2024, 3, 20)})))", "source": "recorded",
+      "expected": {"columns": ["[feb]","[mar]","[day]","[qtr]","[yr]","[gap]"], "types": ["int","int","int","int","int","int"],
+        "rows": [
+          [31,29,31,31,31,2]
+        ]}},
+    {"id": "time.dateadd.full", "query": "EVALUATE ROW(\"q1\", CALCULATE(CALCULATE(COUNTROWS(DATEADD('Date'[Date], -1, QUARTER)), DATESBETWEEN('Date'[Date], DATE(2024, 4, 1), DATE(2024, 6, 30)))), \"y\", CALCULATE(CALCULATE(COUNTROWS(DATEADD('Date'[Date], -1, YEAR)), DATESBETWEEN('Date'[Date], DATE(2024, 1, 1), DATE(2024, 12, 31)))), \"m31\", CALCULATE(CALCULATE(COUNTROWS(DATEADD('Date'[Date], 1, MONTH)), DATESBETWEEN('Date'[Date], DATE(2024, 1, 31), DATE(2024, 1, 31)))))", "source": "recorded",
+      "expected": {"columns": ["[q1]","[y]","[m31]"], "types": ["int","int","int"],
+        "rows": [
+          [91,365,1]
+        ]}},
+    {"id": "time.dateadd.sales", "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], 'Date'[MonthNumber], \"prev\", CALCULATE(SUM(Sales[Quantity]), DATEADD('Date'[Date], -1, MONTH))) ORDER BY 'Date'[Year], 'Date'[MonthNumber]", "source": "recorded",
+      "expected": {"columns": ["Date[Year]","Date[MonthNumber]","[prev]"], "types": ["int","int","int"],
+        "rows": [
+          [2023,2,64],
+          [2023,3,18],
+          [2023,4,37],
+          [2023,5,33],
+          [2023,6,18],
+          [2023,7,19],
+          [2023,8,33],
+          [2023,9,39],
+          [2023,10,39],
+          [2023,11,25],
+          [2023,12,41],
+          [2024,1,18],
+          [2024,2,17],
+          [2024,3,24],
+          [2024,4,29],
+          [2024,5,31],
+          [2024,6,13],
+          [2024,7,15],
+          [2024,8,33],
+          [2024,9,20],
+          [2024,10,54],
+          [2024,11,31],
+          [2024,12,43]
+        ]}},
+    {"id": "time.parallel", "query": "EVALUATE ROW(\"y\", CALCULATE(CALCULATE(COUNTROWS(PARALLELPERIOD('Date'[Date], -1, YEAR)), 'Date'[Date] = DATE(2024, 3, 15))), \"m\", CALCULATE(CALCULATE(COUNTROWS(PARALLELPERIOD('Date'[Date], -1, MONTH)), 'Date'[Date] = DATE(2024, 3, 15))), \"q\", CALCULATE(CALCULATE(COUNTROWS(PARALLELPERIOD('Date'[Date], -1, QUARTER)), 'Date'[Date] = DATE(2024, 3, 15))), \"fwd\", CALCULATE(CALCULATE(COUNTROWS(PARALLELPERIOD('Date'[Date], 1, YEAR)), 'Date'[Date] = DATE(2024, 3, 15))), \"span\", CALCULATE(CALCULATE(COUNTROWS(PARALLELPERIOD('Date'[Date], -1, MONTH)), DATESBETWEEN('Date'[Date], DATE(2024, 3, 10), DATE(2024, 5, 20)))))", "source": "recorded",
+      "expected": {"columns": ["[y]","[m]","[q]","[fwd]","[span]"], "types": ["int","int","int","int","int"],
+        "rows": [
+          [365,29,92,null,90]
+        ]}},
+    {"id": "time.parallel.day", "query": "EVALUATE ROW(\"v\", COUNTROWS(PARALLELPERIOD('Date'[Date], 1, DAY)))", "source": "recorded", "expected": {"error": "Exception calling \"ExecuteReader\" with \"0\" argument(s): \"Query (1, 29) A 'DAY' interval type was specified in the call to function 'PARALLELPERIOD'. This is not supported.\""}},
+    {"id": "time.previous", "query": "EVALUATE ROW(\"day\", CALCULATE(CALCULATE(COUNTROWS(PREVIOUSDAY('Date'[Date])), 'Date'[Date] = DATE(2024, 3, 15))), \"month\", CALCULATE(CALCULATE(COUNTROWS(PREVIOUSMONTH('Date'[Date])), 'Date'[Date] = DATE(2024, 3, 15))), \"quarter\", CALCULATE(CALCULATE(COUNTROWS(PREVIOUSQUARTER('Date'[Date])), 'Date'[Date] = DATE(2024, 3, 15))), \"year\", CALCULATE(CALCULATE(COUNTROWS(PREVIOUSYEAR('Date'[Date])), 'Date'[Date] = DATE(2024, 3, 15))), \"fy\", CALCULATE(CALCULATE(COUNTROWS(PREVIOUSYEAR('Date'[Date], \"6/30\")), 'Date'[Date] = DATE(2024, 3, 15))))", "source": "recorded",
+      "expected": {"columns": ["[day]","[month]","[quarter]","[year]","[fy]"], "types": ["int","int","int","int","int"],
+        "rows": [
+          [1,29,92,365,181]
+        ]}},
+    {"id": "time.next", "query": "EVALUATE ROW(\"day\", CALCULATE(CALCULATE(COUNTROWS(NEXTDAY('Date'[Date])), 'Date'[Date] = DATE(2024, 3, 15))), \"month\", CALCULATE(CALCULATE(COUNTROWS(NEXTMONTH('Date'[Date])), 'Date'[Date] = DATE(2024, 3, 15))), \"quarter\", CALCULATE(CALCULATE(COUNTROWS(NEXTQUARTER('Date'[Date])), 'Date'[Date] = DATE(2024, 3, 15))), \"year\", CALCULATE(CALCULATE(COUNTROWS(NEXTYEAR('Date'[Date])), 'Date'[Date] = DATE(2024, 3, 15))), \"year23\", CALCULATE(CALCULATE(COUNTROWS(NEXTYEAR('Date'[Date])), 'Date'[Date] = DATE(2023, 3, 15))), \"fy\", CALCULATE(CALCULATE(COUNTROWS(NEXTYEAR('Date'[Date], \"6/30\")), 'Date'[Date] = DATE(2023, 3, 15))))", "source": "recorded",
+      "expected": {"columns": ["[day]","[month]","[quarter]","[year]","[year23]","[fy]"], "types": ["int","int","int","int","int","int"],
+        "rows": [
+          [1,30,91,null,366,366]
+        ]}},
+    {"id": "time.previous.span", "query": "EVALUATE ROW(\"day\", CALCULATE(CALCULATE(MAXX(PREVIOUSDAY('Date'[Date]), [Date])), DATESBETWEEN('Date'[Date], DATE(2024, 3, 10), DATE(2024, 3, 20))), \"nday\", CALCULATE(CALCULATE(MAXX(NEXTDAY('Date'[Date]), [Date])), DATESBETWEEN('Date'[Date], DATE(2024, 3, 10), DATE(2024, 3, 20))), \"month\", CALCULATE(CALCULATE(MAXX(PREVIOUSMONTH('Date'[Date]), [Date])), DATESBETWEEN('Date'[Date], DATE(2024, 3, 10), DATE(2024, 5, 20))), \"nmonth\", CALCULATE(CALCULATE(MAXX(NEXTMONTH('Date'[Date]), [Date])), DATESBETWEEN('Date'[Date], DATE(2024, 3, 10), DATE(2024, 5, 20))))", "source": "recorded",
+      "expected": {"columns": ["[day]","[nday]","[month]","[nmonth]"], "types": ["datetime","datetime","datetime","datetime"],
+        "rows": [
+          ["2024-03-09T00:00:00","2024-03-21T00:00:00","2024-02-29T00:00:00","2024-06-30T00:00:00"]
+        ]}},
+    {"id": "time.previous.sales", "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], 'Date'[MonthNumber], \"pm\", CALCULATE(SUM(Sales[Quantity]), PREVIOUSMONTH('Date'[Date])), \"pq\", CALCULATE(SUM(Sales[Quantity]), PREVIOUSQUARTER('Date'[Date])), \"py\", CALCULATE(SUM(Sales[Quantity]), PREVIOUSYEAR('Date'[Date]))) ORDER BY 'Date'[Year], 'Date'[MonthNumber]", "source": "recorded",
+      "expected": {"columns": ["Date[Year]","Date[MonthNumber]","[pm]","[pq]","[py]"], "types": ["int","int","int","int","int"],
+        "rows": [
+          [2023,2,64,null,null],
+          [2023,3,18,null,null],
+          [2023,4,37,119,null],
+          [2023,5,33,119,null],
+          [2023,6,18,119,null],
+          [2023,7,19,70,null],
+          [2023,8,33,70,null],
+          [2023,9,39,70,null],
+          [2023,10,39,111,null],
+          [2023,11,25,111,null],
+          [2023,12,41,111,null],
+          [2024,1,18,84,384],
+          [2024,2,17,84,384],
+          [2024,3,24,84,384],
+          [2024,4,29,70,384],
+          [2024,5,31,70,384],
+          [2024,6,13,70,384],
+          [2024,7,15,59,384],
+          [2024,8,33,59,384],
+          [2024,9,20,59,384],
+          [2024,10,54,107,384],
+          [2024,11,31,107,384],
+          [2024,12,43,107,384]
+        ]}},
+    {"id": "time.firstlast", "query": "EVALUATE ROW(\"first\", CALCULATE(CALCULATE(MAXX(FIRSTDATE('Date'[Date]), [Date])), DATESBETWEEN('Date'[Date], DATE(2024, 3, 10), DATE(2024, 3, 20))), \"last\", CALCULATE(CALCULATE(MAXX(LASTDATE('Date'[Date]), [Date])), DATESBETWEEN('Date'[Date], DATE(2024, 3, 10), DATE(2024, 3, 20))), \"all1\", MAXX(FIRSTDATE('Date'[Date]), [Date]), \"all2\", MAXX(LASTDATE('Date'[Date]), [Date]))", "source": "recorded",
+      "expected": {"columns": ["[first]","[last]","[all1]","[all2]"], "types": ["datetime","datetime","datetime","datetime"],
+        "rows": [
+          ["2024-03-10T00:00:00","2024-03-20T00:00:00","2023-01-01T00:00:00","2024-12-31T00:00:00"]
+        ]}},
+    {"id": "time.firstlast.cols", "query": "EVALUATE FIRSTDATE('Date'[Date])", "source": "recorded",
+      "expected": {"columns": ["Date[Date]"], "types": ["datetime"],
+        "rows": [
+          ["2023-01-01T00:00:00"]
+        ]}},
+    {"id": "time.startof", "query": "EVALUATE ROW(\"sm\", CALCULATE(CALCULATE(MAXX(STARTOFMONTH('Date'[Date]), [Date])), DATESBETWEEN('Date'[Date], DATE(2024, 3, 10), DATE(2024, 3, 20))), \"em\", CALCULATE(CALCULATE(MAXX(ENDOFMONTH('Date'[Date]), [Date])), DATESBETWEEN('Date'[Date], DATE(2024, 3, 10), DATE(2024, 3, 20))), \"sq\", CALCULATE(CALCULATE(MAXX(STARTOFQUARTER('Date'[Date]), [Date])), DATESBETWEEN('Date'[Date], DATE(2024, 3, 10), DATE(2024, 3, 20))), \"sy\", CALCULATE(CALCULATE(MAXX(STARTOFYEAR('Date'[Date]), [Date])), DATESBETWEEN('Date'[Date], DATE(2024, 3, 10), DATE(2024, 3, 20))), \"ey\", CALCULATE(CALCULATE(MAXX(ENDOFYEAR('Date'[Date]), [Date])), DATESBETWEEN('Date'[Date], DATE(2024, 3, 10), DATE(2024, 3, 20))), \"eq\", CALCULATE(CALCULATE(MAXX(ENDOFQUARTER('Date'[Date]), [Date])), DATESBETWEEN('Date'[Date], DATE(2024, 3, 10), DATE(2024, 3, 20))))", "source": "recorded",
+      "expected": {"columns": ["[sm]","[em]","[sq]","[sy]","[ey]","[eq]"], "types": ["datetime","datetime","datetime","datetime","datetime","datetime"],
+        "rows": [
+          ["2024-03-01T00:00:00","2024-03-31T00:00:00","2024-01-01T00:00:00","2024-01-01T00:00:00","2024-12-31T00:00:00","2024-03-31T00:00:00"]
+        ]}},
+    {"id": "time.startof.span", "query": "EVALUATE ROW(\"sm\", CALCULATE(CALCULATE(MAXX(STARTOFMONTH('Date'[Date]), [Date])), DATESBETWEEN('Date'[Date], DATE(2024, 1, 15), DATE(2024, 3, 20))), \"em\", CALCULATE(CALCULATE(MAXX(ENDOFMONTH('Date'[Date]), [Date])), DATESBETWEEN('Date'[Date], DATE(2024, 1, 15), DATE(2024, 3, 20))), \"sy\", CALCULATE(CALCULATE(MAXX(STARTOFYEAR('Date'[Date]), [Date])), DATESBETWEEN('Date'[Date], DATE(2023, 6, 15), DATE(2024, 3, 20))), \"ey\", CALCULATE(CALCULATE(MAXX(ENDOFYEAR('Date'[Date]), [Date])), DATESBETWEEN('Date'[Date], DATE(2023, 6, 15), DATE(2024, 3, 20))), \"all\", MAXX(STARTOFYEAR('Date'[Date]), [Date]), \"allq\", MAXX(STARTOFQUARTER('Date'[Date]), [Date]), \"alle\", MAXX(ENDOFMONTH('Date'[Date]), [Date]))", "source": "recorded",
+      "expected": {"columns": ["[sm]","[em]","[sy]","[ey]","[all]","[allq]","[alle]"], "types": ["datetime","datetime","datetime","datetime","datetime","datetime","datetime"],
+        "rows": [
+          ["2024-01-01T00:00:00","2024-03-31T00:00:00","2023-01-01T00:00:00","2024-12-31T00:00:00","2023-01-01T00:00:00","2023-01-01T00:00:00","2024-12-31T00:00:00"]
+        ]}},
+    {"id": "time.startof.single", "query": "EVALUATE ROW(\"sm\", CALCULATE(CALCULATE(MAXX(STARTOFMONTH('Date'[Date]), [Date])), 'Date'[Date] = DATE(2024, 3, 15)), \"em\", CALCULATE(CALCULATE(MAXX(ENDOFMONTH('Date'[Date]), [Date])), 'Date'[Date] = DATE(2024, 3, 15)), \"sy\", CALCULATE(CALCULATE(MAXX(STARTOFYEAR('Date'[Date]), [Date])), 'Date'[Date] = DATE(2024, 3, 15)))", "source": "recorded",
+      "expected": {"columns": ["[sm]","[em]","[sy]"], "types": ["datetime","datetime","datetime"],
+        "rows": [
+          ["2024-03-01T00:00:00","2024-03-31T00:00:00","2024-01-01T00:00:00"]
+        ]}},
+    {"id": "time.startof.month", "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], 'Date'[MonthNumber], \"sm\", MAXX(STARTOFMONTH('Date'[Date]), [Date]), \"em\", MAXX(ENDOFMONTH('Date'[Date]), [Date]), \"sy\", MAXX(STARTOFYEAR('Date'[Date]), [Date])) ORDER BY 'Date'[Year], 'Date'[MonthNumber]", "source": "recorded",
+      "expected": {"columns": ["Date[Year]","Date[MonthNumber]","[sm]","[em]","[sy]"], "types": ["int","int","datetime","datetime","datetime"],
+        "rows": [
+          [2023,1,"2023-01-01T00:00:00","2023-01-31T00:00:00","2023-01-01T00:00:00"],
+          [2023,2,"2023-02-01T00:00:00","2023-02-28T00:00:00","2023-01-01T00:00:00"],
+          [2023,3,"2023-03-01T00:00:00","2023-03-31T00:00:00","2023-01-01T00:00:00"],
+          [2023,4,"2023-04-01T00:00:00","2023-04-30T00:00:00","2023-01-01T00:00:00"],
+          [2023,5,"2023-05-01T00:00:00","2023-05-31T00:00:00","2023-01-01T00:00:00"],
+          [2023,6,"2023-06-01T00:00:00","2023-06-30T00:00:00","2023-01-01T00:00:00"],
+          [2023,7,"2023-07-01T00:00:00","2023-07-31T00:00:00","2023-01-01T00:00:00"],
+          [2023,8,"2023-08-01T00:00:00","2023-08-31T00:00:00","2023-01-01T00:00:00"],
+          [2023,9,"2023-09-01T00:00:00","2023-09-30T00:00:00","2023-01-01T00:00:00"],
+          [2023,10,"2023-10-01T00:00:00","2023-10-31T00:00:00","2023-01-01T00:00:00"],
+          [2023,11,"2023-11-01T00:00:00","2023-11-30T00:00:00","2023-01-01T00:00:00"],
+          [2023,12,"2023-12-01T00:00:00","2023-12-31T00:00:00","2023-01-01T00:00:00"],
+          [2024,1,"2024-01-01T00:00:00","2024-01-31T00:00:00","2024-01-01T00:00:00"],
+          [2024,2,"2024-02-01T00:00:00","2024-02-29T00:00:00","2024-01-01T00:00:00"],
+          [2024,3,"2024-03-01T00:00:00","2024-03-31T00:00:00","2024-01-01T00:00:00"],
+          [2024,4,"2024-04-01T00:00:00","2024-04-30T00:00:00","2024-01-01T00:00:00"],
+          [2024,5,"2024-05-01T00:00:00","2024-05-31T00:00:00","2024-01-01T00:00:00"],
+          [2024,6,"2024-06-01T00:00:00","2024-06-30T00:00:00","2024-01-01T00:00:00"],
+          [2024,7,"2024-07-01T00:00:00","2024-07-31T00:00:00","2024-01-01T00:00:00"],
+          [2024,8,"2024-08-01T00:00:00","2024-08-31T00:00:00","2024-01-01T00:00:00"],
+          [2024,9,"2024-09-01T00:00:00","2024-09-30T00:00:00","2024-01-01T00:00:00"],
+          [2024,10,"2024-10-01T00:00:00","2024-10-31T00:00:00","2024-01-01T00:00:00"],
+          [2024,11,"2024-11-01T00:00:00","2024-11-30T00:00:00","2024-01-01T00:00:00"],
+          [2024,12,"2024-12-01T00:00:00","2024-12-31T00:00:00","2024-01-01T00:00:00"]
+        ]}},
+    {"id": "time.balance", "query": "EVALUATE ROW(\"cm\", CALCULATE(CLOSINGBALANCEMONTH(SUM(Sales[Quantity]), 'Date'[Date]), DATESBETWEEN('Date'[Date], DATE(2024, 3, 10), DATE(2024, 3, 20))), \"om\", CALCULATE(OPENINGBALANCEMONTH(SUM(Sales[Quantity]), 'Date'[Date]), DATESBETWEEN('Date'[Date], DATE(2024, 3, 10), DATE(2024, 3, 20))), \"cq\", CALCULATE(CLOSINGBALANCEQUARTER(SUM(Sales[Quantity]), 'Date'[Date]), DATESBETWEEN('Date'[Date], DATE(2024, 3, 10), DATE(2024, 3, 20))), \"oq\", CALCULATE(OPENINGBALANCEQUARTER(SUM(Sales[Quantity]), 'Date'[Date]), DATESBETWEEN('Date'[Date], DATE(2024, 3, 10), DATE(2024, 3, 20))), \"cy\", CALCULATE(CLOSINGBALANCEYEAR(SUM(Sales[Quantity]), 'Date'[Date]), DATESBETWEEN('Date'[Date], DATE(2024, 3, 10), DATE(2024, 3, 20))), \"oy\", CALCULATE(OPENINGBALANCEYEAR(SUM(Sales[Quantity]), 'Date'[Date]), DATESBETWEEN('Date'[Date], DATE(2024, 3, 10), DATE(2024, 3, 20))))", "source": "recorded",
+      "expected": {"columns": ["[cm]","[om]","[cq]","[oq]","[cy]","[oy]"], "types": ["int","int","int","int","int","int"],
+        "rows": [
+          [null,null,null,null,8,null]
+        ]}},
+    {"id": "time.balance.month", "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], 'Date'[MonthNumber], \"close\", CLOSINGBALANCEMONTH(SUM(Sales[Quantity]), 'Date'[Date]), \"open\", OPENINGBALANCEMONTH(SUM(Sales[Quantity]), 'Date'[Date]), \"cy\", CLOSINGBALANCEYEAR(SUM(Sales[Quantity]), 'Date'[Date]), \"oy\", OPENINGBALANCEYEAR(SUM(Sales[Quantity]), 'Date'[Date])) ORDER BY 'Date'[Year], 'Date'[MonthNumber]", "source": "recorded",
+      "expected": {"columns": ["Date[Year]","Date[MonthNumber]","[close]","[open]","[cy]","[oy]"], "types": ["int","int","int","int","int","int"],
+        "rows": [
+          [2023,1,6,null,null,null],
+          [2023,2,null,6,null,null],
+          [2023,4,8,null,null,null],
+          [2023,5,null,8,null,null],
+          [2023,7,1,null,null,null],
+          [2023,8,null,1,null,null],
+          [2023,9,2,null,null,null],
+          [2023,10,5,2,null,null],
+          [2023,11,5,5,null,null],
+          [2023,12,null,5,null,null],
+          [2024,1,null,null,8,null],
+          [2024,2,null,null,8,null],
+          [2024,3,null,null,8,null],
+          [2024,4,4,null,8,null],
+          [2024,5,null,4,8,null],
+          [2024,6,null,null,8,null],
+          [2024,7,null,null,8,null],
+          [2024,8,null,null,8,null],
+          [2024,9,2,null,8,null],
+          [2024,10,1,2,8,null],
+          [2024,11,null,1,8,null],
+          [2024,12,8,null,8,null]
+        ]}},
+    {"id": "time.balance.filter", "query": "EVALUATE ROW(\"a\", CALCULATE(CLOSINGBALANCEMONTH(SUM(Sales[Quantity]), 'Date'[Date], Product[Category] = \"Bikes\"), DATESBETWEEN('Date'[Date], DATE(2024, 3, 1), DATE(2024, 3, 31))), \"b\", CALCULATE(CLOSINGBALANCEYEAR(SUM(Sales[Quantity]), 'Date'[Date], ALL(Product), \"6/30\"), DATESBETWEEN('Date'[Date], DATE(2024, 3, 1), DATE(2024, 3, 31))))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]"], "types": ["int","int"],
+        "rows": [
+          [null,null]
+        ]}},
+    {"id": "time.nonblank", "query": "EVALUATE ROW(\"first\", MAXX(FIRSTNONBLANK('Date'[Date], CALCULATE(SUM(Sales[Quantity]))), [Date]), \"last\", MAXX(LASTNONBLANK('Date'[Date], CALCULATE(SUM(Sales[Quantity]))), [Date]), \"fv\", FIRSTNONBLANKVALUE('Date'[Date], SUM(Sales[Quantity])), \"lv\", LASTNONBLANKVALUE('Date'[Date], SUM(Sales[Quantity])))", "source": "recorded",
+      "expected": {"columns": ["[first]","[last]","[fv]","[lv]"], "types": ["datetime","datetime","int","int"],
+        "rows": [
+          ["2023-01-02T00:00:00","2024-12-31T00:00:00",4,8]
+        ]}},
+    {"id": "time.nonblank.ctx", "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], \"first\", MAXX(FIRSTNONBLANK('Date'[Date], CALCULATE(COUNTROWS(Sales))), [Date]), \"last\", MAXX(LASTNONBLANK('Date'[Date], CALCULATE(COUNTROWS(Sales))), [Date]), \"lv\", LASTNONBLANKVALUE('Date'[Date], CALCULATE(COUNTROWS(Sales)))) ORDER BY 'Date'[Year]", "source": "recorded",
+      "expected": {"columns": ["Date[Year]","[first]","[last]","[lv]"], "types": ["int","datetime","datetime","int"],
+        "rows": [
+          [2023,"2023-01-02T00:00:00","2023-12-29T00:00:00",1],
+          [2024,"2024-01-01T00:00:00","2024-12-31T00:00:00",3]
+        ]}},
+    {"id": "time.nonblank.other", "query": "EVALUATE ROW(\"p\", MAXX(FIRSTNONBLANK(Product[Product], CALCULATE(SUM(Sales[Quantity]))), Product[Product]), \"q\", MAXX(LASTNONBLANK(Product[ListPrice], CALCULATE(SUM(Sales[Quantity]))), Product[ListPrice]), \"none\", FIRSTNONBLANKVALUE(Product[Product], BLANK()))", "source": "recorded",
+      "expected": {"columns": ["[p]","[q]","[none]"], "types": ["text","real","int"],
+        "rows": [
+          ["Bottle",1200,null]
+        ]}},
+    {"id": "time.calendar", "query": "EVALUATE ROW(\"a\", COUNTROWS(CALENDAR(DATE(2024, 1, 1), DATE(2024, 1, 5))), \"b\", MAXX(CALENDAR(DATE(2024, 1, 1), DATE(2024, 2, 29)), [Date]), \"c\", COUNTROWS(CALENDAR(DATE(2024, 1, 1), DATE(2024, 1, 1))), \"d\", COUNTROWS(CALENDAR(\"2024-01-01\", \"2024-01-31\")))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]","[d]"], "types": ["int","datetime","int","int"],
+        "rows": [
+          [5,"2024-02-29T00:00:00",1,31]
+        ]}},
+    {"id": "time.calendar.rev", "query": "EVALUATE ROW(\"a\", COUNTROWS(CALENDAR(DATE(2024, 1, 5), DATE(2024, 1, 1))))", "source": "recorded", "expected": {"error": "Exception calling \"ExecuteReader\" with \"0\" argument(s): \"Query (1, 29) The start date in Calendar function can not be later than the end date.\""}},
+    {"id": "time.calendar.cols", "query": "EVALUATE CALENDAR(DATE(2024, 1, 30), DATE(2024, 2, 2))", "source": "recorded",
+      "expected": {"columns": ["[Date]"], "types": ["datetime"],
+        "rows": [
+          ["2024-01-30T00:00:00"],
+          ["2024-01-31T00:00:00"],
+          ["2024-02-01T00:00:00"],
+          ["2024-02-02T00:00:00"]
+        ]}},
+    {"id": "time.calendarauto", "query": "EVALUATE ROW(\"n\", COUNTROWS(CALENDARAUTO()), \"lo\", MINX(CALENDARAUTO(), [Date]), \"hi\", MAXX(CALENDARAUTO(), [Date]), \"fylo\", MINX(CALENDARAUTO(6), [Date]), \"fyhi\", MAXX(CALENDARAUTO(6), [Date]), \"fyn\", COUNTROWS(CALENDARAUTO(6)))", "source": "recorded",
+      "expected": {"columns": ["[n]","[lo]","[hi]","[fylo]","[fyhi]","[fyn]"], "types": ["int","datetime","datetime","datetime","datetime","int"],
+        "rows": [
+          [20454,"1970-01-01T00:00:00","2025-12-31T00:00:00","1970-07-01T00:00:00","2025-06-30T00:00:00",20089]
+        ]}},
+    {"id": "time.userel", "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], \"ship\", CALCULATE(SUM(Sales[Quantity]), USERELATIONSHIP(Sales[ShipDate], 'Date'[Date]), DATESYTD('Date'[Date])), \"order\", CALCULATE(SUM(Sales[Quantity]), DATESYTD('Date'[Date]))) ORDER BY 'Date'[Year]", "source": "recorded",
+      "expected": {"columns": ["Date[Year]","[ship]","[order]"], "types": ["int","int","int"],
+        "rows": [
+          [2023,375,384],
+          [2024,340,346]
+        ]}},
+    {"id": "time.quarter.sales", "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], 'Date'[Quarter], \"ytd\", CALCULATE(SUM(Sales[Quantity]), DATESYTD('Date'[Date])), \"prevq\", CALCULATE(SUM(Sales[Quantity]), PREVIOUSQUARTER('Date'[Date]))) ORDER BY 'Date'[Year], 'Date'[Quarter]", "source": "recorded",
+      "expected": {"columns": ["Date[Year]","Date[Quarter]","[ytd]","[prevq]"], "types": ["int","text","int","int"],
+        "rows": [
+          [2023,"Q1",119,null],
+          [2023,"Q2",189,119],
+          [2023,"Q3",300,70],
+          [2023,"Q4",384,111],
+          [2024,"Q1",70,84],
+          [2024,"Q2",129,70],
+          [2024,"Q3",236,59],
+          [2024,"Q4",346,107]
+        ]}},
+    {"id": "time.other.datecol", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), DATESBETWEEN(Sales[OrderDate], DATE(2024, 3, 1), DATE(2024, 3, 31))), \"w\", CALCULATE(SUM(Sales[Quantity]), SAMEPERIODLASTYEAR(Sales[OrderDate])))", "source": "recorded",
+      "expected": {"columns": ["[v]","[w]"], "types": ["int","int"],
+        "rows": [
+          [29,384]
+        ]}}
   ]
 }

@@ -137,7 +137,8 @@ fn run<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], env: &Env<'a>) 
     let x0 = a.first().cloned().flatten();
     let n0 = || num(&a.first().cloned().unwrap_or(None));
     let n1 = || num(&a.get(1).cloned().unwrap_or(None));
-    match name {
+    let blank_in = a.iter().any(|v| matches!(v, Some(Value::Blank)));
+    let out: VResult<Value> = match name {
         "PI" => Ok(Value::Double(std::f64::consts::PI)),
         "ABS" => {
             let v = x0.unwrap_or(Value::Blank).to_number()?;
@@ -250,6 +251,9 @@ fn run<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], env: &Env<'a>) 
         "INT" => {
             let v = x0.unwrap_or(Value::Blank).to_number()?;
             let x = v.as_f64().unwrap_or(0.0).floor();
+            if matches!(v, Value::Currency(_)) {
+                return Ok(like(&v, x));
+            }
             Ok(if x.abs() < 9.0e15 { Value::Int(x as i64) } else { Value::Double(x) })
         }
         "TRUNC" => {
@@ -275,25 +279,47 @@ fn run<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], env: &Env<'a>) 
             })
         }
         "CEILING" | "FLOOR" | "ISO.CEILING" => {
+            // recorded from Power BI: a significance of 0 gives 0 (FLOOR: division by zero), a positive number with a
+            // negative significance is an error, and a negative number with a negative significance rounds away
+            // from zero for CEILING and toward zero for FLOOR; the result is an Integer when it and the
+            // significance are whole
             let v = x0.unwrap_or(Value::Blank).to_number()?;
             let x = v.as_f64().unwrap_or(0.0);
-            let sig = if a.len() > 1 && a[1].is_some() { n1()?.abs() } else { 1.0 };
-            if sig == 0.0 {
-                return Ok(Value::Double(0.0));
+            let sig_raw = if a.len() > 1 && a[1].is_some() { n1()? } else { 1.0 };
+            if sig_raw == 0.0 {
+                if name == "FLOOR" {
+                    return Err(err(ErrorCode::Evaluation, "Division by zero has occurred when evaluating function 'FLOOR'."));
+                }
+                return Ok(Value::Int(0));
             }
-            let q = norm(x / sig);
-            let r = if name == "FLOOR" { q.floor() } else { q.ceil() } * sig;
-            Ok(like(&v, r))
+            if x > 0.0 && sig_raw < 0.0 && name != "ISO.CEILING" {
+                return Err(domain(name, "a positive number cannot have a negative significance"));
+            }
+            let s = sig_raw.abs();
+            let q = norm(x.abs() / s);
+            let neg_sig = sig_raw < 0.0 && name != "ISO.CEILING";
+            let r = if name == "FLOOR" {
+                if x >= 0.0 { q.floor() * s } else if neg_sig { -(q.floor() * s) } else { -(q.ceil() * s) }
+            } else if x >= 0.0 {
+                q.ceil() * s
+            } else if neg_sig {
+                -(q.ceil() * s)
+            } else {
+                -(q.floor() * s)
+            };
+            Ok(if r.fract() == 0.0 && s.fract() == 0.0 && r.abs() < 9.0e15 { Value::Int(r as i64) } else if matches!(v, Value::Currency(_)) { like(&v, r) } else { Value::Double(r) })
         }
         "MROUND" => {
             let (x, m) = (n0()?, n1()?);
             if m == 0.0 {
-                return Ok(Value::Double(0.0));
+                // recorded from Power BI
+                return Ok(Value::Int(0));
             }
             if x * m < 0.0 {
                 return Err(domain(name, "the number and multiple must have the same sign"));
             }
-            Ok(Value::Double((norm(x / m)).round() * m))
+            let r = norm(x / m).round() * m;
+            Ok(if r.fract() == 0.0 && m.fract() == 0.0 && r.abs() < 9.0e15 { Value::Int(r as i64) } else { Value::Double(r) })
         }
         "EVEN" | "ODD" => {
             let x = n0()?;
@@ -382,6 +408,12 @@ fn run<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], env: &Env<'a>) 
             Ok(Value::Int(lo + (next_random() * (hi - lo + 1) as f64).floor() as i64))
         }
         _ => unreachable!("{name}"),
+    };
+    // recorded from Power BI: with a BLANK argument a result of 0 is returned as BLANK (SIN(BLANK()) is BLANK,
+    // COS(BLANK()) is 1, EXP(BLANK()) is 1, FACT(BLANK()) is 1); LCM keeps its 0
+    match out {
+        Ok(v) if blank_in && name != "LCM" && v.as_f64() == Some(0.0) && !matches!(v, Value::Blank | Value::Bool(_) | Value::Str(_) | Value::DateTime(_)) => Ok(Value::Blank),
+        other => other,
     }
 }
 

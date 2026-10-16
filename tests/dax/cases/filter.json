@@ -1,48 +1,260 @@
 {
   "area": "filter",
   "fixture": "tests/dax/fixtures",
+  "recordedWith": "local Analysis Services of Power BI Desktop 2.158.1304.0",
   "cases": [
-    {"id": "filter.allselected.slicer", "query": "EVALUATE SUMMARIZECOLUMNS(Product[Category], FILTER(ALL(Product[Category]), Product[Category] IN {\"Bikes\", \"Accessories\"}), \"qty\", SUM(Sales[Quantity]), \"sel\", CALCULATE(SUM(Sales[Quantity]), ALLSELECTED(Product[Category])), \"all\", CALCULATE(SUM(Sales[Quantity]), ALL(Product[Category])))", "source": "pending", "expected": null},
-    {"id": "filter.allselected.noouter", "query": "EVALUATE SUMMARIZECOLUMNS(Product[Category], \"sel\", CALCULATE(SUM(Sales[Quantity]), ALLSELECTED(Product[Category])))", "source": "pending", "expected": null},
-    {"id": "filter.allselected.calculate", "query": "EVALUATE ROW(\"v\", CALCULATE(CALCULATE(SUM(Sales[Quantity]), ALLSELECTED(Product[Category])), Product[Category] = \"Bikes\"))", "source": "pending", "expected": null},
-    {"id": "filter.allselected.rowctx", "query": "EVALUATE ADDCOLUMNS(VALUES(Product[Category]), \"v\", CALCULATE(SUM(Sales[Quantity]), ALLSELECTED(Product[Category])))", "source": "pending", "expected": null},
-    {"id": "filter.allselected.noargs", "query": "EVALUATE SUMMARIZECOLUMNS(Product[Category], Customer[Country], FILTER(ALL(Customer[Country]), Customer[Country] = \"France\"), \"sel\", CALCULATE(SUM(Sales[Quantity]), ALLSELECTED()))", "source": "pending", "expected": null},
-    {"id": "filter.allselected.table", "query": "EVALUATE SUMMARIZECOLUMNS(Product[Category], FILTER(ALL(Product[Category]), Product[Category] IN {\"Bikes\", \"Accessories\"}), \"n\", COUNTROWS(ALLSELECTED(Product)), \"m\", COUNTROWS(ALLSELECTED(Product[Category])))", "source": "pending", "expected": null},
-    {"id": "filter.allselected.share", "query": "EVALUATE SUMMARIZECOLUMNS(Product[Category], FILTER(ALL(Product[Category]), Product[Category] IN {\"Bikes\", \"Accessories\"}), \"share\", DIVIDE(SUM(Sales[Quantity]), CALCULATE(SUM(Sales[Quantity]), ALLSELECTED(Product[Category]))))", "source": "pending", "expected": null},
-    {"id": "filter.allcrossfiltered", "query": "EVALUATE ROW(\"a\", CALCULATE(CALCULATE(SUM(Sales[Quantity]), ALLCROSSFILTERED(Product)), Product[Color] = \"Red\"), \"b\", CALCULATE(CALCULATE(SUM(Sales[Quantity]), ALLCROSSFILTERED(Product)), Customer[Country] = \"France\"), \"c\", CALCULATE(CALCULATE(SUM(Sales[Quantity]), ALL(Product)), Customer[Country] = \"France\"))", "source": "pending", "expected": null},
-    {"id": "filter.filters", "query": "EVALUATE ROW(\"a\", COUNTROWS(FILTERS(Product[Color])), \"b\", CALCULATE(COUNTROWS(FILTERS(Product[Color])), Product[Category] = \"Bikes\"), \"c\", CALCULATE(COUNTROWS(VALUES(Product[Color])), Product[Category] = \"Bikes\"), \"d\", CALCULATE(COUNTROWS(FILTERS(Product[Color])), Product[Color] IN {\"Red\", \"Blue\"}))", "source": "pending", "expected": null},
-    {"id": "filter.nonvisual", "query": "EVALUATE ROW(\"a\", CALCULATE(NONVISUAL(SUM(Sales[Quantity])), Product[Color] = \"Red\"), \"b\", EVALUATEANDLOG(5))", "source": "pending", "expected": null},
-    {"id": "table.generateseries", "query": "EVALUATE ROW(\"a\", COUNTROWS(GENERATESERIES(1, 5)), \"b\", SUMX(GENERATESERIES(1, 5), [Value]), \"c\", COUNTROWS(GENERATESERIES(1, 2, 0.5)), \"d\", SUMX(GENERATESERIES(1, 2, 0.5), [Value]), \"e\", COUNTROWS(GENERATESERIES(5, 1, -1)), \"f\", COUNTROWS(GENERATESERIES(5, 1)), \"g\", COUNTROWS(GENERATESERIES(DATE(2024, 1, 1), DATE(2024, 1, 5))), \"h\", MAXX(GENERATESERIES(DATE(2024, 1, 1), DATE(2024, 1, 5)), [Value]))", "source": "pending", "expected": null},
-    {"id": "table.generateseries.rows", "query": "EVALUATE GENERATESERIES(1, 3)", "source": "pending", "expected": null},
-    {"id": "table.generateseries.real", "query": "EVALUATE GENERATESERIES(0, 1, 0.25)", "source": "pending", "expected": null},
-    {"id": "table.generateseries.int", "query": "EVALUATE GENERATESERIES(1.0, 3)", "source": "pending", "expected": null},
-    {"id": "table.union", "query": "EVALUATE ROW(\"a\", COUNTROWS(UNION({1, 2}, {2, 3})), \"b\", COUNTROWS(DISTINCT(UNION({1, 2}, {2, 3}))), \"c\", COUNTROWS(INTERSECT({1, 2, 2, 3}, {2, 3, 4})), \"d\", COUNTROWS(EXCEPT({1, 2, 2, 3}, {2})), \"e\", SUMX(EXCEPT({1, 2, 2, 3}, {2}), [Value]))", "source": "pending", "expected": null},
-    {"id": "table.union.columns", "query": "EVALUATE UNION(SELECTCOLUMNS(FILTER(Product, Product[Category] = \"Bikes\"), \"a\", Product[Product]), SELECTCOLUMNS(FILTER(Product, Product[Category] = \"Clothing\"), \"b\", Product[Product]))", "source": "pending", "expected": null},
-    {"id": "table.union.width", "query": "EVALUATE UNION({1}, ROW(\"a\", 1, \"b\", 2))", "source": "pending", "expected": null},
-    {"id": "table.intersect.lineage", "query": "EVALUATE ROW(\"a\", CALCULATE(SUM(Sales[Quantity]), INTERSECT(VALUES(Product[Category]), FILTER(VALUES(Product[Category]), Product[Category] = \"Bikes\"))))", "source": "pending", "expected": null},
-    {"id": "table.generate", "query": "EVALUATE ROW(\"a\", COUNTROWS(GENERATE({1, 2}, {10, 20})), \"b\", SUMX(GENERATE(SELECTCOLUMNS({1, 2}, \"a\", [Value]), SELECTCOLUMNS({10, 20}, \"b\", [Value])), [a] * [b]))", "source": "pending", "expected": null},
-    {"id": "table.generate.all", "query": "EVALUATE GENERATEALL(SELECTCOLUMNS({1, 2}, \"a\", [Value]), FILTER(SELECTCOLUMNS({10, 20}, \"b\", [Value]), [b] > [a] * 10))", "source": "pending", "expected": null},
-    {"id": "table.generate.inner", "query": "EVALUATE GENERATE(SELECTCOLUMNS({1, 2}, \"a\", [Value]), FILTER(SELECTCOLUMNS({10, 20}, \"b\", [Value]), [b] > [a] * 10))", "source": "pending", "expected": null},
-    {"id": "table.naturaljoin", "query": "EVALUATE NATURALINNERJOIN(SELECTCOLUMNS(Product, \"ProductKey\", Product[ProductKey], \"Color\", Product[Color]), SELECTCOLUMNS(FILTER(Product, Product[Category] = \"Clothing\"), \"ProductKey\", Product[ProductKey], \"Cat\", Product[Category]))", "source": "pending", "expected": null},
-    {"id": "table.naturalleft", "query": "EVALUATE NATURALLEFTOUTERJOIN(SELECTCOLUMNS(Product, \"ProductKey\", Product[ProductKey]), SELECTCOLUMNS(FILTER(Product, Product[Category] = \"Clothing\"), \"ProductKey\", Product[ProductKey], \"X\", Product[Product]))", "source": "pending", "expected": null},
-    {"id": "table.naturaljoin.nocommon", "query": "EVALUATE NATURALINNERJOIN(SELECTCOLUMNS(Product, \"a\", Product[Product]), SELECTCOLUMNS(Customer, \"b\", Customer[Customer]))", "source": "pending", "expected": null},
-    {"id": "table.naturaljoin.related", "query": "EVALUATE NATURALINNERJOIN(SELECTCOLUMNS(Sales, \"ProductKey\", Sales[ProductKey], \"Qty\", Sales[Quantity]), SELECTCOLUMNS(Product, \"ProductKey\", Product[ProductKey], \"Name\", Product[Product]))", "source": "pending", "expected": null},
-    {"id": "table.topn", "query": "EVALUATE TOPN(2, Product, Product[ListPrice])", "source": "pending", "expected": null},
-    {"id": "table.topn.asc", "query": "EVALUATE TOPN(2, Product, Product[ListPrice], ASC)", "source": "pending", "expected": null},
-    {"id": "table.topn.ties", "query": "EVALUATE TOPN(1, Product, Product[Category], ASC)", "source": "pending", "expected": null},
-    {"id": "table.topn.two", "query": "EVALUATE TOPN(2, Product, Product[Category], ASC, Product[ListPrice], DESC)", "source": "pending", "expected": null},
-    {"id": "table.topn.zero", "query": "EVALUATE ROW(\"a\", COUNTROWS(TOPN(0, Product, Product[ListPrice])), \"b\", COUNTROWS(TOPN(-1, Product, Product[ListPrice])), \"c\", COUNTROWS(TOPN(50, Product, Product[ListPrice])))", "source": "pending", "expected": null},
-    {"id": "table.topn.measure", "query": "EVALUATE TOPN(3, VALUES(Customer[Customer]), CALCULATE(SUM(Sales[Quantity])), DESC)", "source": "pending", "expected": null},
-    {"id": "table.topn.numorder", "query": "EVALUATE TOPN(2, Product, Product[ListPrice], 0)", "source": "pending", "expected": null},
-    {"id": "table.groupby", "query": "EVALUATE GROUPBY(Product, Product[Category], \"total\", SUMX(CURRENTGROUP(), Product[ListPrice]), \"n\", COUNTX(CURRENTGROUP(), Product[ListPrice]))", "source": "pending", "expected": null},
-    {"id": "table.groupby.mat", "query": "EVALUATE GROUPBY(ADDCOLUMNS(Product, \"double\", Product[ListPrice] * 2), Product[Category], \"d\", SUMX(CURRENTGROUP(), [double]))", "source": "pending", "expected": null},
-    {"id": "table.groupby.current", "query": "EVALUATE ROW(\"a\", COUNTROWS(CURRENTGROUP()))", "source": "pending", "expected": null},
-    {"id": "table.datatable", "query": "EVALUATE DATATABLE(\"a\", INTEGER, \"b\", STRING, \"c\", DOUBLE, \"d\", BOOLEAN, \"e\", DATETIME, \"f\", CURRENCY, {{1, \"x\", 1.5, TRUE, \"2024-01-01\", 2.5}, {2, \"y\", 2, FALSE, \"2024-06-01 13:00\", 3}})", "source": "pending", "expected": null},
-    {"id": "table.datatable.coerce", "query": "EVALUATE DATATABLE(\"a\", INTEGER, \"b\", DOUBLE, {{\"1\", \"1.5\"}, {2.6, 2}})", "source": "pending", "expected": null},
-    {"id": "table.summarize.ext", "query": "EVALUATE SUMMARIZE(Product, Product[Category], \"qty\", SUM(Sales[Quantity]), \"n\", COUNTROWS(Product))", "source": "pending", "expected": null},
-    {"id": "table.summarize.related", "query": "EVALUATE SUMMARIZE(Sales, Product[Category], Customer[Country], \"qty\", SUM(Sales[Quantity]))", "source": "pending", "expected": null},
-    {"id": "table.summarize.groupsonly", "query": "EVALUATE SUMMARIZE(Sales, Product[Category])", "source": "pending", "expected": null},
-    {"id": "table.summarize.filtered", "query": "EVALUATE SUMMARIZE(FILTER(Sales, Sales[Quantity] > 3), Product[Category], \"rows\", COUNTROWS(Sales))", "source": "pending", "expected": null},
-    {"id": "table.row.nested", "query": "EVALUATE ROW(\"a\", COUNTROWS(ADDCOLUMNS(VALUES(Product[Category]), \"q\", CALCULATE(SUM(Sales[Quantity])))))", "source": "pending", "expected": null}
+    {"id": "filter.allselected.slicer", "query": "EVALUATE SUMMARIZECOLUMNS(Product[Category], FILTER(ALL(Product[Category]), Product[Category] IN {\"Bikes\", \"Accessories\"}), \"qty\", SUM(Sales[Quantity]), \"sel\", CALCULATE(SUM(Sales[Quantity]), ALLSELECTED(Product[Category])), \"all\", CALCULATE(SUM(Sales[Quantity]), ALL(Product[Category])))", "source": "recorded",
+      "expected": {"columns": ["Product[Category]","[qty]","[sel]","[all]"], "types": ["text","int","int","int"],
+        "rows": [
+          ["Bikes",270,548,730],
+          ["Accessories",278,548,730]
+        ]}},
+    {"id": "filter.allselected.noouter", "query": "EVALUATE SUMMARIZECOLUMNS(Product[Category], \"sel\", CALCULATE(SUM(Sales[Quantity]), ALLSELECTED(Product[Category])))", "source": "recorded",
+      "expected": {"columns": ["Product[Category]","[sel]"], "types": ["text","int"],
+        "rows": [
+          ["Bikes",730],
+          ["Accessories",730],
+          ["Clothing",730],
+          [null,730]
+        ]}},
+    {"id": "filter.allselected.calculate", "query": "EVALUATE ROW(\"v\", CALCULATE(CALCULATE(SUM(Sales[Quantity]), ALLSELECTED(Product[Category])), Product[Category] = \"Bikes\"))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [270]
+        ]}},
+    {"id": "filter.allselected.rowctx", "query": "EVALUATE ADDCOLUMNS(VALUES(Product[Category]), \"v\", CALCULATE(SUM(Sales[Quantity]), ALLSELECTED(Product[Category])))", "source": "recorded",
+      "expected": {"columns": ["Product[Category]","[v]"], "types": ["text","int"],
+        "rows": [
+          ["Bikes",730],
+          ["Accessories",730],
+          ["Clothing",730],
+          [null,730]
+        ]}},
+    {"id": "filter.allselected.noargs", "query": "EVALUATE SUMMARIZECOLUMNS(Product[Category], Customer[Country], FILTER(ALL(Customer[Country]), Customer[Country] = \"France\"), \"sel\", CALCULATE(SUM(Sales[Quantity]), ALLSELECTED()))", "source": "recorded",
+      "expected": {"columns": ["Product[Category]","Customer[Country]","[sel]"], "types": ["text","text","int"],
+        "rows": [
+          ["Bikes","France",159],
+          ["Accessories","France",159],
+          ["Clothing","France",159],
+          [null,"France",159]
+        ]}},
+    {"id": "filter.allselected.table", "query": "EVALUATE SUMMARIZECOLUMNS(Product[Category], FILTER(ALL(Product[Category]), Product[Category] IN {\"Bikes\", \"Accessories\"}), \"n\", COUNTROWS(ALLSELECTED(Product)), \"m\", COUNTROWS(ALLSELECTED(Product[Category])))", "source": "recorded",
+      "expected": {"columns": ["Product[Category]","[n]","[m]"], "types": ["text","int","int"],
+        "rows": [
+          ["Bikes",6,2],
+          ["Accessories",6,2]
+        ]}},
+    {"id": "filter.allselected.share", "query": "EVALUATE SUMMARIZECOLUMNS(Product[Category], FILTER(ALL(Product[Category]), Product[Category] IN {\"Bikes\", \"Accessories\"}), \"share\", DIVIDE(SUM(Sales[Quantity]), CALCULATE(SUM(Sales[Quantity]), ALLSELECTED(Product[Category]))))", "source": "recorded",
+      "expected": {"columns": ["Product[Category]","[share]"], "types": ["text","real"],
+        "rows": [
+          ["Bikes",0.4927007299270073],
+          ["Accessories",0.5072992700729927]
+        ]}},
+    {"id": "filter.allcrossfiltered", "query": "EVALUATE ROW(\"a\", CALCULATE(CALCULATE(SUM(Sales[Quantity]), ALLCROSSFILTERED(Product)), Product[Color] = \"Red\"), \"b\", CALCULATE(CALCULATE(SUM(Sales[Quantity]), ALLCROSSFILTERED(Product)), Customer[Country] = \"France\"), \"c\", CALCULATE(CALCULATE(SUM(Sales[Quantity]), ALL(Product)), Customer[Country] = \"France\"))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]"], "types": ["int","int","int"],
+        "rows": [
+          [730,159,159]
+        ]}},
+    {"id": "filter.filters", "query": "EVALUATE ROW(\"a\", COUNTROWS(FILTERS(Product[Color])), \"b\", CALCULATE(COUNTROWS(FILTERS(Product[Color])), Product[Category] = \"Bikes\"), \"c\", CALCULATE(COUNTROWS(VALUES(Product[Color])), Product[Category] = \"Bikes\"), \"d\", CALCULATE(COUNTROWS(FILTERS(Product[Color])), Product[Color] IN {\"Red\", \"Blue\"}))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]","[d]"], "types": ["int","int","int","int"],
+        "rows": [
+          [6,6,3,2]
+        ]}},
+    {"id": "filter.nonvisual", "query": "EVALUATE ROW(\"a\", CALCULATE(NONVISUAL(SUM(Sales[Quantity])), Product[Color] = \"Red\"), \"b\", EVALUATEANDLOG(5))", "source": "recorded", "expected": {"error": "Exception calling \"ExecuteReader\" with \"0\" argument(s): \"Query (1, 29) 'NONVISUAL' function can only be used as a value filter of SUMMARIZECOLUMNS.\""}},
+    {"id": "table.generateseries", "query": "EVALUATE ROW(\"a\", COUNTROWS(GENERATESERIES(1, 5)), \"b\", SUMX(GENERATESERIES(1, 5), [Value]), \"c\", COUNTROWS(GENERATESERIES(1, 2, 0.5)), \"d\", SUMX(GENERATESERIES(1, 2, 0.5), [Value]), \"e\", COUNTROWS(GENERATESERIES(5, 1, -1)), \"f\", COUNTROWS(GENERATESERIES(5, 1)), \"g\", COUNTROWS(GENERATESERIES(DATE(2024, 1, 1), DATE(2024, 1, 5))), \"h\", MAXX(GENERATESERIES(DATE(2024, 1, 1), DATE(2024, 1, 5)), [Value]))", "source": "recorded", "expected": {"error": "Exception calling \"ExecuteReader\" with \"0\" argument(s): \"Query (1, 199) GenerateSeries function cannot have an IncrementValue less than or equal to zero.\""}},
+    {"id": "table.generateseries.rows", "query": "EVALUATE GENERATESERIES(1, 3)", "source": "recorded",
+      "expected": {"columns": ["[Value]"], "types": ["int"],
+        "rows": [
+          [1],
+          [2],
+          [3]
+        ]}},
+    {"id": "table.generateseries.real", "query": "EVALUATE GENERATESERIES(0, 1, 0.25)", "source": "recorded",
+      "expected": {"columns": ["[Value]"], "types": ["real"],
+        "rows": [
+          [0],
+          [0.25],
+          [0.5],
+          [0.75],
+          [1]
+        ]}},
+    {"id": "table.generateseries.int", "query": "EVALUATE GENERATESERIES(1.0, 3)", "source": "recorded",
+      "expected": {"columns": ["[Value]"], "types": ["real"],
+        "rows": [
+          [1],
+          [2],
+          [3]
+        ]}},
+    {"id": "table.union", "query": "EVALUATE ROW(\"a\", COUNTROWS(UNION({1, 2}, {2, 3})), \"b\", COUNTROWS(DISTINCT(UNION({1, 2}, {2, 3}))), \"c\", COUNTROWS(INTERSECT({1, 2, 2, 3}, {2, 3, 4})), \"d\", COUNTROWS(EXCEPT({1, 2, 2, 3}, {2})), \"e\", SUMX(EXCEPT({1, 2, 2, 3}, {2}), [Value]))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]","[d]","[e]"], "types": ["int","int","int","int","int"],
+        "rows": [
+          [4,3,3,2,4]
+        ]}},
+    {"id": "table.union.columns", "query": "EVALUATE UNION(SELECTCOLUMNS(FILTER(Product, Product[Category] = \"Bikes\"), \"a\", Product[Product]), SELECTCOLUMNS(FILTER(Product, Product[Category] = \"Clothing\"), \"b\", Product[Product]))", "source": "recorded",
+      "expected": {"columns": ["[a]"], "types": ["text"],
+        "rows": [
+          ["Trail Bike"],
+          ["City Bike"],
+          ["Kids Bike"],
+          ["Jersey"],
+          ["Gloves"],
+          ["Rain Jacket"]
+        ]}},
+    {"id": "table.union.width", "query": "EVALUATE UNION({1}, ROW(\"a\", 1, \"b\", 2))", "source": "recorded", "expected": {"error": "Exception calling \"ExecuteReader\" with \"0\" argument(s): \"Query (1, 10) Each table argument of 'UNION' must have the same number of columns.\""}},
+    {"id": "table.intersect.lineage", "query": "EVALUATE ROW(\"a\", CALCULATE(SUM(Sales[Quantity]), INTERSECT(VALUES(Product[Category]), FILTER(VALUES(Product[Category]), Product[Category] = \"Bikes\"))))", "source": "recorded",
+      "expected": {"columns": ["[a]"], "types": ["int"],
+        "rows": [
+          [270]
+        ]}},
+    {"id": "table.generate", "query": "EVALUATE ROW(\"a\", COUNTROWS(GENERATE({1, 2}, {10, 20})), \"b\", SUMX(GENERATE(SELECTCOLUMNS({1, 2}, \"a\", [Value]), SELECTCOLUMNS({10, 20}, \"b\", [Value])), [a] * [b]))", "source": "recorded", "expected": {"error": "Exception calling \"ExecuteReader\" with \"0\" argument(s): \"Query (1, 46) Function GENERATE does not allow two columns with the same name ''[Value].\""}},
+    {"id": "table.generate.all", "query": "EVALUATE GENERATEALL(SELECTCOLUMNS({1, 2}, \"a\", [Value]), FILTER(SELECTCOLUMNS({10, 20}, \"b\", [Value]), [b] > [a] * 10))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]"], "types": ["int","int"],
+        "rows": [
+          [1,20],
+          [2,null]
+        ]}},
+    {"id": "table.generate.inner", "query": "EVALUATE GENERATE(SELECTCOLUMNS({1, 2}, \"a\", [Value]), FILTER(SELECTCOLUMNS({10, 20}, \"b\", [Value]), [b] > [a] * 10))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]"], "types": ["int","int"],
+        "rows": [
+          [1,20]
+        ]}},
+    {"id": "table.naturaljoin", "query": "EVALUATE NATURALINNERJOIN(SELECTCOLUMNS(Product, \"ProductKey\", Product[ProductKey], \"Color\", Product[Color]), SELECTCOLUMNS(FILTER(Product, Product[Category] = \"Clothing\"), \"ProductKey\", Product[ProductKey], \"Cat\", Product[Category]))", "source": "recorded",
+      "expected": {"columns": ["[ProductKey]","[Color]","[Cat]"], "types": ["int","text","text"],
+        "rows": [
+          [7,"Red","Clothing"],
+          [8,"Black","Clothing"],
+          [9,"Yellow","Clothing"]
+        ]}},
+    {"id": "table.naturalleft", "query": "EVALUATE NATURALLEFTOUTERJOIN(SELECTCOLUMNS(Product, \"ProductKey\", Product[ProductKey]), SELECTCOLUMNS(FILTER(Product, Product[Category] = \"Clothing\"), \"ProductKey\", Product[ProductKey], \"X\", Product[Product]))", "source": "recorded",
+      "expected": {"columns": ["[ProductKey]","[X]"], "types": ["int","text"],
+        "rows": [
+          [1,null],
+          [2,null],
+          [3,null],
+          [4,null],
+          [5,null],
+          [6,null],
+          [7,"Jersey"],
+          [8,"Gloves"],
+          [9,"Rain Jacket"]
+        ]}},
+    {"id": "table.naturaljoin.nocommon", "query": "EVALUATE NATURALINNERJOIN(SELECTCOLUMNS(Product, \"a\", Product[Product]), SELECTCOLUMNS(Customer, \"b\", Customer[Customer]))", "source": "recorded", "expected": {"error": "Exception calling \"ExecuteReader\" with \"0\" argument(s): \"Query (1, 74) No common join columns detected. The join function 'NATURALINNERJOIN' requires at-least one common join column.\""}},
+    {"id": "table.naturaljoin.related", "query": "EVALUATE NATURALINNERJOIN(SELECTCOLUMNS(Sales, \"ProductKey\", Sales[ProductKey], \"Qty\", Sales[Quantity]), SELECTCOLUMNS(Product, \"ProductKey\", Product[ProductKey], \"Name\", Product[Product]))", "source": "recorded", "expected": {"error": "Exception calling \"ExecuteReader\" with \"0\" argument(s): \"Query (1, 106) An incompatible join column, (''[ProductKey]) was detected. 'NATURALINNERJOIN' doesn't support joins by using columns with different data types or lineage.\""}},
+    {"id": "table.topn", "query": "EVALUATE TOPN(2, Product, Product[ListPrice])", "source": "recorded",
+      "expected": {"columns": ["Product[ProductKey]","Product[Product]","Product[Category]","Product[Subcategory]","Product[Color]","Product[ListPrice]","Product[Cost]"], "types": ["int","text","text","text","text","real","real"],
+        "rows": [
+          [2,"City Bike","Bikes","Road","Blue",850.5,500.25],
+          [1,"Trail Bike","Bikes","Mountain","Red",1200,700]
+        ]}},
+    {"id": "table.topn.asc", "query": "EVALUATE TOPN(2, Product, Product[ListPrice], ASC)", "source": "recorded",
+      "expected": {"columns": ["Product[ProductKey]","Product[Product]","Product[Category]","Product[Subcategory]","Product[Color]","Product[ListPrice]","Product[Cost]"], "types": ["int","text","text","text","text","real","real"],
+        "rows": [
+          [8,"Gloves","Clothing","Hands","Black",19.99,7.5],
+          [5,"Bottle","Accessories","Hydration","Blue",9.5,2.75]
+        ]}},
+    {"id": "table.topn.ties", "query": "EVALUATE TOPN(1, Product, Product[Category], ASC)", "source": "recorded",
+      "expected": {"columns": ["Product[ProductKey]","Product[Product]","Product[Category]","Product[Subcategory]","Product[Color]","Product[ListPrice]","Product[Cost]"], "types": ["int","text","text","text","text","real","real"],
+        "rows": [
+          [4,"Helmet","Accessories","Safety","Black",45.99,20],
+          [5,"Bottle","Accessories","Hydration","Blue",9.5,2.75],
+          [6,"Lights","Accessories","Safety","Black",25,11.4]
+        ]}},
+    {"id": "table.topn.two", "query": "EVALUATE TOPN(2, Product, Product[Category], ASC, Product[ListPrice], DESC)", "source": "recorded",
+      "expected": {"columns": ["Product[ProductKey]","Product[Product]","Product[Category]","Product[Subcategory]","Product[Color]","Product[ListPrice]","Product[Cost]"], "types": ["int","text","text","text","text","real","real"],
+        "rows": [
+          [6,"Lights","Accessories","Safety","Black",25,11.4],
+          [4,"Helmet","Accessories","Safety","Black",45.99,20]
+        ]}},
+    {"id": "table.topn.zero", "query": "EVALUATE ROW(\"a\", COUNTROWS(TOPN(0, Product, Product[ListPrice])), \"b\", COUNTROWS(TOPN(-1, Product, Product[ListPrice])), \"c\", COUNTROWS(TOPN(50, Product, Product[ListPrice])))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]"], "types": ["int","int","int"],
+        "rows": [
+          [null,null,9]
+        ]}},
+    {"id": "table.topn.measure", "query": "EVALUATE TOPN(3, VALUES(Customer[Customer]), CALCULATE(SUM(Sales[Quantity])), DESC)", "source": "recorded",
+      "expected": {"columns": ["Customer[Customer]"], "types": ["text"],
+        "rows": [
+          ["Bruno"],
+          ["Goran"],
+          ["Dana"],
+          ["Farah"]
+        ]}},
+    {"id": "table.topn.numorder", "query": "EVALUATE TOPN(2, Product, Product[ListPrice], 0)", "source": "recorded",
+      "expected": {"columns": ["Product[ProductKey]","Product[Product]","Product[Category]","Product[Subcategory]","Product[Color]","Product[ListPrice]","Product[Cost]"], "types": ["int","text","text","text","text","real","real"],
+        "rows": [
+          [2,"City Bike","Bikes","Road","Blue",850.5,500.25],
+          [1,"Trail Bike","Bikes","Mountain","Red",1200,700]
+        ]}},
+    {"id": "table.groupby", "query": "EVALUATE GROUPBY(Product, Product[Category], \"total\", SUMX(CURRENTGROUP(), Product[ListPrice]), \"n\", COUNTX(CURRENTGROUP(), Product[ListPrice]))", "source": "recorded",
+      "expected": {"columns": ["Product[Category]","[total]","[n]"], "types": ["text","real","int"],
+        "rows": [
+          ["Bikes",2350.5,3],
+          ["Accessories",80.49000000000001,3],
+          ["Clothing",199.98000000000002,3]
+        ]}},
+    {"id": "table.groupby.mat", "query": "EVALUATE GROUPBY(ADDCOLUMNS(Product, \"double\", Product[ListPrice] * 2), Product[Category], \"d\", SUMX(CURRENTGROUP(), [double]))", "source": "recorded",
+      "expected": {"columns": ["Product[Category]","[d]"], "types": ["text","real"],
+        "rows": [
+          ["Bikes",4701],
+          ["Accessories",160.98000000000002],
+          ["Clothing",399.96000000000004]
+        ]}},
+    {"id": "table.groupby.current", "query": "EVALUATE ROW(\"a\", COUNTROWS(CURRENTGROUP()))", "source": "recorded", "expected": {"error": "Exception calling \"ExecuteReader\" with \"0\" argument(s): \"Query (1, 29) CURRENTGROUP() must be specified as the table argument to a table aggregation function when it is specified as the expression argument to a GROUPBY() function. For example, GROUPBY(Sales, Geography[Country], 'Total Sales', SUMX(CURRENTGROUP(), Sales[Price] * Sales[Qty]))\""}},
+    {"id": "table.datatable", "query": "EVALUATE DATATABLE(\"a\", INTEGER, \"b\", STRING, \"c\", DOUBLE, \"d\", BOOLEAN, \"e\", DATETIME, \"f\", CURRENCY, {{1, \"x\", 1.5, TRUE, \"2024-01-01\", 2.5}, {2, \"y\", 2, FALSE, \"2024-06-01 13:00\", 3}})", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]","[d]","[e]","[f]"], "types": ["int","text","real","bool","datetime","currency"],
+        "rows": [
+          [1,"x",1.5,true,"2024-01-01T00:00:00",2.5],
+          [2,"y",2,false,"2024-06-01T13:00:00",3]
+        ]}},
+    {"id": "table.datatable.coerce", "query": "EVALUATE DATATABLE(\"a\", INTEGER, \"b\", DOUBLE, {{\"1\", \"1.5\"}, {2.6, 2}})", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]"], "types": ["int","real"],
+        "rows": [
+          [1,1.5],
+          [3,2]
+        ]}},
+    {"id": "table.summarize.ext", "query": "EVALUATE SUMMARIZE(Product, Product[Category], \"qty\", SUM(Sales[Quantity]), \"n\", COUNTROWS(Product))", "source": "recorded",
+      "expected": {"columns": ["Product[Category]","[qty]","[n]"], "types": ["text","int","int"],
+        "rows": [
+          ["Bikes",270,3],
+          ["Accessories",278,3],
+          ["Clothing",181,3]
+        ]}},
+    {"id": "table.summarize.related", "query": "EVALUATE SUMMARIZE(Sales, Product[Category], Customer[Country], \"qty\", SUM(Sales[Quantity]))", "source": "recorded",
+      "expected": {"columns": ["Product[Category]","Customer[Country]","[qty]"], "types": ["text","text","int"],
+        "rows": [
+          [null,"United States",1],
+          ["Bikes","United States",106],
+          ["Bikes","France",50],
+          ["Bikes","Canada",70],
+          ["Bikes","Germany",44],
+          ["Accessories",null,2],
+          ["Accessories","United States",97],
+          ["Accessories","France",72],
+          ["Accessories","Canada",48],
+          ["Accessories","Germany",59],
+          ["Clothing","United States",46],
+          ["Clothing","France",37],
+          ["Clothing","Canada",42],
+          ["Clothing","Germany",56]
+        ]}},
+    {"id": "table.summarize.groupsonly", "query": "EVALUATE SUMMARIZE(Sales, Product[Category])", "source": "recorded",
+      "expected": {"columns": ["Product[Category]"], "types": ["text"],
+        "rows": [
+          [null],
+          ["Bikes"],
+          ["Accessories"],
+          ["Clothing"]
+        ]}},
+    {"id": "table.summarize.filtered", "query": "EVALUATE SUMMARIZE(FILTER(Sales, Sales[Quantity] > 3), Product[Category], \"rows\", COUNTROWS(Sales))", "source": "recorded",
+      "expected": {"columns": ["Product[Category]","[rows]"], "types": ["text","int"],
+        "rows": [
+          ["Bikes",37],
+          ["Accessories",37],
+          ["Clothing",25]
+        ]}},
+    {"id": "table.row.nested", "query": "EVALUATE ROW(\"a\", COUNTROWS(ADDCOLUMNS(VALUES(Product[Category]), \"q\", CALCULATE(SUM(Sales[Quantity])))))", "source": "recorded",
+      "expected": {"columns": ["[a]"], "types": ["int"],
+        "rows": [
+          [4]
+        ]}}
   ]
 }

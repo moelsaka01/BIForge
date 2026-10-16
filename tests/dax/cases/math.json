@@ -1,44 +1,144 @@
 {
   "area": "math",
   "fixture": "tests/dax/fixtures",
+  "recordedWith": "local Analysis Services of Power BI Desktop 2.158.1304.0",
   "cases": [
-    {"id": "math.abs", "query": "EVALUATE ROW(\"a\", ABS(-5), \"b\", ABS(-2.5), \"c\", ABS(CURRENCY(-1.5)), \"d\", ABS(BLANK()), \"e\", ABS(\"-3\"))", "source": "pending", "expected": null},
-    {"id": "math.sign", "query": "EVALUATE ROW(\"a\", SIGN(-3), \"b\", SIGN(0), \"c\", SIGN(2.5), \"d\", SIGN(BLANK()))", "source": "pending", "expected": null},
-    {"id": "math.round", "query": "EVALUATE ROW(\"a\", ROUND(2.5, 0), \"b\", ROUND(-2.5, 0), \"c\", ROUND(1.005, 2), \"d\", ROUND(2.567, 1), \"e\", ROUND(1234, -2), \"f\", ROUND(1250, -2), \"g\", ROUND(7, 2), \"h\", ROUND(0.5, 0), \"i\", ROUND(BLANK(), 0))", "source": "pending", "expected": null},
-    {"id": "math.round.types", "query": "EVALUATE ROW(\"a\", ROUND(CURRENCY(1.2345), 2), \"b\", ROUND(2.5, 0) + 1, \"c\", ROUNDUP(7, 0), \"d\", ROUNDDOWN(7.9, 0), \"e\", ROUND(1234.5678, 20))", "source": "pending", "expected": null},
-    {"id": "math.roundup.down", "query": "EVALUATE ROW(\"a\", ROUNDUP(2.01, 1), \"b\", ROUNDUP(-2.01, 1), \"c\", ROUNDDOWN(-2.99, 1), \"d\", ROUNDDOWN(2.99, 0), \"e\", ROUNDUP(1234, -2), \"f\", ROUNDDOWN(1299, -2))", "source": "pending", "expected": null},
-    {"id": "math.trunc.int", "query": "EVALUATE ROW(\"a\", TRUNC(-8.9), \"b\", TRUNC(3.14159, 2), \"c\", INT(-1.5), \"d\", INT(1.9), \"e\", INT(5), \"f\", TRUNC(8.9), \"g\", INT(CURRENCY(2.7)))", "source": "pending", "expected": null},
-    {"id": "math.ceiling.floor", "query": "EVALUATE ROW(\"a\", CEILING(2.1, 1), \"b\", CEILING(-2.5, 1), \"c\", CEILING(2.1, 0.5), \"d\", CEILING(4, 3), \"e\", FLOOR(-2.5, 1), \"f\", FLOOR(2.7, 0.5), \"g\", ISO.CEILING(4.3), \"h\", ISO.CEILING(-4.3), \"i\", CEILING(2.5, 0), \"j\", FLOOR(7, 0))", "source": "pending", "expected": null},
-    {"id": "math.ceiling.neg", "query": "EVALUATE ROW(\"a\", CEILING(2.5, -1), \"b\", FLOOR(-2.5, -1), \"c\", CEILING(-2.5, -1))", "source": "pending", "expected": null},
-    {"id": "math.mround", "query": "EVALUATE ROW(\"a\", MROUND(10, 3), \"b\", MROUND(-10, -3), \"c\", MROUND(5, 0), \"d\", MROUND(1.3, 0.2))", "source": "pending", "expected": null},
-    {"id": "math.mround.sign", "query": "EVALUATE ROW(\"a\", MROUND(5, -2))", "source": "pending", "expected": null},
-    {"id": "math.evenodd", "query": "EVALUATE ROW(\"e1\", EVEN(1.5), \"e2\", EVEN(3), \"e3\", EVEN(-1), \"e4\", EVEN(0), \"o1\", ODD(1.5), \"o2\", ODD(2), \"o3\", ODD(-1), \"o4\", ODD(0))", "source": "pending", "expected": null},
-    {"id": "math.mod", "query": "EVALUATE ROW(\"a\", MOD(10, 3), \"b\", MOD(-10, 3), \"c\", MOD(10, -3), \"d\", MOD(5.5, 2), \"e\", MOD(-5.5, 2), \"f\", MOD(3, 5))", "source": "pending", "expected": null},
-    {"id": "math.mod.zero", "query": "EVALUATE ROW(\"a\", MOD(1, 0))", "source": "pending", "expected": null},
-    {"id": "math.quotient", "query": "EVALUATE ROW(\"a\", QUOTIENT(7, 2), \"b\", QUOTIENT(-7, 2), \"c\", QUOTIENT(7.9, 2), \"d\", QUOTIENT(0, 5))", "source": "pending", "expected": null},
-    {"id": "math.quotient.zero", "query": "EVALUATE ROW(\"a\", QUOTIENT(1, 0))", "source": "pending", "expected": null},
-    {"id": "math.power", "query": "EVALUATE ROW(\"a\", POWER(2, 10), \"b\", POWER(2, -1), \"c\", POWER(0, 0), \"d\", POWER(-8, 1 / 3), \"e\", POWER(4, 0.5), \"f\", POWER(BLANK(), 2), \"g\", POWER(2, BLANK()))", "source": "pending", "expected": null},
-    {"id": "math.sqrt", "query": "EVALUATE ROW(\"a\", SQRT(16), \"b\", SQRT(2), \"c\", SQRTPI(1), \"d\", SQRT(0), \"e\", SQRT(BLANK()))", "source": "pending", "expected": null},
-    {"id": "math.sqrt.neg", "query": "EVALUATE ROW(\"a\", SQRT(-1))", "source": "pending", "expected": null},
-    {"id": "math.exp.ln", "query": "EVALUATE ROW(\"a\", EXP(0), \"b\", EXP(1), \"c\", LN(1), \"d\", LN(EXP(2)), \"e\", LOG10(1000), \"f\", LOG(8, 2), \"g\", LOG(100), \"h\", LOG(9, 3))", "source": "pending", "expected": null},
-    {"id": "math.ln.zero", "query": "EVALUATE ROW(\"a\", LN(0))", "source": "pending", "expected": null},
-    {"id": "math.log.base1", "query": "EVALUATE ROW(\"a\", LOG(8, 1))", "source": "pending", "expected": null},
-    {"id": "math.trig", "query": "EVALUATE ROW(\"pi\", PI(), \"sin\", SIN(0), \"cos\", COS(0), \"tan\", TAN(PI() / 4), \"atan\", ATAN(1), \"deg\", DEGREES(PI()), \"rad\", RADIANS(180), \"cot\", COT(PI() / 4))", "source": "pending", "expected": null},
-    {"id": "math.trig2", "query": "EVALUATE ROW(\"asin\", ASIN(1), \"acos\", ACOS(0), \"acot\", ACOT(1), \"sinh\", SINH(1), \"cosh\", COSH(1), \"tanh\", TANH(0.5), \"coth\", COTH(2), \"asinh\", ASINH(1), \"acosh\", ACOSH(2), \"atanh\", ATANH(0.5), \"acoth\", ACOTH(2))", "source": "pending", "expected": null},
-    {"id": "math.acos.range", "query": "EVALUATE ROW(\"a\", ACOS(2))", "source": "pending", "expected": null},
-    {"id": "math.cot.zero", "query": "EVALUATE ROW(\"a\", COT(0))", "source": "pending", "expected": null},
-    {"id": "math.fact", "query": "EVALUATE ROW(\"a\", FACT(5), \"b\", FACT(0), \"c\", FACT(20), \"d\", FACT(21), \"e\", FACT(5.9))", "source": "pending", "expected": null},
-    {"id": "math.fact.neg", "query": "EVALUATE ROW(\"a\", FACT(-1))", "source": "pending", "expected": null},
-    {"id": "math.combin", "query": "EVALUATE ROW(\"a\", COMBIN(5, 2), \"b\", COMBINA(3, 2), \"c\", COMBIN(5, 0), \"d\", COMBIN(52, 5), \"e\", COMBINA(5, 0))", "source": "pending", "expected": null},
-    {"id": "math.combin.range", "query": "EVALUATE ROW(\"a\", COMBIN(2, 5))", "source": "pending", "expected": null},
-    {"id": "math.gcd.lcm", "query": "EVALUATE ROW(\"a\", GCD(12, 18), \"b\", LCM(4, 6), \"c\", GCD(0, 5), \"d\", LCM(0, 5), \"e\", GCD(7, 13))", "source": "pending", "expected": null},
-    {"id": "math.currency", "query": "EVALUATE ROW(\"a\", CURRENCY(1.23456), \"b\", CURRENCY(1.5) * 2, \"c\", CURRENCY(10) / 4, \"d\", CURRENCY(10) / CURRENCY(4), \"e\", CURRENCY(1.5) + 1, \"f\", CURRENCY(1.5) + 1.25, \"g\", CURRENCY(-1.00005))", "source": "pending", "expected": null},
-    {"id": "math.convert", "query": "EVALUATE ROW(\"a\", CONVERT(\"5\", INTEGER), \"b\", CONVERT(2.5, INTEGER), \"c\", CONVERT(1, STRING), \"d\", CONVERT(1, BOOLEAN), \"e\", CONVERT(3, DOUBLE), \"f\", CONVERT(BLANK(), INTEGER), \"g\", CONVERT(2.5, CURRENCY), \"h\", CONVERT(-2.5, INTEGER), \"i\", CONVERT(0.5, INTEGER))", "source": "pending", "expected": null},
-    {"id": "math.convert.date", "query": "EVALUATE ROW(\"a\", CONVERT(\"2024-03-05\", DATETIME), \"b\", CONVERT(DATE(2024, 3, 5), STRING), \"c\", CONVERT(45000, DATETIME))", "source": "pending", "expected": null},
-    {"id": "math.convert.bad", "query": "EVALUATE ROW(\"a\", CONVERT(\"x\", INTEGER))", "source": "pending", "expected": null},
-    {"id": "math.divide", "query": "EVALUATE ROW(\"a\", DIVIDE(6, 3), \"b\", DIVIDE(1, 3), \"c\", DIVIDE(CURRENCY(1), 4), \"d\", DIVIDE(1, 0, 99))", "source": "pending", "expected": null},
-    {"id": "math.blank.args", "query": "EVALUATE ROW(\"a\", EXP(BLANK()), \"b\", MOD(BLANK(), 3), \"c\", CEILING(BLANK(), 1), \"d\", INT(BLANK()), \"e\", TRUNC(BLANK()), \"f\", FACT(BLANK()), \"g\", LN(BLANK() + 1))", "source": "pending", "expected": null},
-    {"id": "math.rand", "query": "EVALUATE ROW(\"lo\", RAND() >= 0 && RAND() < 1, \"rb\", RANDBETWEEN(3, 5) >= 3 && RANDBETWEEN(3, 5) <= 5)", "source": "pending", "expected": null},
-    {"id": "math.rowwise", "query": "EVALUATE SUMMARIZECOLUMNS(Product[Category], \"r\", SUMX(Sales, ROUND(Sales[UnitPrice] / 3, 0)), \"c\", CALCULATE(COUNTROWS(Sales), MOD(Sales[Quantity], 2) = 0)) ORDER BY Product[Category]", "source": "pending", "expected": null}
+    {"id": "math.abs", "query": "EVALUATE ROW(\"a\", ABS(-5), \"b\", ABS(-2.5), \"c\", ABS(CURRENCY(-1.5)), \"d\", ABS(BLANK()), \"e\", ABS(\"-3\"))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]","[d]","[e]"], "types": ["int","real","currency","int","real"],
+        "rows": [
+          [5,2.5,1.5,null,3]
+        ]}},
+    {"id": "math.sign", "query": "EVALUATE ROW(\"a\", SIGN(-3), \"b\", SIGN(0), \"c\", SIGN(2.5), \"d\", SIGN(BLANK()))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]","[d]"], "types": ["int","int","int","int"],
+        "rows": [
+          [-1,0,1,null]
+        ]}},
+    {"id": "math.round", "query": "EVALUATE ROW(\"a\", ROUND(2.5, 0), \"b\", ROUND(-2.5, 0), \"c\", ROUND(1.005, 2), \"d\", ROUND(2.567, 1), \"e\", ROUND(1234, -2), \"f\", ROUND(1250, -2), \"g\", ROUND(7, 2), \"h\", ROUND(0.5, 0), \"i\", ROUND(BLANK(), 0))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]","[d]","[e]","[f]","[g]","[h]","[i]"], "types": ["real","real","real","real","int","int","int","real","int"],
+        "rows": [
+          [3,-3,1.01,2.6,1200,1300,7,1,null]
+        ]}},
+    {"id": "math.round.types", "query": "EVALUATE ROW(\"a\", ROUND(CURRENCY(1.2345), 2), \"b\", ROUND(2.5, 0) + 1, \"c\", ROUNDUP(7, 0), \"d\", ROUNDDOWN(7.9, 0), \"e\", ROUND(1234.5678, 20))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]","[d]","[e]"], "types": ["currency","real","int","real","real"],
+        "rows": [
+          [1.23,4,7,7,1234.5678]
+        ]}},
+    {"id": "math.roundup.down", "query": "EVALUATE ROW(\"a\", ROUNDUP(2.01, 1), \"b\", ROUNDUP(-2.01, 1), \"c\", ROUNDDOWN(-2.99, 1), \"d\", ROUNDDOWN(2.99, 0), \"e\", ROUNDUP(1234, -2), \"f\", ROUNDDOWN(1299, -2))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]","[d]","[e]","[f]"], "types": ["real","real","real","real","int","int"],
+        "rows": [
+          [2.1,-2.1,-2.9,2,1300,1200]
+        ]}},
+    {"id": "math.trunc.int", "query": "EVALUATE ROW(\"a\", TRUNC(-8.9), \"b\", TRUNC(3.14159, 2), \"c\", INT(-1.5), \"d\", INT(1.9), \"e\", INT(5), \"f\", TRUNC(8.9), \"g\", INT(CURRENCY(2.7)))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]","[d]","[e]","[f]","[g]"], "types": ["real","real","int","int","int","real","currency"],
+        "rows": [
+          [-8,3.14,-2,1,5,8,2]
+        ]}},
+    {"id": "math.ceiling.floor", "query": "EVALUATE ROW(\"a\", CEILING(2.1, 1), \"b\", CEILING(-2.5, 1), \"c\", CEILING(2.1, 0.5), \"d\", CEILING(4, 3), \"e\", FLOOR(-2.5, 1), \"f\", FLOOR(2.7, 0.5), \"g\", ISO.CEILING(4.3), \"h\", ISO.CEILING(-4.3), \"i\", CEILING(2.5, 0), \"j\", FLOOR(7, 0))", "source": "recorded", "expected": {"error": "Exception calling \"Read\" with \"0\" argument(s): \"Query (1, 220) Division by zero has occurred when evaluating function 'FLOOR'.\""}},
+    {"id": "math.ceiling.neg", "query": "EVALUATE ROW(\"a\", CEILING(2.5, -1), \"b\", FLOOR(-2.5, -1), \"c\", CEILING(-2.5, -1))", "source": "recorded", "expected": {"error": "Exception calling \"Read\" with \"0\" argument(s): \"Query (1, 19) An argument of function 'CEILING' has the wrong data type or the result is too large or too small.\""}},
+    {"id": "math.mround", "query": "EVALUATE ROW(\"a\", MROUND(10, 3), \"b\", MROUND(-10, -3), \"c\", MROUND(5, 0), \"d\", MROUND(1.3, 0.2))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]","[d]"], "types": ["int","int","int","real"],
+        "rows": [
+          [9,-9,0,1.4000000000000001]
+        ]}},
+    {"id": "math.mround.sign", "query": "EVALUATE ROW(\"a\", MROUND(5, -2))", "source": "recorded", "expected": {"error": "Exception calling \"Read\" with \"0\" argument(s): \"Query (1, 19) An argument of function 'MROUND' has the wrong data type or the result is too large or too small.\""}},
+    {"id": "math.evenodd", "query": "EVALUATE ROW(\"e1\", EVEN(1.5), \"e2\", EVEN(3), \"e3\", EVEN(-1), \"e4\", EVEN(0), \"o1\", ODD(1.5), \"o2\", ODD(2), \"o3\", ODD(-1), \"o4\", ODD(0))", "source": "recorded",
+      "expected": {"columns": ["[e1]","[e2]","[e3]","[e4]","[o1]","[o2]","[o3]","[o4]"], "types": ["real","int","int","int","real","int","int","int"],
+        "rows": [
+          [2,4,-2,0,3,3,-1,1]
+        ]}},
+    {"id": "math.mod", "query": "EVALUATE ROW(\"a\", MOD(10, 3), \"b\", MOD(-10, 3), \"c\", MOD(10, -3), \"d\", MOD(5.5, 2), \"e\", MOD(-5.5, 2), \"f\", MOD(3, 5))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]","[d]","[e]","[f]"], "types": ["int","int","int","real","real","int"],
+        "rows": [
+          [1,2,-2,1.5,0.5,3]
+        ]}},
+    {"id": "math.mod.zero", "query": "EVALUATE ROW(\"a\", MOD(1, 0))", "source": "recorded", "expected": {"error": "Exception calling \"Read\" with \"0\" argument(s): \"Query (1, 19) Division by zero has occurred when evaluating function 'MOD'.\""}},
+    {"id": "math.quotient", "query": "EVALUATE ROW(\"a\", QUOTIENT(7, 2), \"b\", QUOTIENT(-7, 2), \"c\", QUOTIENT(7.9, 2), \"d\", QUOTIENT(0, 5))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]","[d]"], "types": ["int","int","int","int"],
+        "rows": [
+          [3,-3,3,0]
+        ]}},
+    {"id": "math.quotient.zero", "query": "EVALUATE ROW(\"a\", QUOTIENT(1, 0))", "source": "recorded", "expected": {"error": "Exception calling \"Read\" with \"0\" argument(s): \"Query (1, 19) Division by zero has occurred when evaluating function 'QUOTIENT'.\""}},
+    {"id": "math.power", "query": "EVALUATE ROW(\"a\", POWER(2, 10), \"b\", POWER(2, -1), \"c\", POWER(0, 0), \"d\", POWER(-8, 1 / 3), \"e\", POWER(4, 0.5), \"f\", POWER(BLANK(), 2), \"g\", POWER(2, BLANK()))", "source": "recorded", "expected": {"error": "Exception calling \"Read\" with \"0\" argument(s): \"Query (1, 57) An argument of function 'POWER' has the wrong data type or the result is too large or too small.\""}},
+    {"id": "math.sqrt", "query": "EVALUATE ROW(\"a\", SQRT(16), \"b\", SQRT(2), \"c\", SQRTPI(1), \"d\", SQRT(0), \"e\", SQRT(BLANK()))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]","[d]","[e]"], "types": ["real","real","real","real","real"],
+        "rows": [
+          [4,1.4142135623730951,1.7724538509055159,0,null]
+        ]}},
+    {"id": "math.sqrt.neg", "query": "EVALUATE ROW(\"a\", SQRT(-1))", "source": "recorded", "expected": {"error": "Exception calling \"Read\" with \"0\" argument(s): \"Query (1, 19) An argument of function 'SQRT' has the wrong data type or the result is too large or too small.\""}},
+    {"id": "math.exp.ln", "query": "EVALUATE ROW(\"a\", EXP(0), \"b\", EXP(1), \"c\", LN(1), \"d\", LN(EXP(2)), \"e\", LOG10(1000), \"f\", LOG(8, 2), \"g\", LOG(100), \"h\", LOG(9, 3))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]","[d]","[e]","[f]","[g]","[h]"], "types": ["real","real","real","real","real","real","real","real"],
+        "rows": [
+          [1,2.718281828459045,0,2,3,3,2,2]
+        ]}},
+    {"id": "math.ln.zero", "query": "EVALUATE ROW(\"a\", LN(0))", "source": "recorded", "expected": {"error": "Exception calling \"Read\" with \"0\" argument(s): \"Query (1, 19) An argument of function 'LN' has the wrong data type or the result is too large or too small.\""}},
+    {"id": "math.log.base1", "query": "EVALUATE ROW(\"a\", LOG(8, 1))", "source": "recorded", "expected": {"error": "Exception calling \"Read\" with \"0\" argument(s): \"Query (1, 19) Division by zero has occurred when evaluating function 'LOG'.\""}},
+    {"id": "math.trig", "query": "EVALUATE ROW(\"pi\", PI(), \"sin\", SIN(0), \"cos\", COS(0), \"tan\", TAN(PI() / 4), \"atan\", ATAN(1), \"deg\", DEGREES(PI()), \"rad\", RADIANS(180), \"cot\", COT(PI() / 4))", "source": "recorded",
+      "expected": {"columns": ["[pi]","[sin]","[cos]","[tan]","[atan]","[deg]","[rad]","[cot]"], "types": ["real","real","real","real","real","real","real","real"],
+        "rows": [
+          [3.141592653589793,0,1,0.9999999999999999,0.7853981633974483,180,3.141592653589793,1]
+        ]}},
+    {"id": "math.trig2", "query": "EVALUATE ROW(\"asin\", ASIN(1), \"acos\", ACOS(0), \"acot\", ACOT(1), \"sinh\", SINH(1), \"cosh\", COSH(1), \"tanh\", TANH(0.5), \"coth\", COTH(2), \"asinh\", ASINH(1), \"acosh\", ACOSH(2), \"atanh\", ATANH(0.5), \"acoth\", ACOTH(2))", "source": "recorded",
+      "expected": {"columns": ["[asin]","[acos]","[acot]","[sinh]","[cosh]","[tanh]","[coth]","[asinh]","[acosh]","[atanh]","[acoth]"], "types": ["real","real","real","real","real","real","real","real","real","real","real"],
+        "rows": [
+          [1.5707963267948966,1.5707963267948966,0.7853981633974483,1.1752011936438014,1.5430806348152437,0.4621171572600098,1.037314720727548,0.8813735870195429,1.3169578969248166,0.5493061443340549,0.5493061443340549]
+        ]}},
+    {"id": "math.acos.range", "query": "EVALUATE ROW(\"a\", ACOS(2))", "source": "recorded", "expected": {"error": "Exception calling \"Read\" with \"0\" argument(s): \"Query (1, 19) An argument of function 'ACOS' has the wrong data type or the result is too large or too small.\""}},
+    {"id": "math.cot.zero", "query": "EVALUATE ROW(\"a\", COT(0))", "source": "recorded", "expected": {"error": "Exception calling \"Read\" with \"0\" argument(s): \"Query (1, 19) Division by zero has occurred when evaluating function 'COT'.\""}},
+    {"id": "math.fact", "query": "EVALUATE ROW(\"a\", FACT(5), \"b\", FACT(0), \"c\", FACT(20), \"d\", FACT(21), \"e\", FACT(5.9))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]","[d]","[e]"], "types": ["real","real","real","real","real"],
+        "rows": [
+          [120,1,2432902008176640000,51090942171709440000,120]
+        ]}},
+    {"id": "math.fact.neg", "query": "EVALUATE ROW(\"a\", FACT(-1))", "source": "recorded", "expected": {"error": "Exception calling \"Read\" with \"0\" argument(s): \"Query (1, 19) An argument of function 'FACT' has the wrong data type or the result is too large or too small.\""}},
+    {"id": "math.combin", "query": "EVALUATE ROW(\"a\", COMBIN(5, 2), \"b\", COMBINA(3, 2), \"c\", COMBIN(5, 0), \"d\", COMBIN(52, 5), \"e\", COMBINA(5, 0))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]","[d]","[e]"], "types": ["real","real","real","real","real"],
+        "rows": [
+          [10,6,1,2598960,1]
+        ]}},
+    {"id": "math.combin.range", "query": "EVALUATE ROW(\"a\", COMBIN(2, 5))", "source": "recorded", "expected": {"error": "Exception calling \"Read\" with \"0\" argument(s): \"Query (1, 19) An argument of function 'COMBIN' has the wrong data type or the result is too large or too small.\""}},
+    {"id": "math.gcd.lcm", "query": "EVALUATE ROW(\"a\", GCD(12, 18), \"b\", LCM(4, 6), \"c\", GCD(0, 5), \"d\", LCM(0, 5), \"e\", GCD(7, 13))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]","[d]","[e]"], "types": ["int","int","int","int","int"],
+        "rows": [
+          [6,12,5,0,1]
+        ]}},
+    {"id": "math.currency", "query": "EVALUATE ROW(\"a\", CURRENCY(1.23456), \"b\", CURRENCY(1.5) * 2, \"c\", CURRENCY(10) / 4, \"d\", CURRENCY(10) / CURRENCY(4), \"e\", CURRENCY(1.5) + 1, \"f\", CURRENCY(1.5) + 1.25, \"g\", CURRENCY(-1.00005))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]","[d]","[e]","[f]","[g]"], "types": ["currency","currency","currency","real","currency","real","currency"],
+        "rows": [
+          [1.2346,3,2.5,2.5,2.5,2.75,-1.0001]
+        ]}},
+    {"id": "math.convert", "query": "EVALUATE ROW(\"a\", CONVERT(\"5\", INTEGER), \"b\", CONVERT(2.5, INTEGER), \"c\", CONVERT(1, STRING), \"d\", CONVERT(1, BOOLEAN), \"e\", CONVERT(3, DOUBLE), \"f\", CONVERT(BLANK(), INTEGER), \"g\", CONVERT(2.5, CURRENCY), \"h\", CONVERT(-2.5, INTEGER), \"i\", CONVERT(0.5, INTEGER))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]","[d]","[e]","[f]","[g]","[h]","[i]"], "types": ["int","int","text","bool","real","int","currency","int","int"],
+        "rows": [
+          [5,3,"1",true,3,null,2.5,-3,1]
+        ]}},
+    {"id": "math.convert.date", "query": "EVALUATE ROW(\"a\", CONVERT(\"2024-03-05\", DATETIME), \"b\", CONVERT(DATE(2024, 3, 5), STRING), \"c\", CONVERT(45000, DATETIME))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]"], "types": ["datetime","text","datetime"],
+        "rows": [
+          ["2024-03-05T00:00:00","3/5/2024","2023-03-15T00:00:00"]
+        ]}},
+    {"id": "math.convert.bad", "query": "EVALUATE ROW(\"a\", CONVERT(\"x\", INTEGER))", "source": "recorded", "expected": {"error": "Exception calling \"Read\" with \"0\" argument(s): \"Query (1, 27) Cannot convert value 'x' of type Text to type Integer.\""}},
+    {"id": "math.divide", "query": "EVALUATE ROW(\"a\", DIVIDE(6, 3), \"b\", DIVIDE(1, 3), \"c\", DIVIDE(CURRENCY(1), 4), \"d\", DIVIDE(1, 0, 99))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]","[d]"], "types": ["real","real","currency","real"],
+        "rows": [
+          [2,0.3333333333333333,0.25,99]
+        ]}},
+    {"id": "math.blank.args", "query": "EVALUATE ROW(\"a\", EXP(BLANK()), \"b\", MOD(BLANK(), 3), \"c\", CEILING(BLANK(), 1), \"d\", INT(BLANK()), \"e\", TRUNC(BLANK()), \"f\", FACT(BLANK()), \"g\", LN(BLANK() + 1))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]","[d]","[e]","[f]","[g]"], "types": ["real","int","int","int","int","real","real"],
+        "rows": [
+          [1,null,null,null,null,1,0]
+        ]}},
+    {"id": "math.rand", "query": "EVALUATE ROW(\"lo\", RAND() >= 0 && RAND() < 1, \"rb\", RANDBETWEEN(3, 5) >= 3 && RANDBETWEEN(3, 5) <= 5)", "source": "recorded",
+      "expected": {"columns": ["[lo]","[rb]"], "types": ["bool","bool"],
+        "rows": [
+          [true,true]
+        ]}},
+    {"id": "math.rowwise", "query": "EVALUATE SUMMARIZECOLUMNS(Product[Category], \"r\", SUMX(Sales, ROUND(Sales[UnitPrice] / 3, 0)), \"c\", CALCULATE(COUNTROWS(Sales), MOD(Sales[Quantity], 2) = 0)) ORDER BY Product[Category]", "source": "recorded",
+      "expected": {"columns": ["Product[Category]","[r]","[c]"], "types": ["text","real","int"],
+        "rows": [
+          [null,298,null],
+          ["Accessories",867,38],
+          ["Bikes",20345,27],
+          ["Clothing",884,26]
+        ]}}
   ]
 }

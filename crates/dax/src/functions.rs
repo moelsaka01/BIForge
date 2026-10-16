@@ -184,7 +184,7 @@ pub(crate) fn distinct_values(ev: &Evaluator, c: ColId, env: &Env, with_blank_ro
 }
 
 pub(crate) fn col_table(ev: &Evaluator, cols: &[ColId], vals: Vec<Vec<Value>>) -> TableVal {
-    TableVal::mat(cols.iter().map(|&c| TCol { name: ev.data.model.column(c).name.clone(), lineage: Some(c) }).collect(), vals)
+    TableVal::mat(cols.iter().map(|&c| TCol { name: ev.data.model.column(c).name.clone(), lineage: Some(c), renamed: false }).collect(), vals)
 }
 
 /// Sums non-blank values with DAX addition (Integer stays Integer, Currency stays Currency).
@@ -460,6 +460,10 @@ pub fn call<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], whole: &'a
         }
         "COUNT" | "COUNTA" => {
             let c = col_arg(name, args, 0)?;
+            // recorded from Power BI: COUNT rejects True/False columns (COUNTA accepts them)
+            if name == "COUNT" && ev.data.model.column(c).data_type == crate::model::DataType::Boolean {
+                return Err(err(ErrorCode::TypeMismatch, "The function COUNT cannot work with values of type Boolean."));
+            }
             if let Some(v) = crate::sql::try_aggregate(ev, "COUNT", c, env)? {
                 return s(v);
             }
@@ -479,7 +483,8 @@ pub fn call<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], whole: &'a
         }
         "DISTINCTCOUNT" | "DISTINCTCOUNTNOBLANK" => {
             let c = col_arg(name, args, 0)?;
-            let vals = distinct_values(ev, c, env, true);
+            // recorded from Power BI: the virtual blank row is not counted (an empty text value is)
+            let vals = distinct_values(ev, c, env, false);
             let n = if name == "DISTINCTCOUNT" { vals.len() } else { vals.iter().filter(|v| !v.is_blank()).count() };
             s(as_count(n))
         }
@@ -513,7 +518,7 @@ pub fn call<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], whole: &'a
             let pairs = name_expr_pairs(ev, &args[1..], env, name)?;
             let mut cols = src.cols(ev.data);
             for (n, _) in &pairs {
-                cols.push(TCol { name: n.clone(), lineage: None });
+                cols.push(TCol { name: n.clone(), lineage: None, renamed: false });
             }
             let mut rows = Vec::with_capacity(src.nrows());
             for_each_row(ev, &src, env, |i, e2| {
@@ -529,7 +534,7 @@ pub fn call<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], whole: &'a
         "SELECTCOLUMNS" => {
             let src = ev.table(&args[0], env)?;
             let pairs = name_expr_pairs(ev, &args[1..], env, name)?;
-            let cols = pairs.iter().map(|(n, x)| TCol { name: n.clone(), lineage: x.col() }).collect();
+            let cols = pairs.iter().map(|(n, x)| TCol { name: n.clone(), lineage: x.col(), renamed: true }).collect();
             let mut rows = Vec::with_capacity(src.nrows());
             for_each_row(ev, &src, env, |_, e2| {
                 rows.push(pairs.iter().map(|(_, x)| ev.scalar(x, e2)).collect::<VResult<Vec<_>>>()?);
@@ -539,7 +544,7 @@ pub fn call<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], whole: &'a
         }
         "ROW" => {
             let pairs = name_expr_pairs(ev, args, env, name)?;
-            let cols = pairs.iter().map(|(n, _)| TCol { name: n.clone(), lineage: None }).collect();
+            let cols = pairs.iter().map(|(n, _)| TCol { name: n.clone(), lineage: None, renamed: false }).collect();
             let row = pairs.iter().map(|(_, x)| ev.scalar(x, env)).collect::<VResult<Vec<_>>>()?;
             t(TableVal::mat(cols, vec![row]))
         }
@@ -665,8 +670,8 @@ fn summarize_columns<'a>(ev: &'a Evaluator<'a>, args: &'a [BExpr], env: &Env<'a>
         r.extend(vals);
         out_rows.push(r);
     }
-    let mut cols: Vec<TCol> = order.iter().map(|&c| TCol { name: ev.data.model.column(c).name.clone(), lineage: Some(c) }).collect();
-    cols.extend(pairs.iter().map(|(n, _)| TCol { name: n.clone(), lineage: None }));
+    let mut cols: Vec<TCol> = order.iter().map(|&c| TCol { name: ev.data.model.column(c).name.clone(), lineage: Some(c), renamed: false }).collect();
+    cols.extend(pairs.iter().map(|(n, _)| TCol { name: n.clone(), lineage: None, renamed: false }));
     Ok(TableVal::mat(cols, out_rows))
 }
 
@@ -711,9 +716,12 @@ fn summarize<'a>(ev: &'a Evaluator<'a>, args: &'a [BExpr], env: &Env<'a>) -> VRe
     // added columns: evaluated per group in the filter context of the group-by values
     let g = ev.graph(&env.filter);
     let group_cols: HashSet<ColId> = cols.iter().copied().collect();
-    let mut rows = Vec::with_capacity(out.len());
+    let mut result_rows = Vec::with_capacity(out.len());
     for mut vals in out {
         let mut c2 = env.filter.remove_columns(ev.data, &g, &group_cols);
+        // recorded from Power BI: the added columns only see the rows of the source table (SUMMARIZE over a
+        // filtered table counts the filtered rows)
+        c2 = c2.push(Filter::Rows { table: *table, rows: Rc::new(crate::filter::RowSet::from_rows(ev.data.nrows(*table) + 1, rows.iter().copied())), cols: ev.data.model.columns_of(*table).collect() });
         for (k, &c) in cols.iter().enumerate() {
             c2 = c2.push(Filter::single(c, vals[k].key()));
         }
@@ -721,11 +729,11 @@ fn summarize<'a>(ev: &'a Evaluator<'a>, args: &'a [BExpr], env: &Env<'a>) -> VRe
         for (_, x) in &pairs {
             vals.push(ev.scalar(x, &e2)?);
         }
-        rows.push(vals);
+        result_rows.push(vals);
     }
-    let mut tcols: Vec<TCol> = cols.iter().map(|&c| TCol { name: ev.data.model.column(c).name.clone(), lineage: Some(c) }).collect();
-    tcols.extend(pairs.iter().map(|(n, _)| TCol { name: n.clone(), lineage: None }));
-    Ok(TableVal::mat(tcols, rows))
+    let mut tcols: Vec<TCol> = cols.iter().map(|&c| TCol { name: ev.data.model.column(c).name.clone(), lineage: Some(c), renamed: false }).collect();
+    tcols.extend(pairs.iter().map(|(n, _)| TCol { name: n.clone(), lineage: None, renamed: false }));
+    Ok(TableVal::mat(tcols, result_rows))
 }
 
 #[cfg(test)]

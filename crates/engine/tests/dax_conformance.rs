@@ -24,6 +24,8 @@ enum Outcome {
     Skip(String),
     /// No expected result yet; carries the engine error text when our engine fails on the query.
     Pending(Option<String>),
+    /// A recorded case that BIForge does not match yet and that is documented ("knownDifference" in the case).
+    Known(String),
 }
 
 fn cases_dir() -> PathBuf {
@@ -143,6 +145,15 @@ fn compare(actual: &ResultTable, expected: &Json, ordered: bool) -> Outcome {
 }
 
 fn run_case(dax: &biforge_dax::Engine, case: &Json) -> Outcome {
+    let out = run_case_inner(dax, case);
+    match (out, case["knownDifference"].as_str()) {
+        (Outcome::Fail(m), Some(reason)) => Outcome::Known(format!("{reason} [{m}]")),
+        (Outcome::Pass, Some(_)) => Outcome::Fail("matches now: remove knownDifference from the case".into()),
+        (o, _) => o,
+    }
+}
+
+fn run_case_inner(dax: &biforge_dax::Engine, case: &Json) -> Outcome {
     let expected = &case["expected"];
     let query = case["query"].as_str().unwrap_or("");
     if expected.is_null() {
@@ -194,7 +205,7 @@ fn conformance_cases() {
     let mut files: Vec<PathBuf> = std::fs::read_dir(cases_dir()).map(|d| d.filter_map(|e| e.ok()).map(|e| e.path()).filter(|p| p.extension().is_some_and(|x| x == "json")).collect()).unwrap_or_default();
     files.sort();
     let verbose = std::env::var("BIFORGE_DAX_VERBOSE").is_ok();
-    let (mut pass, mut skip, mut pending) = (0usize, 0usize, 0usize);
+    let (mut pass, mut skip, mut pending, mut known) = (0usize, 0usize, 0usize, 0usize);
     let mut failures = Vec::new();
     let mut skipped_names = Vec::new();
     let mut pending_err: Vec<String> = Vec::new();
@@ -208,6 +219,7 @@ fn conformance_cases() {
             }
             match out {
                 Outcome::Pass => pass += 1,
+                Outcome::Known(_) => known += 1,
                 Outcome::Skip(m) => {
                     skip += 1;
                     skipped_names.push(format!("{id}: {m}"));
@@ -222,8 +234,8 @@ fn conformance_cases() {
             }
         }
     }
-    let recorded = pass + skip + failures.len();
-    println!("conformance: {pass}/{recorded} pass, {} fail, {skip} skipped (not implemented), {pending} pending (no expected result recorded)", failures.len());
+    let recorded = pass + skip + known + failures.len();
+    println!("conformance: {pass}/{recorded} pass, {} fail, {known} known differences, {skip} skipped (not implemented), {pending} pending (no expected result recorded)", failures.len());
     println!("pending cases on which BIForge reports an error: {}", pending_err.len());
     if verbose {
         for s in &pending_err {

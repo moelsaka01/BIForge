@@ -1,62 +1,377 @@
 {
   "area": "core",
   "fixture": "tests/dax/fixtures",
+  "recordedWith": "local Analysis Services of Power BI Desktop 2.158.1304.0",
   "cases": [
-    {"id": "core.sum.qty", "query": "EVALUATE ROW(\"v\", SUM(Sales[Quantity]))", "source": "pending", "expected": null},
-    {"id": "core.sum.price", "query": "EVALUATE ROW(\"v\", SUM(Sales[UnitPrice]))", "source": "pending", "expected": null},
-    {"id": "core.avg.price", "query": "EVALUATE ROW(\"v\", AVERAGE(Sales[UnitPrice]))", "source": "pending", "expected": null},
-    {"id": "core.min.date", "query": "EVALUATE ROW(\"min\", MIN(Sales[OrderDate]), \"max\", MAX(Sales[ShipDate]))", "source": "pending", "expected": null},
-    {"id": "core.count.cols", "query": "EVALUATE ROW(\"count\", COUNT(Sales[Quantity]), \"counta\", COUNTA(Sales[ShipDate]), \"blank\", COUNTBLANK(Sales[ShipDate]), \"rows\", COUNTROWS(Sales))", "source": "pending", "expected": null},
-    {"id": "core.distinctcount", "query": "EVALUATE ROW(\"dc\", DISTINCTCOUNT(Sales[CustomerKey]), \"dcnb\", DISTINCTCOUNTNOBLANK(Sales[ProductKey]))", "source": "pending", "expected": null},
-    {"id": "core.divide", "query": "EVALUATE ROW(\"a\", DIVIDE(1, 0), \"b\", DIVIDE(1, 0, -1), \"c\", DIVIDE(7, 2), \"d\", DIVIDE(BLANK(), 2), \"e\", DIVIDE(4, BLANK()))", "source": "pending", "expected": null},
-    {"id": "core.by.category", "query": "EVALUATE SUMMARIZECOLUMNS(Product[Category], \"qty\", SUM(Sales[Quantity]), \"rows\", COUNTROWS(Sales)) ORDER BY Product[Category]", "source": "pending", "expected": null},
-    {"id": "core.by.color", "query": "EVALUATE SUMMARIZECOLUMNS(Product[Color], \"qty\", SUM(Sales[Quantity])) ORDER BY Product[Color]", "source": "pending", "expected": null},
-    {"id": "core.by.country", "query": "EVALUATE SUMMARIZECOLUMNS(Customer[Country], \"qty\", SUM(Sales[Quantity])) ORDER BY Customer[Country]", "source": "pending", "expected": null},
-    {"id": "core.by.year", "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], \"qty\", SUM(Sales[Quantity])) ORDER BY 'Date'[Year]", "source": "pending", "expected": null},
-    {"id": "core.by.promotion", "query": "EVALUATE SUMMARIZECOLUMNS(Promotion[Promotion], \"qty\", SUM(Sales[Quantity])) ORDER BY Promotion[Promotion]", "source": "pending", "expected": null},
-    {"id": "core.by.year.category", "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], Product[Category], \"qty\", SUM(Sales[Quantity])) ORDER BY 'Date'[Year], Product[Category]", "source": "pending", "expected": null},
-    {"id": "core.calc.bool", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), Product[Category] = \"Bikes\"))", "source": "pending", "expected": null},
-    {"id": "core.calc.two", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), Product[Category] = \"Bikes\", 'Date'[Year] = 2024))", "source": "pending", "expected": null},
-    {"id": "core.calc.in", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), Customer[Country] IN {\"France\", \"Germany\"}))", "source": "pending", "expected": null},
-    {"id": "core.calc.case", "query": "EVALUATE ROW(\"v\", CALCULATE(COUNTROWS(Sales), Product[Color] = \"red\"))", "source": "pending", "expected": null},
-    {"id": "core.calc.blankcolor", "query": "EVALUATE ROW(\"v\", CALCULATE(COUNTROWS(Sales), Product[Color] = BLANK()))", "source": "pending", "expected": null},
-    {"id": "core.calc.overwrite", "query": "EVALUATE SUMMARIZECOLUMNS(Product[Category], \"v\", CALCULATE(SUM(Sales[Quantity]), Product[Category] = \"Bikes\")) ORDER BY Product[Category]", "source": "pending", "expected": null},
-    {"id": "core.calc.keepfilters", "query": "EVALUATE SUMMARIZECOLUMNS(Product[Category], \"v\", CALCULATE(SUM(Sales[Quantity]), KEEPFILTERS(Product[Category] = \"Bikes\"))) ORDER BY Product[Category]", "source": "pending", "expected": null},
-    {"id": "core.calc.all", "query": "EVALUATE SUMMARIZECOLUMNS(Product[Category], \"v\", CALCULATE(SUM(Sales[Quantity]), ALL(Product[Category]))) ORDER BY Product[Category]", "source": "pending", "expected": null},
-    {"id": "core.calc.alltable", "query": "EVALUATE SUMMARIZECOLUMNS(Product[Category], 'Date'[Year], \"v\", CALCULATE(SUM(Sales[Quantity]), ALL(Product))) ORDER BY Product[Category], 'Date'[Year]", "source": "pending", "expected": null},
-    {"id": "core.calc.allexcept", "query": "EVALUATE SUMMARIZECOLUMNS(Product[Category], Product[Color], \"v\", CALCULATE(SUM(Sales[Quantity]), ALLEXCEPT(Product, Product[Category]))) ORDER BY Product[Category], Product[Color]", "source": "pending", "expected": null},
-    {"id": "core.calc.removefilters", "query": "EVALUATE SUMMARIZECOLUMNS(Product[Category], \"v\", CALCULATE(SUM(Sales[Quantity]), REMOVEFILTERS(Product))) ORDER BY Product[Category]", "source": "pending", "expected": null},
-    {"id": "core.calc.filter.table", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), FILTER(Product, Product[ListPrice] > 1000)))", "source": "pending", "expected": null},
-    {"id": "core.calc.filter.all", "query": "EVALUATE SUMMARIZECOLUMNS(Product[Category], \"v\", CALCULATE(SUM(Sales[Quantity]), FILTER(ALL(Product[ListPrice]), Product[ListPrice] > 1000))) ORDER BY Product[Category]", "source": "pending", "expected": null},
-    {"id": "core.calc.fact.filter", "query": "EVALUATE SUMMARIZECOLUMNS(Product[Category], \"v\", CALCULATE(COUNTROWS(Product), FILTER(Sales, TRUE()))) ORDER BY Product[Category]", "source": "pending", "expected": null},
-    {"id": "core.calc.factcond", "query": "EVALUATE ROW(\"v\", CALCULATE(COUNTROWS(Sales), Sales[Quantity] > 3))", "source": "pending", "expected": null},
-    {"id": "core.calc.multicol", "query": "EVALUATE ROW(\"v\", CALCULATE(COUNTROWS(Sales), Sales[Quantity] > 2 && Sales[UnitPrice] > 500))", "source": "pending", "expected": null},
-    {"id": "core.rel.related", "query": "EVALUATE ROW(\"v\", SUMX(Sales, Sales[Quantity] * RELATED(Product[ListPrice])))", "source": "pending", "expected": null},
-    {"id": "core.rel.relatedtable", "query": "EVALUATE SELECTCOLUMNS(Product, \"p\", Product[Product], \"n\", COUNTROWS(RELATEDTABLE(Sales))) ORDER BY [p]", "source": "pending", "expected": null},
-    {"id": "core.rel.userel", "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], \"ship\", CALCULATE(SUM(Sales[Quantity]), USERELATIONSHIP(Sales[ShipDate], 'Date'[Date]))) ORDER BY 'Date'[Year]", "source": "pending", "expected": null},
-    {"id": "core.rel.crossfilter", "query": "EVALUATE SUMMARIZECOLUMNS(Customer[Country], \"v\", CALCULATE(COUNTROWS(Product), CROSSFILTER(Sales[ProductKey], Product[ProductKey], BOTH))) ORDER BY Customer[Country]", "source": "pending", "expected": null},
-    {"id": "core.rel.bidir", "query": "EVALUATE SUMMARIZECOLUMNS(Product[Category], \"promos\", COUNTROWS(Promotion)) ORDER BY Product[Category]", "source": "pending", "expected": null},
-    {"id": "core.rel.bidir.values", "query": "EVALUATE SUMMARIZECOLUMNS(Product[Category], \"promos\", COUNTROWS(VALUES(Promotion))) ORDER BY Product[Category]", "source": "pending", "expected": null},
-    {"id": "core.blankrow.values", "query": "EVALUATE ROW(\"values\", COUNTROWS(VALUES(Customer)), \"all\", COUNTROWS(ALL(Customer)), \"allnb\", COUNTROWS(ALLNOBLANKROW(Customer)), \"distinct\", COUNTROWS(DISTINCT(Customer[CustomerKey])), \"table\", COUNTROWS(Customer))", "source": "pending", "expected": null},
-    {"id": "core.blankrow.product", "query": "EVALUATE ROW(\"values\", COUNTROWS(VALUES(Product)), \"table\", COUNTROWS(Product), \"valcol\", COUNTROWS(VALUES(Product[Color])))", "source": "pending", "expected": null},
-    {"id": "core.blankrow.promotion", "query": "EVALUATE ROW(\"values\", COUNTROWS(VALUES(Promotion)), \"table\", COUNTROWS(Promotion))", "source": "pending", "expected": null},
-    {"id": "core.blankrow.date", "query": "EVALUATE ROW(\"values\", COUNTROWS(VALUES('Date')), \"table\", COUNTROWS('Date'))", "source": "pending", "expected": null},
-    {"id": "core.blankrow.group", "query": "EVALUATE SUMMARIZECOLUMNS(Customer[Customer], \"qty\", SUM(Sales[Quantity])) ORDER BY Customer[Customer]", "source": "pending", "expected": null},
-    {"id": "core.blankrow.measure", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), ISBLANK(Customer[Customer])))", "source": "pending", "expected": null},
-    {"id": "core.ct.addcolumns", "query": "EVALUATE ADDCOLUMNS(Product, \"qty\", CALCULATE(SUM(Sales[Quantity]))) ORDER BY Product[ProductKey]", "source": "pending", "expected": null},
-    {"id": "core.ct.sumx", "query": "EVALUATE ROW(\"v\", SUMX(Product, CALCULATE(SUM(Sales[Quantity])) * 2))", "source": "pending", "expected": null},
-    {"id": "core.ct.earlier", "query": "EVALUATE SELECTCOLUMNS(FILTER(Product, COUNTROWS(FILTER(Product, EARLIER(Product[ListPrice]) > Product[ListPrice])) < 2), \"p\", Product[Product]) ORDER BY [p]", "source": "pending", "expected": null},
-    {"id": "core.var", "query": "EVALUATE ROW(\"v\", VAR x = SUM(Sales[Quantity]) RETURN x * 2 + x)", "source": "pending", "expected": null},
-    {"id": "core.selectedvalue", "query": "EVALUATE SUMMARIZECOLUMNS(Product[Category], \"v\", SELECTEDVALUE(Product[Category], \"many\"), \"all\", SELECTEDVALUE(Product[Color], \"many\")) ORDER BY Product[Category]", "source": "pending", "expected": null},
-    {"id": "core.hasonevalue", "query": "EVALUATE ROW(\"v\", HASONEVALUE(Product[Category]), \"f\", CALCULATE(HASONEVALUE(Product[Category]), Product[Category] = \"Bikes\"))", "source": "pending", "expected": null},
-    {"id": "core.isfiltered", "query": "EVALUATE SUMMARIZECOLUMNS(Product[Category], \"f\", ISFILTERED(Product[Category]), \"c\", ISCROSSFILTERED(Sales[Quantity])) ORDER BY Product[Category]", "source": "pending", "expected": null},
-    {"id": "core.treatas", "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], \"v\", CALCULATE(SUM(Budget[BudgetAmount]), TREATAS(VALUES('Date'[Year]), Budget[Year]))) ORDER BY 'Date'[Year]", "source": "pending", "expected": null},
-    {"id": "core.op.arith", "query": "EVALUATE ROW(\"a\", 7 / 2, \"b\", 2 ^ 10, \"c\", -2 ^ 2, \"d\", 5 - BLANK(), \"e\", BLANK() - 5, \"f\", BLANK() * 5, \"g\", BLANK() + BLANK(), \"h\", 1 / 0)", "source": "pending", "expected": null},
-    {"id": "core.op.types", "query": "EVALUATE ROW(\"int\", 2 + 3, \"mixed\", 2 + 3.5, \"div\", 6 / 3, \"cur\", CURRENCY(1.5) * 2, \"curdiv\", CURRENCY(10) / 4, \"curcur\", CURRENCY(10) / CURRENCY(4), \"pow\", 2 ^ 3)", "source": "pending", "expected": null},
-    {"id": "core.op.logic", "query": "EVALUATE ROW(\"a\", TRUE() || BLANK(), \"b\", FALSE() || BLANK(), \"c\", TRUE() && BLANK(), \"d\", BLANK() || BLANK(), \"e\", BLANK() && BLANK(), \"f\", NOT BLANK())", "source": "pending", "expected": null},
-    {"id": "core.op.compare", "query": "EVALUATE ROW(\"a\", BLANK() = 0, \"b\", BLANK() = \"\", \"c\", BLANK() == 0, \"d\", BLANK() == BLANK(), \"e\", BLANK() < 1, \"f\", 0 IN {BLANK()}, \"g\", BLANK() IN {0})", "source": "pending", "expected": null},
-    {"id": "core.op.text", "query": "EVALUATE ROW(\"a\", \"x\" & 1, \"b\", 1 & 2, \"c\", TRUE() & \"y\", \"d\", 1.5 & \"\", \"e\", \"A\" = \"a\", \"f\", \"a\" < \"B\", \"g\", \"abc\" & BLANK())", "source": "pending", "expected": null},
-    {"id": "core.op.date", "query": "EVALUATE ROW(\"a\", DATE(2024, 1, 31) + 1, \"b\", DATE(2024, 3, 1) - DATE(2024, 2, 1), \"c\", DATE(2024, 1, 1) & \"\")", "source": "pending", "expected": null},
-    {"id": "core.text.case", "query": "EVALUATE ROW(\"v\", COUNTROWS(FILTER(ALL(Product), Product[Color] = \"RED\")), \"w\", DISTINCTCOUNT(Product[Color]))", "source": "pending", "expected": null}
+    {"id": "core.sum.qty", "query": "EVALUATE ROW(\"v\", SUM(Sales[Quantity]))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [730]
+        ]}},
+    {"id": "core.sum.price", "query": "EVALUATE ROW(\"v\", SUM(Sales[UnitPrice]))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["real"],
+        "rows": [
+          [67200.77]
+        ]}},
+    {"id": "core.avg.price", "query": "EVALUATE ROW(\"v\", AVERAGE(Sales[UnitPrice]))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["real"],
+        "rows": [
+          [278.84136929460584]
+        ]}},
+    {"id": "core.min.date", "query": "EVALUATE ROW(\"min\", MIN(Sales[OrderDate]), \"max\", MAX(Sales[ShipDate]))", "source": "recorded",
+      "expected": {"columns": ["[min]","[max]"], "types": ["datetime","datetime"],
+        "rows": [
+          ["2023-01-02T00:00:00","2025-01-05T00:00:00"]
+        ]}},
+    {"id": "core.count.cols", "query": "EVALUATE ROW(\"count\", COUNT(Sales[Quantity]), \"counta\", COUNTA(Sales[ShipDate]), \"blank\", COUNTBLANK(Sales[ShipDate]), \"rows\", COUNTROWS(Sales))", "source": "recorded",
+      "expected": {"columns": ["[count]","[counta]","[blank]","[rows]"], "types": ["int","int","int","int"],
+        "rows": [
+          [240,239,2,241]
+        ]}},
+    {"id": "core.distinctcount", "query": "EVALUATE ROW(\"dc\", DISTINCTCOUNT(Sales[CustomerKey]), \"dcnb\", DISTINCTCOUNTNOBLANK(Sales[ProductKey]))", "source": "recorded",
+      "expected": {"columns": ["[dc]","[dcnb]"], "types": ["int","int"],
+        "rows": [
+          [10,8]
+        ]}},
+    {"id": "core.divide", "query": "EVALUATE ROW(\"a\", DIVIDE(1, 0), \"b\", DIVIDE(1, 0, -1), \"c\", DIVIDE(7, 2), \"d\", DIVIDE(BLANK(), 2), \"e\", DIVIDE(4, BLANK()))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]","[d]","[e]"], "types": ["real","real","real","real","real"],
+        "rows": [
+          [null,-1,3.5,null,null]
+        ]}},
+    {"id": "core.by.category", "query": "EVALUATE SUMMARIZECOLUMNS(Product[Category], \"qty\", SUM(Sales[Quantity]), \"rows\", COUNTROWS(Sales)) ORDER BY Product[Category]", "source": "recorded",
+      "expected": {"columns": ["Product[Category]","[qty]","[rows]"], "types": ["text","int","int"],
+        "rows": [
+          [null,1,1],
+          ["Accessories",278,98],
+          ["Bikes",270,79],
+          ["Clothing",181,63]
+        ]}},
+    {"id": "core.by.color", "query": "EVALUATE SUMMARIZECOLUMNS(Product[Color], \"qty\", SUM(Sales[Quantity])) ORDER BY Product[Color]", "source": "recorded",
+      "expected": {"columns": ["Product[Color]","[qty]"], "types": ["text","int"],
+        "rows": [
+          [null,1],
+          ["",95],
+          ["Black",253],
+          ["Blue",192],
+          ["Red",189]
+        ]}},
+    {"id": "core.by.country", "query": "EVALUATE SUMMARIZECOLUMNS(Customer[Country], \"qty\", SUM(Sales[Quantity])) ORDER BY Customer[Country]", "source": "recorded",
+      "expected": {"columns": ["Customer[Country]","[qty]"], "types": ["text","int"],
+        "rows": [
+          [null,2],
+          ["Canada",160],
+          ["France",159],
+          ["Germany",159],
+          ["United States",250]
+        ]}},
+    {"id": "core.by.year", "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], \"qty\", SUM(Sales[Quantity])) ORDER BY 'Date'[Year]", "source": "recorded",
+      "expected": {"columns": ["Date[Year]","[qty]"], "types": ["int","int"],
+        "rows": [
+          [2023,384],
+          [2024,346]
+        ]}},
+    {"id": "core.by.promotion", "query": "EVALUATE SUMMARIZECOLUMNS(Promotion[Promotion], \"qty\", SUM(Sales[Quantity])) ORDER BY Promotion[Promotion]", "source": "recorded",
+      "expected": {"columns": ["Promotion[Promotion]","[qty]"], "types": ["text","int"],
+        "rows": [
+          ["Black Friday",161],
+          ["No Promotion",407],
+          ["Spring Sale",162]
+        ]}},
+    {"id": "core.by.year.category", "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], Product[Category], \"qty\", SUM(Sales[Quantity])) ORDER BY 'Date'[Year], Product[Category]", "source": "recorded",
+      "expected": {"columns": ["Date[Year]","Product[Category]","[qty]"], "types": ["int","text","int"],
+        "rows": [
+          [2023,null,1],
+          [2023,"Accessories",171],
+          [2023,"Bikes",125],
+          [2023,"Clothing",87],
+          [2024,"Accessories",107],
+          [2024,"Bikes",145],
+          [2024,"Clothing",94]
+        ]}},
+    {"id": "core.calc.bool", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), Product[Category] = \"Bikes\"))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [270]
+        ]}},
+    {"id": "core.calc.two", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), Product[Category] = \"Bikes\", 'Date'[Year] = 2024))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [145]
+        ]}},
+    {"id": "core.calc.in", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), Customer[Country] IN {\"France\", \"Germany\"}))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [318]
+        ]}},
+    {"id": "core.calc.case", "query": "EVALUATE ROW(\"v\", CALCULATE(COUNTROWS(Sales), Product[Color] = \"red\"))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [61]
+        ]}},
+    {"id": "core.calc.blankcolor", "query": "EVALUATE ROW(\"v\", CALCULATE(COUNTROWS(Sales), Product[Color] = BLANK()))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [30]
+        ]}},
+    {"id": "core.calc.overwrite", "query": "EVALUATE SUMMARIZECOLUMNS(Product[Category], \"v\", CALCULATE(SUM(Sales[Quantity]), Product[Category] = \"Bikes\")) ORDER BY Product[Category]", "source": "recorded",
+      "expected": {"columns": ["Product[Category]","[v]"], "types": ["text","int"],
+        "rows": [
+          [null,270],
+          ["Accessories",270],
+          ["Bikes",270],
+          ["Clothing",270]
+        ]}},
+    {"id": "core.calc.keepfilters", "query": "EVALUATE SUMMARIZECOLUMNS(Product[Category], \"v\", CALCULATE(SUM(Sales[Quantity]), KEEPFILTERS(Product[Category] = \"Bikes\"))) ORDER BY Product[Category]", "source": "recorded",
+      "expected": {"columns": ["Product[Category]","[v]"], "types": ["text","int"],
+        "rows": [
+          ["Bikes",270]
+        ]}},
+    {"id": "core.calc.all", "query": "EVALUATE SUMMARIZECOLUMNS(Product[Category], \"v\", CALCULATE(SUM(Sales[Quantity]), ALL(Product[Category]))) ORDER BY Product[Category]", "source": "recorded",
+      "expected": {"columns": ["Product[Category]","[v]"], "types": ["text","int"],
+        "rows": [
+          [null,730],
+          ["Accessories",730],
+          ["Bikes",730],
+          ["Clothing",730]
+        ]}},
+    {"id": "core.calc.alltable", "query": "EVALUATE SUMMARIZECOLUMNS(Product[Category], 'Date'[Year], \"v\", CALCULATE(SUM(Sales[Quantity]), ALL(Product))) ORDER BY Product[Category], 'Date'[Year]", "source": "recorded",
+      "expected": {"columns": ["Product[Category]","Date[Year]","[v]"], "types": ["text","int","int"],
+        "rows": [
+          [null,2023,384],
+          [null,2024,346],
+          ["Accessories",2023,384],
+          ["Accessories",2024,346],
+          ["Bikes",2023,384],
+          ["Bikes",2024,346],
+          ["Clothing",2023,384],
+          ["Clothing",2024,346]
+        ]}},
+    {"id": "core.calc.allexcept", "query": "EVALUATE SUMMARIZECOLUMNS(Product[Category], Product[Color], \"v\", CALCULATE(SUM(Sales[Quantity]), ALLEXCEPT(Product, Product[Category]))) ORDER BY Product[Category], Product[Color]", "source": "recorded",
+      "expected": {"columns": ["Product[Category]","Product[Color]","[v]"], "types": ["text","text","int"],
+        "rows": [
+          [null,null,1],
+          ["Accessories","Black",278],
+          ["Accessories","Blue",278],
+          ["Bikes","",270],
+          ["Bikes","Blue",270],
+          ["Bikes","Red",270],
+          ["Clothing","Black",181],
+          ["Clothing","Red",181],
+          ["Clothing","Yellow",181]
+        ]}},
+    {"id": "core.calc.removefilters", "query": "EVALUATE SUMMARIZECOLUMNS(Product[Category], \"v\", CALCULATE(SUM(Sales[Quantity]), REMOVEFILTERS(Product))) ORDER BY Product[Category]", "source": "recorded",
+      "expected": {"columns": ["Product[Category]","[v]"], "types": ["text","int"],
+        "rows": [
+          [null,730],
+          ["Accessories",730],
+          ["Bikes",730],
+          ["Clothing",730]
+        ]}},
+    {"id": "core.calc.filter.table", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), FILTER(Product, Product[ListPrice] > 1000)))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [87]
+        ]}},
+    {"id": "core.calc.filter.all", "query": "EVALUATE SUMMARIZECOLUMNS(Product[Category], \"v\", CALCULATE(SUM(Sales[Quantity]), FILTER(ALL(Product[ListPrice]), Product[ListPrice] > 1000))) ORDER BY Product[Category]", "source": "recorded",
+      "expected": {"columns": ["Product[Category]","[v]"], "types": ["text","int"],
+        "rows": [
+          ["Bikes",87]
+        ]}},
+    {"id": "core.calc.fact.filter", "query": "EVALUATE SUMMARIZECOLUMNS(Product[Category], \"v\", CALCULATE(COUNTROWS(Product), FILTER(Sales, TRUE()))) ORDER BY Product[Category]", "source": "recorded",
+      "expected": {"columns": ["Product[Category]","[v]"], "types": ["text","int"],
+        "rows": [
+          ["Accessories",3],
+          ["Bikes",3],
+          ["Clothing",2]
+        ]}},
+    {"id": "core.calc.factcond", "query": "EVALUATE ROW(\"v\", CALCULATE(COUNTROWS(Sales), Sales[Quantity] > 3))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [99]
+        ]}},
+    {"id": "core.calc.multicol", "query": "EVALUATE ROW(\"v\", CALCULATE(COUNTROWS(Sales), Sales[Quantity] > 2 && Sales[UnitPrice] > 500))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [37]
+        ]}},
+    {"id": "core.rel.related", "query": "EVALUATE ROW(\"v\", SUMX(Sales, Sales[Quantity] * RELATED(Product[ListPrice])))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["real"],
+        "rows": [
+          [222333.45000000004]
+        ]}},
+    {"id": "core.rel.relatedtable", "query": "EVALUATE SELECTCOLUMNS(Product, \"p\", Product[Product], \"n\", COUNTROWS(RELATEDTABLE(Sales))) ORDER BY [p]", "source": "recorded",
+      "expected": {"columns": ["[p]","[n]"], "types": ["text","int"],
+        "rows": [
+          ["Bottle",30],
+          ["City Bike",23],
+          ["Gloves",29],
+          ["Helmet",32],
+          ["Jersey",34],
+          ["Kids Bike",29],
+          ["Lights",36],
+          ["Rain Jacket",null],
+          ["Trail Bike",27]
+        ]}},
+    {"id": "core.rel.userel", "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], \"ship\", CALCULATE(SUM(Sales[Quantity]), USERELATIONSHIP(Sales[ShipDate], 'Date'[Date]))) ORDER BY 'Date'[Year]", "source": "recorded",
+      "expected": {"columns": ["Date[Year]","[ship]"], "types": ["int","int"],
+        "rows": [
+          [null,15],
+          [2023,375],
+          [2024,340]
+        ]}},
+    {"id": "core.rel.crossfilter", "query": "EVALUATE SUMMARIZECOLUMNS(Customer[Country], \"v\", CALCULATE(COUNTROWS(Product), CROSSFILTER(Sales[ProductKey], Product[ProductKey], BOTH))) ORDER BY Customer[Country]", "source": "recorded",
+      "expected": {"columns": ["Customer[Country]","[v]"], "types": ["text","int"],
+        "rows": [
+          [null,1],
+          ["Canada",8],
+          ["France",8],
+          ["Germany",8],
+          ["United States",8]
+        ]}},
+    {"id": "core.rel.bidir", "query": "EVALUATE SUMMARIZECOLUMNS(Product[Category], \"promos\", COUNTROWS(Promotion)) ORDER BY Product[Category]", "source": "recorded",
+      "expected": {"columns": ["Product[Category]","[promos]"], "types": ["text","int"],
+        "rows": [
+          [null,1],
+          ["Accessories",3],
+          ["Bikes",3],
+          ["Clothing",3]
+        ]}},
+    {"id": "core.rel.bidir.values", "query": "EVALUATE SUMMARIZECOLUMNS(Product[Category], \"promos\", COUNTROWS(VALUES(Promotion))) ORDER BY Product[Category]", "source": "recorded",
+      "expected": {"columns": ["Product[Category]","[promos]"], "types": ["text","int"],
+        "rows": [
+          [null,1],
+          ["Accessories",3],
+          ["Bikes",3],
+          ["Clothing",3]
+        ]}},
+    {"id": "core.blankrow.values", "query": "EVALUATE ROW(\"values\", COUNTROWS(VALUES(Customer)), \"all\", COUNTROWS(ALL(Customer)), \"allnb\", COUNTROWS(ALLNOBLANKROW(Customer)), \"distinct\", COUNTROWS(DISTINCT(Customer[CustomerKey])), \"table\", COUNTROWS(Customer))", "source": "recorded",
+      "expected": {"columns": ["[values]","[all]","[allnb]","[distinct]","[table]"], "types": ["int","int","int","int","int"],
+        "rows": [
+          [11,11,10,10,10]
+        ]}},
+    {"id": "core.blankrow.product", "query": "EVALUATE ROW(\"values\", COUNTROWS(VALUES(Product)), \"table\", COUNTROWS(Product), \"valcol\", COUNTROWS(VALUES(Product[Color])))", "source": "recorded",
+      "expected": {"columns": ["[values]","[table]","[valcol]"], "types": ["int","int","int"],
+        "rows": [
+          [10,9,6]
+        ]}},
+    {"id": "core.blankrow.promotion", "query": "EVALUATE ROW(\"values\", COUNTROWS(VALUES(Promotion)), \"table\", COUNTROWS(Promotion))", "source": "recorded",
+      "expected": {"columns": ["[values]","[table]"], "types": ["int","int"],
+        "rows": [
+          [4,4]
+        ]}},
+    {"id": "core.blankrow.date", "query": "EVALUATE ROW(\"values\", COUNTROWS(VALUES('Date')), \"table\", COUNTROWS('Date'))", "source": "recorded",
+      "expected": {"columns": ["[values]","[table]"], "types": ["int","int"],
+        "rows": [
+          [732,731]
+        ]}},
+    {"id": "core.blankrow.group", "query": "EVALUATE SUMMARIZECOLUMNS(Customer[Customer], \"qty\", SUM(Sales[Quantity])) ORDER BY Customer[Customer]", "source": "recorded",
+      "expected": {"columns": ["Customer[Customer]","[qty]"], "types": ["text","int"],
+        "rows": [
+          [null,2],
+          ["Alice",77],
+          ["Bruno",80],
+          ["Chen",67],
+          ["Dana",97],
+          ["Émile",79],
+          ["Farah",93],
+          ["Goran",80],
+          ["Hana",79],
+          ["Ivan",76]
+        ]}},
+    {"id": "core.blankrow.measure", "query": "EVALUATE ROW(\"v\", CALCULATE(SUM(Sales[Quantity]), ISBLANK(Customer[Customer])))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [2]
+        ]}},
+    {"id": "core.ct.addcolumns", "query": "EVALUATE ADDCOLUMNS(Product, \"qty\", CALCULATE(SUM(Sales[Quantity]))) ORDER BY Product[ProductKey]", "source": "recorded",
+      "expected": {"columns": ["Product[ProductKey]","Product[Product]","Product[Category]","Product[Subcategory]","Product[Color]","Product[ListPrice]","Product[Cost]","[qty]"], "types": ["int","text","text","text","text","real","real","int"],
+        "rows": [
+          [1,"Trail Bike","Bikes","Mountain","Red",1200,700,87],
+          [2,"City Bike","Bikes","Road","Blue",850.5,500.25,88],
+          [3,"Kids Bike","Bikes","Road","",300,180,95],
+          [4,"Helmet","Accessories","Safety","Black",45.99,20,74],
+          [5,"Bottle","Accessories","Hydration","Blue",9.5,2.75,104],
+          [6,"Lights","Accessories","Safety","Black",25,11.4,100],
+          [7,"Jersey","Clothing","Tops","Red",59.99,25,102],
+          [8,"Gloves","Clothing","Hands","Black",19.99,7.5,79],
+          [9,"Rain Jacket","Clothing","Tops","Yellow",120,60,null]
+        ]}},
+    {"id": "core.ct.sumx", "query": "EVALUATE ROW(\"v\", SUMX(Product, CALCULATE(SUM(Sales[Quantity])) * 2))", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [1458]
+        ]}},
+    {"id": "core.ct.earlier", "query": "EVALUATE SELECTCOLUMNS(FILTER(Product, COUNTROWS(FILTER(Product, EARLIER(Product[ListPrice]) > Product[ListPrice])) < 2), \"p\", Product[Product]) ORDER BY [p]", "source": "recorded",
+      "expected": {"columns": ["[p]"], "types": ["text"],
+        "rows": [
+          ["Bottle"],
+          ["Gloves"]
+        ]}},
+    {"id": "core.var", "query": "EVALUATE ROW(\"v\", VAR x = SUM(Sales[Quantity]) RETURN x * 2 + x)", "source": "recorded",
+      "expected": {"columns": ["[v]"], "types": ["int"],
+        "rows": [
+          [2190]
+        ]}},
+    {"id": "core.selectedvalue", "query": "EVALUATE SUMMARIZECOLUMNS(Product[Category], \"v\", SELECTEDVALUE(Product[Category], \"many\"), \"all\", SELECTEDVALUE(Product[Color], \"many\")) ORDER BY Product[Category]", "source": "recorded",
+      "expected": {"columns": ["Product[Category]","[v]","[all]"], "types": ["text","text","text"],
+        "rows": [
+          ["Accessories","Accessories","many"],
+          ["Bikes","Bikes","many"],
+          ["Clothing","Clothing","many"]
+        ]}},
+    {"id": "core.hasonevalue", "query": "EVALUATE ROW(\"v\", HASONEVALUE(Product[Category]), \"f\", CALCULATE(HASONEVALUE(Product[Category]), Product[Category] = \"Bikes\"))", "source": "recorded",
+      "expected": {"columns": ["[v]","[f]"], "types": ["bool","bool"],
+        "rows": [
+          [false,true]
+        ]}},
+    {"id": "core.isfiltered", "query": "EVALUATE SUMMARIZECOLUMNS(Product[Category], \"f\", ISFILTERED(Product[Category]), \"c\", ISCROSSFILTERED(Sales[Quantity])) ORDER BY Product[Category]", "source": "recorded",
+      "expected": {"columns": ["Product[Category]","[f]","[c]"], "types": ["text","bool","bool"],
+        "rows": [
+          [null,true,true],
+          ["Accessories",true,true],
+          ["Bikes",true,true],
+          ["Clothing",true,true]
+        ]}},
+    {"id": "core.treatas", "query": "EVALUATE SUMMARIZECOLUMNS('Date'[Year], \"v\", CALCULATE(SUM(Budget[BudgetAmount]), TREATAS(VALUES('Date'[Year]), Budget[Year]))) ORDER BY 'Date'[Year]", "source": "recorded",
+      "expected": {"columns": ["Date[Year]","[v]"], "types": ["int","int"],
+        "rows": [
+          [2023,47500],
+          [2024,52500]
+        ]}},
+    {"id": "core.op.arith", "query": "EVALUATE ROW(\"a\", 7 / 2, \"b\", 2 ^ 10, \"c\", -2 ^ 2, \"d\", 5 - BLANK(), \"e\", BLANK() - 5, \"f\", BLANK() * 5, \"g\", BLANK() + BLANK(), \"h\", 1 / 0)", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]","[d]","[e]","[f]","[g]","[h]"], "types": ["real","real","real","int","int","int","int","real"],
+        "rows": [
+          [3.5,1024,-4,5,-5,null,null,"Infinity"]
+        ]}},
+    {"id": "core.op.types", "query": "EVALUATE ROW(\"int\", 2 + 3, \"mixed\", 2 + 3.5, \"div\", 6 / 3, \"cur\", CURRENCY(1.5) * 2, \"curdiv\", CURRENCY(10) / 4, \"curcur\", CURRENCY(10) / CURRENCY(4), \"pow\", 2 ^ 3)", "source": "recorded",
+      "expected": {"columns": ["[int]","[mixed]","[div]","[cur]","[curdiv]","[curcur]","[pow]"], "types": ["int","real","real","currency","currency","real","real"],
+        "rows": [
+          [5,5.5,2,3,2.5,2.5,8]
+        ]}},
+    {"id": "core.op.logic", "query": "EVALUATE ROW(\"a\", TRUE() || BLANK(), \"b\", FALSE() || BLANK(), \"c\", TRUE() && BLANK(), \"d\", BLANK() || BLANK(), \"e\", BLANK() && BLANK(), \"f\", NOT BLANK())", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]","[d]","[e]","[f]"], "types": ["bool","bool","bool","bool","bool","bool"],
+        "rows": [
+          [true,false,false,false,false,true]
+        ]}},
+    {"id": "core.op.compare", "query": "EVALUATE ROW(\"a\", BLANK() = 0, \"b\", BLANK() = \"\", \"c\", BLANK() == 0, \"d\", BLANK() == BLANK(), \"e\", BLANK() < 1, \"f\", 0 IN {BLANK()}, \"g\", BLANK() IN {0})", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]","[d]","[e]","[f]","[g]"], "types": ["bool","bool","bool","bool","bool","bool","bool"],
+        "rows": [
+          [true,true,false,true,true,false,false]
+        ]}},
+    {"id": "core.op.text", "query": "EVALUATE ROW(\"a\", \"x\" & 1, \"b\", 1 & 2, \"c\", TRUE() & \"y\", \"d\", 1.5 & \"\", \"e\", \"A\" = \"a\", \"f\", \"a\" < \"B\", \"g\", \"abc\" & BLANK())", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]","[d]","[e]","[f]","[g]"], "types": ["text","text","text","text","bool","bool","text"],
+        "rows": [
+          ["x1","12","TRUEy","1.5",true,true,"abc"]
+        ]}},
+    {"id": "core.op.date", "query": "EVALUATE ROW(\"a\", DATE(2024, 1, 31) + 1, \"b\", DATE(2024, 3, 1) - DATE(2024, 2, 1), \"c\", DATE(2024, 1, 1) & \"\")", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]"], "types": ["datetime","datetime","text"],
+        "rows": [
+          ["2024-02-01T00:00:00","1900-01-28T00:00:00","1/1/2024"]
+        ]}},
+    {"id": "core.text.case", "query": "EVALUATE ROW(\"v\", COUNTROWS(FILTER(ALL(Product), Product[Color] = \"RED\")), \"w\", DISTINCTCOUNT(Product[Color]))", "source": "recorded",
+      "expected": {"columns": ["[v]","[w]"], "types": ["int","int"],
+        "rows": [
+          [2,5]
+        ]}}
   ]
 }

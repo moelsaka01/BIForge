@@ -55,7 +55,9 @@ fn series_value(base: &Value, x: f64, int: bool) -> Value {
 fn run<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], env: &Env<'a>) -> VResult<Val> {
     let t = |v: TableVal| Ok(Val::T(v));
     match name {
-        "NONVISUAL" | "EVALUATEANDLOG" => ev.eval(&args[0], env),
+        "EVALUATEANDLOG" => ev.eval(&args[0], env),
+        // recorded from Power BI: only valid as a value filter of SUMMARIZECOLUMNS (handled there)
+        "NONVISUAL" => Err(err(ErrorCode::InvalidParameter, "The NONVISUAL function can only be used as a value filter of SUMMARIZECOLUMNS.")),
         "FILTERS" => {
             let c = col_arg(name, args, 0)?;
             // only the filters that name this column directly (cross-filters from other tables do not count)
@@ -73,8 +75,12 @@ fn run<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], env: &Env<'a>) 
             let end = ev.scalar(&args[1], env)?;
             let step = if args.len() > 2 && !args[2].is_missing() { ev.scalar(&args[2], env)? } else { Value::Int(1) };
             let (a, b, s) = (start.to_f64()?, end.to_f64()?, step.to_f64()?);
-            if s == 0.0 || (s > 0.0 && a > b) || (s < 0.0 && a < b) {
-                return t(TableVal::mat(vec![TCol { name: "Value".into(), lineage: None }], vec![]));
+            if s <= 0.0 {
+                // recorded from Power BI
+                return Err(err(ErrorCode::InvalidValue, "GENERATESERIES cannot have an increment value less than or equal to zero."));
+            }
+            if a > b {
+                return t(TableVal::mat(vec![TCol { name: "Value".into(), lineage: None, renamed: false }], vec![]));
             }
             let int = matches!((&start, &step), (Value::Int(_), Value::Int(_)));
             let n = ((b - a) / s + 1e-9).floor() as usize + 1;
@@ -82,7 +88,7 @@ fn run<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], env: &Env<'a>) 
                 return Err(err(ErrorCode::InvalidValue, "GENERATESERIES would produce too many rows."));
             }
             let rows = (0..n).map(|i| vec![series_value(&start, a + s * i as f64, int)]).collect();
-            t(TableVal::mat(vec![TCol { name: "Value".into(), lineage: None }], rows))
+            t(TableVal::mat(vec![TCol { name: "Value".into(), lineage: None, renamed: false }], rows))
         }
         "UNION" | "INTERSECT" | "EXCEPT" => {
             let tables = args.iter().map(|a| ev.table(a, env).map(|x| mat(ev, &x))).collect::<VResult<Vec<_>>>()?;
@@ -92,7 +98,7 @@ fn run<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], env: &Env<'a>) 
                 .cols
                 .iter()
                 .enumerate()
-                .map(|(i, c)| TCol { name: c.name.clone(), lineage: if tables.iter().all(|t| t.cols[i].lineage == c.lineage) { c.lineage } else { None } })
+                .map(|(i, c)| TCol { name: c.name.clone(), lineage: if tables.iter().all(|t| t.cols[i].lineage == c.lineage) { c.lineage } else { None }, renamed: false })
                 .collect();
             let rows: Vec<Vec<Value>> = match name {
                 "UNION" => tables.iter().flat_map(|t| t.rows.iter().cloned()).collect(),
@@ -135,7 +141,12 @@ fn run<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], env: &Env<'a>) 
                     rows.push(row);
                 }
             }
-            cols.extend(right_cols.unwrap_or_default());
+            let right_cols = right_cols.unwrap_or_default();
+            // recorded from Power BI: the two tables must not share a column name
+            if let Some(dup) = right_cols.iter().find(|c| cols.iter().any(|l| l.name.eq_ignore_ascii_case(&c.name))) {
+                return Err(err(ErrorCode::InvalidParameter, format!("Function {name} does not allow two columns with the same name [{}].", dup.name)));
+            }
+            cols.extend(right_cols);
             t(TableVal::mat(cols, rows))
         }
         "NATURALINNERJOIN" | "NATURALLEFTOUTERJOIN" => {
@@ -255,7 +266,7 @@ fn run<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], env: &Env<'a>) 
             let mut cols = Vec::new();
             let mut types = Vec::new();
             for p in spec.chunks(2) {
-                cols.push(TCol { name: ev.scalar(&p[0], env)?.to_text(), lineage: None });
+                cols.push(TCol { name: ev.scalar(&p[0], env)?.to_text(), lineage: None, renamed: false });
                 types.push(p[1].ident().unwrap_or("STRING").to_string());
             }
             let data = ev.table(&last[0], env)?;
@@ -318,7 +329,7 @@ fn groupby<'a>(ev: &'a Evaluator<'a>, args: &'a [BExpr], env: &Env<'a>) -> VResu
         groups.entry(k).or_default().push(r.clone());
     }
     let mut cols: Vec<TCol> = group_idx.iter().map(|&g| src.cols[g].clone()).collect();
-    cols.extend(pairs.iter().map(|(n, _)| TCol { name: n.clone(), lineage: None }));
+    cols.extend(pairs.iter().map(|(n, _)| TCol { name: n.clone(), lineage: None, renamed: false }));
     let mut rows = Vec::new();
     for k in order {
         let members = groups.remove(&k).unwrap();

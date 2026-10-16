@@ -21,6 +21,10 @@ pub fn setup() -> (Engine, biforge_dax::Engine) {
     for t in TABLES {
         let path = fixtures().join(format!("{t}.csv")).to_string_lossy().into_owned();
         let info = store.import(t, &SourceSpec::Csv { path, delimiter: None, header: None }, &creds).unwrap();
+        // Power BI's CSV import loads an empty text field as "" (not BLANK); the recorded results depend on it
+        for c in info.columns.iter().filter(|c| c.bi_type == biforge_engine::BiType::String) {
+            store.connection().execute(&format!("UPDATE \"{t}\" SET \"{}\" = '' WHERE \"{}\" IS NULL", c.name, c.name), []).unwrap();
+        }
         let cols: Vec<(String, biforge_dax::DataType)> = info.columns.iter().map(|c| (c.name.clone(), dax_type(c.bi_type))).collect();
         let refs: Vec<(&str, biforge_dax::DataType)> = cols.iter().map(|(n, t)| (n.as_str(), *t)).collect();
         model.add_table(t, &refs).unwrap();

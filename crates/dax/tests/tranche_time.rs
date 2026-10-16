@@ -75,7 +75,7 @@ fn datesbetween_and_datesinperiod() {
     assert_eq!(ev(&e, "COUNTROWS(DATESINPERIOD('Date'[Date], DATE(2024, 1, 31), 1, MONTH))"), i(29));
     assert_eq!(ev(&e, "COUNTROWS(DATESINPERIOD('Date'[Date], DATE(2024, 3, 15), -7, DAY))"), i(7));
     assert_eq!(ev(&e, "COUNTROWS(DATESINPERIOD('Date'[Date], DATE(2024, 12, 31), -1, YEAR))"), i(366));
-    assert_eq!(ev(&e, "COUNTROWS(DATESINPERIOD('Date'[Date], DATE(2024, 6, 30), -2, QUARTER))"), i(183));
+    assert_eq!(ev(&e, "COUNTROWS(DATESINPERIOD('Date'[Date], DATE(2024, 6, 30), -2, QUARTER))"), i(182));
     // the filtered result drives CALCULATE
     assert_eq!(ev(&e, "CALCULATE([Total], DATESBETWEEN('Date'[Date], DATE(2024, 3, 10), DATE(2024, 3, 20)))"), i(11));
     assert_eq!(ev(&e, "CALCULATE([Total], DATESINPERIOD('Date'[Date], DATE(2024, 3, 31), -1, MONTH))"), i(31));
@@ -161,14 +161,15 @@ fn first_and_last_dates() {
     let max = |t: &str| ev(&e, &mid(&format!("MAXX({t}, [Date])")));
     assert_eq!(max("FIRSTDATE('Date'[Date])"), dt(2024, 3, 10));
     assert_eq!(max("LASTDATE('Date'[Date])"), dt(2024, 3, 20));
-    assert_eq!(max("STARTOFMONTH('Date'[Date])"), dt(2024, 3, 10));
-    assert_eq!(max("ENDOFMONTH('Date'[Date])"), dt(2024, 3, 20));
-    assert_eq!(max("STARTOFQUARTER('Date'[Date])"), dt(2024, 3, 10));
-    assert_eq!(max("STARTOFYEAR('Date'[Date])"), dt(2024, 3, 10));
-    assert_eq!(max("ENDOFYEAR('Date'[Date])"), dt(2024, 3, 20));
-    // the whole calendar: first / last visible date of the period holding the last date
-    assert_eq!(ev(&e, "MAXX(STARTOFQUARTER('Date'[Date]), [Date])"), dt(2024, 10, 1));
-    assert_eq!(ev(&e, "MAXX(STARTOFYEAR('Date'[Date]), [Date])"), dt(2024, 1, 1));
+    // recorded from Power BI: STARTOF* = first date of the period of the first context date, ENDOF* = last date of
+    // the period of the last context date, both from the whole date column
+    assert_eq!(max("STARTOFMONTH('Date'[Date])"), dt(2024, 3, 1));
+    assert_eq!(max("ENDOFMONTH('Date'[Date])"), dt(2024, 3, 31));
+    assert_eq!(max("STARTOFQUARTER('Date'[Date])"), dt(2024, 1, 1));
+    assert_eq!(max("STARTOFYEAR('Date'[Date])"), dt(2024, 1, 1));
+    assert_eq!(max("ENDOFYEAR('Date'[Date])"), dt(2024, 12, 31));
+    assert_eq!(ev(&e, "MAXX(STARTOFQUARTER('Date'[Date]), [Date])"), dt(2023, 1, 1));
+    assert_eq!(ev(&e, "MAXX(STARTOFYEAR('Date'[Date]), [Date])"), dt(2023, 1, 1));
     assert_eq!(ev(&e, "MAXX(ENDOFMONTH('Date'[Date]), [Date])"), dt(2024, 12, 31));
     assert_eq!(ev(&e, "COUNTROWS(FIRSTDATE('Date'[Date]))"), i(1));
     assert_eq!(ev(&e, "COUNTROWS(FIRSTDATE(FILTER(VALUES('Date'[Date]), FALSE())))"), B);
@@ -177,13 +178,15 @@ fn first_and_last_dates() {
 #[test]
 fn opening_and_closing_balances() {
     let e = eng();
-    // running balance: days since 2023-01-01
-    assert_eq!(ev(&e, &mid("CLOSINGBALANCEMONTH([Balance], 'Date'[Date])")), i(445));
-    assert_eq!(ev(&e, &mid("OPENINGBALANCEMONTH([Balance], 'Date'[Date])")), i(434));
-    assert_eq!(ev(&e, &mid("CLOSINGBALANCEQUARTER([Balance], 'Date'[Date])")), i(445));
-    assert_eq!(ev(&e, &mid("OPENINGBALANCEQUARTER([Balance], 'Date'[Date])")), i(434));
-    assert_eq!(ev(&e, &mid("CLOSINGBALANCEYEAR([Balance], 'Date'[Date])")), i(445));
-    assert_eq!(ev(&e, &mid("OPENINGBALANCEYEAR([Balance], 'Date'[Date])")), i(434));
+    // running balance: days since 2023-01-01. Recorded from Power BI: closing = the end of the period of the last
+    // context date (Mar 31 / Dec 31, not the last visible date), opening = the day before the start of the period of
+    // the first context date
+    assert_eq!(ev(&e, &mid("CLOSINGBALANCEMONTH([Balance], 'Date'[Date])")), i(456));
+    assert_eq!(ev(&e, &mid("OPENINGBALANCEMONTH([Balance], 'Date'[Date])")), i(425));
+    assert_eq!(ev(&e, &mid("CLOSINGBALANCEQUARTER([Balance], 'Date'[Date])")), i(456));
+    assert_eq!(ev(&e, &mid("OPENINGBALANCEQUARTER([Balance], 'Date'[Date])")), i(365));
+    assert_eq!(ev(&e, &mid("CLOSINGBALANCEYEAR([Balance], 'Date'[Date])")), i(731));
+    assert_eq!(ev(&e, &mid("OPENINGBALANCEYEAR([Balance], 'Date'[Date])")), i(365));
     // the full calendar closes on its last date
     assert_eq!(ev(&e, "CLOSINGBALANCEYEAR([Balance], 'Date'[Date])"), i(731));
     // the optional filter argument is applied as well

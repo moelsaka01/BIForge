@@ -34,8 +34,9 @@ fn column_aggregates() {
     // filters apply; nothing left gives BLANK
     assert_eq!(ev(&e, "CALCULATE(MEDIAN(Sales[Qty]), Product[Color] = \"Red\")"), f(1.0));
     assert_eq!(ev(&e, "CALCULATE(MEDIAN(Sales[Qty]), Product[Color] = \"Purple\")"), B);
-    // a sample statistic over one value is BLANK (harness)
-    assert_eq!(ev(&e, "CALCULATE(VAR.S(Sales[Qty]), Sales[SalesKey] = 1)"), B);
+    // a sample statistic over one value is NaN, over no value BLANK (recorded from Power BI)
+    assert!(matches!(ev(&e, "CALCULATE(VAR.S(Sales[Qty]), Sales[SalesKey] = 1)"), Value::Double(x) if x.is_nan()));
+    assert_eq!(ev(&e, "CALCULATE(VAR.S(Sales[Qty]), Product[Color] = \"Purple\")"), B);
     assert_eq!(ev(&e, "CALCULATE(VAR.P(Sales[Qty]), Sales[SalesKey] = 1)"), f(0.0));
     fails(&e, "GEOMEAN(Product[ListPrice] - 100)");
 }
@@ -73,15 +74,17 @@ fn x_aggregates_evaluate_per_row() {
 fn rankx_and_rank_eq() {
     let e = engine();
     let r = sorted(rows(&e, "EVALUATE ADDCOLUMNS(VALUES(Product[Category]), \"r\", RANKX(ALL(Product[Category]), CALCULATE(SUM(Sales[Qty]))))"));
-    assert_eq!(r, vec![vec![B, i(3)], vec![s("Accessories"), i(1)], vec![s("Bikes"), i(2)], vec![s("Clothing"), B]]);
+    assert_eq!(r, vec![vec![B, i(3)], vec![s("Accessories"), i(1)], vec![s("Bikes"), i(2)], vec![s("Clothing"), i(4)]]);
     let r = sorted(rows(&e, "EVALUATE ADDCOLUMNS(VALUES(Product[Category]), \"r\", RANKX(ALL(Product[Category]), CALCULATE(SUM(Sales[Qty])), , ASC))"));
-    assert_eq!(r, vec![vec![B, i(1)], vec![s("Accessories"), i(3)], vec![s("Bikes"), i(2)], vec![s("Clothing"), B]]);
+    assert_eq!(r, vec![vec![B, i(1)], vec![s("Accessories"), i(3)], vec![s("Bikes"), i(2)], vec![s("Clothing"), i(1)]]);
     assert_eq!(ev(&e, "RANKX({1, 2, 2, 3}, [Value], 3)"), i(1));
     assert_eq!(ev(&e, "RANKX({1, 2, 2, 3}, [Value], 2)"), i(2));
     assert_eq!(ev(&e, "RANKX({1, 2, 2, 3}, [Value], 1)"), i(4));
     assert_eq!(ev(&e, "RANKX({1, 2, 2, 3}, [Value], 1, , DENSE)"), i(3));
     assert_eq!(ev(&e, "RANKX({1, 2, 2, 3}, [Value], 1, ASC)"), i(1));
     assert_eq!(ev(&e, "RANKX({1, 2, 2, 3}, [Value], 7)"), i(1));
+    // a BLANK value ranks like 0 (recorded from Power BI)
+    assert_eq!(ev(&e, "RANKX({1, 2, 2, 3}, [Value], BLANK())"), i(5));
     assert_eq!(ev(&e, "RANK.EQ(2, Sales[Qty])"), i(3));
     assert_eq!(ev(&e, "RANK.EQ(2, Sales[Qty], 1)"), i(4));
     assert_eq!(ev(&e, "RANK.EQ(5, Sales[Qty])"), B);

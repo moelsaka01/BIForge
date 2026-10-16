@@ -10,6 +10,8 @@ pub struct TCol {
     pub name: String,
     /// The model column this column comes from (keeps filtering power), if any.
     pub lineage: Option<ColId>,
+    /// Named explicitly (SELECTCOLUMNS): the header is `[Name]` even when the column keeps its lineage.
+    pub renamed: bool,
 }
 
 #[derive(Debug, Default)]
@@ -42,7 +44,7 @@ impl TableVal {
             TableVal::Base { table, .. } => data
                 .model
                 .columns_of(*table)
-                .map(|c| TCol { name: data.model.column(c).name.clone(), lineage: Some(c) })
+                .map(|c| TCol { name: data.model.column(c).name.clone(), lineage: Some(c), renamed: false })
                 .collect(),
             TableVal::Mat(m) => m.cols.clone(),
         }
@@ -77,7 +79,7 @@ impl TableVal {
 /// Header shown for a result column: `Table[Column]` for model columns, `[Name]` otherwise.
 pub fn header(data: &ModelData, c: &TCol) -> String {
     match c.lineage {
-        Some(id) if data.model.column(id).name.eq_ignore_ascii_case(&c.name) => data.model.column_name(id),
+        Some(id) if !c.renamed && data.model.column(id).name.eq_ignore_ascii_case(&c.name) => data.model.column_name(id),
         _ => format!("[{}]", c.name),
     }
 }

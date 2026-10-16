@@ -1,17 +1,50 @@
 {
   "area": "agg",
   "fixture": "tests/dax/fixtures",
+  "recordedWith": "local Analysis Services of Power BI Desktop 2.158.1304.0",
   "cases": [
-    {"id": "agg.product", "query": "EVALUATE ROW(\"p\", PRODUCT(Sales[Quantity]), \"px\", PRODUCTX(Product, Product[ListPrice]))", "source": "pending", "expected": null},
-    {"id": "agg.product.empty", "query": "EVALUATE ROW(\"p\", CALCULATE(PRODUCT(Sales[Quantity]), Product[Color] = \"Purple\"))", "source": "pending", "expected": null},
-    {"id": "agg.product.types", "query": "EVALUATE ROW(\"a\", PRODUCTX(FILTER(Product, Product[ProductKey] <= 3), Product[ProductKey]), \"b\", PRODUCT(Budget[Year]))", "source": "pending", "expected": null},
-    {"id": "agg.averagea", "query": "EVALUATE ROW(\"text\", AVERAGEA(Product[Color]), \"num\", AVERAGEA(Sales[Quantity]), \"date\", AVERAGEA(Sales[ShipDate]))", "source": "pending", "expected": null},
-    {"id": "agg.mina.maxa", "query": "EVALUATE ROW(\"mint\", MINA(Product[Color]), \"maxt\", MAXA(Product[Color]), \"mn\", MINA(Sales[Quantity]), \"mx\", MAXA(Sales[Quantity]))", "source": "pending", "expected": null},
-    {"id": "agg.mina.bool", "query": "EVALUATE ROW(\"mn\", MINA('Date'[IsWeekend]), \"mx\", MAXA('Date'[IsWeekend]), \"av\", AVERAGEA('Date'[IsWeekend]))", "source": "pending", "expected": null},
-    {"id": "agg.approxdc", "query": "EVALUATE ROW(\"a\", APPROXIMATEDISTINCTCOUNT(Sales[CustomerKey]), \"b\", DISTINCTCOUNT(Sales[CustomerKey]))", "source": "pending", "expected": null},
-    {"id": "agg.minmax.two", "query": "EVALUATE ROW(\"a\", MIN(3, 5), \"b\", MAX(3, 5), \"c\", MAX(\"a\", \"b\"), \"d\", MIN(BLANK(), 4))", "source": "pending", "expected": null},
-    {"id": "agg.minmax.text", "query": "EVALUATE ROW(\"a\", MIN(Product[Product]), \"b\", MAX(Product[Color]))", "source": "pending", "expected": null},
-    {"id": "agg.sum.text", "query": "EVALUATE ROW(\"a\", SUM(Product[Product]))", "source": "pending", "expected": null},
-    {"id": "agg.count.types", "query": "EVALUATE ROW(\"a\", COUNT(Product[Color]), \"b\", COUNTA(Product[Color]), \"c\", COUNTBLANK(Product[Color]), \"d\", COUNT('Date'[IsWeekend]), \"e\", COUNTA('Date'[IsWeekend]))", "source": "pending", "expected": null}
+    {"id": "agg.product", "query": "EVALUATE ROW(\"p\", PRODUCT(Sales[Quantity]), \"px\", PRODUCTX(Product, Product[ListPrice]))", "source": "recorded",
+      "expected": {"columns": ["[p]","[px]"], "types": ["real","real"],
+        "rows": [
+          [-1.4397177541993556e+102,481256650796509200]
+        ]}},
+    {"id": "agg.product.empty", "query": "EVALUATE ROW(\"p\", CALCULATE(PRODUCT(Sales[Quantity]), Product[Color] = \"Purple\"))", "source": "recorded",
+      "expected": {"columns": ["[p]"], "types": ["real"],
+        "rows": [
+          [null]
+        ]}},
+    {"id": "agg.product.types", "query": "EVALUATE ROW(\"a\", PRODUCTX(FILTER(Product, Product[ProductKey] <= 3), Product[ProductKey]), \"b\", PRODUCT(Budget[Year]))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]"], "types": ["real","real"],
+        "rows": [
+          [6,68646622270958870000]
+        ]}},
+    {"id": "agg.averagea", "query": "EVALUATE ROW(\"text\", AVERAGEA(Product[Color]), \"num\", AVERAGEA(Sales[Quantity]), \"date\", AVERAGEA(Sales[ShipDate]))", "source": "recorded",
+      "expected": {"columns": ["[text]","[num]","[date]"], "types": ["real","real","real"],
+        "rows": [
+          [0,3.0416666666666665,45290.59414225941]
+        ]}},
+    {"id": "agg.mina.maxa", "query": "EVALUATE ROW(\"mint\", MINA(Product[Color]), \"maxt\", MAXA(Product[Color]), \"mn\", MINA(Sales[Quantity]), \"mx\", MAXA(Sales[Quantity]))", "source": "recorded",
+      "expected": {"columns": ["[mint]","[maxt]","[mn]","[mx]"], "types": ["int","int","int","int"],
+        "rows": [
+          [0,0,-2,5]
+        ]}},
+    {"id": "agg.mina.bool", "query": "EVALUATE ROW(\"mn\", MINA('Date'[IsWeekend]), \"mx\", MAXA('Date'[IsWeekend]), \"av\", AVERAGEA('Date'[IsWeekend]))", "source": "recorded",
+      "expected": {"columns": ["[mn]","[mx]","[av]"], "types": ["int","int","real"],
+        "rows": [
+          [0,1,0.2859097127222982]
+        ]}},
+    {"id": "agg.approxdc", "query": "EVALUATE ROW(\"a\", APPROXIMATEDISTINCTCOUNT(Sales[CustomerKey]), \"b\", DISTINCTCOUNT(Sales[CustomerKey]))", "source": "recorded", "expected": {"error": "Exception calling \"ExecuteReader\" with \"0\" argument(s): \"Query (1, 19) The function APPROXIMATEDISTINCTCOUNT isn't supported for this storage mode. See https://go.microsoft.com/fwlink/?linkid=2216355 to learn more.\""}},
+    {"id": "agg.minmax.two", "query": "EVALUATE ROW(\"a\", MIN(3, 5), \"b\", MAX(3, 5), \"c\", MAX(\"a\", \"b\"), \"d\", MIN(BLANK(), 4))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]","[c]","[d]"], "types": ["int","int","text","int"],
+        "rows": [
+          [3,5,"b",null]
+        ]}},
+    {"id": "agg.minmax.text", "query": "EVALUATE ROW(\"a\", MIN(Product[Product]), \"b\", MAX(Product[Color]))", "source": "recorded",
+      "expected": {"columns": ["[a]","[b]"], "types": ["text","text"],
+        "rows": [
+          ["Bottle","Yellow"]
+        ]}},
+    {"id": "agg.sum.text", "query": "EVALUATE ROW(\"a\", SUM(Product[Product]))", "source": "recorded", "expected": {"error": "Exception calling \"ExecuteReader\" with \"0\" argument(s): \"Query (1, 23) The function SUM cannot work with values of type String.\""}},
+    {"id": "agg.count.types", "query": "EVALUATE ROW(\"a\", COUNT(Product[Color]), \"b\", COUNTA(Product[Color]), \"c\", COUNTBLANK(Product[Color]), \"d\", COUNT('Date'[IsWeekend]), \"e\", COUNTA('Date'[IsWeekend]))", "source": "recorded", "expected": {"error": "Exception calling \"ExecuteReader\" with \"0\" argument(s): \"Query (1, 115) The function COUNT cannot work with values of type Boolean.\""}}
   ]
 }

@@ -3,7 +3,7 @@
 use crate::bind::BExpr;
 use crate::diag::ErrorCode;
 use crate::eval::{Env, Evaluator, Val};
-use crate::functions::{col_arg, column_values, distinct_values, err, for_each_row};
+use crate::functions::{col_arg, column_values, err, for_each_row};
 use crate::value::{VResult, Value};
 
 pub const NAMES: &[&str] = &["AVERAGEA", "MINA", "MAXA", "PRODUCT", "PRODUCTX", "APPROXIMATEDISTINCTCOUNT"];
@@ -62,10 +62,10 @@ fn run<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], env: &Env<'a>) 
             product(name, vals.into_iter())
         }
         "APPROXIMATEDISTINCTCOUNT" => {
-            // BIForge counts exactly, which is a valid (error-free) approximation.
-            let c = col_arg(name, args, 0)?;
-            let n = distinct_values(ev, c, env, true).len();
-            Ok(crate::functions::as_count(n))
+            // recorded from Power BI: the function is only available for DirectQuery sources and fails on imported
+            // (storage mode Import) models, which is all BIForge has
+            let _ = (ev, args, env);
+            Err(err(ErrorCode::InvalidParameter, "The function APPROXIMATEDISTINCTCOUNT isn't supported for this storage mode."))
         }
         _ => unreachable!(),
     }

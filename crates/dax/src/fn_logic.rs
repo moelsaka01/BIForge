@@ -2,10 +2,9 @@
 //! ISNONTEXT, ISLOGICAL, ISEVEN, ISODD, HASONEFILTER, CONTAINS, CONTAINSROW, CONTAINSSTRING(EXACT),
 //! LOOKUPVALUE, USERCULTURE.
 
-use crate::ast::BinOp;
 use crate::bind::BExpr;
 use crate::diag::ErrorCode;
-use crate::eval::{binary, Env, Evaluator, Val};
+use crate::eval::{Env, Evaluator, Val};
 use crate::functions::{col_arg, distinct_values, err};
 use crate::model::ColId;
 use crate::table::TableVal;
@@ -32,6 +31,12 @@ fn col_index(ev: &Evaluator, t: &TableVal, c: ColId) -> Option<usize> {
     }
 }
 
+/// A value that IFERROR / ISERROR treat as an error although it is a result: Infinity and NaN (recorded from
+/// Power BI: IFERROR(1 / 0, "bad") is "bad").
+fn non_finite(v: &Value) -> bool {
+    matches!(v, Value::Double(d) if !d.is_finite())
+}
+
 /// A recoverable evaluation error: IFERROR / ISERROR catch these, but not a missing implementation.
 fn caught(e: &value::EvalError) -> bool {
     e.code != ErrorCode::NotImplemented
@@ -55,16 +60,21 @@ fn run<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], env: &Env<'a>) 
         }
         "IFERROR" => match ev.scalar(&args[0], env) {
             Err(e) if caught(&e) => ev.scalar(&args[1], env),
+            Ok(v) if non_finite(&v) => ev.scalar(&args[1], env),
             other => other,
         },
-        "ISERROR" => Ok(Value::Bool(matches!(ev.scalar(&args[0], env), Err(ref e) if caught(e)))),
+        "ISERROR" => Ok(Value::Bool(match ev.scalar(&args[0], env) {
+            Err(ref e) => caught(e),
+            Ok(v) => non_finite(&v),
+        })),
         "SWITCH" => {
             let subject = ev.scalar(&args[0], env)?;
             let rest = &args[1..];
             let pairs = rest.len() / 2;
             for p in 0..pairs {
                 let candidate = ev.scalar(&rest[2 * p], env)?;
-                if binary(BinOp::Eq, &subject, &candidate)? == Value::Bool(true) {
+                // recorded from Power BI: BLANK only matches BLANK in SWITCH (0 and "" do not)
+                if value::strict_eq(&subject, &candidate)? {
                     return ev.scalar(&rest[2 * p + 1], env);
                 }
             }
@@ -98,24 +108,18 @@ fn run<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], env: &Env<'a>) 
                 left = !left;
                 n = -n;
             }
-            Ok(Value::Int(if n >= 64 {
-                0
-            } else if left {
-                ((x as u64) << n) as i64
-            } else {
-                ((x as u64) >> n) as i64
-            }))
+            // recorded from Power BI: the count wraps modulo 64
+            let n = n % 64;
+            Ok(Value::Int(if left { ((x as u64) << n) as i64 } else { ((x as u64) >> n) as i64 }))
         }
-        "ISNUMBER" => Ok(Value::Bool(matches!(ev.scalar(&args[0], env)?, Value::Int(_) | Value::Double(_) | Value::Currency(_)))),
+        "ISNUMBER" => Ok(Value::Bool(matches!(ev.scalar(&args[0], env)?, Value::Int(_) | Value::Double(_) | Value::Currency(_) | Value::DateTime(_)))),
         "ISTEXT" => Ok(Value::Bool(matches!(ev.scalar(&args[0], env)?, Value::Str(_)))),
         "ISNONTEXT" => Ok(Value::Bool(!matches!(ev.scalar(&args[0], env)?, Value::Str(_)))),
         "ISLOGICAL" => Ok(Value::Bool(matches!(ev.scalar(&args[0], env)?, Value::Bool(_)))),
         "ISEVEN" | "ISODD" => {
+            // recorded from Power BI: BLANK counts as 0 and a fraction is rounded (ISEVEN(3.9) is TRUE)
             let v = ev.scalar(&args[0], env)?;
-            if v.is_blank() {
-                return Ok(Value::Blank);
-            }
-            let n = v.to_f64()?.trunc();
+            let n = v.to_f64()?.round();
             let even = n % 2.0 == 0.0;
             Ok(Value::Bool(if name == "ISEVEN" { even } else { !even }))
         }
@@ -141,7 +145,7 @@ fn run<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], env: &Env<'a>) 
                 let i = col_index(ev, &t, c).ok_or_else(|| err(ErrorCode::InvalidParameter, format!("CONTAINS: column {} is not in the table.", ev.data.model.column_name(c))))?;
                 want.push((i, ev.scalar(&p[1], env)?));
             }
-            let found = (0..t.nrows()).any(|r| want.iter().all(|(i, v)| value::compare(&t.value(ev.data, r, *i), v).map(|o| o.is_eq()).unwrap_or(false)));
+            let found = (0..t.nrows()).any(|r| want.iter().all(|(i, v)| value::strict_eq(&t.value(ev.data, r, *i), v).unwrap_or(false)));
             Ok(Value::Bool(found))
         }
         "CONTAINSROW" => {

@@ -35,9 +35,10 @@ fn a_aggregations_count_text_as_zero() {
 }
 
 #[test]
-fn approximate_distinct_count_is_exact() {
+fn approximate_distinct_count_is_not_available_for_imported_models() {
+    // recorded from Power BI: only DirectQuery sources support it
     let e = engine();
-    assert_eq!(ev(&e, "APPROXIMATEDISTINCTCOUNT(Sales[CustomerKey])"), i(3));
+    assert!(e.eval_scalar("APPROXIMATEDISTINCTCOUNT(Sales[CustomerKey])").is_err());
 }
 
 #[test]
@@ -97,8 +98,10 @@ fn type_tests() {
     assert_eq!(ev(&e, "ISLOGICAL(1)"), t(false));
     assert_eq!(ev(&e, "ISEVEN(4)"), t(true));
     assert_eq!(ev(&e, "ISODD(3)"), t(true));
-    assert_eq!(ev(&e, "ISEVEN(3.9)"), t(false));
-    assert_eq!(ev(&e, "ISEVEN(BLANK())"), B);
+    // recorded from Power BI: a fraction is rounded and BLANK counts as 0
+    assert_eq!(ev(&e, "ISEVEN(3.9)"), t(true));
+    assert_eq!(ev(&e, "ISEVEN(BLANK())"), t(true));
+    assert_eq!(ev(&e, "ISNUMBER(MIN('Date'[Date]))"), t(true));
 }
 
 #[test]

@@ -33,7 +33,7 @@ fn count(name: &str, v: &Option<Value>, default: i64) -> VResult<i64> {
             if !f.is_finite() || f.abs() > 1.0e9 {
                 return Err(err(ErrorCode::InvalidValue, format!("The function {name} cannot use an argument of this size.")));
             }
-            Ok(f.trunc() as i64)
+            Ok(f.round() as i64)
         }
     }
 }
@@ -67,6 +67,10 @@ fn run<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], env: &Env<'a>) 
     let a = eval_args(ev, args, env)?;
     let arg = |i: usize| a.get(i).cloned().flatten();
     let s0 = || text(&arg(0));
+    // recorded from Power BI: BLANK in, BLANK out (REPLACE and CONCATENATE treat it as empty text)
+    if matches!(name, "LEN" | "LOWER" | "UPPER" | "TRIM" | "LEFT" | "RIGHT" | "MID" | "REPT" | "SUBSTITUTE" | "UNICODE") && matches!(arg(0), Some(Value::Blank)) {
+        return Ok(Value::Blank);
+    }
     match name {
         "LEN" => Ok(Value::Int(s0().chars().count() as i64)),
         "LOWER" => Ok(Value::str(&s0().to_lowercase())),
@@ -151,7 +155,7 @@ fn run<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], env: &Env<'a>) 
         "EXACT" => Ok(Value::Bool(s0() == text(&arg(1)))),
         "CONCATENATE" => {
             if arg(0).is_none_or(|v| v.is_blank()) && arg(1).is_none_or(|v| v.is_blank()) {
-                return Ok(Value::str(""));
+                return Ok(Value::Blank);
             }
             Ok(Value::str(&(s0() + &text(&arg(1)))))
         }
@@ -183,7 +187,7 @@ fn run<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], env: &Env<'a>) 
             let n = count(name, &arg(0), 0)?;
             u32::try_from(n).ok().and_then(char::from_u32).map(|c| Value::str(&c.to_string())).ok_or_else(|| err(ErrorCode::InvalidValue, "UNICHAR: not a valid Unicode code point."))
         }
-        "UNICODE" => s0().chars().next().map(|c| Value::Int(c as i64)).ok_or_else(|| err(ErrorCode::InvalidValue, "UNICODE: the text is empty.")),
+        "UNICODE" => Ok(s0().chars().next().map(|c| Value::Int(c as i64)).unwrap_or(Value::Blank)),
         "FIXED" => {
             let v = arg(0).unwrap_or(Value::Blank).to_f64()?;
             let d = count(name, &arg(1), 2)? as i32;
@@ -192,8 +196,9 @@ fn run<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], env: &Env<'a>) 
         }
         "VALUE" => match arg(0) {
             None | Some(Value::Blank) => Ok(Value::Blank),
-            Some(Value::Str(s)) => parse_value(&s),
-            Some(v) => v.to_number(),
+            Some(Value::Str(s)) => parse_value(&s).map(to_number),
+            Some(Value::Bool(_)) => Err(EvalError::type_mismatch("Cannot convert value 'TRUE' of type Text to type Number.")),
+            Some(v) => v.to_number().map(to_number),
         },
         "FORMAT" => match arg(0) {
             None | Some(Value::Blank) => Ok(Value::str("")),
@@ -242,6 +247,10 @@ fn concatenatex<'a>(ev: &'a Evaluator<'a>, args: &'a [BExpr], env: &Env<'a>) -> 
             }
             std::cmp::Ordering::Equal
         });
+    }
+    // recorded from Power BI: over an empty table the result is BLANK
+    if rows.is_empty() {
+        return Ok(Value::Blank);
     }
     Ok(Value::str(&rows.into_iter().map(|r| r.1).collect::<Vec<_>>().join(&delim)))
 }
@@ -567,15 +576,14 @@ fn format_date(serial: f64, fmt: &str) -> VResult<String> {
 pub fn format_value(v: &Value, fmt: &str) -> VResult<String> {
     match v {
         Value::Blank => Ok(String::new()),
-        Value::Str(s) => Ok(match fmt {
-            "<" => s.to_lowercase(),
-            ">" => s.to_uppercase(),
-            _ => s.to_string(),
-        }),
+        // recorded from Power BI: "<" and ">" leave the text unchanged
+        Value::Str(s) => Ok(s.to_string()),
         Value::Bool(b) => Ok(match fmt.to_ascii_lowercase().as_str() {
             "yes/no" => if *b { "Yes" } else { "No" }.into(),
             "on/off" => if *b { "On" } else { "Off" }.into(),
-            _ => if *b { "True" } else { "False" }.into(),
+            "" | "general" => if *b { "True" } else { "False" }.into(),
+            // a number format sees True as -1 (recorded from Power BI)
+            _ => return format_number(if *b { -1.0 } else { 0.0 }, fmt),
         }),
         Value::DateTime(d) if is_date_format(fmt) || fmt.is_empty() => {
             if fmt.is_empty() {
@@ -594,6 +602,15 @@ pub fn format_value(v: &Value, fmt: &str) -> VResult<String> {
 // ---------------------------------------------------------------------------------------------------------
 // VALUE
 
+/// VALUE returns a Number (Double) whatever the text looks like, dates and times included (recorded from Power BI).
+fn to_number(v: Value) -> Value {
+    match v {
+        Value::Int(i) => Value::Double(i as f64),
+        Value::DateTime(d) => Value::Double(d),
+        other => other,
+    }
+}
+
 fn parse_value(s: &str) -> VResult<Value> {
     let t = s.trim();
     let bad = || EvalError::type_mismatch(format!("Cannot convert value '{s}' of type Text to type Number."));
@@ -601,10 +618,8 @@ fn parse_value(s: &str) -> VResult<Value> {
         return Err(bad());
     }
     let (neg_paren, t2) = if t.starts_with('(') && t.ends_with(')') { (true, &t[1..t.len() - 1]) } else { (false, t) };
-    let (percent, t3) = match t2.strip_suffix('%') {
-        Some(r) => (true, r),
-        None => (false, t2),
-    };
+    // recorded from Power BI: VALUE("50%") fails
+    let (percent, t3) = (false, t2);
     let cleaned: String = t3.trim().trim_start_matches('$').replace(',', "");
     if let Ok(mut x) = cleaned.parse::<f64>() {
         if !x.is_finite() {
@@ -682,7 +697,7 @@ mod tests {
         assert_eq!(fixed(1234.0, -2, true), "1,200");
         assert_eq!(parse_value("1,234.5").unwrap(), Value::Double(1234.5));
         assert_eq!(parse_value("$12").unwrap(), Value::Int(12));
-        assert_eq!(parse_value("50%").unwrap(), Value::Double(0.5));
+        assert!(parse_value("50%").is_err());
         assert_eq!(parse_value("(5)").unwrap(), Value::Int(-5));
         assert!(parse_value("abc").is_err());
     }

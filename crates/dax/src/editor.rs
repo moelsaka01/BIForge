@@ -205,7 +205,7 @@ mod tests {
         assert_eq!(cell(&Value::Int(5)), Cell { t: "int", v: "5".into() });
         assert_eq!(cell(&Value::Blank).t, "blank");
         assert_eq!(cell(&Value::Double(0.5)).v, "0.5");
-        assert_eq!(cell(&Value::Bool(true)).v, "True");
+        assert_eq!(cell(&Value::Bool(true)).v, "TRUE");
         let r = ResultTable { columns: vec!["[A]".into()], rows: (0..MAX_RESULT_ROWS + 5).map(|i| vec![Value::Int(i as i64)]).collect() };
         let dto = result_dto(&r);
         assert!(dto.truncated);

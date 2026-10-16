@@ -201,13 +201,14 @@ impl ModelData {
             .clone()
     }
 
-    /// True when the table gets a virtual blank row: an active many-to-one relationship into it has
-    /// many-side values with no match (including BLANK keys).
+    /// True when the table gets a virtual blank row: a many-to-one relationship into it, active or not, has
+    /// many-side values with no match (including BLANK keys). Recorded from Power BI: an inactive relationship
+    /// with orphans also adds the blank row (VALUES(Date) has one more row than the table).
     pub fn has_blank_row(&self, t: TableId) -> bool {
         self.blank_rows.get_or_init(|| {
             let mut v = vec![false; self.model.tables.len()];
             for (i, r) in self.model.relationships.iter().enumerate() {
-                if r.active && r.cardinality == Cardinality::ManyToOne && self.rel(i).has_orphans {
+                if r.cardinality == Cardinality::ManyToOne && self.rel(i).has_orphans {
                     v[r.to.table] = true;
                 }
             }

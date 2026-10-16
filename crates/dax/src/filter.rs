@@ -389,6 +389,20 @@ fn visible_rec(data: &ModelData, graph: &Graph, ctx: &FilterCtx, t: TableId, vis
     let mut filtered = false;
     for f in ctx.filters.iter() {
         if !graph.applies(f, t) || visiting.iter().any(|&v| graph.applies(f, v)) {
+            // Recorded from Power BI: a table filter (rows of a fact table with all columns of its expanded table)
+            // also restricts the dimension tables its rows point to, to the rows those rows reference.
+            if let Filter::Rows { table: src, rows: allowed, cols } = f {
+                if *src != t && graph.reaches(*src, t) && !graph.reaches(t, *src) && cols.iter().any(|c| c.table == t) && !visiting.iter().any(|&v| graph.applies(f, v)) {
+                    let mut keep = RowSet::empty(len);
+                    for r in allowed.iter() {
+                        if let Some(x) = graph.follow(data, *src, r, t) {
+                            keep.set(x, true);
+                        }
+                    }
+                    rows.and(&keep);
+                    filtered = true;
+                }
+            }
             continue;
         }
         filtered = true;
