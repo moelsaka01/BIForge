@@ -1,0 +1,6 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "report-harness-ui", "runtimeExecutable": "npm", "runtimeArgs": ["--prefix", "app", "run", "dev"], "port": 1420 }
+  ]
+}

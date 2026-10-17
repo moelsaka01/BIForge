@@ -124,3 +124,15 @@ describe("migrating report files written by earlier versions", () => {
     expect(migrateProject(m)).toBe(m);
   });
 });
+
+describe("role names read from Desktop's capabilities", () => {
+  it("renames the KPI trend axis and the filled map's color saturation well", () => {
+    const kpi = { visual: { visualType: "kpi", query: { queryState: { Indicator: { projections: [] }, TrendAxis: { projections: [1] } } } } };
+    expect(migrateVisual(kpi)).toBe(true);
+    expect(Object.keys(kpi.visual.query.queryState)).toEqual(["Indicator", "TrendLine"]);
+    const map = { visual: { visualType: "filledMap", query: { queryState: { Category: { projections: [] }, Y: { projections: [1] } } } } };
+    expect(migrateVisual(map)).toBe(true);
+    expect(Object.keys(map.visual.query.queryState)).toEqual(["Category", "Size"]);
+    expect(migrateVisual(map)).toBe(false);
+  });
+});

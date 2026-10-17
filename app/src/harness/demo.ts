@@ -31,7 +31,7 @@ export async function buildDemo(session: Session, run: (id: string, a?: unknown)
   await add("scatterChart", 20, 330, 400, 340, [{ role: "Category", field: column("Product", "Product") }, { role: "X", field: agg("Product", "ListPrice", 1) }, { role: "Y", field: Qty }, { role: "Size", field: Amount }], p2);
   await add("waterfallChart", 430, 330, 400, 340, [{ role: "Category", field: column("Date", "Quarter") }, { role: "Y", field: Qty }], p2);
   await add("gauge", 840, 330, 380, 240, [{ role: "Y", field: Qty }, { role: "TargetValue", field: agg("Sales", "Quantity", 4) }], p2);
-  await add("kpi", 840, 580, 380, 110, [{ role: "Indicator", field: measure("Sales", "Quantity YTD") }, { role: "TrendAxis", field: column("Date", "YearMonth") }], p2);
+  await add("kpi", 840, 580, 380, 110, [{ role: "Indicator", field: measure("Sales", "Quantity YTD") }, { role: "TrendLine", field: column("Date", "YearMonth") }], p2);
   // page 3: drillthrough target
   await run("report.page.add", { name: "Customer detail", type: "Drillthrough" });
   const p3 = session.report.getSnapshot().page!;

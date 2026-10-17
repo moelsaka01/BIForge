@@ -394,7 +394,7 @@ export function buildKpi(visual: VisualModel, loaded: Extract<Loaded, { kind: "g
   const q = loaded.query;
   const ind = columnsOf(q, "Indicator", "value")[0];
   const goal = columnsOf(q, "Goal", "value")[0];
-  const axis = columnsOf(q, "TrendAxis", "group")[0];
+  const axis = columnsOf(q, "TrendLine", "group")[0];
   // the indicator is the value at the last point of the trend axis (or the only row)
   const rows = loaded.rows;
   const last = rows.length ? rows[rows.length - 1] : undefined;

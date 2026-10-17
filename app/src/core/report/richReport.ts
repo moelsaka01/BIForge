@@ -36,7 +36,7 @@ const FIELDS: Record<string, { role: string; field: unknown }[]> = {
   pivotTable: [{ role: "Rows", field: Cat }, { role: "Columns", field: column("Sales", "Channel") }, { role: "Values", field: Qty }],
   card: [{ role: "Values", field: T }],
   multiRowCard: [{ role: "Values", field: Cat }, { role: "Values", field: Qty }],
-  kpi: [{ role: "Indicator", field: Qty }, { role: "TrendAxis", field: column("Date", "YearMonth") }],
+  kpi: [{ role: "Indicator", field: Qty }, { role: "TrendLine", field: column("Date", "YearMonth") }],
   gauge: [{ role: "Y", field: Qty }],
   treemap: [{ role: "Group", field: Cat }, { role: "Values", field: Qty }],
   funnel: [{ role: "Category", field: Cat }, { role: "Y", field: Qty }],
@@ -45,7 +45,7 @@ const FIELDS: Record<string, { role: string; field: unknown }[]> = {
   keyDriversVisual: [{ role: "Target", field: column("Sales", "Channel") }, { role: "ExplainBy", field: Cat }],
   slicer: [{ role: "Values", field: column("Customer", "Country") }],
   map: [{ role: "Category", field: column("Customer", "City") }, { role: "Size", field: Qty }],
-  filledMap: [{ role: "Category", field: column("Customer", "Country") }, { role: "Y", field: Qty }],
+  filledMap: [{ role: "Category", field: column("Customer", "Country") }, { role: "Size", field: Qty }],
 };
 
 /** A value of the right shape for a property of the given kind, different from any default. */

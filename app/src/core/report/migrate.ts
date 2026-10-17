@@ -10,6 +10,12 @@ export const LEGACY_VISUAL_TYPES: Record<string, string> = {
   stackedColumnChart: "columnChart",
 };
 
+/** Role names BIForge guessed before they were read from the capability definitions of Desktop: visualType -> old role -> role. */
+export const LEGACY_ROLES: Record<string, Record<string, string>> = {
+  kpi: { TrendAxis: "TrendLine" },
+  filledMap: { Y: "Size" },
+};
+
 const isVisualFile = (key: string) => /(^|\/)pages\/[^/]+\/visuals\/[^/]+\/visual\.json$/.test(key);
 
 type Entry = { selector?: J; properties: Record<string, J> };
@@ -78,6 +84,17 @@ export function migrateVisual(json: J): boolean {
   if (renamed) {
     v.visualType = renamed;
     changed = true;
+  }
+  const queryState = v.query?.queryState;
+  const roleMap = LEGACY_ROLES[v.visualType];
+  if (queryState && roleMap) {
+    for (const [from, to] of Object.entries(roleMap)) {
+      if (from in queryState && !(to in queryState)) {
+        queryState[to] = queryState[from];
+        delete queryState[from];
+        changed = true;
+      }
+    }
   }
   // the sync group is part of the visual, not of the container
   if (json.syncGroup) {

@@ -151,7 +151,7 @@ describe("cards and KPI", () => {
   });
 
   it("KPI: last value against the goal, trend, status direction", () => {
-    const v = visualOf("kpi", { Indicator: [Qty], TrendAxis: [column("Date", "YearMonth")], Goal: [agg("Sales", "Quantity", 4)] });
+    const v = visualOf("kpi", { Indicator: [Qty], TrendLine: [column("Date", "YearMonth")], Goal: [agg("Sales", "Quantity", 4)] });
     const g = grouped(v, [[n(202401), n(80), n(100)], [n(202402), n(120), n(100)]]);
     const k = buildKpi(v, g, DEFAULT_THEME);
     expect([k.value, k.goal, k.varianceText, k.status]).toEqual(["120", "100", "+20.0%", "good"]);

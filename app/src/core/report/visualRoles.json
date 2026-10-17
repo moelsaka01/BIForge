@@ -1,0 +1,21 @@
+{
+  "_source": "Data role names of the visual capability definitions (dataRoles) in the Power BI Desktop 2.159 report bundles, read with tools/re/data-roles.mjs. Names only. Update after running the tool again.",
+  "cartesian": ["Category", "Series", "Y", "Gradient", "Rows", "Tooltips"],
+  "lineClusteredColumnComboChart": ["Category", "Series", "Y", "Y2", "Rows", "Tooltips"],
+  "pie": ["Category", "Series", "Y", "Tooltips"],
+  "scatterChart": ["Category", "Series", "X", "Y", "Size", "Gradient", "Play", "Tooltips"],
+  "tableEx": ["Values"],
+  "pivotTable": ["Rows", "Columns", "Values"],
+  "card": ["Values"],
+  "multiRowCard": ["Values"],
+  "kpi": ["Indicator", "TrendLine", "Goal"],
+  "gauge": ["Y", "MinValue", "MaxValue", "TargetValue", "Tooltips"],
+  "treemap": ["Group", "Details", "Values", "Tooltips"],
+  "funnel": ["Category", "Y", "Tooltips"],
+  "waterfallChart": ["Category", "Breakdown", "Y", "Tooltips"],
+  "decompositionTreeVisual": ["Analyze", "ExplainBy", "Tooltips"],
+  "keyDriversVisual": ["Target", "ExplainBy", "Details"],
+  "slicer": ["Values"],
+  "map": ["Category", "Series", "X", "Y", "Size", "Tooltips", "PathID", "PointOrder"],
+  "filledMap": ["Category", "Series", "X", "Y", "Size", "Tooltips"]
+}

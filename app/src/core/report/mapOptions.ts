@@ -181,7 +181,7 @@ export function filledMap(inp: ChartInput, gaz: Gazetteer): ChartBuild {
   const f = new FormatReader(visual.json, theme, visual.visualType);
   const { rows, missing, q } = locate(inp, gaz, ["country", "state"]);
   const cat = columnsOf(q, "Category", "group")[0];
-  const vc = columnsOf(q, "Y", "value")[0];
+  const vc = columnsOf(q, "Size", "value")[0];
   // one kind of region per map: the kind most of the locations are
   const nStates = rows.filter((r) => r.place?.kind === "state").length;
   const kind = nStates > rows.length - nStates ? "state" : "country";

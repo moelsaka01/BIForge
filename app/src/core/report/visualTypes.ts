@@ -120,7 +120,7 @@ export const VISUAL_TYPES: VisualTypeDef[] = [
     family: "kpi",
     roles: [
       { name: "Indicator", label: "Value", accepts: "value", max: 1 },
-      { name: "TrendAxis", label: "Trend axis", accepts: "column", max: 1 },
+      { name: "TrendLine", label: "Trend axis", accepts: "column", max: 1 },
       { name: "Goal", label: "Target", accepts: "value", max: 1 },
     ],
     size: { width: 240, height: 160 },
@@ -208,7 +208,7 @@ export const VISUAL_TYPES: VisualTypeDef[] = [
     id: "filledMap",
     label: "Filled map",
     family: "map",
-    roles: [{ name: "Category", label: "Location", accepts: "column", max: 1 }, { name: "Y", label: "Color saturation", accepts: "value", max: 1 }],
+    roles: [{ name: "Category", label: "Location", accepts: "column", max: 1 }, { name: "Size", label: "Color saturation", accepts: "value", max: 1 }],
     size: { width: 420, height: 300 },
     glyph: "▦",
   },

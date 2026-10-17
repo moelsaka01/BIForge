@@ -53,13 +53,13 @@ describe("maps", () => {
 
   it("a filled map draws the countries; places the data does not know are listed under the map", async () => {
     const t = setup();
-    await t.run("report.visual.add", { type: "filledMap", position: { width: 600, height: 400 }, fields: [{ role: "Category", field: Country }, { role: "Y", field: Qty }] });
+    await t.run("report.visual.add", { type: "filledMap", position: { width: 600, height: 400 }, fields: [{ role: "Category", field: Country }, { role: "Size", field: Qty }] });
     render(<t.Host />);
     const chart = await screen.findByRole("img", { name: "Filled map" });
     await waitFor(() => expect(chart.querySelectorAll("path").length).toBeGreaterThan(100));
     cleanup();
     const u = setup();
-    await u.run("report.visual.add", { type: "filledMap", position: { width: 600, height: 400 }, fields: [{ role: "Category", field: Category }, { role: "Y", field: Qty }] });
+    await u.run("report.visual.add", { type: "filledMap", position: { width: 600, height: 400 }, fields: [{ role: "Category", field: Category }, { role: "Size", field: Qty }] });
     render(<u.Host />);
     // product categories are not places: nothing can be drawn, and the person is told which values were skipped
     await waitFor(() => expect(screen.getByText(/not drawn.*Accessories/)).toBeTruthy());

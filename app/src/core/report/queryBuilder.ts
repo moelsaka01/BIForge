@@ -101,7 +101,7 @@ function slotsFor(v: VisualModel, family: VisualFamily, drill?: DrillState): { g
       return { groups: dedupe(all.filter((s) => s.field.kind === "column")), values: all.filter((s) => s.field.kind !== "column"), extra: [] };
     }
     case "kpi":
-      return { groups: roleSlots("TrendAxis"), values: [...roleSlots("Indicator"), ...roleSlots("Goal")], extra: [] };
+      return { groups: roleSlots("TrendLine"), values: [...roleSlots("Indicator"), ...roleSlots("Goal")], extra: [] };
     case "gauge":
       return { groups: [], values: [...roleSlots("Y"), ...roleSlots("MinValue"), ...roleSlots("MaxValue"), ...roleSlots("TargetValue")], extra: [] };
     default:

@@ -100,7 +100,7 @@ describe("bubble map", () => {
 
 describe("filled map", () => {
   it("colors the countries by value and registers them by their region name", () => {
-    const v = visualOf("filledMap", { Category: [Country], Y: [Qty] });
+    const v = visualOf("filledMap", { Category: [Country], Size: [Qty] });
     const b = build(v, [[c("France"), c(30)], [c("United States"), c(90)], [c("Germany"), c(60)], [c("Narnia"), c(5)]]);
     const s = b.option.series[0];
     expect(s.type).toBe("map");
@@ -116,7 +116,7 @@ describe("filled map", () => {
   });
 
   it("states of the US use the states map; a fixed color and the outline are format settings", () => {
-    const v = visualOf("filledMap", { Category: [Country], Y: [Qty] });
+    const v = visualOf("filledMap", { Category: [Country], Size: [Qty] });
     const b = build(v, [[c("Washington"), c(30)], [c("Oregon"), c(50)], [c("France"), c(10)]]);
     expect(b.option.series[0].map).toBe("states");
     expect(b.option.series[0].data.map((d: { name: string }) => d.name)).toEqual(["Washington", "Oregon"]);
