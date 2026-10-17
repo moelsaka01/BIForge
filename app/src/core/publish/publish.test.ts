@@ -35,7 +35,7 @@ describe("viewing guard", () => {
     expect(viewingGuard(sess(false), "model.addTable")).toBeNull();
   });
   it("in viewing mode allows only windows, panes, paging, drilling and leaving", () => {
-    for (const id of ["app.options", "app.theme.toggle", "view.report", "view.zoom", "pane.toggle", "report.page.go", "report.view.drillUp", "report.visuals.refresh", "file.close", "file.open", "package.open.run"]) {
+    for (const id of ["app.options", "app.theme.toggle", "view.report", "view.zoom", "pane.toggle", "report.page.go", "report.view.drillUp", "report.visuals.refresh", "report.bookmark.apply", "report.slicer.select", "report.filter.upsert", "report.view.resetChanges", "file.close", "file.open", "package.open.run"]) {
       expect(viewingGuard(sess(true), id), id).toBeNull();
     }
     for (const id of ["model.addTable", "model.deleteTable", "model.addMeasure", "data.import", "data.refreshAll", "file.save", "file.saveAs.run", "edit.undo", "report.visual.add", "report.visual.delete", "report.page.add", "report.page.rename", "report.format.set", "report.field.add", "view.data", "view.model", "view.dax", "view.tmdl", "dax.query.run", "query.apply", "tmdl.apply", "publish.open", "publish.run"]) {

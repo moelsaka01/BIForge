@@ -1,10 +1,11 @@
 import { Button } from "@fluentui/react-components";
 import type { ViewingInfo } from "../../core/session/session";
-import { useEnv } from "./ShellContext";
+import { useDoc, useEnv } from "./ShellContext";
 
 /** Replaces the ribbon while a shared report is open: who published it, which version, and the way out. */
 export function ViewingBar({ viewing }: { viewing: ViewingInfo }) {
   const env = useEnv();
+  const doc = useDoc();
   return (
     <section className="notice-bar viewing-bar" role="region" aria-label="Viewing mode" style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", padding: "6px 12px" }}>
       <strong>Viewing mode</strong>
@@ -23,6 +24,11 @@ export function ViewingBar({ viewing }: { viewing: ViewingInfo }) {
           ))}
         </ul>
       </details>
+      {doc.viewChanged && (
+        <Button size="small" onClick={() => void env.run("report.view.resetChanges")}>
+          Reset view
+        </Button>
+      )}
       <Button size="small" onClick={() => void env.run("report.visuals.refresh")}>
         Refresh visuals
       </Button>

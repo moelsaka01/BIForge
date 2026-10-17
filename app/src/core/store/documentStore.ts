@@ -17,6 +17,8 @@ export interface StoreSnapshot {
   redoLabel: string | null;
   /** A shared report opened for viewing: no change can be made to it. */
   readOnly: boolean;
+  /** In viewing mode: the reader changed what is shown (slicers, bookmarks) since opening it. */
+  viewChanged: boolean;
 }
 
 const MAX_HISTORY = 100;
@@ -73,6 +75,28 @@ export class DocumentStore {
   loadReadOnly(project: Project): void {
     this.load(project);
     this.readOnly = true;
+    this.bump();
+  }
+
+  /**
+   * A change of what a reader sees in a report opened for viewing (a slicer selection, a bookmark): applied to a copy,
+   * never saved, not an undo step, and the report does not count as changed. Refused for a project that can be edited.
+   */
+  applyViewChange(change: (draft: Project) => void): boolean {
+    if (!this.readOnly) throw new Error("View changes are for a report opened for viewing.");
+    if (!this.current) throw new Error("No project is open.");
+    const draft = structuredClone(this.current);
+    change(draft);
+    if (deepEqual(this.current, draft)) return false;
+    this.current = draft;
+    this.bump();
+    return true;
+  }
+
+  /** Back to the report as it was published: drops every view change. */
+  resetViewChanges(): void {
+    if (!this.readOnly || this.current === this.saved) return;
+    this.current = this.saved;
     this.bump();
   }
 
@@ -141,12 +165,13 @@ export class DocumentStore {
     return {
       project: this.current,
       revision: this.revision,
-      isDirty: this.current !== null && this.current !== this.saved,
+      isDirty: !this.readOnly && this.current !== null && this.current !== this.saved,
       canUndo: this.undoStack.length > 0,
       canRedo: this.redoStack.length > 0,
       undoLabel: this.undoStack.at(-1)?.label ?? null,
       redoLabel: this.redoStack.at(-1)?.label ?? null,
       readOnly: this.readOnly,
+      viewChanged: this.readOnly && this.current !== this.saved,
     };
   }
 

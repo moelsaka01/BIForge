@@ -42,6 +42,8 @@ export function registerReportCommands(r: CommandRegistry<Session>): void {
   const reg = (id: string, label: string, run: (s: Session, args: unknown) => void | Promise<void>, extra: { shortcut?: string; enabled?: (s: Session) => boolean } = {}) =>
     r.register({ id, label, category: "Report", shortcut: extra.shortcut, isEnabled: extra.enabled ?? hasProject, run });
   const edit = (s: Session, label: string, fn: (p: NonNullable<Session["store"]["project"]>) => void) => s.store.transact(label, (p) => fn(p));
+  /** A change of what is shown (slicers, filters, bookmarks): an edit for a project, a view change for a report open for viewing. */
+  const editView = (s: Session, label: string, fn: (p: NonNullable<Session["store"]["project"]>) => void) => (s.store.getSnapshot().readOnly ? s.store.applyViewChange(fn) : s.store.transact(label, (p) => fn(p)));
 
   // ---- pages ----
   reg("report.page.add", "New page", (s, a) => {
@@ -52,6 +54,15 @@ export function registerReportCommands(r: CommandRegistry<Session>): void {
     });
     s.report.goToPage(id);
   });
+  reg(
+    "report.view.resetChanges",
+    "Reset the view",
+    (s) => {
+      s.store.resetViewChanges();
+      s.report.clearSelection();
+    },
+    { enabled: (s) => s.store.getSnapshot().readOnly && s.store.getSnapshot().viewChanged },
+  );
   reg("report.page.go", "Go to page", (s, a) => {
     const { page } = need<{ page: string }>(a, ["page"]);
     if (!listPageNames(s.store.project!).includes(page)) throw new Error(`Page "${page}" does not exist.`);
@@ -156,7 +167,6 @@ export function registerReportCommands(r: CommandRegistry<Session>): void {
           if (!s.store.getSnapshot().readOnly) edit(s, "Switch page", (d) => ops.setActivePage(d, act.page!));
           break;
         case "Bookmark":
-          if (s.store.getSnapshot().readOnly) throw new Error("Bookmark buttons do not work yet in a report opened for viewing.");
           await r.execute("report.bookmark.apply", { id: act.bookmark });
           break;
         case "Back":
@@ -350,16 +360,16 @@ export function registerReportCommands(r: CommandRegistry<Session>): void {
   // ---- filters, slicers, interactions ----
   reg("report.filter.upsert", "Set filter", (s, a) => {
     const x = need<{ scope: ops.FilterScope; filter: FilterDef }>(a, ["scope", "filter"]);
-    edit(s, "Set filter", (p) => ops.upsertFilter(p, x.scope, x.filter));
+    editView(s, "Set filter", (p) => ops.upsertFilter(p, x.scope, x.filter));
   });
   reg("report.filter.remove", "Clear filter", (s, a) => {
     const x = need<{ scope: ops.FilterScope; name: string }>(a, ["scope", "name"]);
-    edit(s, "Clear filter", (p) => ops.removeFilter(p, x.scope, x.name));
+    editView(s, "Clear filter", (p) => ops.removeFilter(p, x.scope, x.name));
   });
   reg("report.slicer.select", "Slicer selection", (s, a) => {
     const x = need<{ page: string; visual: string; field: FieldRef }>(a, ["page", "visual", "field"]);
     const cond = (a as { cond?: FilterDef["cond"] | null }).cond ?? null;
-    edit(s, "Slicer selection", (p) => {
+    editView(s, "Slicer selection", (p) => {
       const scope = { level: "visual", page: x.page, visual: x.visual } as const;
       if (!cond) ops.removeFilter(p, scope, "slicer");
       else ops.upsertFilter(p, scope, { name: "slicer", field: x.field, cond });
@@ -393,7 +403,7 @@ export function registerReportCommands(r: CommandRegistry<Session>): void {
   reg("report.bookmark.apply", "Apply bookmark", (s, a) => {
     const { id } = need<{ id: string }>(a, ["id"]);
     let applied: bm.Applied | null = null;
-    edit(s, "Apply bookmark", (p) => {
+    editView(s, "Apply bookmark", (p) => {
       applied = bm.applyBookmark(p, id, currentPage(s));
     });
     const ap = applied as bm.Applied | null;

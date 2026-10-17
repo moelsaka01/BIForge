@@ -17,6 +17,8 @@ const VIEWING_ALLOWED: RegExp[] = [
   /^report\.button\.run$/,
   /^report\.visuals\.(pause|refresh)$/,
   /^report\.view\./,
+  // what a reader sees may change (view changes, not edits): slicer selections, filters, bookmarks
+  /^report\.(slicer\.select|filter\.(upsert|remove)|bookmark\.apply)$/,
   /^file\.(close|open|new|newBlank|newSample|newSample\.run)$/,
   /^package\./,
   /^link\./,
