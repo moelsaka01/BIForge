@@ -213,3 +213,42 @@
 2. Check CI for this push.
 3. O3 personal storage (needs your OAuth app registrations) or O5 backend; remaining O7 options.
 4. Cloudflare live run once a token is available; then mark its COVERAGE row Done-tested.
+
+## 2026-10-17 (session 3): Publish & Share fixes, Phase 7 leftovers, Phase 8 connectors
+### Checks first
+- CI on c80bcf6 was green. The tag `cli-v0.1.0` already existed on that commit; `release-cli` built and published `biforge-cli.exe` (35.8 MB). The URL the generated GitHub workflow uses (`releases/latest/download/biforge-cli.exe`) downloads and the program starts (`--help`). The scheduled-refresh run on a real runner had been done in the earlier session.
+- Cloudflare live test: `BIFORGE_TEST_CLOUDFLARE_TOKEN` / `_ACCOUNT_ID` are not set in this environment, so it was **skipped**. The Cloudflare adapter is still only tested against fakes.
+
+### Publish & Share form (your bug report)
+- Every destination type in "Add a destination" now shows its account block: Cloudflare and GitHub show "<provider> account: Not connected" with a **Connect <provider> account** button that opens the token entry (password field, steps, "kept in Windows Credential Manager") and, when connected, "Connected as ..." with **Disconnect**. Cloudflare's account ID is asked once (in the form). Folder says "none needed"; types that are not built say so.
+- "Add a destination" appeared twice when there was no destination yet (heading and toggle button); the toggle is hidden then.
+- Tests: jsdom (3 new), and the real-window e2e checks the empty form shows the text once, the Cloudflare form says Not connected, the token field is a password field, the account ID is asked once, the Credential Manager sentence, and the folder form. The fake adapter list now has Cloudflare.
+
+### Phase 7 leftovers
+- **Group children** are stored relative to their group (nested groups chain) and read back to page positions; old files migrate on load (marker annotation `biforge.coordinates` in report.json; files without it are read as page positions unless a member cannot fit its group's box). Also applied to recovery files and published packages. `storage.ts`, 13 tests, schema validation of the stored form.
+- **Images** are registered resources (file under `StaticResources/RegisteredResources`, `resourcePackages` item of type Image, `image.sourceFile` ResourcePackageItem). New Rust model field `images` (base64) with a round-trip test. In memory a picture is still a data address, converted at the load/save boundary.
+- **Bookmark groups** (pane, commands, PBIR `children`), **hierarchy slicer** (several fields of one table; tree; branches stored as shortest prefixes; `FILTER(ALL(levels), OR of ANDs)`; PBIR In/Or; real DAX engine test), **map heat map**, **zoom buttons**, **lasso**, the **Tooltips card** for chart tooltips, **Shadow presets**, spacing between title/subtitle/divider/plot area. The rendered-properties measurement was regenerated.
+- Not done: the large remainder of "(not drawn yet)" properties (visual header buttons that need Desktop features, action/visual link on data visuals, axis reference lines, small multiples layout, zoom slider, error bars, many label options). The heat map layer needs a canvas: tested at option level only, **not looked at in the real window**.
+
+### Phase 8: connectors
+- **Engine (Rust):** SQL Server (custom SQL through sp_describe_first_result_set, trust-certificate option, Windows auth only on Windows), PostgreSQL custom SQL, **MySQL/MariaDB** (mysql crate), **ODBC** (odbc-api: any driver; flavors Access, Oracle, Db2, Teradata, SAP HANA, Redshift, Snowflake, plain connection string; driver list; table list), **Web** (HTML tables, JSON incl. nested records, CSV, XML, Basic auth), **OData v4**, **XML**, **PDF tables** (best effort), **fixed width**, **Enter data**, nested JSON flattened to dotted columns. Navigator support in the engine: `source_choices`, `source_preview`. New dependencies: odbc-api (MIT), mysql (MIT/Apache-2.0), quick-xml (MIT), scraper (ISC), lopdf (MIT), reqwest (already used).
+- **App:** Get data dialog with 21 connectors in three groups, Navigator (list, 20-row preview, tick several tables), SQL statement option, ODBC driver list, Enter data grid, Data source settings (stored password: save/clear; change source -> refresh), ribbon buttons SQL Server, Enter data, Data source settings. Partition M for every connector (`partitionM.ts`; snapshots in `tests/m/connectors`, all parsed by BIForge's M parser; `#table` for Enter data also evaluated by it).
+- **Bug found by the real tests:** the engine expected the kind names `sqlServer`, `mySql`, `oData` while the app sends `sqlserver`, `mysql`, `odata`: SQL Server could never have worked from the app. Fixed, with a test over every kind name.
+- **Where each was tested:** SQL Server against SQL Server 2022 in a container on the CI runner (job `sqlserver`; no free SQL Server could be installed here without admin rights); MySQL against MySQL 8 on the Windows runner and in the real window; Access through the real Access ODBC driver on this machine (also in the e2e; skipped on the runner, which has no Access driver); Web/OData against a local HTTP server; XML/PDF/fixed width/JSON/Enter data with files.
+- **Not tested against the real thing (marked Partial in the inventory):** Oracle, Db2, Teradata, SAP HANA, Redshift, Snowflake, BigQuery, Databricks, Sybase (their ODBC drivers are not installed here); Azure SQL; the M that Desktop runs for any connector has never been run by Desktop.
+- **Not built:** OLE DB, Analysis Services, Active Directory, Exchange, SharePoint on-premises, Python/R source, Blank query source, DirectQuery, Excel via ACE (.xls untested), privacy levels (Power BI project files do not store them; BIForge never sends data from one source to another), custom request headers for Web.
+
+### Numbers
+- **Inventory: 875 Done-tested / 311 Partial / 1822 Not started of 3008** (last: 823 / 324 / 1861). Part of the change is the measurement (spacing, shadow, tooltip, heat map properties now count as drawn).
+- Tests at the last local run: frontend 803+ passed, Rust engine 21 unit + 9 connector tests + 15 import tests.
+
+### Online track status
+- O0, O1 done. O2: GitHub Pages live-tested (publish, update, rotate, unpublish, scheduled refresh on a real runner, `biforge-cli` release published and downloadable); Cloudflare written, tested against fakes only (no token here). O7 GitHub part done. O3 (personal storage), O4 (peer to peer), O5 (backend), O6, O8 not started.
+- Owner steps unchanged (Cloudflare token for the live test; optional GitHub OAuth app; Google/OneDrive/Dropbox app registrations for O3).
+
+### Next steps
+1. Read the CI result of the last push (SQL Server and MySQL jobs, the real-window test with MySQL); fix anything it shows.
+2. Run the Cloudflare live test when a token is available.
+3. Look at the heat map and the hierarchy slicer in the real window (add to the e2e).
+4. Phase 7: draw more "(not drawn yet)" properties (small multiples layout, axis reference lines, error bars, label options), Q&A/R/Python visuals decision.
+5. Phase 8 remainder: Oracle/Db2/etc. need drivers to test; PDF tables on real-world PDFs; custom headers for Web; Blank query and the File > Options entry for Data source settings.
