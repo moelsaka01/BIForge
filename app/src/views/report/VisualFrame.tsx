@@ -6,7 +6,7 @@ import { resolveInteraction, supportsHighlight } from "../../core/report/interac
 import type { PageModel, Position, VisualModel } from "../../core/report/visualDoc";
 import { visualType } from "../../core/report/visualTypes";
 import { drillPlan } from "../../core/report/queryBuilder";
-import { useReport } from "./reportContext";
+import { useReport, type MenuItem } from "./reportContext";
 import { VisualContent } from "./VisualContent";
 
 export type Handle = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
@@ -100,18 +100,18 @@ export function VisualFrame(p: FrameProps) {
     // a right-click on a data point has its own menu (the chart prevents the default before this runs)
     if (e.defaultPrevented) return;
     e.preventDefault();
-    c.onMenu(
-      [
+    const all: MenuItem[] = [
         { label: "Duplicate", onClick: () => c.dispatch("report.visual.duplicate", { page: page.name, visual: visual.name }) },
         { label: "Bring to front", onClick: () => c.dispatch("report.visual.arrange", { page: page.name, visual: visual.name, where: "front" }) },
         { label: "Send to back", onClick: () => c.dispatch("report.visual.arrange", { page: page.name, visual: visual.name, where: "back" }) },
         { label: "Edit interactions", onClick: () => c.dispatch("report.interaction.edit", { source: visual.name }) },
         { separator: true, label: "", onClick: () => undefined },
         { label: "Delete", onClick: () => c.dispatch("report.visual.delete", { page: page.name, visual: visual.name }) },
-      ],
-      e.clientX,
-      e.clientY,
-    );
+    ];
+    // a shared report is open for viewing: editing items are not shown at all (and no menu if none is left)
+    const items = c.readOnly ? all.filter((i) => i.viewOnly === true) : all;
+    if (items.length === 0) return;
+    c.onMenu(items, e.clientX, e.clientY);
   };
 
   const outer: CSSProperties = {

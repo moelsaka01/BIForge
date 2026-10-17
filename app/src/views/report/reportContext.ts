@@ -34,6 +34,8 @@ export interface MenuItem {
   onClick(): void;
   disabled?: boolean;
   separator?: boolean;
+  /** Also offered while a shared report is open for viewing (every other item changes the report). */
+  viewOnly?: boolean;
 }
 
 export const ReportContext = createContext<ReportCtx | null>(null);

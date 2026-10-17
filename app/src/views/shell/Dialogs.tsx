@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, Input } from "@fluentui/react-components";
 import type { SourceKind } from "../importForm";
 import { ImportDialog } from "../ImportDialog";
@@ -358,9 +358,29 @@ function ShortcutsDialog() {
   );
 }
 
+/**
+ * Fluent hides everything outside an open modal dialog from assistive technology (aria-hidden on #root) and removes it
+ * when the dialog unmounts. Found in the real window: when a dialog is closed in the same commit that swaps the whole
+ * document (opening a shared report), the attribute stayed and the entire app was hidden from screen readers and
+ * from role queries. When no dialog is open, clear what a dialog left behind.
+ */
+function useClearStaleModalHiding(noDialog: boolean) {
+  useEffect(() => {
+    if (!noDialog) return;
+    const id = window.setTimeout(() => {
+      if (document.querySelector("[role=dialog]")) return;
+      const root = document.getElementById("root");
+      if (root?.getAttribute("aria-hidden") === "true") root.removeAttribute("aria-hidden");
+      root?.removeAttribute("inert");
+    }, 100);
+    return () => window.clearTimeout(id);
+  }, [noDialog]);
+}
+
 /** Draws the dialog the last command asked for. */
 export function Dialogs() {
   const { dialog } = useShellState();
+  useClearStaleModalHiding(dialog === null);
   if (!dialog) return null;
   switch (dialog.kind) {
     case "newProject":

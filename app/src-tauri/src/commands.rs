@@ -126,3 +126,18 @@ mod tests {
         assert!(new_project(d.path().join("q").to_string_lossy().into_owned(), "a/b".into()).is_err());
     }
 }
+
+/// Test seam for the real-window UI test: native file dialogs cannot be driven by WebDriver/CDP, so when the
+/// environment variable BIFORGE_TEST_PICKS (paths separated by `|`) is set the app answers its pickers from it,
+/// one value per call. Without the variable this returns None and the real dialog is used.
+#[tauri::command]
+pub fn test_pick() -> Option<String> {
+    use std::sync::Mutex;
+    static QUEUE: Mutex<Option<std::collections::VecDeque<String>>> = Mutex::new(None);
+    let mut g = QUEUE.lock().ok()?;
+    if g.is_none() {
+        let raw = std::env::var("BIFORGE_TEST_PICKS").ok()?;
+        *g = Some(raw.split('|').filter(|s| !s.is_empty()).map(String::from).collect());
+    }
+    g.as_mut()?.pop_front()
+}

@@ -25,7 +25,7 @@ const Qty = agg("Sales", "Quantity", 0);
 const text = (v: string) => cell(v, "text");
 const rows = (...r: [string, number][]) => r.map(([a, b]) => [text(a), cell(String(b))]);
 
-function setup(docks?: ReportViewProps["docks"]) {
+function setup(docks?: ReportViewProps["docks"], readOnly = false) {
   const session = new Session(new FakeIO(), new FakeDialogs());
   session.store.load(fixtureProject());
   const registry = createRegistry(session);
@@ -49,6 +49,7 @@ function setup(docks?: ReportViewProps["docks"]) {
         }
         dataEpoch={0}
         docks={docks}
+        readOnly={readOnly}
       />
     );
   }
@@ -398,5 +399,24 @@ describe("ReportView: chart data points", () => {
     const overlay = await screen.findByTestId("tooltip-page");
     await waitFor(() => expect(within(overlay).getByTestId("card-value").textContent).toBe("270"));
     fireEvent.mouseOut(root, { clientX: 0, clientY: 0, relatedTarget: document.body });
+  });
+
+  it("viewing mode: right-click on a visual shows no editing items", async () => {
+    const edit = setup();
+    await edit.run("report.visual.add", { page: "page1", type: "card", position: { x: 20, y: 20, width: 200, height: 120 }, fields: [{ role: "Values", field: Qty }] });
+    const view = setup(undefined, true);
+    const one = () => ({ results: [result(["m"], [[cell("730")]])], elapsedMs: 1 });
+    view.dax.handler = one;
+    edit.dax.handler = one;
+    view.session.store.load(edit.session.store.project!);
+    render(<view.Host />);
+    const card = await screen.findByTestId("card-value");
+    fireEvent.contextMenu(card);
+    expect(screen.queryByRole("menu")).toBeNull();
+    expect(screen.queryByRole("menuitem", { name: "Delete" })).toBeNull();
+    cleanup();
+    render(<edit.Host />);
+    fireEvent.contextMenu(await screen.findByTestId("card-value"));
+    expect(await screen.findByRole("menuitem", { name: "Delete" })).toBeTruthy();
   });
 });

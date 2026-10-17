@@ -13,16 +13,31 @@ export const tauriIO: ProjectIO = {
   writeSampleData: (root) => invoke<string[]>("write_sample_data", { root }),
 };
 
+// real-window UI test seam (see test_pick in commands.rs): answers from BIFORGE_TEST_PICKS when it is set
+const testPick = async (): Promise<string | null> => {
+  try {
+    return await invoke<string | null>("test_pick");
+  } catch {
+    return null;
+  }
+};
+
 export const tauriDialogs: Dialogs = {
   pickPbip: async () => {
+    const t = await testPick();
+    if (t) return t;
     const r = await open({ multiple: false, directory: false, filters: [{ name: "BIForge / Power BI project", extensions: ["pbip"] }] });
     return typeof r === "string" ? r : null;
   },
   pickFile: async (name, extensions) => {
+    const t = await testPick();
+    if (t) return t;
     const r = await open({ multiple: false, directory: false, filters: [{ name, extensions }] });
     return typeof r === "string" ? r : null;
   },
   pickFolder: async () => {
+    const t = await testPick();
+    if (t) return t;
     const r = await open({ multiple: false, directory: true });
     return typeof r === "string" ? r : null;
   },

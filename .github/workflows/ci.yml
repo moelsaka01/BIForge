@@ -44,3 +44,9 @@ jobs:
           "BIFORGE_REQUIRE_PG=1" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
       - name: Rust tests
         run: cargo test --workspace
+      - name: Build the app (debug, frontend embedded)
+        working-directory: app
+        run: npx tauri build --debug --no-bundle
+      - name: Real-window test (WebView2 over DevTools protocol)
+        working-directory: app
+        run: npm run e2e

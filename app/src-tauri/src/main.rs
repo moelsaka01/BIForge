@@ -31,6 +31,7 @@ fn main() {
             commands::read_recovery,
             commands::clear_recovery,
             commands::tmdl_print,
+            commands::test_pick,
             commands::tmdl_parse,
             commands::write_sample_data,
             dax::dax_catalog,
