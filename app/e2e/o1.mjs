@@ -64,6 +64,49 @@ try {
   await page.getByRole("button", { name: /Publish & Share/ }).first().waitFor();
   check(true, "sample project opened; Publish & Share is in the ribbon");
 
+  // 1b. the Phase 7 objects and panes in the real window: text box, map from the bundled outlines, Format pane, group, Selection pane
+  const frames = () => page.locator("[data-visual]");
+  await page.waitForTimeout(1500);
+  const before = await frames().count();
+  await page.getByRole("button", { name: "Text box", exact: true }).click();
+  check((await frames().count()) === before + 1, "Text box adds an object to the page");
+  await page.getByRole("button", { name: "Map", exact: true }).click();
+  check((await frames().count()) === before + 2, "the Map gallery button adds a map visual");
+  const mapBox = await frames().last().boundingBox();
+  await page.mouse.click(mapBox.x + mapBox.width / 2, mapBox.y + mapBox.height / 2);
+  await page.getByRole("treeitem", { name: /^Customer/ }).locator("svg").first().click();
+  await page.getByRole("checkbox", { name: "Use City in the selected visual" }).check();
+  await page.getByRole("treeitem", { name: /^Sales/ }).locator("svg").first().click();
+  await page.getByRole("checkbox", { name: "Use Quantity in the selected visual" }).check();
+  const mapImg = page.getByRole("img", { name: "Map" });
+  await mapImg.waitFor();
+  await page.waitForFunction(() => document.querySelectorAll("[role=img][aria-label=Map] path").length > 100);
+  check((await mapImg.locator("path").count()) > 100, "the map is drawn from the bundled Natural Earth outlines (country paths, no tiles)");
+  const notice = await page.locator("[data-testid=chart-notice]").first().innerText();
+  check(/not drawn/.test(notice), `places the data does not know are reported under the map (${notice.slice(-40)})`);
+  // the Format pane is generated from the schema: cards, typed controls, and an honest marker for what is not drawn yet
+  await page.getByRole("tab", { name: /Format visual/ }).click();
+  await page.getByText("Bubbles", { exact: true }).first().waitFor();
+  check((await page.getByText(/not drawn yet/).count()) > 0, "Format pane marks properties that are not drawn yet");
+  const bubble = page.getByLabel("Bubble size").first();
+  await bubble.fill("40");
+  await bubble.press("Tab");
+  await page.waitForTimeout(500);
+  check((await bubble.inputValue()) === "40", "a typed Format pane control keeps its value");
+  // group two visuals from the Format tab, then see the group in the Selection pane
+  await frames().nth(1).click({ position: { x: 5, y: 5 } });
+  await frames().nth(2).click({ modifiers: ["Control"], position: { x: 5, y: 5 } });
+  await page.getByRole("tab", { name: "Format", exact: true }).click();
+  await page.getByRole("button", { name: "Group", exact: true }).click();
+  await page.getByRole("menuitem", { name: /^Group \(Ctrl\+G\)/ }).click();
+  await page.getByRole("tab", { name: "View", exact: true }).click();
+  await page.getByRole("button", { name: "Selection", exact: true }).click();
+  const tree = page.getByRole("tree", { name: "Visuals and groups" });
+  await tree.waitFor();
+  check((await page.getByRole("treeitem", { name: /Group/ }).count()) > 0, "Group creates a group that the Selection pane lists");
+  await page.screenshot({ path: join(work, "editing.png") });
+  await page.getByRole("tab", { name: "Home", exact: true }).click();
+
   // 2. Publish & Share to the folder adapter
   await page.getByRole("button", { name: /Publish & Share/ }).first().click();
   const dlg = page.getByRole("dialog", { name: "Publish and Share" });
@@ -92,6 +135,10 @@ try {
   await open.getByLabel("Report file").fill(join(share, files.find((f) => f.endsWith(".biforge"))));
   await open.getByLabel("Access key").fill(key);
   await open.getByRole("button", { name: "Open for viewing" }).click();
+  // the editing session above left unsaved changes: the app asks before it swaps the document
+  const dontSave = page.getByRole("button", { name: "Don't save" });
+  check(await dontSave.waitFor({ timeout: 5000 }).then(() => true, () => false), "opening a shared report asks about the unsaved edits first");
+  await dontSave.click();
   const bar = page.locator(".viewing-bar");
   await bar.waitFor();
   await page.waitForTimeout(500);
