@@ -1,0 +1,142 @@
+// The look of a visual's container (title, subtitle, divider, spacing, padding, background, border, shadow, alt text,
+// header, tooltip) computed from its formatting objects. Pure: the frame component only applies the result, and the
+// rendered-coverage test compares models to see which properties change the picture.
+import type { CSSProperties } from "react";
+import { cssFont, opacityOf, readFont } from "../format/styles";
+import type { FormatReader } from "./formatReader";
+import type { Theme } from "./theme";
+
+export interface TextBlock {
+  text: string;
+  style: CSSProperties;
+  /** Heading level for assistive technology (2 to 6), or null for plain text. */
+  level: number | null;
+  height: number;
+}
+
+export interface ContainerModel {
+  /** Background, border, corner radius and shadow; position and stacking are the frame's. */
+  look: CSSProperties;
+  title: TextBlock | null;
+  subTitle: TextBlock | null;
+  /** The line under the title area. */
+  divider: { top: number; style: CSSProperties; inset: number } | null;
+  /** Where the visual's content sits inside the container. */
+  body: { left: number; right: number; top: number; bottom: number };
+  altText: string;
+  /** The hover toolbar of the visual (drill, more options); false hides it. */
+  headerShown: boolean;
+  headerStyle: CSSProperties;
+  /** Which buttons of the hover toolbar are on. */
+  headerButtons: { drillUp: boolean; drillToggle: boolean; nextLevel: boolean; expandAll: boolean; options: boolean };
+  /** type: "Default" or "Canvas" (a report page is the tooltip). */
+  tooltip: { show: boolean; type: string; section: string };
+  lockAspect: boolean;
+}
+
+export interface ContainerInput {
+  f: FormatReader;
+  theme: Theme;
+  /** The automatic title (fields of the visual) and whether this visual type shows one by default. */
+  autoTitle: string;
+  titleByDefault: boolean;
+  /** Tables and matrices never get an automatic title text. */
+  noAutoText: boolean;
+}
+
+const ALIGN: Record<string, CSSProperties["textAlign"]> = { left: "left", center: "center", right: "right", Left: "left", Center: "center", Right: "right" };
+const DASH: Record<string, string> = { solid: "solid", dashed: "dashed", dotted: "dotted", custom: "dashed" };
+
+function block(f: FormatReader, theme: Theme, object: "title" | "subTitle", text: string, defaults: { size: number; color: string; family: string }, wrapDefault: boolean): TextBlock | null {
+  const font = readFont(f, object, {});
+  const style: CSSProperties = {
+    ...cssFont(font, defaults),
+    textAlign: ALIGN[f.str(object, "alignment", "left")] ?? "left",
+    background: f.color(object, "background"),
+    padding: "4px 8px 0",
+    whiteSpace: f.bool(object, "titleWrap", wrapDefault) ? "normal" : "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+  };
+  const size = font.size ?? defaults.size;
+  const heading = /^Heading([2-6])$/.exec(f.str(object, "heading", "Normal"));
+  return { text, style, level: heading ? Number(heading[1]) : null, height: Math.round(size) + 12 };
+}
+
+export function buildContainer(inp: ContainerInput): ContainerModel {
+  const { f, theme } = inp;
+  const t = theme.textClasses.title;
+  const customText = f.str("title", "text", "");
+  const showTitleSetting = f.bool("title", "show", inp.titleByDefault);
+  const titleText = customText || (showTitleSetting && !inp.noAutoText ? inp.autoTitle : "");
+  const title = showTitleSetting && titleText !== "" ? block(f, theme, "title", titleText, { size: t.fontSize, color: t.color, family: t.fontFace }, false) : null;
+  const l = theme.textClasses.label;
+  const subText = f.str("subTitle", "text", "");
+  const subTitle = f.bool("subTitle", "show", false) && subText !== "" ? block(f, theme, "subTitle", subText, { size: Math.max(8, l.fontSize + 1), color: l.color, family: l.fontFace }, false) : null;
+
+  // vertical rhythm: title, subtitle, divider, then the content; custom spacing replaces the defaults
+  const custom = f.bool("spacing", "customizeSpacing", false);
+  const sp = (prop: string, dflt: number) => (custom ? f.num("spacing", prop, dflt) : dflt);
+  let y = 0;
+  if (title) y += title.height + sp("spaceBelowTitle", 0);
+  if (subTitle) y += sp("spaceAboveSubtitle", 0) + subTitle.height + sp("spaceBelowSubTitle", 0);
+  const dividerOn = f.bool("divider", "show", false) && (title !== null || subTitle !== null);
+  let divider: ContainerModel["divider"] = null;
+  if (dividerOn) {
+    y += sp("spaceAboveDivider", 0);
+    const w = Math.max(1, f.num("divider", "width", 1));
+    divider = {
+      top: y,
+      inset: f.bool("divider", "ignorePadding", false) ? 0 : 8,
+      style: { borderTop: `${w}px ${DASH[f.str("divider", "style", "solid")] ?? "solid"} ${f.color("divider", "color") ?? theme.muted}` },
+    };
+    y += w;
+  }
+  if (title || subTitle) y += sp("spaceBelowTitleArea", 0) + (custom ? sp("verticalSpacing", 0) : 0);
+
+  const base = 4;
+  const pad = (prop: string) => base + Math.max(0, f.num("padding", prop, 0));
+  const body = { left: pad("left"), right: pad("right"), top: y + pad("top"), bottom: pad("bottom") };
+
+  const bgOn = f.bool("background", "show", true);
+  const bgAlpha = opacityOf(f.num("background", "transparency", 0));
+  const bgColor = f.color("background", "color") ?? theme.background;
+  const borderOn = f.bool("border", "show", false);
+  const shadowOn = f.bool("dropShadow", "show", false);
+  const angle = (f.num("dropShadow", "angle", 45) * Math.PI) / 180;
+  const dist = f.num("dropShadow", "shadowDistance", 3);
+  const blur = f.num("dropShadow", "shadowBlur", 4);
+  const spread = f.num("dropShadow", "shadowSpread", 0);
+  const shadowAlpha = opacityOf(f.num("dropShadow", "transparency", 70));
+  const inner = f.str("dropShadow", "position", "Outer") === "Inner";
+  const look: CSSProperties = {
+    background: bgOn ? `color-mix(in srgb, ${bgColor} ${Math.round(bgAlpha * 100)}%, transparent)` : "transparent",
+    border: borderOn ? `${f.num("border", "width", 1)}px solid ${f.color("border", "color") ?? theme.muted}` : "1px solid transparent",
+    borderRadius: f.num("border", "radius", 0),
+    boxShadow: shadowOn ? `${inner ? "inset " : ""}${(Math.cos(angle) * dist).toFixed(1)}px ${(-Math.sin(angle) * dist).toFixed(1)}px ${blur}px ${spread}px color-mix(in srgb, ${f.color("dropShadow", "color") ?? "#000000"} ${Math.round(shadowAlpha * 100)}%, transparent)` : undefined,
+  };
+
+  return {
+    look,
+    title,
+    subTitle,
+    divider,
+    body,
+    altText: f.str("general", "altText", ""),
+    headerShown: f.bool("visualHeader", "show", true),
+    headerStyle: {
+      background: f.color("visualHeader", "background") ?? "#ffffffd9",
+      color: f.color("visualHeader", "foreground") ?? "#222222",
+      border: f.color("visualHeader", "border") ? `1px solid ${f.color("visualHeader", "border")}` : undefined,
+    },
+    headerButtons: {
+      drillUp: f.bool("visualHeader", "showDrillUpButton", true),
+      drillToggle: f.bool("visualHeader", "showDrillToggleButton", true),
+      nextLevel: f.bool("visualHeader", "showDrillDownLevelButton", true),
+      expandAll: f.bool("visualHeader", "showDrillDownExpandButton", true),
+      options: f.bool("visualHeader", "showOptionsMenu", true),
+    },
+    tooltip: { show: f.bool("visualTooltip", "show", true), type: f.str("visualTooltip", "type", "Default"), section: f.str("visualTooltip", "section", "") },
+    lockAspect: f.bool("lockAspect", "show", false),
+  };
+}

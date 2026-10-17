@@ -78,7 +78,7 @@ describe("visual queries (checked against values computed from the fixture CSV f
   });
 
   it("category + series", () => {
-    visualCase("column.category-series", visualOf("stackedColumnChart", { Category: [Cat], Series: [Country], Y: [Qty] }), groupSum(joined, [cat, country], sumQty, "valueDesc"));
+    visualCase("column.category-series", visualOf("columnChart", { Category: [Cat], Series: [Country], Y: [Qty] }), groupSum(joined, [cat, country], sumQty, "valueDesc"));
   });
 
   it("report/page filters narrow the data through relationships", () => {

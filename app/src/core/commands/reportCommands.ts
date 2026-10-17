@@ -2,6 +2,7 @@
 // actions (selection, drilling, drillthrough). Shells and panes only dispatch these ids.
 import type { CommandRegistry } from "./registry";
 import type { Session } from "../session/session";
+import type { Project } from "../model/types";
 import * as bm from "../report/bookmarks";
 import { lit, type FieldRef, type Lit } from "../report/fields";
 import type { FilterDef } from "../report/filters";
@@ -23,6 +24,13 @@ function need<T extends object>(args: unknown, keys: (keyof T & string)[]): T {
 }
 
 /** The page the user is looking at: the runtime's, else the document's active page. */
+
+/** The picture of an image visual: an address (a data address here) with the source type that says so. */
+function setImageSource(p: Project, page: string, visual: string, uri: string): void {
+  ops.setVisualFormat(p, page, visual, "image", "sourceType", lit.str("imageUrl"));
+  ops.setVisualFormat(p, page, visual, "image", "sourceUrl", lit.str(uri));
+}
+
 export function currentPage(s: Session): string {
   const p = s.store.project;
   const page = s.report.getSnapshot().page ?? (p ? activePageName(p) : null);
@@ -117,7 +125,7 @@ export function registerReportCommands(r: CommandRegistry<Session>): void {
     edit(s, "Insert image", (p) => {
       const page = ((a ?? {}) as { page?: string }).page ?? currentPage(s);
       const name = ops.addVisual(p, page, "image");
-      ops.setVisualFormat(p, page, name, "image", "imageUrl", lit.str(uri));
+      setImageSource(p, page, name, uri);
     });
   });
   reg("report.image.choose", "Choose image", async (s, a) => {
@@ -129,7 +137,7 @@ export function registerReportCommands(r: CommandRegistry<Session>): void {
     const x = need<{ page: string; visual: string; path: string }>(a, ["page", "visual", "path"]);
     if (!s.io.readImage) throw new Error("Choosing an image is not available here.");
     const uri = await s.io.readImage(x.path);
-    edit(s, "Choose image", (p) => ops.setVisualFormat(p, x.page, x.visual, "image", "imageUrl", lit.str(uri)));
+    edit(s, "Choose image", (p) => setImageSource(p, x.page, x.visual, uri));
   });
   reg(
     "report.button.run",

@@ -1,32 +1,36 @@
 // Analytics pane: reference lines (constant, min, max, average, median, percentile) and the trend line of a
 // cartesian chart, and the layout of a ribbon chart. Pure functions; the chart builder draws the result.
 
-export type ReferenceKind = "constantLine" | "minLine" | "maxLine" | "averageLine" | "medianLine" | "percentileLine";
+export type ReferenceKind = "constant" | "min" | "max" | "average" | "median" | "percentile";
 
-export const REFERENCE_KINDS: { kind: ReferenceKind; label: string; name: string }[] = [
-  { kind: "constantLine", label: "Constant line", name: "Constant" },
-  { kind: "minLine", label: "Min line", name: "Min" },
-  { kind: "maxLine", label: "Max line", name: "Max" },
-  { kind: "averageLine", label: "Average line", name: "Average" },
-  { kind: "medianLine", label: "Median line", name: "Median" },
-  { kind: "percentileLine", label: "Percentile line", name: "Percentile" },
+/**
+ * The reference lines of the Analytics pane. A constant line is an instance of the value axis's line object
+ * (y1AxisReferenceLine); the statistic lines are instances of referenceLine, told apart by their `type` property.
+ */
+export const REFERENCE_KINDS: { kind: ReferenceKind; label: string; name: string; object: "y1AxisReferenceLine" | "referenceLine" }[] = [
+  { kind: "constant", label: "Constant line", name: "Constant", object: "y1AxisReferenceLine" },
+  { kind: "min", label: "Min line", name: "Min", object: "referenceLine" },
+  { kind: "max", label: "Max line", name: "Max", object: "referenceLine" },
+  { kind: "average", label: "Average line", name: "Average", object: "referenceLine" },
+  { kind: "median", label: "Median line", name: "Median", object: "referenceLine" },
+  { kind: "percentile", label: "Percentile line", name: "Percentile", object: "referenceLine" },
 ];
 
 /** The value of a reference line over the plotted values; null when there is nothing to compute from. */
 export function referenceValue(kind: ReferenceKind, values: (number | null)[], opt: { constant?: number; percentile?: number } = {}): number | null {
-  if (kind === "constantLine") return opt.constant !== undefined && Number.isFinite(opt.constant) ? opt.constant : null;
+  if (kind === "constant") return opt.constant !== undefined && Number.isFinite(opt.constant) ? opt.constant : null;
   const xs = values.filter((v): v is number => v !== null && Number.isFinite(v)).sort((a, b) => a - b);
   if (xs.length === 0) return null;
   switch (kind) {
-    case "minLine":
+    case "min":
       return xs[0];
-    case "maxLine":
+    case "max":
       return xs[xs.length - 1];
-    case "averageLine":
+    case "average":
       return xs.reduce((a, b) => a + b, 0) / xs.length;
-    case "medianLine":
+    case "median":
       return percentile(xs, 50);
-    case "percentileLine":
+    case "percentile":
       return percentile(xs, opt.percentile ?? 50);
     default:
       return null;

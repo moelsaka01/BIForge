@@ -286,13 +286,15 @@ describe("ReportView: format, filters, bookmarks", () => {
     fireEvent.pointerDown(await waitFor(() => document.querySelector(`[data-visual="${v.name}"]`) as HTMLElement), { button: 0 });
     fireEvent.click(await screen.findByRole("tab", { name: "Format visual" }));
     fireEvent.click(await screen.findByRole("tab", { name: "General" }));
-    const title = await screen.findByLabelText("Text");
+    const titleCard = (await waitFor(() => document.querySelector('[data-card="title"]'))) as HTMLElement;
+    const title = within(titleCard).getByLabelText("Text");
     fireEvent.change(title, { target: { value: "Quantity by category" } });
     await waitFor(() => expect(getFormat(t.session.store.project!.report.files[visualKey("page1", v.name)], "title", "text")).toEqual(lit.str("Quantity by category")));
     await waitFor(() => expect(screen.getByText("Quantity by category")).toBeTruthy());
     fireEvent.click(screen.getByRole("tab", { name: "Visual" }));
     await screen.findByText("Legend");
-    expect(screen.queryByText("Detail labels")).toBeNull();
+    // the cards of the schema for this chart, not those of other visual types
+    expect(screen.queryByText("Slices")).toBeNull();
   });
 
   it("a visual-level filter from the Filters pane narrows the query", async () => {
@@ -388,7 +390,7 @@ describe("ReportView: chart data points", () => {
     await t.run("report.page.go", { page: "page1" });
     await t.run("report.visual.add", { page: "page1", type: "clusteredColumnChart", position: { x: 20, y: 20, width: 500, height: 300 }, fields: [{ role: "Category", field: Cat }, { role: "Y", field: Qty }] });
     const v = t.page().visuals[0].name;
-    await t.run("report.format.set", { page: "page1", visual: v, object: "visualTooltip", prop: "type", value: lit.str("ReportPage") });
+    await t.run("report.format.set", { page: "page1", visual: v, object: "visualTooltip", prop: "type", value: lit.str("Canvas") });
     await t.run("report.format.set", { page: "page1", visual: v, object: "visualTooltip", prop: "section", value: lit.str(tip) });
     t.dax.handler = (q) => (q.includes("TREATAS") || q.includes('Product[Category] IN {"Bikes"}') ? { results: [result(["m"], [[cell("270")]])], elapsedMs: 1 } : q.includes("SUMMARIZECOLUMNS(Product[Category]") ? { results: [result(["a", "b"], rows(["Accessories", 278], ["Bikes", 270]))], elapsedMs: 1 } : { results: [result(["m"], [[cell("730")]])], elapsedMs: 1 });
     render(<t.Host />);

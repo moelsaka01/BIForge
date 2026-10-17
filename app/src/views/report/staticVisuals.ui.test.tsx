@@ -84,9 +84,9 @@ describe("objects without data on the canvas", () => {
     const v = t.visuals()[0];
     render(<t.Host />);
     expect(await screen.findByText(/No image yet/)).toBeTruthy();
-    await t.run("report.format.set", { page: "page1", visual: v.name, object: "image", prop: "imageUrl", value: lit.str("data:image/png;base64,AAAA") });
-    await t.run("report.format.set", { page: "page1", visual: v.name, object: "altText", prop: "text", value: lit.str("Company logo") });
-    await t.run("report.format.set", { page: "page1", visual: v.name, object: "image", prop: "scaling", value: lit.str("Fill") });
+    await t.run("report.format.set", { page: "page1", visual: v.name, object: "image", prop: "sourceUrl", value: lit.str("data:image/png;base64,AAAA") });
+    await t.run("report.format.set", { page: "page1", visual: v.name, object: "general", prop: "altText", value: lit.str("Company logo") });
+    await t.run("report.format.set", { page: "page1", visual: v.name, object: "image", prop: "fit", value: lit.str("Fill") });
     const img = (await screen.findByTestId("image")) as HTMLImageElement;
     expect(img.src).toBe("data:image/png;base64,AAAA");
     expect(img.style.objectFit).toBe("cover");

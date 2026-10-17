@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { linearTrend, percentile, referenceValue, ribbonLayout } from "./analytics";
+import { REFERENCE_KINDS, linearTrend, percentile, referenceValue, ribbonLayout } from "./analytics";
 import { decodeCell } from "./cells";
 import { buildChart } from "./chartOptions";
 import type { Loaded } from "./dataLoader";
@@ -21,24 +21,31 @@ function grouped(v: VisualModel, rows: Cell[][]): Extract<Loaded, { kind: "group
   return { kind: "grouped", query, rows: rows.map((r) => r.map(([t, x]) => decodeCell({ t: t as never, v: x }))), highlightRows: null, totals: null, truncated: false, ms: 0 };
 }
 const build = (v: VisualModel, loaded: Extract<Loaded, { kind: "grouped" }>) => buildChart({ visual: v, loaded, theme: DEFAULT_THEME, selected: [] })!;
+
+/** Sets one property of an Analytics line the way the Format pane stores it (instance id, and the type of a statistic line). */
+const ref = (v: VisualModel, kind: string, prop: string, value: ReturnType<typeof lit.num> | ReturnType<typeof lit.bool> | ReturnType<typeof lit.str>) => {
+  const k = REFERENCE_KINDS.find((x) => x.kind === kind)!;
+  setFormat(v.json, k.object, prop, value, `id:${kind}`);
+  if (k.object === "referenceLine") setFormat(v.json, "referenceLine", "type", lit.str(k.name), `id:${kind}`);
+};
 const fmt = (v: VisualModel, object: string, prop: string, value: ReturnType<typeof lit.num> | ReturnType<typeof lit.bool> | ReturnType<typeof lit.str>) => setFormat(v.json, object, prop, value);
 
 describe("reference line values", () => {
   const xs = [4, 1, 3, 2, null, 10];
   it("min, max, average, median and percentile over the non-blank values", () => {
-    expect(referenceValue("minLine", xs)).toBe(1);
-    expect(referenceValue("maxLine", xs)).toBe(10);
-    expect(referenceValue("averageLine", xs)).toBe(4);
-    expect(referenceValue("medianLine", xs)).toBe(3);
-    expect(referenceValue("percentileLine", xs, { percentile: 90 })).toBeCloseTo(7.6, 10);
-    expect(referenceValue("percentileLine", xs, { percentile: 0 })).toBe(1);
-    expect(referenceValue("percentileLine", xs, { percentile: 100 })).toBe(10);
+    expect(referenceValue("min", xs)).toBe(1);
+    expect(referenceValue("max", xs)).toBe(10);
+    expect(referenceValue("average", xs)).toBe(4);
+    expect(referenceValue("median", xs)).toBe(3);
+    expect(referenceValue("percentile", xs, { percentile: 90 })).toBeCloseTo(7.6, 10);
+    expect(referenceValue("percentile", xs, { percentile: 0 })).toBe(1);
+    expect(referenceValue("percentile", xs, { percentile: 100 })).toBe(10);
   });
   it("a constant line is its value; nothing to compute from gives null", () => {
-    expect(referenceValue("constantLine", [], { constant: 7 })).toBe(7);
-    expect(referenceValue("constantLine", [1])).toBeNull();
-    expect(referenceValue("averageLine", [null])).toBeNull();
-    expect(referenceValue("medianLine", [])).toBeNull();
+    expect(referenceValue("constant", [], { constant: 7 })).toBe(7);
+    expect(referenceValue("constant", [1])).toBeNull();
+    expect(referenceValue("average", [null])).toBeNull();
+    expect(referenceValue("median", [])).toBeNull();
   });
   it("percentile interpolates between ranks and handles one value", () => {
     expect(percentile([10, 20, 30, 40], 50)).toBe(25);
@@ -63,13 +70,13 @@ describe("Analytics on a chart", () => {
 
   it("draws the lines that are switched on, with value, color and style", () => {
     const v = mk();
-    fmt(v, "averageLine", "show", lit.bool(true));
-    fmt(v, "maxLine", "show", lit.bool(true));
-    fmt(v, "maxLine", "lineColor", lit.str("#ff0000"));
-    fmt(v, "maxLine", "style", lit.str("solid"));
-    fmt(v, "constantLine", "show", lit.bool(true));
-    fmt(v, "constantLine", "value", lit.num(25));
-    fmt(v, "constantLine", "dataLabelShow", lit.bool(true));
+    ref(v, "average", "show", lit.bool(true));
+    ref(v, "max", "show", lit.bool(true));
+    ref(v, "max", "lineColor", lit.str("#ff0000"));
+    ref(v, "max", "style", lit.str("solid"));
+    ref(v, "constant", "show", lit.bool(true));
+    ref(v, "constant", "value", lit.num(25));
+    ref(v, "constant", "dataLabelShow", lit.bool(true));
     const mark = build(v, grouped(v, rows)).option.series[0].markLine;
     const byName = Object.fromEntries(mark.data.map((d: { name: string }) => [d.name, d]));
     expect(byName.Average.yAxis).toBe(25);
@@ -83,8 +90,8 @@ describe("Analytics on a chart", () => {
 
   it("a percentile line is named after its percentile; horizontal bars put lines on the x axis", () => {
     const v = mk("clusteredBarChart");
-    fmt(v, "percentileLine", "show", lit.bool(true));
-    fmt(v, "percentileLine", "percentile", lit.num(75));
+    ref(v, "percentile", "show", lit.bool(true));
+    ref(v, "percentile", "percentile", lit.num(75));
     const d = build(v, grouped(v, rows)).option.series[0].markLine.data[0];
     expect(d.name).toBe("75th percentile");
     expect(d.xAxis).toBeCloseTo(32.5, 10);
@@ -94,13 +101,13 @@ describe("Analytics on a chart", () => {
   it("no lines are drawn by default, and a constant line without a value is skipped", () => {
     const v = mk();
     expect(build(v, grouped(v, rows)).option.series[0].markLine).toBeUndefined();
-    fmt(v, "constantLine", "show", lit.bool(true));
+    ref(v, "constant", "show", lit.bool(true));
     expect(build(v, grouped(v, rows)).option.series[0].markLine).toBeUndefined();
   });
 
   it("the trend line is one more series that is not a data point", () => {
     const v = mk("lineChart");
-    fmt(v, "trendLine", "show", lit.bool(true));
+    fmt(v, "trend", "show", lit.bool(true));
     const b = build(v, grouped(v, rows));
     const s = b.option.series;
     expect(s).toHaveLength(2);
@@ -113,7 +120,7 @@ describe("Analytics on a chart", () => {
 
   it("is not offered or drawn on 100% stacked charts", () => {
     const v = mk("hundredPercentStackedColumnChart");
-    fmt(v, "averageLine", "show", lit.bool(true));
+    ref(v, "average", "show", lit.bool(true));
     expect(build(v, grouped(v, rows)).option.series[0].markLine).toBeUndefined();
   });
 });

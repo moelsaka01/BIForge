@@ -1,12 +1,17 @@
 // Models for the DOM-rendered visuals (table, matrix, card, KPI): arranged cells and display text. Pure.
 import { isNumeric, valueKey, type Value } from "./cells";
 import { BLANK_LABEL, columnsOf, labelOf, num } from "./chartData";
+import { seriesColor } from "./theme";
 import { colorFn, condFormatFromPbir, textOn } from "./condFormat";
 import type { Loaded } from "./dataLoader";
 import { fieldKey, type FieldRef } from "./fields";
 import { FormatReader } from "./formatReader";
-import { formatCompact, formatNumber, type DisplayUnits } from "./numberFormat";
-import { queryRefOf } from "./pbir";
+import { formatCompact, formatNumber } from "./numberFormat";
+import { unitsOf, valueText } from "./chartFormat";
+import { cssFont, readFont, withDefaults } from "../format/styles";
+import { tableStyle, type TableStyle } from "./tableStyle";
+import type { CSSProperties } from "react";
+import { queryRefOf, readLitProp, type J } from "./pbir";
 import type { BuiltMatrixQuery, PlannedColumn } from "./queryBuilder";
 import type { Theme } from "./theme";
 import type { VisualModel } from "./visualDoc";
@@ -14,8 +19,11 @@ import type { VisualModel } from "./visualDoc";
 export function displayValue(v: Value, col: { format: string | null; field: FieldRef }, f?: FormatReader): string {
   if (v.kind === "blank") return "";
   if (isNumeric(v) && v.num !== null) {
-    const u = f ? (f.str("values", "displayUnits", "none") as DisplayUnits) : "none";
-    return u === "none" || u === "auto" ? formatNumber(v.num, col.format) : formatCompact(v.num, u, f?.num("values", "decimalPlaces", 1) ?? 1, col.format);
+    if (!f) return formatNumber(v.num, col.format);
+    const sel = queryRefOf(col.field);
+    // tables show full numbers unless the column asks for display units
+    const u = f.num("columnFormatting", "labelDisplayUnits", 1, sel) === 1 ? "none" : unitsOf(f, "columnFormatting", "labelDisplayUnits", sel);
+    return u === "none" || u === "auto" ? formatNumber(v.num, col.format) : formatCompact(v.num, u, f.num("columnFormatting", "labelPrecision", 1, sel), col.format);
   }
   return v.text;
 }
@@ -27,7 +35,13 @@ export interface CellStyle {
   bar?: { ratio: number; color: string; negative: boolean };
 }
 
-/** Formatting of one column from its `values` entry (selector = the column's query reference). */
+/** The color of a fill node ({ solid: { color: <literal> } }), or undefined. */
+function fillOf(node: unknown): string | undefined {
+  const l = readLitProp(node as J);
+  return l && l.t === "string" ? l.v : undefined;
+}
+
+/** Formatting of one column from its `values` and `columnFormatting` entries (selector = the column's query reference). */
 function columnStyler(f: FormatReader, col: PlannedColumn, numbers: (number | null)[]): (v: Value) => CellStyle {
   const sel = queryRefOf(col.field);
   const bg = f.raw("values", "backColor", sel);
@@ -36,12 +50,13 @@ function columnStyler(f: FormatReader, col: PlannedColumn, numbers: (number | nu
   const fgSpec = fg ? condFormatFromPbir(fg) : null;
   const bgFn = bgSpec ? colorFn(bgSpec, numbers) : null;
   const fgFn = fgSpec ? colorFn(fgSpec, numbers) : null;
-  const plainBg = f.color("values", "backColor", sel);
-  const plainFg = f.color("values", "fontColor", sel);
-  const bars = f.bool("values", "dataBars", false, sel);
+  const plainBg = f.color("values", "backColor", sel) ?? f.color("columnFormatting", "backColor", sel);
+  const plainFg = f.color("values", "fontColor", sel) ?? f.color("columnFormatting", "fontColor", sel);
+  const barsNode = f.raw("columnFormatting", "dataBars", sel);
+  const bars = barsNode !== undefined;
   const nums = numbers.filter((x): x is number => x !== null);
   const maxAbs = nums.length ? Math.max(...nums.map(Math.abs)) : 0;
-  const barColor = f.color("values", "dataBarColor", sel) ?? "#6aa9e9";
+  const barColor = (barsNode && fillOf(barsNode.positiveColor)) || "#6aa9e9";
   return (v) => {
     const s: CellStyle = {};
     const key: number | string | null = isNumeric(v) ? v.num : v.kind === "blank" ? null : v.text;
@@ -62,13 +77,14 @@ function columnStyler(f: FormatReader, col: PlannedColumn, numbers: (number | nu
 export interface TableColumn {
   label: string;
   field: FieldRef;
-  align: "left" | "right";
+  align: "left" | "right" | "center";
   isValue: boolean;
   /** Sort state of this column (from the visual's sort definition). */
   sort: "asc" | "desc" | null;
 }
 
 export interface TableModel {
+  style: TableStyle;
   columns: TableColumn[];
   rows: { text: string; style: CellStyle; raw: Value }[][];
   totals: string[] | null;
@@ -89,7 +105,7 @@ export function buildTable(visual: VisualModel, loaded: Extract<Loaded, { kind: 
   const columns: TableColumn[] = cols.map(({ pf, pc }) => ({
     label: pf.displayName ?? pc.label,
     field: pc.field,
-    align: pc.kind === "value" ? "right" : "left",
+    align: alignOf(f, pc),
     isValue: pc.kind === "value",
     sort: sortKey && sortKey === fieldKey(pc.field) ? visual.sort!.dir : null,
   }));
@@ -100,9 +116,16 @@ export function buildTable(visual: VisualModel, loaded: Extract<Loaded, { kind: 
       return { text: displayValue(v, pc, f), style: stylers[i](v), raw: v };
     }),
   );
+  const style = tableStyle(f, theme);
   const tot = totals && f.bool("total", "totals", true) ? cols.map(({ pc }) => (pc.kind === "value" ? displayValue(totals[valueIndex(q.columns, pc)], pc, f) : "")) : null;
-  if (tot && tot.length) tot[0] = tot[0] || "Total";
-  return { columns, rows, totals: tot, truncated: loaded.truncated };
+  if (tot && tot.length) tot[0] = tot[0] || style.totalLabel;
+  return { style, columns, rows, totals: tot, truncated: loaded.truncated };
+}
+
+/** Column alignment: the column's own setting (columnFormatting.alignment), else numbers right and text left. */
+function alignOf(f: FormatReader, pc: PlannedColumn): "left" | "right" | "center" {
+  const a = f.str("columnFormatting", "alignment", "Auto", queryRefOf(pc.field));
+  return a === "Left" ? "left" : a === "Right" ? "right" : a === "Center" ? "center" : pc.kind === "value" ? "right" : "left";
 }
 
 /** Position of a value column among the value columns (the totals query returns only values). */
@@ -132,6 +155,7 @@ export interface MatrixRow {
 }
 
 export interface MatrixModel {
+  style: TableStyle;
   rowHeader: string;
   /** Header rows above the data: one per column field, then one for the value names when there are several. */
   headers: MatrixHeaderCell[][];
@@ -255,6 +279,7 @@ export function buildMatrix(visual: VisualModel, parts: Value[][][], q: BuiltMat
     });
   }
   return {
+    style: tableStyle(f, theme),
     rowHeader: q.rows.map((r) => r.name).join(" / "),
     headers,
     rows,
@@ -272,6 +297,9 @@ export interface CardModel {
   color?: string;
   fontSize: number;
   showLabel: boolean;
+  /** Font of the value and of the category label under it. */
+  valueStyle: CSSProperties;
+  labelStyle: CSSProperties;
 }
 
 export function buildCard(visual: VisualModel, loaded: Extract<Loaded, { kind: "grouped" }>, theme: Theme): CardModel {
@@ -282,24 +310,34 @@ export function buildCard(visual: VisualModel, loaded: Extract<Loaded, { kind: "
   const raw = f.raw("labels", "color");
   const spec = raw ? condFormatFromPbir(raw) : null;
   const color = spec && v ? (colorFn(spec, [v.num ?? null])(isNumeric(v) ? v.num : v.text) ?? undefined) : f.color("labels", "color");
+  const co = theme.textClasses.callout;
+  const font = readFont(f, "labels", { color: "color" });
+  const lb = theme.textClasses.label;
   return {
     label: visual.roles.Values?.[0]?.displayName ?? col?.label ?? "",
     text: v?.kind === "blank" ? "" : text,
     color,
-    fontSize: f.num("labels", "fontSize", theme.textClasses.callout.fontSize),
+    fontSize: f.num("labels", "fontSize", co.fontSize),
     showLabel: f.bool("categoryLabels", "show", true),
+    valueStyle: cssFont({ ...font, color }, { family: co.fontFace, size: co.fontSize, color: co.color }),
+    labelStyle: cssFont(readFont(f, "categoryLabels", { color: "color" }), { family: lb.fontFace, size: lb.fontSize + 1, color: theme.muted }),
   };
 }
 
 function formatCompact2(x: number, f: FormatReader, fmt: string | null): string {
-  const u = f.str("labels", "displayUnits", "auto") as DisplayUnits;
-  const dec = f.num("labels", "decimalPlaces", 1);
-  if (u === "none") return formatNumber(x, fmt);
-  return fmt && /[%]/.test(fmt) ? formatNumber(x, fmt) : formatCompact(x, u, dec, fmt);
+  return valueText(x, fmt, f, "labels");
 }
 
 export interface MultiRowCardModel {
   cards: { title: string; items: { label: string; text: string }[] }[];
+  /** First item of a card (the title line), the other values, and their captions. */
+  titleStyle: CSSProperties;
+  valueStyle: CSSProperties;
+  captionStyle: CSSProperties;
+  showCaptions: boolean;
+  /** One card: padding, background, outline and the accent bar. */
+  cardStyle: CSSProperties;
+  bar: { color: string; weight: number } | null;
 }
 
 export function buildMultiRowCard(visual: VisualModel, loaded: Extract<Loaded, { kind: "grouped" }>, theme: Theme): MultiRowCardModel {
@@ -311,7 +349,22 @@ export function buildMultiRowCard(visual: VisualModel, loaded: Extract<Loaded, {
     title: "",
     items: cols.map(({ pf, pc }) => ({ label: pf.displayName ?? pc.label, text: displayValue(row[pc.index], pc, f) })),
   }));
-  return { cards };
+  const lb = theme.textClasses.label;
+  const outlineW = f.num("card", "outlineWeight", 0);
+  const barOn = f.bool("card", "barShow", false);
+  return {
+    cards,
+    titleStyle: cssFont(readFont(f, "cardTitle", { color: "color" }), { family: lb.fontFace, size: 14, color: theme.foreground }),
+    valueStyle: cssFont(readFont(f, "dataLabels", { color: "color" }), { family: lb.fontFace, size: 12, color: theme.foreground }),
+    captionStyle: cssFont(readFont(f, "categoryLabels", { color: "color" }), { family: lb.fontFace, size: 10, color: theme.muted }),
+    showCaptions: f.bool("categoryLabels", "show", true),
+    cardStyle: {
+      padding: f.num("card", "cardPadding", 0),
+      background: f.color("card", "cardBackground"),
+      ...(outlineW ? { border: `${outlineW}px solid ${f.color("card", "outlineColor") ?? theme.muted}` } : {}),
+    },
+    bar: barOn ? { color: f.color("card", "barColor") ?? seriesColor(theme, 0), weight: f.num("card", "barWeight", 4) } : null,
+  };
 }
 
 export interface KpiModel {
@@ -323,6 +376,17 @@ export interface KpiModel {
   status: "good" | "bad" | "neutral";
   trend: { x: string; y: number | null }[];
   label: string;
+  valueStyle: CSSProperties;
+  goalStyle: CSSProperties;
+  goalText: string;
+  showGoal: boolean;
+  showDistance: boolean;
+  /** Colors for the three states and whether the trend area shows (with its transparency, percent). */
+  colors: { good: string; bad: string; neutral: string };
+  showTrend: boolean;
+  trendTransparency: number;
+  showIcon: boolean;
+  align: CSSProperties["textAlign"];
 }
 
 export function buildKpi(visual: VisualModel, loaded: Extract<Loaded, { kind: "grouped" }>, theme: Theme): KpiModel {
@@ -337,15 +401,33 @@ export function buildKpi(visual: VisualModel, loaded: Extract<Loaded, { kind: "g
   const v = last && ind ? num(last[ind.index]) : null;
   const g = last && goal ? num(last[goal.index]) : null;
   const variance = v !== null && g !== null && g !== 0 ? (v - g) / Math.abs(g) : null;
-  const higherIsBetter = f.str("indicator", "direction", "High is good") !== "Low is good";
+  // status direction: "High is good" / "Low is good" (goals.direction)
+  const higherIsBetter = f.str("goals", "direction", "High is good") !== "Low is good";
   const status = variance === null ? "neutral" : (variance >= 0) === higherIsBetter ? "good" : "bad";
+  const co = theme.textClasses.callout;
+  const lb = theme.textClasses.label;
+  const pct = f.has("goals", "labelPrecision") ? f.num("goals", "labelPrecision", 1) : 1;
+  const goalFont = readFont(f, "goals", { color: "goalFontColor" });
+  const indFont = readFont(f, "indicator", { color: "fontColor" });
+  const units = unitsOf(f, "indicator", "indicatorDisplayUnits");
+  const prec = f.has("indicator", "indicatorPrecision") ? f.num("indicator", "indicatorPrecision", 1) : 1;
   return {
-    value: v === null ? "" : formatCompact(v, "auto", 1, ind?.format ?? null),
+    value: v === null ? "" : formatCompact(v, units, prec, ind?.format ?? null),
     goal: g === null ? null : formatCompact(g, "auto", 1, goal?.format ?? null),
     variance,
-    varianceText: variance === null ? null : `${variance >= 0 ? "+" : ""}${(variance * 100).toFixed(1)}%`,
+    varianceText: variance === null ? null : `${variance >= 0 ? "+" : ""}${(variance * 100).toFixed(pct)}%`,
     status,
     trend: axis && ind ? rows.map((r) => ({ x: labelOf(r[axis.index], axis.format), y: num(r[ind.index]) })) : [],
     label: visual.roles.Indicator?.[0]?.displayName ?? ind?.label ?? "",
+    valueStyle: cssFont(indFont, { family: co.fontFace, size: co.fontSize, color: theme.foreground }),
+    goalStyle: cssFont({ ...goalFont, color: undefined }, { family: lb.fontFace, size: 12, color: theme.foreground }),
+    goalText: f.str("goals", "goalText", "Goal"),
+    showGoal: f.bool("goals", "showGoal", true),
+    showDistance: f.bool("goals", "showDistance", true),
+    colors: { good: f.color("status", "goodColor") ?? theme.good, bad: f.color("status", "badColor") ?? theme.bad, neutral: f.color("status", "neutralColor") ?? theme.neutral },
+    showTrend: f.bool("trendline", "show", true),
+    trendTransparency: f.num("trendline", "transparency", 75),
+    showIcon: f.bool("indicator", "showIcon", false),
+    align: (f.str("indicator", "horizontalAlignment", "left") as CSSProperties["textAlign"]) ?? "left",
   };
 }

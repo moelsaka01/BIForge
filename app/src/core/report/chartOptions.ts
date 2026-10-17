@@ -8,13 +8,14 @@ import type { FieldRef } from "./fields";
 import { FormatReader } from "./formatReader";
 import type { Loaded } from "./dataLoader";
 import type { SelectedPoint } from "./interactions";
-import { formatCompact, formatNumber, type DisplayUnits } from "./numberFormat";
+import { formatCompact, formatNumber } from "./numberFormat";
+import { axisBlock, gridFor, labelBlock, labelDefaults, legendBlock, lineSeriesStyle, referenceLineMark, valueText, type LineSpec } from "./chartFormat";
+import { echartsText, opacityOf, readFont } from "../format/styles";
 import { seriesColor, type Theme } from "./theme";
 import type { VisualModel } from "./visualDoc";
 import { visualType } from "./visualTypes";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type O = Record<string, any>;
+import type { O } from "./chartFormat";
 
 export interface ChartInput {
   visual: VisualModel;
@@ -33,45 +34,7 @@ export interface ChartBuild {
 }
 
 const DIM = 0.35;
-
-function units(f: FormatReader, object: string): DisplayUnits {
-  const u = f.str(object, "displayUnits", "auto");
-  return (["auto", "none", "thousands", "millions", "billions", "trillions"].includes(u) ? u : "auto") as DisplayUnits;
-}
-
-function valueText(x: number | null, fmt: string | null, f: FormatReader, object = "labels"): string {
-  if (x === null) return "";
-  const u = units(f, object);
-  const dec = f.num(object, "decimalPlaces", u === "none" ? 2 : 1);
-  return fmt && u === "none" ? formatNumber(x, fmt) : formatCompact(x, u, dec, fmt);
-}
-
-function legendBlock(f: FormatReader, theme: Theme, show: boolean): O {
-  const pos = f.str("legend", "position", "Top");
-  const horizontal = pos.startsWith("Top") || pos.startsWith("Bottom");
-  return {
-    show: f.bool("legend", "show", show),
-    type: "scroll",
-    [pos.startsWith("Bottom") ? "bottom" : pos.startsWith("Left") ? "left" : pos.startsWith("Right") ? "right" : "top"]: 0,
-    orient: horizontal ? "horizontal" : "vertical",
-    textStyle: { color: f.color("legend", "labelColor") ?? theme.textClasses.label.color, fontSize: f.num("legend", "fontSize", theme.textClasses.label.fontSize), fontFamily: theme.textClasses.label.fontFace },
-    icon: "roundRect",
-    itemWidth: 10,
-    itemHeight: 10,
-  };
-}
-
-function gridFor(f: FormatReader, legendShown: boolean): O {
-  const pos = f.str("legend", "position", "Top");
-  const g: O = { left: 8, right: 12, top: 8, bottom: 8, containLabel: true };
-  if (legendShown) {
-    if (pos.startsWith("Bottom")) g.bottom = 30;
-    else if (pos.startsWith("Left")) g.left = 90;
-    else if (pos.startsWith("Right")) g.right = 100;
-    else g.top = 30;
-  }
-  return g;
-}
+const SYMBOLS: Record<string, string> = { circle: "circle", square: "rect", diamond: "diamond", triangle: "triangle" };
 
 /** Colors of the data points of a series: conditional formatting of the fill, or null for the series color. */
 function pointColors(f: FormatReader, p: Pivot, valueCols: { field: FieldRef }[], vi: number, si: number): (string | null)[] | null {
@@ -107,9 +70,9 @@ function cartesian(inp: ChartInput): ChartBuild {
   const q = loaded.query;
   const f = new FormatReader(visual.json, theme, visual.visualType);
   const t = visual.visualType;
-  const horizontal = /BarChart$/.test(t);
+  const horizontal = t === "barChart" || /BarChart$/.test(t);
   const hundred = t.startsWith("hundredPercent");
-  const stacked = hundred || t === "stackedBarChart" || t === "stackedColumnChart" || t === "stackedAreaChart";
+  const stacked = hundred || t === "barChart" || t === "columnChart" || t === "stackedAreaChart";
   const lineOnly = t === "lineChart";
   const areaOnly = t === "areaChart" || t === "stackedAreaChart" || t === "hundredPercentStackedAreaChart";
   const ribbon = t === "ribbonChart";
@@ -140,7 +103,9 @@ function cartesian(inp: ChartInput): ChartBuild {
   const seriesOut: O[] = [];
   const meta: { vi: number; si: number }[] = [];
   const labelOn = f.bool("labels", "show", false);
-  const labelStyle = { color: f.color("labels", "color") ?? theme.textClasses.label.color, fontSize: f.num("labels", "fontSize", theme.textClasses.label.fontSize) };
+  const showSeriesName = f.bool("labels", "showSeries", false);
+  const fillAlpha = opacityOf(f.num("dataPoint", "fillTransparency", 0));
+  const borderOn = f.bool("dataPoint", "borderShow", false);
   const addSeries = (vi: number, si: number, isHighlight: boolean) => {
     const role = valueCols[vi].role;
     const asLine = lineOnly || areaOnly || (combo && role === "Y2");
@@ -154,30 +119,41 @@ function cartesian(inp: ChartInput): ChartBuild {
       const dimmed = (selecting && !isSelected(ci, si)) || (hl !== null && !isHighlight);
       const c = cond?.[ci] ?? color;
       const item: O = { value: v, raw: cells[vi][si][ci] };
-      if (!asLine || cond) item.itemStyle = { color: c, opacity: dimmed ? DIM : 1 };
+      if (!asLine || cond) item.itemStyle = { color: c, opacity: (dimmed ? DIM : 1) * (asLine ? 1 : fillAlpha) };
       if (asLine && dimmed) item.itemStyle = { ...(item.itemStyle ?? {}), opacity: DIM };
       return item;
     });
+    const barBorder = borderOn
+      ? { borderWidth: f.num("dataPoint", "borderSize", 1), borderColor: f.bool("dataPoint", "borderColorMatchFill", false) ? color : (f.color("dataPoint", "borderColor") ?? theme.foreground) }
+      : {};
     const s: O = {
       name: isHighlight ? `${name} (highlighted)` : name,
       type: asLine ? "line" : "bar",
       data,
-      itemStyle: { color },
+      itemStyle: { color, ...(asLine ? {} : { opacity: fillAlpha, ...barBorder }) },
       emphasis: { focus: "none" },
-      label: { show: labelOn && !isHighlight, position: horizontal ? "right" : "top", ...labelStyle, formatter: (pa: O) => (hundred ? `${Math.round(pa.value ?? 0)}%` : valueText(pa.data?.raw ?? null, valueCols[vi].format, f)) },
+      label: labelBlock({
+        f,
+        theme,
+        show: labelOn && !isHighlight,
+        horizontal,
+        stacked,
+        asLine,
+        text: (pa: O) => {
+          const text = hundred ? `${Math.round(pa.value ?? 0)}%` : valueText(pa.data?.raw ?? null, valueCols[vi].format, f);
+          return showSeriesName ? `${name}: ${text}` : text;
+        },
+      }),
     };
-    if (stacked) {
-      s.stack = isHighlight ? "highlight" : "total";
-      if (!asLine) s.label.position = "inside";
-    }
+    if (stacked) s.stack = isHighlight ? "highlight" : "total";
     if (asLine) {
-      s.symbolSize = f.bool("lineStyles", "showMarker", false) ? 8 : 5;
-      s.smooth = f.bool("lineStyles", "smooth", false);
-      s.lineStyle = { width: f.num("lineStyles", "strokeWidth", 2), type: f.str("lineStyles", "lineStyle", "solid"), opacity: hl !== null && !isHighlight ? DIM : 1 };
-      if (areaOnly) s.areaStyle = { opacity: isHighlight ? 0.85 : hl ? 0.2 : 0.4 };
+      Object.assign(s, lineSeriesStyle(f, color, hl !== null && !isHighlight));
+      if (areaOnly || f.bool("lineStyles", "areaShow", false)) s.areaStyle = { opacity: isHighlight ? 0.85 : hl ? 0.2 : 0.4, color: f.bool("lineStyles", "areaMatchStrokeColor", true) ? undefined : f.color("lineStyles", "areaColor") };
       if (combo && role === "Y2") s.yAxisIndex = 1;
-    } else if (hl) {
-      s.barGap = "-100%";
+    } else {
+      if (hl) s.barGap = "-100%";
+      else if (f.has("categoryAxis", "innerPadding")) s.barGap = `${f.num("categoryAxis", "innerPadding", 0)}%`;
+      if (f.has("categoryAxis", "outerPadding")) s.barCategoryGap = `${f.num("categoryAxis", "outerPadding", 20)}%`;
     }
     if (isHighlight) {
       s.z = 5;
@@ -236,30 +212,28 @@ function cartesian(inp: ChartInput): ChartBuild {
     const fmtRef = valueCols[0]?.format ?? null;
     const marks: O[] = [];
     for (const k of REFERENCE_KINDS) {
-      if (!f.bool(k.kind, "show", false)) continue;
-      const v = referenceValue(k.kind, pooled, { constant: f.has(k.kind, "value") ? f.num(k.kind, "value", 0) : undefined, percentile: f.num(k.kind, "percentile", 50) });
-      if (v === null) continue;
-      const color = f.color(k.kind, "lineColor") ?? theme.muted;
-      const title = f.str(k.kind, "displayName", "") || (k.kind === "percentileLine" ? `${f.num(k.kind, "percentile", 50)}th percentile` : k.name);
-      marks.push({
-        name: title,
-        [horizontal ? "xAxis" : "yAxis"]: v,
-        lineStyle: { color, width: f.num(k.kind, "strokeWidth", 1), type: f.str(k.kind, "style", "dashed"), opacity: 1 - Math.min(100, Math.max(0, f.num(k.kind, "transparency", 0))) / 100 },
-        label: { show: f.bool(k.kind, "dataLabelShow", false), formatter: () => `${title}: ${valueText(v, fmtRef, f, "valueAxis")}`, color, position: "insideEndTop" },
-      });
+      const sel = `id:${k.kind}`;
+      const spec: LineSpec = { object: k.object, id: k.kind };
+      // a statistic line is told apart by its type; a stored line of another type is not this one
+      if (k.object === "referenceLine" && f.str("referenceLine", "type", "", sel) !== k.name) continue;
+      const v = referenceValue(k.kind, pooled, { constant: f.has(k.object, "value", sel) ? f.num(k.object, "value", 0, sel) : undefined, percentile: f.num(k.object, "percentile", 50, sel) });
+      const name = k.kind === "percentile" ? `${f.num(k.object, "percentile", 50, sel)}th percentile` : k.name;
+      const mark = referenceLineMark(f, theme, spec, v, name, horizontal ? "xAxis" : "yAxis", fmtRef);
+      if (mark) marks.push(mark);
     }
     if (marks.length) seriesOut[0].markLine = { silent: true, symbol: "none", animation: false, data: marks };
-    if (f.bool("trendLine", "show", false) && !stacked && valueCols.length > 0 && p.series.length > 0) {
+    if (f.bool("trend", "show", false) && !stacked && valueCols.length > 0 && p.series.length > 0) {
       const tr = linearTrend(p.categories.map((_c, ci) => shown(0, 0, ci)));
       if (tr) {
+        const style = f.str("trend", "style", "dashed");
         seriesOut.push({
-          name: "Trend line",
+          name: f.str("trend", "displayName", "") || "Trend line",
           type: "line",
           data: p.categories.map((_c, ci) => ({ value: tr.at(ci), raw: tr.at(ci) })),
           symbol: "none",
           silent: true,
           z: 6,
-          lineStyle: { color: f.color("trendLine", "lineColor") ?? theme.muted, width: f.num("trendLine", "strokeWidth", 2), type: f.str("trendLine", "style", "dashed") },
+          lineStyle: { color: f.color("trend", "lineColor") ?? theme.muted, width: f.num("trend", "width", 2), type: style === "custom" ? "dashed" : style, opacity: opacityOf(f.num("trend", "transparency", 0)) },
           tooltip: { show: false },
         });
       }
@@ -267,41 +241,15 @@ function cartesian(inp: ChartInput): ChartBuild {
   }
 
   const catLabels = p.categories.map((c) => c.label);
-  const fg = f.color("categoryAxis", "labelColor") ?? theme.textClasses.label.color;
-  const axisFont = { color: fg, fontSize: f.num("categoryAxis", "fontSize", theme.textClasses.label.fontSize), fontFamily: theme.textClasses.label.fontFace };
   const catAxis: O = {
-    type: "category",
+    ...axisBlock({ f, theme, object: "categoryAxis", kind: "category", titleDefault: columnsOf(q, "Category", "group").map((c) => c.label).join(", "), inverseDefault: horizontal, horizontal }),
     data: catLabels,
-    show: f.bool("categoryAxis", "show", true),
-    inverse: horizontal,
-    axisLabel: { ...axisFont, hideOverlap: true, width: horizontal ? 110 : 90, overflow: "truncate" },
-    axisLine: { lineStyle: { color: theme.muted } },
-    axisTick: { show: false },
     boundaryGap: !(lineOnly || areaOnly),
-    name: f.bool("categoryAxis", "showAxisTitle", false) ? f.str("categoryAxis", "axisTitle", columnsOf(q, "Category", "group").map((c) => c.label).join(", ")) : undefined,
-    nameLocation: "middle",
-    nameGap: 28,
   };
   const fmt0 = valueCols[0]?.format ?? null;
-  const gridColor = theme.dark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.1)";
-  const mkValueAxis = (object: string, fmt: string | null, show: boolean): O => ({
-    type: "value",
-    show: f.bool(object, "show", show),
-    min: f.has(object, "start") ? f.num(object, "start", 0) : hundred ? 0 : undefined,
-    max: f.has(object, "end") ? f.num(object, "end", 0) : hundred ? 100 : undefined,
-    splitLine: { show: f.bool(object, "gridlineShow", true), lineStyle: { color: gridColor } },
-    axisLabel: {
-      color: f.color(object, "labelColor") ?? theme.textClasses.label.color,
-      fontSize: f.num(object, "fontSize", theme.textClasses.label.fontSize),
-      formatter: (v: number) => (hundred ? `${v}%` : valueText(v, fmt, f, object)),
-    },
-    name: f.bool(object, "showAxisTitle", false) ? f.str(object, "axisTitle", valueCols.map((c) => c.label).join(", ")) : undefined,
-    nameLocation: "middle",
-    nameGap: 44,
-  });
-  const valAxis = mkValueAxis("valueAxis", fmt0, true);
+  const valAxis = axisBlock({ f, theme, object: "valueAxis", kind: "value", fmt: fmt0, titleDefault: valueCols.map((c) => c.label).join(", "), hundred, horizontal });
   const y2Cols = columnsOf(q, "Y2", "value");
-  const valAxes = combo && y2Cols.length ? [valAxis, { ...mkValueAxis("secondaryValueAxis", y2Cols[0].format, true), splitLine: { show: false } }] : [valAxis];
+  const valAxes = combo && y2Cols.length ? [valAxis, { ...axisBlock({ f, theme, object: "valueAxis", prefix: "sec", kind: "value", fmt: y2Cols[0].format, titleDefault: y2Cols.map((c) => c.label).join(", "), horizontal }), splitLine: { show: false } }] : [valAxis];
 
   const option: O = {
     animation: false,
@@ -352,6 +300,17 @@ function sliceData(inp: ChartInput) {
   return { p, vcol, values: p.cells[0]?.[0] ?? [] };
 }
 
+const SLICE_STYLES: Record<string, { cat: boolean; val: boolean; pct: boolean }> = {
+  Category: { cat: true, val: false, pct: false },
+  Data: { cat: false, val: true, pct: false },
+  "Percent of total": { cat: false, val: false, pct: true },
+  Both: { cat: true, val: true, pct: false },
+  "Category, percent of total": { cat: true, val: false, pct: true },
+  "Data value, percent of total": { cat: false, val: true, pct: true },
+  "Category, data value, percent of total": { cat: true, val: true, pct: true },
+};
+const PIE_POS: Record<string, string> = { outside: "outside", inside: "inside", preferOutside: "outside", preferInside: "inside" };
+
 function pie(inp: ChartInput): ChartBuild {
   const { visual, theme } = inp;
   const f = new FormatReader(visual.json, theme, visual.visualType);
@@ -361,35 +320,29 @@ function pie(inp: ChartInput): ChartBuild {
   const hl = inp.loaded.highlightRows ? sliceData({ ...inp, loaded: { ...inp.loaded, rows: inp.loaded.highlightRows } }) : null;
   const hlByKey = hl ? new Map(hl.p.categories.map((c, i) => [c.key, hl.values[i]])) : null;
   const selKeys = new Set(inp.selected.map((s) => JSON.stringify(s.values)));
-  const style = f.str("labels", "labelStyle", "Category");
+  const style = SLICE_STYLES[f.str("labels", "labelStyle", "Category")] ?? SLICE_STYLES.Category;
+  const sliceAlpha = opacityOf(f.num("dataPoint", "fillTransparency", 0));
   const data = p.categories.map((c, i) => ({
     name: c.label,
     value: values[i] ?? 0,
     itemStyle: {
-      color: f.color("dataPoint", "fill", c.label) ?? seriesColor(theme, i),
-      opacity: (selKeys.size > 0 && !selKeys.has(JSON.stringify(c.values.map(valueToLit)))) || (hlByKey !== null && (hlByKey.get(c.key) ?? 0) === 0) ? DIM : 1,
+      color: f.color("dataPoint", "fill", c.label) ?? f.color("dataPoint", "defaultColor") ?? seriesColor(theme, i),
+      opacity: ((selKeys.size > 0 && !selKeys.has(JSON.stringify(c.values.map(valueToLit)))) || (hlByKey !== null && (hlByKey.get(c.key) ?? 0) === 0) ? DIM : 1) * sliceAlpha,
     },
   }));
+  const pctDigits = f.num("labels", "percentageLabelPrecision", 1);
   const text = (pa: O) => {
+    const parts: string[] = [];
+    if (style.cat) parts.push(pa.name);
     const val = valueText(pa.value, vcol?.format ?? null, f);
-    const pct = total ? `${((pa.value / total) * 100).toFixed(1)}%` : "";
-    switch (style) {
-      case "Data value":
-        return val;
-      case "Percent of total":
-        return pct;
-      case "Category, data value":
-        return `${pa.name}: ${val}`;
-      case "Category, percent of total":
-        return `${pa.name}: ${pct}`;
-      case "Data value, percent of total":
-        return `${val} (${pct})`;
-      case "All detail labels":
-        return `${pa.name}: ${val} (${pct})`;
-      default:
-        return pa.name;
-    }
+    const pct = total ? `${((pa.value / total) * 100).toFixed(pctDigits)}%` : "";
+    if (style.val && style.pct) return `${style.cat ? `${pa.name}: ` : ""}${val} (${pct})`;
+    if (style.val) parts.push(val);
+    if (style.pct) parts.push(pct);
+    return parts.join(": ");
   };
+  const font = readFont(f, "labels", { color: "color" });
+  const bg = f.str("labels", "background", "auto");
   const option: O = {
     animation: false,
     legend: legendBlock(f, theme, true),
@@ -399,8 +352,16 @@ function pie(inp: ChartInput): ChartBuild {
         type: "pie",
         radius: donut ? [`${f.num("slices", "innerRadiusRatio", 50)}%`, "72%"] : ["0%", "72%"],
         center: ["50%", "55%"],
+        startAngle: 90 - f.num("slices", "startAngle", 0),
         data,
-        label: { show: f.bool("labels", "show", true), formatter: text, color: f.color("labels", "color") ?? theme.textClasses.label.color, fontSize: f.num("labels", "fontSize", theme.textClasses.label.fontSize) },
+        label: {
+          show: f.bool("labels", "show", true),
+          position: PIE_POS[f.str("labels", "position", "outside")] ?? "outside",
+          formatter: text,
+          ...echartsText(font, labelDefaults(theme)),
+          ...(bg === "on" ? { backgroundColor: theme.background, padding: [2, 4] } : {}),
+          overflow: f.bool("labels", "overflow", false) ? "none" : "truncate",
+        },
         itemStyle: { borderColor: theme.background, borderWidth: 1 },
       },
     ],
@@ -412,7 +373,22 @@ function funnel(inp: ChartInput): ChartBuild {
   const { visual, theme } = inp;
   const f = new FormatReader(visual.json, theme, visual.visualType);
   const { p, vcol, values } = sliceData(inp);
-  const data = p.categories.map((c, i) => ({ name: c.label, value: values[i] ?? 0, itemStyle: { color: f.color("dataPoint", "fill", c.label) ?? seriesColor(theme, i) } }));
+  const data = p.categories.map((c, i) => ({ name: c.label, value: values[i] ?? 0, itemStyle: { color: f.color("dataPoint", "fill", c.label) ?? f.color("dataPoint", "defaultColor") ?? seriesColor(theme, i) } }));
+  const first = values[0] ?? 0;
+  const fmtStyle = f.str("labels", "funnelLabelStyle", "Data");
+  const pctDigits = f.num("labels", "percentageLabelPrecision", 0);
+  const font = readFont(f, "labels", { color: "color" });
+  const catFont = readFont(f, "categoryAxis", { color: "color" });
+  const showCat = f.bool("categoryAxis", "show", true);
+  const labelText = (pa: O) => {
+    const v = pa.value as number;
+    const prev = values[pa.dataIndex - 1] ?? v;
+    const val = valueText(v, vcol?.format ?? null, f);
+    const pctFirst = first ? `${((v / first) * 100).toFixed(pctDigits)}%` : "";
+    const pctPrev = prev ? `${((v / prev) * 100).toFixed(pctDigits)}%` : "";
+    const body = fmtStyle === "Percent of first" ? pctFirst : fmtStyle === "Percent of previous" ? pctPrev : fmtStyle === "Data, percent of first" ? `${val} (${pctFirst})` : fmtStyle === "Data, percent of previous" ? `${val} (${pctPrev})` : val;
+    return showCat ? `${pa.name}  ${body}` : body;
+  };
   const option: O = {
     animation: false,
     legend: legendBlock(f, theme, false),
@@ -426,8 +402,15 @@ function funnel(inp: ChartInput): ChartBuild {
         top: 10,
         bottom: 10,
         data,
-        label: { show: true, position: "inside", color: "#fff", formatter: (pa: O) => `${pa.name}  ${valueText(pa.value, vcol?.format ?? null, f)}` },
+        label: {
+          show: f.bool("labels", "show", true),
+          position: f.str("labels", "labelPosition", "Auto") === "OutsideEnd" ? "outside" : "inside",
+          ...echartsText({ ...font, color: font.color ?? (showCat ? catFont.color : undefined) ?? "#ffffff" }, labelDefaults(theme)),
+          formatter: labelText,
+          ...(f.bool("labels", "enableBackground", false) ? { backgroundColor: f.color("labels", "backgroundColor") ?? theme.background, padding: [2, 4] } : {}),
+        },
         itemStyle: { borderColor: theme.background, borderWidth: 1 },
+        labelLine: { show: showCat },
       },
     ],
   };
@@ -456,8 +439,14 @@ function treemap(inp: ChartInput): ChartBuild {
   const flat: Node[] = [];
   const walk = (ns: Node[]) => ns.forEach((n) => (flat.push(n), n.children && walk(n.children)));
   walk(colored);
+  const catFont = readFont(f, "categoryLabels", { color: "color" });
+  const valFont = readFont(f, "labels", { color: "color" });
+  const showCat = f.bool("categoryLabels", "show", true);
+  const showVal = f.bool("labels", "show", true);
+  const white = { family: theme.textClasses.label.fontFace, size: theme.textClasses.label.fontSize, color: "#ffffff" };
   const option: O = {
     animation: false,
+    legend: legendBlock(f, theme, false),
     tooltip: { confine: true, formatter: (pa: O) => `${pa.name}: <b>${formatNumber(pa.value, vcol?.format ?? null)}</b>` },
     series: [
       {
@@ -466,9 +455,13 @@ function treemap(inp: ChartInput): ChartBuild {
         nodeClick: false,
         breadcrumb: { show: false },
         data: colored,
-        label: { show: true, formatter: "{b}", color: "#fff" },
-        upperLabel: { show: groups.length > 1, height: 18, color: "#fff" },
-        itemStyle: { borderColor: theme.background, borderWidth: 1, gapWidth: 1 },
+        label: {
+          show: showCat || showVal,
+          formatter: (pa: O) => [showCat ? pa.name : "", showVal ? valueText(pa.value, vcol?.format ?? null, f) : ""].filter(Boolean).join("\n"),
+          ...echartsText({ ...catFont, color: catFont.color ?? valFont.color }, white),
+        },
+        upperLabel: { show: groups.length > 1 && showCat, height: 18, ...echartsText({ ...catFont, color: catFont.color }, white) },
+        itemStyle: { borderColor: theme.background, borderWidth: 1, gapWidth: f.has("layout", "innerPadding") ? f.num("layout", "innerPadding", 1) : 1 },
       },
     ],
   };
@@ -503,22 +496,25 @@ function scatter(inp: ChartInput): ChartBuild {
     bySeries.set(key, s);
   });
   const list = [...bySeries.values()];
-  const series = list.map((s, si) => ({
-    name: s.name,
-    type: "scatter",
-    itemStyle: { color: f.color("dataPoint", "fill", s.name) ?? seriesColor(theme, si), opacity: 0.85 },
-    symbolSize: (d: number[]) => (sc ? 8 + (smax === smin ? 0.5 : (d[2] - smin) / (smax - smin)) * 28 : 10),
-    data: s.pts.map((pt) => [valueNum(pt.row[xc?.index ?? 0]), valueNum(pt.row[yc?.index ?? 0]), sc ? (valueNum(pt.row[sc.index]) ?? 0) : 0, cat ? labelOf(pt.row[cat.index], cat.format) : ""]),
-  }));
-  const axis = (object: string, c: typeof xc): O => ({
-    type: "value",
-    scale: true,
-    name: f.bool(object, "showAxisTitle", true) ? f.str(object, "axisTitle", c?.label ?? "") : undefined,
-    nameLocation: "middle",
-    nameGap: object === "valueAxis" ? 44 : 28,
-    axisLabel: { color: theme.textClasses.label.color, formatter: (v: number) => valueText(v, c?.format ?? null, f, object) },
-    splitLine: { show: f.bool(object, "gridlineShow", true), lineStyle: { color: theme.dark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.1)" } },
+  const bubble = f.num("bubbles", "bubbleSize", 10) / 10;
+  const markerAlpha = opacityOf(f.num("markers", "transparency", 15));
+  const showPointLabels = f.bool("categoryLabels", "show", false);
+  const ptFont = readFont(f, "categoryLabels", { color: "color" });
+  const markerBorder = f.bool("markers", "borderShow", false);
+  const series = list.map((s, si) => {
+    const color = f.color("dataPoint", "fill", s.name) ?? f.color("dataPoint", "defaultColor") ?? seriesColor(theme, si);
+    return {
+      name: s.name,
+      type: "scatter",
+      itemStyle: { color, opacity: markerAlpha, ...(markerBorder ? { borderColor: f.bool("markers", "borderColorMatchFill", false) ? color : (f.color("markers", "borderColor") ?? theme.foreground), borderWidth: f.num("markers", "borderWidth", 1) } : {}) },
+      symbol: SYMBOLS[f.str("bubbles", "markerShape", "circle")] ?? "circle",
+      symbolRotate: f.num("markers", "rotation", 0),
+      symbolSize: (d: number[]) => bubble * (sc ? 8 + (smax === smin ? 0.5 : (d[2] - smin) / (smax - smin)) * 28 : 10),
+      label: { show: showPointLabels, formatter: (pa: O) => String(pa.data[3] ?? ""), position: "right", ...echartsText(ptFont, labelDefaults(theme)) },
+      data: s.pts.map((pt) => [valueNum(pt.row[xc?.index ?? 0]), valueNum(pt.row[yc?.index ?? 0]), sc ? (valueNum(pt.row[sc.index]) ?? 0) : 0, cat ? labelOf(pt.row[cat.index], cat.format) : ""]),
+    };
   });
+  const axis = (object: "categoryAxis" | "valueAxis", c: typeof xc): O => ({ ...axisBlock({ f, theme, object, kind: "value", fmt: c?.format ?? null, titleDefault: c?.label ?? "", gridDefault: true }), scale: true });
   const option: O = {
     animation: false,
     legend: legendBlock(f, theme, !!ser),
@@ -549,7 +545,8 @@ function waterfall(inp: ChartInput): ChartBuild {
   const vcol = columnsOf(q, "Y", "value")[0];
   const p = pivot(loaded.rows, q, "Category", null, ["Y"]);
   const vals = (p.cells[0]?.[0] ?? []).map((v) => v ?? 0);
-  const names = [...p.categories.map((c) => c.label), "Total"];
+  const showTotal = f.bool("valueAxis", "totalsEnabled", true);
+  const names = [...p.categories.map((c) => c.label), ...(showTotal ? ["Total"] : [])];
   const base: (number | string)[] = [];
   const up: (number | string)[] = [];
   const down: (number | string)[] = [];
@@ -563,24 +560,28 @@ function waterfall(inp: ChartInput): ChartBuild {
     down.push(v < 0 ? -v : "-");
     total.push("-");
   });
-  base.push(0);
-  up.push("-");
-  down.push("-");
-  total.push(run);
+  if (showTotal) {
+    base.push(0);
+    up.push("-");
+    down.push("-");
+    total.push(run);
+  }
   const common = { type: "bar", stack: "wf", barMaxWidth: 48 };
   const colors = { up: f.color("sentimentColors", "increaseFill") ?? theme.good, down: f.color("sentimentColors", "decreaseFill") ?? theme.bad, total: f.color("sentimentColors", "totalFill") ?? theme.neutral };
+  const label = (sign: 1 | -1) =>
+    labelBlock({ f, theme, show: f.bool("labels", "show", false), horizontal: false, stacked: true, asLine: false, text: (pa: O) => valueText(sign * (pa.value as number), vcol?.format ?? null, f) });
   const option: O = {
     animation: false,
-    legend: { show: false },
-    grid: gridFor(f, false),
+    legend: { ...legendBlock(f, theme, false), data: ["Increase", "Decrease", "Total"] },
+    grid: gridFor(f, f.bool("legend", "show", false)),
     tooltip: { trigger: "axis", confine: true, formatter: (ps: O[]) => `${ps[0].name}<br/>${ps.filter((x) => x.seriesName !== "base" && x.value !== "-").map((x) => `${x.marker}${x.seriesName}: <b>${formatNumber(x.seriesName === "Decrease" ? -x.value : x.value, vcol?.format ?? null)}</b>`).join("<br/>")}` },
-    xAxis: { type: "category", data: names, axisLabel: { color: theme.textClasses.label.color, hideOverlap: true, width: 90, overflow: "truncate" } },
-    yAxis: { type: "value", axisLabel: { color: theme.textClasses.label.color, formatter: (v: number) => valueText(v, vcol?.format ?? null, f, "valueAxis") }, splitLine: { lineStyle: { color: theme.dark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.1)" } } },
+    xAxis: { ...axisBlock({ f, theme, object: "categoryAxis", kind: "category", titleDefault: columnsOf(q, "Category", "group").map((c) => c.label).join(", ") }), data: names },
+    yAxis: axisBlock({ f, theme, object: "valueAxis", kind: "value", fmt: vcol?.format ?? null, titleDefault: vcol?.label ?? "" }),
     series: [
       { ...common, name: "base", data: base, itemStyle: { color: "transparent" }, silent: true, tooltip: { show: false } },
-      { ...common, name: "Increase", data: up, itemStyle: { color: colors.up }, label: { show: f.bool("labels", "show", false), position: "inside" } },
-      { ...common, name: "Decrease", data: down, itemStyle: { color: colors.down } },
-      { ...common, name: "Total", data: total, itemStyle: { color: colors.total } },
+      { ...common, name: "Increase", data: up, itemStyle: { color: colors.up }, label: label(1) },
+      { ...common, name: "Decrease", data: down, itemStyle: { color: colors.down }, label: label(-1) },
+      { ...common, name: "Total", data: total, itemStyle: { color: colors.total }, label: label(1) },
     ],
   };
   return { option, count: p.categories.length, pointAt: (_s, di) => (p.categories[di] ? pointOfCategory(p, di, null) : null) };
@@ -595,12 +596,16 @@ function gauge(inp: ChartInput): ChartBuild {
     return c && loaded.rows[0] ? valueNum(loaded.rows[0][c.index]) : null;
   };
   const value = read("Y");
-  const target = read("TargetValue") ?? (f.has("target", "target") ? f.num("target", "target", 0) : null);
+  const target = read("TargetValue") ?? (f.has("axis", "target") ? f.num("axis", "target", 0) : null);
   const min = read("MinValue") ?? f.num("axis", "min", 0);
   const max = read("MaxValue") ?? f.num("axis", "max", target !== null ? Math.max(target * 2, value ?? 0) : Math.max(100, (value ?? 0) * 1.25));
   const fmt = columnsOf(q, "Y", "value")[0]?.format ?? null;
-  const span = max - min || 1;
-  const data: O[] = value === null ? [] : [{ value, name: columnsOf(q, "Y", "value")[0]?.label ?? "", itemStyle: { color: seriesColor(theme, 0) } }];
+  const fill = f.color("dataPoint", "fill") ?? seriesColor(theme, 0);
+  const data: O[] = value === null ? [] : [{ value, name: columnsOf(q, "Y", "value")[0]?.label ?? "", itemStyle: { color: fill } }];
+  const axisFont = readFont(f, "labels", { color: "color" });
+  const calloutFont = readFont(f, "calloutValue", { color: "color" });
+  const targetFont = readFont(f, "target", { color: "color" });
+  const calloutDefaults = { family: theme.textClasses.callout.fontFace, size: theme.textClasses.callout.fontSize * 0.8, color: theme.textClasses.callout.color };
   const option: O = {
     animation: false,
     series: [
@@ -612,14 +617,19 @@ function gauge(inp: ChartInput): ChartBuild {
         endAngle: -20,
         radius: "92%",
         center: ["50%", "62%"],
-        progress: { show: true, width: 16, itemStyle: { color: seriesColor(theme, 0) } },
+        progress: { show: true, width: 16, itemStyle: { color: fill } },
         axisLine: { lineStyle: { width: 16, color: [[1, theme.dark ? "#444" : "#e5e5e5"]] } },
         pointer: { show: false },
         axisTick: { show: false },
         splitLine: { show: false },
         splitNumber: 2,
-        axisLabel: { distance: 16, fontSize: 10, color: theme.textClasses.label.color, formatter: (v: number) => formatCompact(v, "auto", 1, fmt) },
-        detail: { valueAnimation: false, fontSize: theme.textClasses.callout.fontSize * 0.8, color: theme.textClasses.callout.color, offsetCenter: [0, "20%"], formatter: (v: number) => valueText(v, fmt, f) },
+        axisLabel: {
+          show: f.bool("labels", "show", true),
+          distance: 16,
+          ...echartsText(axisFont, { ...labelDefaults(theme), size: 10 }),
+          formatter: (v: number) => (f.has("labels", "labelDisplayUnits") ? valueText(v, fmt, f, "labels") : formatCompact(v, "auto", 1, fmt)),
+        },
+        detail: { show: f.bool("calloutValue", "show", true), valueAnimation: false, offsetCenter: [0, "20%"], ...echartsText(calloutFont, calloutDefaults), formatter: (v: number) => valueText(v, fmt, f, "calloutValue") },
         title: { show: false },
         data,
       },
@@ -638,9 +648,9 @@ function gauge(inp: ChartInput): ChartBuild {
               axisTick: { show: false },
               splitLine: { show: false },
               axisLabel: { show: false },
-              detail: { show: false },
+              detail: { show: f.bool("target", "show", false), offsetCenter: [0, "42%"], ...echartsText(targetFont, { ...calloutDefaults, size: 11 }), formatter: () => `Target: ${valueText(target, fmt, f, "target")}` },
               title: { show: false },
-              pointer: { show: true, length: "16%", width: 4, offsetCenter: [0, "-74%"], itemStyle: { color: theme.foreground } },
+              pointer: { show: true, length: "16%", width: 4, offsetCenter: [0, "-74%"], itemStyle: { color: f.color("dataPoint", "target") ?? theme.foreground } },
               silent: true,
               data: [{ value: Math.min(max, Math.max(min, target)), name: "Target" }],
             },
@@ -648,7 +658,6 @@ function gauge(inp: ChartInput): ChartBuild {
         : []),
     ],
   };
-  void span;
   return { option, count: value === null ? 0 : 1, pointAt: () => null };
 }
 

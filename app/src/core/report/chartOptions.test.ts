@@ -73,7 +73,7 @@ describe("cartesian charts", () => {
   });
 
   it("stacked and 100% stacked charts", () => {
-    const v = visualOf("stackedColumnChart", { Category: [Cat], Series: [Country], Y: [Qty] });
+    const v = visualOf("columnChart", { Category: [Cat], Series: [Country], Y: [Qty] });
     expect(build(v, grouped(v, rows)).option.series.every((s: { stack: string }) => s.stack === "total")).toBe(true);
     const h = visualOf("hundredPercentStackedColumnChart", { Category: [Cat], Series: [Country], Y: [Qty] });
     const o = build(h, grouped(h, rows)).option;

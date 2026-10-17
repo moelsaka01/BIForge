@@ -15,6 +15,30 @@ import { useReport } from "./reportContext";
 import { SlicerView, type SlicerMode } from "./SlicerView";
 import { ButtonView, ImageView, PageNavigatorView, ShapeView, TextboxView } from "./StaticVisuals";
 
+/** The slicer styles of the report format mapped to the ones BIForge draws (a horizontal list is a tile slicer). */
+export function slicerMode(mode: string, horizontal: boolean): SlicerMode {
+  switch (mode) {
+    case "VerticalList":
+    case "Single":
+      return "Basic";
+    case "HorizontalList":
+      return "Tile";
+    case "Basic":
+      return horizontal ? "Tile" : "Basic";
+    case "RelativeTime":
+    case "RelativeDatePicker":
+      return "Relative";
+    case "Dropdown":
+    case "Between":
+    case "Before":
+    case "After":
+    case "Relative":
+      return mode;
+    default:
+      return "Basic";
+  }
+}
+
 /** Loads the data of one visual and draws it according to its type. */
 export function VisualContent({ page, visual, width, height, runOnClick }: { page: PageModel; visual: VisualModel; width: number; height: number; runOnClick?: (e: React.MouseEvent) => boolean }) {
   const c = useReport();
@@ -72,7 +96,7 @@ export function VisualContent({ page, visual, width, height, runOnClick }: { pag
   };
   const tooltipPage = useMemo(() => {
     const f = new FormatReader(visual.json, c.theme, visual.visualType);
-    if (f.str("visualTooltip", "type", "Default") !== "ReportPage") return null;
+    if (f.str("visualTooltip", "type", "Default") !== "Canvas") return null;
     const section = f.str("visualTooltip", "section", "");
     return c.pages.find((p) => p.name === section && p.type === "Tooltip") ?? null;
   }, [visual, c.pages, c.theme]);
@@ -118,16 +142,16 @@ export function VisualContent({ page, visual, width, height, runOnClick }: { pag
     const dt = c.model.columnType(field.table, field.name);
     const isDate = dt === "dateTime";
     const numeric = dt === "int64" || dt === "double" || dt === "decimal";
-    const mode = f.str("data", "mode", isDate || numeric ? "Between" : "Basic") as SlicerMode;
+    const mode = slicerMode(f.str("data", "mode", isDate || numeric ? "Between" : "Basic"), f.num("general", "orientation", 0) === 1);
     const own = visual.filters.defs.find((d) => d.name === "slicer");
     return (
       <SlicerView
         loaded={loaded}
         mode={mode}
         cond={own?.cond ?? null}
-        singleSelect={f.bool("selection", "singleSelect", false)}
-        selectAll={f.bool("selection", "selectAllCheckbox", false)}
-        search={f.bool("header", "search", false)}
+        singleSelect={f.bool("selection", "singleSelect", false) || f.str("data", "mode", "") === "Single"}
+        selectAll={f.bool("selection", "selectAllCheckboxEnabled", false)}
+        search={f.bool("general", "selfFilterEnabled", false)}
         isDate={isDate}
         theme={c.theme}
         width={width}

@@ -27,7 +27,7 @@ const fmt = fs.readFileSync(path.join(root, "app/src/core/report/formatSchema.ts
 const implCards = new Set([...fmt.matchAll(/object: "([A-Za-z0-9]+)"/g)].map((m) => m[1]));
 const vt = fs.readFileSync(path.join(root, "app/src/core/report/visualTypes.ts"), "utf8");
 const implVisuals = new Set([...vt.matchAll(/cartesian\("([A-Za-z]+)"/g), ...vt.matchAll(/\bid: "([A-Za-z]+)"/g)].map((m) => m[1]));
-const alias = { barChart: "stackedBarChart", columnChart: "stackedColumnChart", funnel: "funnel", cardVisual: "card" };
+const alias = { cardVisual: "card" };
 const friendly = {
   report: "Report (filter pane)", page: "Page", filter: "Filter card", group: "Visual group", actionButton: "Button", bookmarkNavigator: "Bookmark navigator", textbox: "Text box", pageNavigator: "Page navigator", shape: "Shape",
   barChart: "Stacked bar chart", columnChart: "Stacked column chart", clusteredBarChart: "Clustered bar chart", clusteredColumnChart: "Clustered column chart", hundredPercentStackedBarChart: "100% stacked bar chart", hundredPercentStackedColumnChart: "100% stacked column chart",

@@ -172,7 +172,7 @@ const elementControls = (): RibbonControl[] => [
   cmd("shapes", "Shapes", "shapes", "report.visual.add", {
     size: "large",
     args: { type: "shape" },
-    menu: [shapeItem("Rectangle", "rectangle"), shapeItem("Rounded rectangle", "roundedRectangle"), shapeItem("Oval", "oval"), shapeItem("Triangle", "triangle"), shapeItem("Line", "line")],
+    menu: [shapeItem("Rectangle", "rectangle"), shapeItem("Rounded rectangle", "rectangleRounded"), shapeItem("Oval", "oval"), shapeItem("Triangle", "triangleIsoc"), shapeItem("Line", "line")],
   }),
   cmd("image", "Image", "image", "report.image.insert", { size: "large" }),
   cmd("pageNavigator", "Page navigator", "bookmarks", "report.visual.add", { size: "large", args: { type: "pageNavigator" } }),

@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 import { FormatReader } from "../../core/report/formatReader";
 import { navigatorPages, readAction, readShape, readTextbox, shapeSvg, type ShapeModel } from "../../core/report/staticVisuals";
 import type { PageModel, VisualModel } from "../../core/report/visualDoc";
+import { opacityOf } from "../../core/format/styles";
 import { useReport } from "./reportContext";
 
 interface Props {
@@ -58,8 +59,8 @@ export function ShapeView({ visual, width, height }: Props) {
 export function ImageView({ visual, width, height }: Props) {
   const c = useReport();
   const f = new FormatReader(visual.json, c.theme, "image");
-  const src = f.str("image", "imageUrl", "");
-  const scaling = f.str("image", "scaling", "Normal");
+  const src = f.str("image", "sourceUrl", "");
+  const fitSetting = f.str("image", "fit", "Normal");
   if (!src) {
     return (
       <div role="status" style={{ width, height, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: c.theme.muted, textAlign: "center" }}>
@@ -67,8 +68,28 @@ export function ImageView({ visual, width, height }: Props) {
       </div>
     );
   }
-  const fit = scaling === "Fit" ? "fill" : scaling === "Fill" ? "cover" : "contain";
-  return <img data-testid="image" src={src} alt={f.str("altText", "text", "")} style={{ width, height, objectFit: fit, display: "block" }} />;
+  const fit = fitSetting === "Stretch" ? "fill" : fitSetting === "Fit" ? "contain" : fitSetting === "Fill" ? "cover" : "none";
+  const radius = f.num("image", "cornerRadius", 0);
+  const stroke = f.bool("image", "strokeShow", false);
+  const bgOn = f.bool("image", "backgroundEnabled", false);
+  return (
+    <img
+      data-testid="image"
+      src={src}
+      alt={f.str("image", "altText", "") || f.str("general", "altText", "")}
+      style={{
+        width,
+        height,
+        objectFit: fit,
+        display: "block",
+        boxSizing: "border-box",
+        borderRadius: radius,
+        opacity: opacityOf(f.num("image", "transparency", 0)),
+        background: bgOn ? `color-mix(in srgb, ${f.color("image", "backgroundColor") ?? "#ffffff"} ${Math.round(opacityOf(f.num("image", "backgroundTransparency", 0)) * 100)}%, transparent)` : undefined,
+        border: stroke ? `${f.num("image", "strokeWidth", 1)}px ${f.str("image", "strokePattern", "solid")} ${f.color("image", "strokeColor") ?? "#888888"}` : undefined,
+      }}
+    />
+  );
 }
 
 export function ButtonView({ page, visual, width, height, runOnClick }: Props) {
@@ -94,7 +115,7 @@ export function ButtonView({ page, visual, width, height, runOnClick }: Props) {
         cursor: action.type === "None" ? "default" : "pointer",
         background: shape.fill.show ? `color-mix(in srgb, ${shape.fill.color} ${100 - shape.fill.transparency}%, transparent)` : "transparent",
         border: shape.outline.show ? `${shape.outline.weight}px solid ${shape.outline.color}` : "none",
-        borderRadius: shape.shape === "oval" ? "50%" : shape.shape === "roundedRectangle" ? Math.min(width, height) / 4 : 0,
+        borderRadius: shape.shape === "oval" ? "50%" : shape.shape === "rectangleRounded" ? Math.min(width, height) / 4 : 0,
         color: f.color("text", "fontColor") ?? c.theme.foreground,
         fontSize: f.num("text", "fontSize", 12),
         fontFamily: c.theme.textClasses.label.fontFace,

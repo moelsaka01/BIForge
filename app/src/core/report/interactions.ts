@@ -24,10 +24,10 @@ export type InteractionMode = "filter" | "highlight" | "none";
 /** Visual types that can draw a highlighted part of their data (the others are filtered instead). */
 const HIGHLIGHT_TARGETS = new Set([
   "clusteredBarChart",
-  "stackedBarChart",
+  "barChart",
   "hundredPercentStackedBarChart",
   "clusteredColumnChart",
-  "stackedColumnChart",
+  "columnChart",
   "hundredPercentStackedColumnChart",
   "lineChart",
   "areaChart",

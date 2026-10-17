@@ -5,7 +5,8 @@ import { FormatReader } from "../../core/report/formatReader";
 import { resolveInteraction, supportsHighlight } from "../../core/report/interactions";
 import type { PageModel, Position, VisualModel } from "../../core/report/visualDoc";
 import { visualType } from "../../core/report/visualTypes";
-import { ALT_TEXT, rotationOf } from "../../core/report/staticVisuals";
+import { rotationOf } from "../../core/report/staticVisuals";
+import { buildContainer } from "../../core/report/containerModel";
 import { drillPlan } from "../../core/report/queryBuilder";
 import { useReport, type MenuItem } from "./reportContext";
 import { VisualContent } from "./VisualContent";
@@ -67,27 +68,9 @@ export function VisualFrame(p: FrameProps) {
   const type = visualType(visual.visualType);
   const fam = type?.family;
   const isCard = fam === "card" || fam === "kpi" || fam === "slicer";
-  const titleText = f.str("title", "text", "") || (f.bool("title", "show", !isCard && fam !== "table" && fam !== "matrix") ? autoTitle(visual) : "");
-  const showTitle = f.bool("title", "show", !isCard) && titleText !== "";
-  const bgOn = f.bool("background", "show", true);
-  const alpha = 1 - Math.min(100, Math.max(0, f.num("background", "transparency", 0))) / 100;
-  const bgColor = f.color("background", "color") ?? c.theme.background;
-  const borderOn = f.bool("border", "show", false);
-  const t = c.theme.textClasses.title;
-  const titleStyle: CSSProperties = {
-    fontSize: f.num("title", "fontSize", t.fontSize),
-    fontFamily: f.str("title", "fontFamily", t.fontFace),
-    color: f.color("title", "fontColor") ?? t.color,
-    fontWeight: f.bool("title", "bold", false) ? 700 : 400,
-    textAlign: (f.str("title", "alignment", "left").toLowerCase() as CSSProperties["textAlign"]) || "left",
-    background: f.color("title", "background"),
-    padding: "4px 8px 0",
-    whiteSpace: "nowrap",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-  };
-  const titleH = showTitle ? Math.round(titleStyle.fontSize as number) + 12 : 0;
-  const pad = 4;
+  const model = buildContainer({ f, theme: c.theme, autoTitle: autoTitle(visual), titleByDefault: !isCard, noAutoText: fam === "table" || fam === "matrix" });
+  const titleText = model.title?.text ?? "";
+  const showTitle = model.title !== null;
   const cats = (visual.roles.Category ?? []).map((x) => x.field);
   const drill = c.snap.drill[visual.name];
   const drillable = cats.length > 1;
@@ -96,7 +79,7 @@ export function VisualFrame(p: FrameProps) {
   const sourceVisual = editingSource ? page.visuals.find((v) => v.name === editingSource) : undefined;
   const showBar = p.selected || hover;
   // On-object formatting: what a selected visual offers right on it (the cards it really has)
-  const cardIds = new Set([...visualCards(visual.visualType), ...generalCards([])].map((x) => x.id));
+  const cardIds = new Set([...visualCards(visual.visualType), ...generalCards(visual.visualType)].map((x) => x.id));
   const handle = (card: string, label: string, def: boolean): { card: string; label: string; on: boolean } | null =>
     cardIds.has(card) ? { card, label, on: card === "title" ? showTitle : f.bool(card, "show", def) } : null;
   const handles = [handle("title", "Title", false), handle("legend", "Legend", true), handle("labels", "Data labels", false)].filter((x): x is NonNullable<typeof x> => x !== null);
@@ -127,10 +110,7 @@ export function VisualFrame(p: FrameProps) {
     height: pos.height,
     zIndex: Math.round(pos.z / 100) + (p.selected ? 10000 : 0),
     boxSizing: "border-box",
-    background: bgOn ? `color-mix(in srgb, ${bgColor} ${Math.round(alpha * 100)}%, transparent)` : "transparent",
-    border: borderOn ? `${f.num("border", "width", 1)}px solid ${f.color("border", "color") ?? c.theme.muted}` : "1px solid transparent",
-    borderRadius: f.num("border", "radius", 0),
-    boxShadow: f.bool("dropShadow", "show", false) ? "0 2px 8px rgba(0,0,0,.25)" : undefined,
+    ...model.look,
     outline: p.selected ? "2px solid #0f6cbd" : hover && p.editing ? "1px solid #8ab4e6" : undefined,
     outlineOffset: -1,
     overflow: "hidden",
@@ -175,7 +155,7 @@ export function VisualFrame(p: FrameProps) {
   return (
     <div
       role="group"
-      aria-label={`Visual: ${ALT_TEXT(visual) || titleText || type?.label || visual.visualType}`}
+      aria-label={`Visual: ${model.altText || titleText || type?.label || visual.visualType}`}
       data-visual={visual.name}
       data-selected={p.selected}
       style={outer}
@@ -189,25 +169,31 @@ export function VisualFrame(p: FrameProps) {
       }}
       onContextMenu={menu}
     >
-      {showTitle && (
-        <div style={{ ...titleStyle, height: titleH }} onDoubleClick={c.onObject && p.editing ? () => c.focusFormat(visual.name, "title") : undefined}>
-          {titleText}
+      {model.title && (
+        <div style={{ ...model.title.style, height: model.title.height }} role={model.title.level ? "heading" : undefined} aria-level={model.title.level ?? undefined} onDoubleClick={c.onObject && p.editing ? () => c.focusFormat(visual.name, "title") : undefined}>
+          {model.title.text}
         </div>
       )}
-      <div style={{ position: "absolute", left: pad, right: pad, top: titleH + pad, bottom: pad, overflow: "hidden" }}>
+      {model.subTitle && (
+        <div style={{ ...model.subTitle.style, position: "absolute", left: 0, right: 0, top: model.title ? model.title.height : 0, height: model.subTitle.height }} role={model.subTitle.level ? "heading" : undefined} aria-level={model.subTitle.level ?? undefined}>
+          {model.subTitle.text}
+        </div>
+      )}
+      {model.divider && <div data-testid="divider" style={{ position: "absolute", left: model.divider.inset, right: model.divider.inset, top: model.divider.top, ...model.divider.style }} />}
+      <div style={{ position: "absolute", left: model.body.left, right: model.body.right, top: model.body.top, bottom: model.body.bottom, overflow: "hidden" }}>
         {pos.width > 20 && (
           <div style={{ width: "100%", height: "100%", transform: rotationOf(visual) ? `rotate(${rotationOf(visual)}deg)` : undefined }}>
-            <VisualContent page={page} visual={visual} width={Math.max(20, pos.width - pad * 2)} height={Math.max(20, pos.height - titleH - pad * 2)} runOnClick={(e) => !p.editing || c.readOnly || e.ctrlKey || e.metaKey} />
+            <VisualContent page={page} visual={visual} width={Math.max(20, pos.width - model.body.left - model.body.right)} height={Math.max(20, pos.height - model.body.top - model.body.bottom)} runOnClick={(e) => !p.editing || c.readOnly || e.ctrlKey || e.metaKey} />
           </div>
         )}
       </div>
-      {p.editing && !c.readOnly && showBar && !editingSource && (
+      {p.editing && !c.readOnly && showBar && !editingSource && model.headerShown && (
         <div
           data-testid="visual-bar"
           onPointerDown={(e) => p.onPointerDownFrame?.(e, "move")}
-          style={{ position: "absolute", left: 0, right: 0, top: 0, height: 20, display: "flex", justifyContent: "flex-end", gap: 1, alignItems: "center", background: "#ffffffd9", cursor: "move", paddingRight: 2, zIndex: 4 }}
+          style={{ position: "absolute", left: 0, right: 0, top: 0, height: 20, display: "flex", justifyContent: "flex-end", gap: 1, alignItems: "center", cursor: "move", paddingRight: 2, zIndex: 4, ...model.headerStyle }}
         >
-          {drillable && (
+          {drillable && model.headerButtons.drillUp && (
             <>
               {iconBtn("Drill up", "↑", () => c.dispatch("report.view.drillUp", { visual: visual.name }), { disabled: level === 0 })}
               {iconBtn("Drill down mode", "↓", () => c.dispatch("report.view.drillMode", { visual: visual.name }), { pressed: c.snap.drillMode === visual.name })}

@@ -4,7 +4,7 @@ import { fieldKey, fieldLabel, lit, type FieldRef, type Lit } from "../../core/r
 import { analyticsCards, generalCards, visualCards, type CardContext, type CardDef, type PropDef } from "../../core/report/formatSchema";
 import { listBookmarks } from "../../core/report/bookmarks";
 import { readTextbox } from "../../core/report/staticVisuals";
-import { queryRefOf } from "../../core/report/pbir";
+import { litExpr, queryRefOf } from "../../core/report/pbir";
 import { getFormat, getRawProp, type PageModel, type VisualModel } from "../../core/report/visualDoc";
 import { visualType } from "../../core/report/visualTypes";
 import { condFormatFromPbir } from "../../core/report/condFormat";
@@ -21,20 +21,39 @@ export interface FormatPaneProps {
   dispatch: Dispatch;
 }
 
+const rowStyle: React.CSSProperties = { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, fontSize: 12 };
+
+/** Shown next to a setting no renderer of this visual reads yet: it is saved in the report, but the visual does not change. */
+function NotDrawn({ def }: { def: PropDef }) {
+  if (def.drawn !== false) return null;
+  return (
+    <span title="Saved in the report. BIForge does not draw this setting yet." aria-label="not drawn yet" style={{ fontSize: 10, opacity: 0.55, marginLeft: 4 }}>
+      (not drawn yet)
+    </span>
+  );
+}
+
 function PropControl({ def, value, onChange }: { def: PropDef; value: Lit | null; onChange(v: Lit | null): void }) {
   const label = def.label;
   const id = `fmt-${def.key}`;
+  const name = (
+    <span>
+      {label}
+      <NotDrawn def={def} />
+    </span>
+  );
   switch (def.type) {
     case "bool": {
       const on = value?.t === "bool" ? value.v : (def.default as boolean | undefined) ?? false;
-      return <Switch checked={on} label={label} onChange={(_, d) => onChange(lit.bool(d.checked))} />;
+      return <Switch checked={on} label={{ children: name }} aria-label={label} onChange={(_, d) => onChange(lit.bool(d.checked))} />;
     }
     case "number":
       return (
-        <label htmlFor={id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, fontSize: 12 }}>
-          {label}
+        <label htmlFor={id} style={rowStyle}>
+          {name}
           <Input
             id={id}
+            aria-label={label}
             size="small"
             type="number"
             style={{ width: 90 }}
@@ -44,24 +63,42 @@ function PropControl({ def, value, onChange }: { def: PropDef; value: Lit | null
             value={value?.t === "number" ? String(value.v) : ""}
             onChange={(_, d) => {
               if (d.value === "") return onChange(null);
-              const n = Number(d.value);
-              if (Number.isFinite(n)) onChange(lit.num(Math.min(def.max ?? Infinity, Math.max(def.min ?? -Infinity, n))));
+              let n = Number(d.value);
+              if (!Number.isFinite(n)) return;
+              if (def.integer) n = Math.round(n);
+              onChange(lit.num(Math.min(def.max ?? Infinity, Math.max(def.min ?? -Infinity, n))));
             }}
           />
         </label>
       );
     case "text":
       return (
-        <label htmlFor={id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, fontSize: 12 }}>
-          {label}
-          <Input id={id} size="small" style={{ width: 140 }} placeholder={def.auto} value={value?.t === "string" ? value.v : ""} onChange={(_, d) => onChange(d.value === "" ? null : lit.str(d.value))} />
+        <label htmlFor={id} style={rowStyle}>
+          {name}
+          <Input
+            id={id}
+            aria-label={label}
+            size="small"
+            style={{ width: 140 }}
+            placeholder={def.auto}
+            list={def.suggest ? `${id}-list` : undefined}
+            value={value?.t === "string" ? value.v : ""}
+            onChange={(_, d) => onChange(d.value === "" ? null : lit.str(d.value))}
+          />
+          {def.suggest && (
+            <datalist id={`${id}-list`}>
+              {def.suggest.map((x) => (
+                <option key={x} value={x} />
+              ))}
+            </datalist>
+          )}
         </label>
       );
     case "color": {
       const v = value?.t === "string" ? value.v : "";
       return (
-        <label htmlFor={id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, fontSize: 12 }}>
-          {label}
+        <label htmlFor={id} style={rowStyle}>
+          {name}
           <span style={{ display: "flex", gap: 4, alignItems: "center" }}>
             <input id={id} type="color" value={/^#[0-9a-f]{6}$/i.test(v) ? v : "#888888"} onChange={(e) => onChange(lit.str(e.target.value))} aria-label={label} />
             <Button size="small" appearance="subtle" disabled={!v} onClick={() => onChange(null)} aria-label={`Reset ${label}`}>
@@ -71,14 +108,20 @@ function PropControl({ def, value, onChange }: { def: PropDef; value: Lit | null
         </label>
       );
     }
-    case "enum":
-    case "units": {
-      const cur = value?.t === "string" ? value.v : "";
+    case "enum": {
+      const cur = value ? String(value.t === "string" || value.t === "number" ? value.v : "") : "";
       return (
-        <label htmlFor={id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, fontSize: 12 }}>
-          {label}
-          <Select id={id} size="small" style={{ width: 150 }} value={cur || (def.default as string | undefined) || ""} onChange={(_, d) => onChange(d.value === "" ? null : lit.str(d.value))}>
-            {!def.default && <option value="">{def.auto ?? "Automatic"}</option>}
+        <label htmlFor={id} style={rowStyle}>
+          {name}
+          <Select
+            id={id}
+            aria-label={label}
+            size="small"
+            style={{ width: 150 }}
+            value={cur || (def.default !== undefined ? String(def.default) : "")}
+            onChange={(_, d) => onChange(d.value === "" ? null : def.numeric ? lit.num(Number(d.value)) : lit.str(d.value))}
+          >
+            {def.default === undefined && <option value="">{def.auto ?? "Automatic"}</option>}
             {def.options?.map((o) => (
               <option key={o.value} value={o.value}>
                 {o.label}
@@ -125,6 +168,15 @@ function TextboxEditor({ page, visual, dispatch }: { page: PageModel; visual: Vi
   );
 }
 
+/** The default data bars of a column: the structure of the report format (colors are fills, the two switches are literals). */
+function dataBarsNode() {
+  return {
+    positiveColor: { solid: { color: litExpr(lit.str("#6aa9e9")) } },
+    reverseDirection: litExpr(lit.bool(false)),
+    hideText: litExpr(lit.bool(false)),
+  };
+}
+
 export function FormatPane(p: FormatPaneProps) {
   const [tab, setTab] = useState<"visual" | "general">("visual");
   const [q, setQ] = useState("");
@@ -132,7 +184,7 @@ export function FormatPane(p: FormatPaneProps) {
   const [colField, setColField] = useState(0);
   const rc = useReport();
   const focus = rc.snap.formatFocus && rc.snap.formatFocus.visual === p.visual.name ? rc.snap.formatFocus : null;
-  const generalIds = generalCards([]).map((x) => x.id);
+  const generalIds = generalCards(p.visual.visualType).map((x) => x.id);
   const [open, setOpen] = useState<string[] | null>(null);
   // On-object formatting asks for a card: show the tab that has it, open it and scroll to it
   useEffect(() => {
@@ -146,14 +198,18 @@ export function FormatPane(p: FormatPaneProps) {
   }, [focus?.tick]); // eslint-disable-line react-hooks/exhaustive-deps
   const type = visualType(p.visual.visualType);
   const needle = q.trim().toLowerCase();
-  const ctx: CardContext = { pages: p.pages.filter((x) => !x.type).map((x) => ({ name: x.name, displayName: x.displayName })), bookmarks: listBookmarks(rc.project).map((b) => ({ id: b.id, name: b.name })) };
-  const cards: CardDef[] = p.analytics ? analyticsCards(p.visual.visualType) : tab === "visual" ? visualCards(p.visual.visualType, ctx) : generalCards(p.pages.filter((x) => x.type === "Tooltip").map((x) => ({ name: x.name, displayName: x.displayName })));
+  const ctx: CardContext = {
+    pages: p.pages.filter((x) => !x.type).map((x) => ({ name: x.name, displayName: x.displayName })),
+    tooltipPages: p.pages.filter((x) => x.type === "Tooltip").map((x) => ({ name: x.name, displayName: x.displayName })),
+    bookmarks: listBookmarks(rc.project).map((b) => ({ id: b.id, name: b.name })),
+  };
+  const cards: CardDef[] = p.analytics ? analyticsCards(p.visual.visualType, ctx) : tab === "visual" ? visualCards(p.visual.visualType, ctx) : generalCards(p.visual.visualType, ctx);
   const shown = cards
     .map((c) => ({ ...c, props: c.label.toLowerCase().includes(needle) ? c.props : c.props.filter((x) => x.label.toLowerCase().includes(needle)) }))
     .filter((c) => needle === "" || c.props.length > 0);
 
-  const set = (object: string, prop: string, value: Lit | null, selector?: string) =>
-    p.dispatch("report.format.set", { page: p.page.name, visual: p.visual.name, object, prop, value, selector });
+  const set = (object: string, prop: string, value: Lit | null, selector?: string, fixed?: CardDef["fixed"]) =>
+    p.dispatch("report.format.set", { page: p.page.name, visual: p.visual.name, object, prop, value, selector, fixed });
   const valueFields: FieldRef[] = Object.values(p.visual.roles)
     .flat()
     .map((x) => x.field)
@@ -211,9 +267,15 @@ export function FormatPane(p: FormatPaneProps) {
             <AccordionHeader size="small">{c.label}</AccordionHeader>
             <AccordionPanel>
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                {c.props.map((d) => (
-                  <PropControl key={d.key} def={d} value={getFormat(p.visual.json, c.object, d.key)} onChange={(v) => set(c.object, d.key, v)} />
-                ))}
+                {c.props.map((d, i) => {
+                  const sel = c.instance ? `id:${c.instance}` : undefined;
+                  return (
+                    <div key={d.key} style={{ display: "contents" }}>
+                      {d.group && d.group !== c.props[i - 1]?.group && <div style={{ fontSize: 11, fontWeight: 600, opacity: 0.7, marginTop: 4 }}>{d.group}</div>}
+                      <PropControl def={d} value={getFormat(p.visual.json, c.object, d.key, sel)} onChange={(v) => set(c.object, d.key, v, sel, c.fixed)} />
+                    </div>
+                  );
+                })}
                 {tab === "visual" && c.id === "dataPoint" && (
                   <>
                     {valueFields.map((f) => (
@@ -237,12 +299,25 @@ export function FormatPane(p: FormatPaneProps) {
                         </option>
                       ))}
                     </Select>
-                    <PropControl def={{ key: "backColor", label: "Background color", type: "color" }} value={getFormat(p.visual.json, "values", "backColor", queryRefOf(colFieldDef))} onChange={(v) => set("values", "backColor", v, queryRefOf(colFieldDef))} />
+                    <PropControl def={{ key: "backColor", label: "Background color", type: "color" }} value={getFormat(p.visual.json, "columnFormatting", "backColor", queryRefOf(colFieldDef))} onChange={(v) => set("columnFormatting", "backColor", v, queryRefOf(colFieldDef))} />
                     {condEntry("Background by rules (fx)", "values", "backColor", queryRefOf(colFieldDef), colFieldDef.kind === "measure")}
-                    <PropControl def={{ key: "fontColor", label: "Font color", type: "color" }} value={getFormat(p.visual.json, "values", "fontColor", queryRefOf(colFieldDef))} onChange={(v) => set("values", "fontColor", v, queryRefOf(colFieldDef))} />
+                    <PropControl def={{ key: "fontColor", label: "Font color", type: "color" }} value={getFormat(p.visual.json, "columnFormatting", "fontColor", queryRefOf(colFieldDef))} onChange={(v) => set("columnFormatting", "fontColor", v, queryRefOf(colFieldDef))} />
                     {condEntry("Font color by rules (fx)", "values", "fontColor", queryRefOf(colFieldDef), colFieldDef.kind === "measure")}
                     {colFieldDef.kind !== "column" && (
-                      <PropControl def={{ key: "dataBars", label: "Data bars", type: "bool", default: false }} value={getFormat(p.visual.json, "values", "dataBars", queryRefOf(colFieldDef))} onChange={(v) => set("values", "dataBars", v, queryRefOf(colFieldDef))} />
+                      <Switch
+                        checked={getRawProp(p.visual.json, "columnFormatting", "dataBars", queryRefOf(colFieldDef)) !== undefined}
+                        label="Data bars"
+                        onChange={(_, d) =>
+                          p.dispatch("report.format.setRaw", {
+                            page: p.page.name,
+                            visual: p.visual.name,
+                            object: "columnFormatting",
+                            prop: "dataBars",
+                            selector: queryRefOf(colFieldDef),
+                            node: d.checked ? dataBarsNode() : null,
+                          })
+                        }
+                      />
                     )}
                   </div>
                 )}

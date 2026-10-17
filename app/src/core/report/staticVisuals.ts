@@ -48,12 +48,12 @@ export function writeTextbox(json: J, patch: Partial<TextboxModel>): void {
   setRawProp(json, "general", "paragraphs", paragraphs as unknown as J);
 }
 
-export type TileShape = "rectangle" | "roundedRectangle" | "oval" | "triangle" | "line";
+export type TileShape = "rectangle" | "rectangleRounded" | "oval" | "triangleIsoc" | "line";
 export const TILE_SHAPES: { value: TileShape; label: string }[] = [
   { value: "rectangle", label: "Rectangle" },
-  { value: "roundedRectangle", label: "Rounded rectangle" },
+  { value: "rectangleRounded", label: "Rounded rectangle" },
   { value: "oval", label: "Oval" },
-  { value: "triangle", label: "Triangle" },
+  { value: "triangleIsoc", label: "Triangle" },
   { value: "line", label: "Line" },
 ];
 
@@ -85,11 +85,11 @@ export function shapeSvg(m: ShapeModel, w: number, h: number): { tag: "rect" | "
   switch (m.shape) {
     case "oval":
       return { tag: "ellipse", attrs: { cx: w / 2, cy: h / 2, rx: Math.max(0, w / 2 - half), ry: Math.max(0, h / 2 - half), ...common } };
-    case "triangle":
+    case "triangleIsoc":
       return { tag: "polygon", attrs: { points: `${w / 2},${half} ${w - half},${h - half} ${half},${h - half}`, ...common } };
     case "line":
       return { tag: "line", attrs: { x1: 0, y1: h / 2, x2: w, y2: h / 2, ...common, fill: "none", stroke: m.outline.color, "stroke-width": Math.max(1, m.outline.weight) } };
-    case "roundedRectangle":
+    case "rectangleRounded":
       return { tag: "rect", attrs: { x: half, y: half, width: Math.max(0, w - sw), height: Math.max(0, h - sw), rx: Math.min(w, h) / 6, ...common } };
     default:
       return { tag: "rect", attrs: { x: half, y: half, width: Math.max(0, w - sw), height: Math.max(0, h - sw), ...common } };
@@ -141,7 +141,7 @@ export const rotationOf = (v: VisualModel): number => {
 };
 
 export const ALT_TEXT = (v: VisualModel): string => {
-  const l = getFormat(v.json, "altText", "text");
+  const l = getFormat(v.json, "general", "altText");
   return l?.t === "string" ? l.v : "";
 };
 

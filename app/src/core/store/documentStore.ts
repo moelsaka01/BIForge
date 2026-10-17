@@ -1,4 +1,5 @@
 import type { Project } from "../model/types";
+import { migrateProject } from "../report/migrate";
 
 interface HistoryEntry {
   label: string;
@@ -60,8 +61,9 @@ export class DocumentStore {
   /** Replaces the document and clears history. The loaded state counts as saved. */
   load(project: Project): void {
     this.readOnly = false;
-    this.current = project;
-    this.saved = project;
+    const current = migrateProject(project); // names written by earlier versions become the names Desktop uses
+    this.current = current;
+    this.saved = current;
     this.undoStack = [];
     this.redoStack = [];
     this.bump();
@@ -77,7 +79,7 @@ export class DocumentStore {
   /** Replaces the document but keeps it marked as unsaved (used when restoring a recovery file). */
   loadUnsaved(project: Project, savedBaseline: Project): void {
     if (this.readOnly) throw new Error(READ_ONLY_MESSAGE);
-    this.current = project;
+    this.current = migrateProject(project);
     this.saved = savedBaseline;
     this.undoStack = [];
     this.redoStack = [];

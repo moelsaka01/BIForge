@@ -3,7 +3,7 @@ import { decodeCell, type Value } from "./cells";
 import { condFormatToPbir } from "./condFormat";
 import type { Loaded } from "./dataLoader";
 import { agg, column, lit } from "./fields";
-import { queryRefOf } from "./pbir";
+import { litExpr, queryRefOf } from "./pbir";
 import { buildMatrixQuery, buildVisualQuery } from "./queryBuilder";
 import { buildCard, buildKpi, buildMatrix, buildMultiRowCard, buildTable } from "./tableModels";
 import { fixtureModel, visualOf } from "./testFixture";
@@ -49,8 +49,8 @@ describe("table", () => {
     const v = visualOf("tableEx", { Values: [Cat, Qty] });
     const ref = queryRefOf(Qty);
     setRawProp(v.json, "values", "backColor", condFormatToPbir({ kind: "gradient", input: Qty, min: { color: "#000000" }, max: { color: "#ffffff" } }), ref);
-    setFormat(v.json, "values", "fontColor", lit.str("#ff0000"), queryRefOf(Cat));
-    setFormat(v.json, "values", "dataBars", lit.bool(true), ref);
+    setFormat(v.json, "columnFormatting", "fontColor", lit.str("#ff0000"), queryRefOf(Cat));
+    setRawProp(v.json, "columnFormatting", "dataBars", { positiveColor: { solid: { color: litExpr(lit.str("#6aa9e9")) } }, reverseDirection: litExpr(lit.bool(false)), hideText: litExpr(lit.bool(false)) }, ref);
     const m = buildTable(v, grouped(v, [[t("A"), n(10)], [t("B"), n(30)]]), DEFAULT_THEME, null);
     expect(m.rows[0][1].style.background).toBe("#000000");
     expect(m.rows[0][1].style.color).toBe("#ffffff");
@@ -129,7 +129,7 @@ describe("cards and KPI", () => {
     const c = buildCard(v, grouped(v, [[n(1234567)]]), DEFAULT_THEME);
     expect(c.text).toBe("1.2M");
     expect(c.label).toBe("Sum of Quantity");
-    setFormat(v.json, "labels", "displayUnits", lit.str("none"));
+    setFormat(v.json, "labels", "labelDisplayUnits", lit.num(1));
     expect(buildCard(v, grouped(v, [[n(1234567)]]), DEFAULT_THEME).text).toBe("1,234,567");
     setFormat(v.json, "categoryLabels", "show", lit.bool(false));
     expect(buildCard(v, grouped(v, [[n(1)]]), DEFAULT_THEME).showLabel).toBe(false);
@@ -156,7 +156,7 @@ describe("cards and KPI", () => {
     const k = buildKpi(v, g, DEFAULT_THEME);
     expect([k.value, k.goal, k.varianceText, k.status]).toEqual(["120", "100", "+20.0%", "good"]);
     expect(k.trend).toEqual([{ x: "202401", y: 80 }, { x: "202402", y: 120 }]);
-    setFormat(v.json, "indicator", "direction", lit.str("Low is good"));
+    setFormat(v.json, "goals", "direction", lit.str("Low is good"));
     expect(buildKpi(v, g, DEFAULT_THEME).status).toBe("bad");
     const none = visualOf("kpi", { Indicator: [Qty] });
     const k2 = buildKpi(none, grouped(none, [[n(5)]]), DEFAULT_THEME);

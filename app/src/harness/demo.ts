@@ -25,7 +25,7 @@ export async function buildDemo(session: Session, run: (id: string, a?: unknown)
   // page 2: other chart types
   await run("report.page.add", { name: "Charts" });
   const p2 = session.report.getSnapshot().page!;
-  await add("stackedBarChart", 20, 20, 400, 300, [{ role: "Category", field: column("Customer", "Country") }, { role: "Series", field: Cat }, { role: "Y", field: Qty }], p2);
+  await add("barChart", 20, 20, 400, 300, [{ role: "Category", field: column("Customer", "Country") }, { role: "Series", field: Cat }, { role: "Y", field: Qty }], p2);
   await add("treemap", 430, 20, 400, 300, [{ role: "Group", field: Cat }, { role: "Group", field: column("Product", "Subcategory") }, { role: "Values", field: Amount }], p2);
   await add("funnel", 840, 20, 380, 300, [{ role: "Category", field: column("Customer", "Segment") }, { role: "Y", field: Qty }], p2);
   await add("scatterChart", 20, 330, 400, 340, [{ role: "Category", field: column("Product", "Product") }, { role: "X", field: agg("Product", "ListPrice", 1) }, { role: "Y", field: Qty }, { role: "Size", field: Amount }], p2);
@@ -47,7 +47,7 @@ export async function buildDemo(session: Session, run: (id: string, a?: unknown)
   const pages = session.store.project!.report.files;
   const key = Object.keys(pages).find((k) => k.startsWith(`pages/${page1}/visuals/`) && (pages[k] as { visual: { visualType: string } }).visual.visualType === "clusteredColumnChart")!;
   const v = (pages[key] as { name: string }).name;
-  await run("report.format.set", { page: page1, visual: v, object: "visualTooltip", prop: "type", value: lit.str("ReportPage") });
+  await run("report.format.set", { page: page1, visual: v, object: "visualTooltip", prop: "type", value: lit.str("Canvas") });
   await run("report.format.set", { page: page1, visual: v, object: "visualTooltip", prop: "section", value: lit.str(p4) });
   void ([] as Cmd[]);
 }

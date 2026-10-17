@@ -66,8 +66,8 @@ describe("text box", () => {
 describe("shape", () => {
   it("each shape of the menu is added with its tile shape; fill, outline and rotation are format settings", async () => {
     const t = setup();
-    for (const shape of ["rectangle", "roundedRectangle", "oval", "triangle", "line"]) await t.run("report.visual.add", { type: "shape", format: [{ object: "shape", prop: "tileShape", value: lit.str(shape) }] });
-    expect(t.visuals().map((v) => getFormat(v.json, "shape", "tileShape"))).toEqual(["rectangle", "roundedRectangle", "oval", "triangle", "line"].map(lit.str));
+    for (const shape of ["rectangle", "rectangleRounded", "oval", "triangleIsoc", "line"]) await t.run("report.visual.add", { type: "shape", format: [{ object: "shape", prop: "tileShape", value: lit.str(shape) }] });
+    expect(t.visuals().map((v) => getFormat(v.json, "shape", "tileShape"))).toEqual(["rectangle", "rectangleRounded", "oval", "triangleIsoc", "line"].map(lit.str));
     const v = t.visuals()[2];
     await t.run("report.format.set", { page: "page1", visual: v.name, object: "fill", prop: "fillColor", value: lit.str("#ff0000") });
     await t.run("report.format.set", { page: "page1", visual: v.name, object: "fill", prop: "transparency", value: lit.num(40) });
@@ -85,7 +85,7 @@ describe("shape", () => {
     const base = { fill: { show: true, color: "#abc", transparency: 50 }, outline: { show: true, color: "#000", weight: 2 } };
     expect(shapeSvg({ shape: "rectangle", ...base }, 100, 50)).toMatchObject({ tag: "rect", attrs: { x: 1, y: 1, width: 98, height: 48, "fill-opacity": 0.5 } });
     expect(shapeSvg({ shape: "oval", ...base }, 100, 50)).toMatchObject({ tag: "ellipse", attrs: { cx: 50, cy: 25, rx: 49, ry: 24 } });
-    expect(shapeSvg({ shape: "triangle", ...base }, 100, 50).attrs.points).toBe("50,1 99,49 1,49");
+    expect(shapeSvg({ shape: "triangleIsoc", ...base }, 100, 50).attrs.points).toBe("50,1 99,49 1,49");
     expect(shapeSvg({ shape: "line", ...base }, 100, 50)).toMatchObject({ tag: "line", attrs: { x1: 0, x2: 100, fill: "none" } });
     expect(shapeSvg({ shape: "rectangle", fill: { ...base.fill, show: false }, outline: { ...base.outline, show: false } }, 10, 10).attrs).toMatchObject({ fill: "none", stroke: "none" });
   });
@@ -99,7 +99,7 @@ describe("image", () => {
     await t.run("report.image.insert");
     const v = t.visuals()[0];
     expect(v.visualType).toBe("image");
-    expect(getFormat(v.json, "image", "imageUrl")).toEqual(lit.str("data:image/png;base64,AAAA"));
+    expect(getFormat(v.json, "image", "sourceUrl")).toEqual(lit.str("data:image/png;base64,AAAA"));
     await t.run("edit.undo");
     expect(t.visuals()).toHaveLength(0);
   });
@@ -120,7 +120,7 @@ describe("image", () => {
     t.dialogs.file = "C:/pics/b.png";
     t.io.images.set("C:/pics/b.png", "data:image/png;base64,BBBB");
     await t.run("report.image.choose", { page: "page1", visual: t.visuals()[0].name });
-    expect(getFormat(t.visuals()[0].json, "image", "imageUrl")).toEqual(lit.str("data:image/png;base64,BBBB"));
+    expect(getFormat(t.visuals()[0].json, "image", "sourceUrl")).toEqual(lit.str("data:image/png;base64,BBBB"));
   });
 });
 

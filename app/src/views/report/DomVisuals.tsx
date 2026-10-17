@@ -55,14 +55,17 @@ export interface TableViewProps {
 export function TableView(p: TableViewProps) {
   const [top, setTop] = useState(0);
   const { model, theme } = p;
+  const st = model.style;
+  const ROW_H = st.rowHeight;
+  const HEAD_H = st.headHeight;
   const groupCols = model.columns.map((c, i) => ({ c, i })).filter((x) => !x.c.isValue);
   const pointOf = (ri: number): SelectedPoint => ({ fields: groupCols.map((g) => g.c.field), values: groupCols.map((g) => valueToLit(model.rows[ri][g.i].raw)) });
   const selKeys = new Set(p.selected.map((s) => JSON.stringify(s.values)));
   const bodyH = Math.max(40, p.height - HEAD_H - (model.totals ? ROW_H : 0));
   const first = Math.max(0, Math.floor(top / ROW_H) - 3);
   const last = Math.min(model.rows.length, Math.ceil((top + bodyH) / ROW_H) + 3);
-  const head = { ...cellBase(theme), height: HEAD_H, lineHeight: `${HEAD_H}px`, fontWeight: 600, background: theme.dark ? "#2b2b2b" : "#f3f2f1", cursor: "pointer" };
-  const widths = `repeat(${model.columns.length}, minmax(90px, 1fr))`;
+  const head: CSSProperties = { ...cellBase(theme), ...st.header, height: HEAD_H, lineHeight: `${HEAD_H}px`, cursor: "pointer" };
+  const widths = `repeat(${model.columns.length}, ${st.columnWidth})`;
   return (
     <div style={{ width: p.width, height: p.height, display: "flex", flexDirection: "column", overflow: "hidden" }} role="table" aria-label="Table">
       <div style={{ display: "grid", gridTemplateColumns: widths }} role="row">
@@ -71,7 +74,7 @@ export function TableView(p: TableViewProps) {
             key={fieldKey(c.field)}
             role="columnheader"
             aria-sort={c.sort === "asc" ? "ascending" : c.sort === "desc" ? "descending" : "none"}
-            style={{ ...head, textAlign: c.align }}
+            style={{ ...head, textAlign: st.headerAlign ?? c.align }}
             onClick={() => p.onSort(c.field)}
             title="Click to sort"
           >
@@ -100,7 +103,7 @@ export function TableView(p: TableViewProps) {
                 }}
               >
                 {row.map((cell, ci) => (
-                  <div key={ci} role="cell" style={styled({ ...cellBase(theme), textAlign: model.columns[ci].align, borderBottom: `1px solid ${theme.dark ? "#333" : "#eee"}` }, cell.style)} title={cell.text}>
+                  <div key={ci} role="cell" style={styled({ ...cellBase(theme), ...st.cell(ri), height: ROW_H, lineHeight: `${ROW_H}px`, textAlign: model.columns[ci].align }, cell.style)} title={cell.text}>
                     {cell.text}
                   </div>
                 ))}
@@ -110,9 +113,9 @@ export function TableView(p: TableViewProps) {
         </div>
       </div>
       {model.totals && (
-        <div style={{ display: "grid", gridTemplateColumns: widths, fontWeight: 600, borderTop: `2px solid ${theme.dark ? "#555" : "#ccc"}` }} role="row" data-testid="table-totals">
+        <div style={{ display: "grid", gridTemplateColumns: widths }} role="row" data-testid="table-totals">
           {model.totals.map((t, i) => (
-            <div key={i} role="cell" style={{ ...cellBase(theme), textAlign: model.columns[i].align }}>
+            <div key={i} role="cell" style={{ ...cellBase(theme), ...st.total, height: ROW_H, lineHeight: `${ROW_H}px`, textAlign: model.columns[i].align }}>
               {t}
             </div>
           ))}
@@ -140,8 +143,9 @@ export interface MatrixViewProps {
 
 export function MatrixView(p: MatrixViewProps) {
   const { model, theme } = p;
+  const st = model.style;
   const selKeys = new Set(p.selected.map((s) => JSON.stringify(s.values)));
-  const th: CSSProperties = { ...cellBase(theme), fontWeight: 600, background: theme.dark ? "#2b2b2b" : "#f3f2f1", textAlign: "center", position: "sticky", top: 0, zIndex: 1 };
+  const th: CSSProperties = { ...cellBase(theme), ...st.header, textAlign: st.headerAlign ?? "center", position: "sticky", top: 0, zIndex: 1 };
   const showTotals = model.showRowTotals;
   return (
     <div style={{ width: p.width, height: p.height, overflow: "auto" }} data-testid="matrix">
@@ -173,13 +177,13 @@ export function MatrixView(p: MatrixViewProps) {
           )}
         </thead>
         <tbody>
-          {model.rows.map((r) => {
+          {model.rows.map((r, ri) => {
             const pt: SelectedPoint | null = r.path.length ? { fields: p.rowFields.slice(0, r.path.length), values: r.path.map(valueToLit) } : null;
             const isSel = pt ? selKeys.has(JSON.stringify(pt.values)) : false;
             return (
               <tr key={r.key} data-row={r.key} style={{ background: isSel ? (theme.dark ? "#334b66" : "#d6e8fa") : undefined, fontWeight: r.isGrand || r.expandable ? 600 : 400, opacity: selKeys.size && !isSel && pt ? 0.55 : 1 }}>
                 <td
-                  style={{ ...cellBase(theme), paddingLeft: 8 + r.depth * 16, cursor: pt ? "pointer" : "default", textAlign: "left" }}
+                  style={{ ...cellBase(theme), ...st.rowHeaderCell, ...(r.isGrand ? st.columnTotal : {}), paddingLeft: 8 + r.depth * 16, cursor: pt ? "pointer" : "default", textAlign: "left" }}
                   onClick={(e) => pt && p.onRow(pt, e.ctrlKey || e.metaKey || e.shiftKey)}
                 >
                   {r.expandable ? (
@@ -200,12 +204,12 @@ export function MatrixView(p: MatrixViewProps) {
                   {r.label}
                 </td>
                 {r.cells.map((c, ci) => (
-                  <td key={ci} style={styled({ ...cellBase(theme), textAlign: "right", borderBottom: `1px solid ${theme.dark ? "#333" : "#eee"}` }, c.style)}>
+                  <td key={ci} style={styled({ ...cellBase(theme), ...st.cell(ri), ...(r.isGrand ? st.columnTotal : {}), textAlign: "right" }, c.style)}>
                     {c.text}
                   </td>
                 ))}
                 {showTotals && r.total.map((c, ci) => (
-                  <td key={`t${ci}`} style={styled({ ...cellBase(theme), textAlign: "right", fontWeight: 600, borderLeft: `1px solid ${theme.dark ? "#444" : "#ddd"}` }, c.style)}>
+                  <td key={`t${ci}`} style={styled({ ...cellBase(theme), ...st.rowTotal, textAlign: "right", borderLeft: `1px solid ${theme.dark ? "#444" : "#ddd"}` }, c.style)}>
                     {c.text}
                   </td>
                 ))}
@@ -224,10 +228,10 @@ export function CardView({ model, theme, width, height }: { model: CardModel; th
   const size = Math.max(14, Math.min(model.fontSize, height * 0.45, width / Math.max(3, model.text.length * 0.65)));
   return (
     <div style={{ width, height, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", overflow: "hidden" }} data-testid="card" role="group" aria-label={model.label}>
-      <div style={{ fontSize: size, fontFamily: theme.textClasses.callout.fontFace, color: model.color ?? theme.textClasses.callout.color, lineHeight: 1.1 }} data-testid="card-value">
+      <div style={{ ...model.valueStyle, fontSize: size, lineHeight: 1.1 }} data-testid="card-value">
         {model.text}
       </div>
-      {model.showLabel && <div style={{ fontSize: theme.textClasses.label.fontSize + 1, color: theme.muted, marginTop: 4 }}>{model.label}</div>}
+      {model.showLabel && <div style={{ ...model.labelStyle, marginTop: 4 }}>{model.label}</div>}
     </div>
   );
 }
@@ -236,11 +240,12 @@ export function MultiRowCardView({ model, theme, width, height }: { model: Multi
   return (
     <div style={{ width, height, overflow: "auto", display: "flex", flexDirection: "column", gap: 8, padding: 8, boxSizing: "border-box" }} data-testid="multirow">
       {model.cards.map((c, i) => (
-        <div key={i} style={{ borderBottom: `1px solid ${theme.dark ? "#333" : "#eee"}`, paddingBottom: 6 }}>
+        <div key={i} style={{ borderBottom: `1px solid ${theme.dark ? "#333" : "#eee"}`, paddingBottom: 6, position: "relative", ...model.cardStyle, ...(model.bar ? { paddingLeft: (model.cardStyle.padding as number) + model.bar.weight + 6 } : {}) }}>
+          {model.bar && <div data-testid="multirow-bar" style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: model.bar.weight, background: model.bar.color }} />}
           {c.items.map((it, j) => (
             <div key={j} style={{ display: "flex", flexDirection: "column", marginBottom: 2 }}>
-              <span style={{ fontSize: j === 0 ? 14 : 12, fontWeight: j === 0 ? 600 : 400, color: theme.foreground }}>{it.text}</span>
-              <span style={{ fontSize: 10, color: theme.muted }}>{it.label}</span>
+              <span style={j === 0 ? { fontWeight: 600, ...model.titleStyle } : model.valueStyle}>{it.text}</span>
+              {model.showCaptions && <span style={model.captionStyle}>{it.label}</span>}
             </div>
           ))}
         </div>
@@ -252,32 +257,34 @@ export function MultiRowCardView({ model, theme, width, height }: { model: Multi
 
 export function KpiView({ model, theme, width, height }: { model: KpiModel; theme: Theme; width: number; height: number }) {
   const ref = useRef<HTMLDivElement>(null);
-  const color = model.status === "good" ? theme.good : model.status === "bad" ? theme.bad : theme.neutral;
+  const color = model.status === "good" ? model.colors.good : model.status === "bad" ? model.colors.bad : model.colors.neutral;
   const trend = useMemo(() => model.trend, [model.trend]);
   useEffect(() => {
-    if (!ref.current || trend.length < 2) return;
+    if (!ref.current || trend.length < 2 || !model.showTrend) return;
     const c = echarts.init(ref.current, null, { renderer: "svg", width: Math.max(20, width), height: Math.max(20, height * 0.4) });
     c.setOption({
       animation: false,
       grid: { left: 0, right: 0, top: 4, bottom: 0 },
       xAxis: { type: "category", show: false, data: trend.map((t) => t.x), boundaryGap: false },
       yAxis: { type: "value", show: false, scale: true },
-      series: [{ type: "line", data: trend.map((t) => t.y), showSymbol: false, areaStyle: { opacity: 0.25 }, lineStyle: { width: 2, color }, itemStyle: { color } }],
+      series: [{ type: "line", data: trend.map((t) => t.y), showSymbol: false, areaStyle: { opacity: 0.25 * (1 - model.trendTransparency / 100) * 4 }, lineStyle: { width: 2, color }, itemStyle: { color } }],
     });
     return () => c.dispose();
-  }, [trend, width, height, color]);
+  }, [trend, width, height, color, model.showTrend, model.trendTransparency]);
   return (
     <div style={{ width, height, display: "flex", flexDirection: "column", overflow: "hidden" }} data-testid="kpi" role="group" aria-label={model.label}>
       <div style={{ padding: "6px 10px 0", fontSize: 12, color: theme.muted }}>{model.label}</div>
-      <div style={{ padding: "0 10px", fontSize: Math.min(36, height * 0.28), fontFamily: theme.textClasses.callout.fontFace, color: theme.foreground }} data-testid="kpi-value">
+      <div style={{ padding: "0 10px", ...model.valueStyle, fontSize: Math.min(model.valueStyle.fontSize as number, height * 0.28), textAlign: model.align }} data-testid="kpi-value">
+        {model.showIcon && <span aria-hidden style={{ color, marginRight: 4 }}>{model.status === "bad" ? "▼" : model.status === "good" ? "▲" : "●"}</span>}
         {model.value}
       </div>
-      {model.goal !== null && (
-        <div style={{ padding: "0 10px", fontSize: 12, color }} data-testid="kpi-goal">
-          {model.varianceText ? `${model.varianceText} ` : ""}Goal: {model.goal}
+      {model.goal !== null && model.showGoal && (
+        <div style={{ padding: "0 10px", ...model.goalStyle, color }} data-testid="kpi-goal">
+          {model.showDistance && model.varianceText ? `${model.varianceText} ` : ""}
+          {model.goalText}: {model.goal}
         </div>
       )}
-      <div ref={ref} style={{ marginTop: "auto", height: height * 0.4 }} aria-hidden />
+      <div ref={ref} style={{ marginTop: "auto", height: height * 0.4, display: model.showTrend ? undefined : "none" }} aria-hidden />
     </div>
   );
 }

@@ -45,15 +45,15 @@ describe("the Analytics tab", () => {
     render(<t.Host />);
     await select(v.name);
     fireEvent.click(await screen.findByRole("tab", { name: "Analytics" }));
-    const card = (await waitFor(() => document.querySelector('[data-card="constantLine"]'))) as HTMLElement;
-    expect(document.querySelector('[data-card="trendLine"]')).toBeTruthy();
+    const card = (await waitFor(() => document.querySelector('[data-card="y1AxisReferenceLine#constant"]'))) as HTMLElement;
+    expect(document.querySelector('[data-card="trend"]')).toBeTruthy();
     fireEvent.click(within(card).getByRole("switch", { name: "Show" }));
-    await waitFor(() => expect(getFormat(t.visuals()[0].json, "constantLine", "show")).toEqual(lit.bool(true)));
+    await waitFor(() => expect(getFormat(t.visuals()[0].json, "y1AxisReferenceLine", "show", "id:constant")).toEqual(lit.bool(true)));
     fireEvent.change(within(card).getByLabelText("Value"), { target: { value: "42" } });
-    await waitFor(() => expect(getFormat(t.visuals()[0].json, "constantLine", "value")).toEqual(lit.num(42)));
+    await waitFor(() => expect(getFormat(t.visuals()[0].json, "y1AxisReferenceLine", "value", "id:constant")).toEqual(lit.num(42)));
   });
 
-  it("is disabled for visuals without Analytics (a pie chart) and has no trend line on stacked charts", async () => {
+  it("is disabled for visuals without Analytics (a pie chart) and offers the lines the visual type has", async () => {
     const t = setup();
     await t.run("report.visual.add", { type: "pieChart", fields: [{ role: "Category", field: Cat }, { role: "Y", field: Qty }] });
     render(<t.Host />);
@@ -61,11 +61,12 @@ describe("the Analytics tab", () => {
     expect((await screen.findByRole("tab", { name: "Analytics" })).hasAttribute("disabled")).toBe(true);
     cleanup();
     const u = setup();
-    await u.run("report.visual.add", { type: "stackedColumnChart", fields: [{ role: "Category", field: Cat }, { role: "Y", field: Qty }] });
+    await u.run("report.visual.add", { type: "columnChart", fields: [{ role: "Category", field: Cat }, { role: "Y", field: Qty }] });
     render(<u.Host />);
     await select(u.visuals()[0].name);
     fireEvent.click(await screen.findByRole("tab", { name: "Analytics" }));
-    await waitFor(() => expect(document.querySelector('[data-card="averageLine"]')).toBeTruthy());
-    expect(document.querySelector('[data-card="trendLine"]')).toBeNull();
+    await waitFor(() => expect(document.querySelector('[data-card="y1AxisReferenceLine#constant"]')).toBeTruthy());
+    // a stacked column chart has the constant line but not the statistic lines
+    expect(document.querySelector('[data-card="referenceLine#average"]')).toBeNull();
   });
 });

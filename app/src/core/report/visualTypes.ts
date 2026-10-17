@@ -42,10 +42,10 @@ const cartesian = (id: string, label: string, glyph: string, extra: RoleDef[] = 
 
 export const VISUAL_TYPES: VisualTypeDef[] = [
   cartesian("clusteredBarChart", "Clustered bar chart", "≡▮"),
-  cartesian("stackedBarChart", "Stacked bar chart", "≣▮"),
+  cartesian("barChart", "Stacked bar chart", "≣▮"),
   cartesian("hundredPercentStackedBarChart", "100% stacked bar chart", "%≡"),
   cartesian("clusteredColumnChart", "Clustered column chart", "▮▮"),
-  cartesian("stackedColumnChart", "Stacked column chart", "▮▯"),
+  cartesian("columnChart", "Stacked column chart", "▮▯"),
   cartesian("hundredPercentStackedColumnChart", "100% stacked column chart", "%▮"),
   cartesian("lineChart", "Line chart", "╱╲"),
   cartesian("areaChart", "Area chart", "◿"),

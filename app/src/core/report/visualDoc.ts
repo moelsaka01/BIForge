@@ -1,6 +1,8 @@
 // Reading and editing page and visual JSON documents (PBIR layout). Edits mutate the given JSON in place;
 // callers pass a draft clone (see DocumentStore.transact). Unknown properties are preserved.
 import type { Project } from "../model/types";
+import { isContainerProp } from "../format/capabilities";
+import { propKind } from "../format/capabilities";
 import { fieldFromPbir, fieldToPbir, litExpr, queryRefOf, readLitProp, type J } from "./pbir";
 import { fieldLabel, sameField, type FieldRef, type Lit } from "./fields";
 import { readFilters, type ReadFilters } from "./filters";
@@ -163,48 +165,74 @@ export function hasField(list: Projection[], f: FieldRef): boolean {
 // ---- formatting objects ---------------------------------------------------------------------
 
 /**
- * Where a formatting object lives. PBIR keeps the general container settings (title, background, border,
- * shadow, tooltip) in visual.visualContainerObjects and everything else in visual.objects.
+ * Where a formatting object lives. PBIR keeps the general container settings (title, background, border, shadow,
+ * tooltip, alt text, ...) in visual.visualContainerObjects and everything else in visual.objects.
  */
-export const CONTAINER_OBJECTS = new Set(["title", "subTitle", "background", "border", "dropShadow", "visualTooltip", "padding", "visualHeader", "divider", "spacing", "lockAspect", "visualLink", "altText"]);
+export { CONTAINER_OBJECTS } from "../format/capabilities";
 
-function bag(json: J, object: string): J {
-  const key = CONTAINER_OBJECTS.has(object) ? "visualContainerObjects" : "objects";
+const bagKey = (object: string, prop: string) => (isContainerProp(object, prop) ? "visualContainerObjects" : "objects");
+
+function bag(json: J, object: string, prop: string): J {
+  const key = bagKey(object, prop);
   json.visual ??= {};
   json.visual[key] ??= {};
   return json.visual[key];
 }
 
+/**
+ * A selector argument: a field's queryRef (stored as selector.metadata, the series an entry formats) or "id:<name>"
+ * (stored as selector.id, a user-defined instance such as one reference line).
+ */
+export function selectorOf(selector: string): J {
+  return selector.startsWith("id:") ? { id: selector.slice(3) } : { metadata: selector };
+}
+
 function entryFor(list: J[] | undefined, selector?: string): J | undefined {
-  return (list ?? []).find((e) => (selector === undefined ? !e.selector : e.selector?.metadata === selector));
+  if (selector === undefined) return (list ?? []).find((e) => !e.selector);
+  const want = selectorOf(selector);
+  return (list ?? []).find((e) => (want.id !== undefined ? e.selector?.id === want.id : e.selector?.metadata === want.metadata));
 }
 
 /** Reads a literal formatting property; selector is a queryRef for per-series settings. */
 export function getFormat(json: J, object: string, prop: string, selector?: string): Lit | null {
-  const key = CONTAINER_OBJECTS.has(object) ? "visualContainerObjects" : "objects";
-  const e = entryFor(json?.visual?.[key]?.[object], selector);
+  const e = entryFor(json?.visual?.[bagKey(object, prop)]?.[object], selector);
   return e ? readLitProp(e.properties?.[prop]) : null;
+}
+
+/** Names of the properties set on one entry of an object (the entry a property of the given name would be written to). */
+export function entryProps(json: J, object: string, prop: string, selector?: string): string[] {
+  const e = entryFor(json?.visual?.[bagKey(object, prop)]?.[object], selector);
+  return e ? Object.keys(e.properties ?? {}) : [];
 }
 
 const isColorProp = (prop: string) => /color$/i.test(prop) || prop === "fill" || prop === "defaultColor";
 
+/** Whether a property holds a color (stored as a solid fill): by the schema when the visual type is known, else by name. */
+function colorProp(json: J, object: string, prop: string): boolean {
+  const k = propKind(json?.visual?.visualType ?? "", object, prop);
+  return k ? k[0] === "c" : isColorProp(prop);
+}
+
 /** Sets (or, with null, removes) a literal formatting property. */
 export function setFormat(json: J, object: string, prop: string, value: Lit | null, selector?: string): void {
-  const b = bag(json, object);
+  const b = bag(json, object, prop);
   const list: J[] = (b[object] ??= []);
   let e = entryFor(list, selector);
   if (value === null) {
-    if (!e) return;
+    if (!e) {
+      if (list.length === 0) delete b[object];
+      return;
+    }
     delete e.properties[prop];
     if (Object.keys(e.properties).length === 0) list.splice(list.indexOf(e), 1);
     if (list.length === 0) delete b[object];
     return;
   }
   if (!e) {
-    e = { ...(selector !== undefined ? { selector: { metadata: selector } } : {}), properties: {} };
+    e = { ...(selector !== undefined ? { selector: selectorOf(selector) } : {}), properties: {} };
     list.push(e);
   }
-  e.properties[prop] = isColorProp(prop) && value.t === "string" ? { solid: { color: litExpr(value) } } : litExpr(value);
+  e.properties[prop] = colorProp(json, object, prop) && value.t === "string" ? { solid: { color: litExpr(value) } } : litExpr(value);
 }
 
 export function getBool(json: J, object: string, prop: string, dflt: boolean, selector?: string): boolean {
@@ -222,23 +250,25 @@ export function getStr(json: J, object: string, prop: string, dflt: string, sele
 
 /** Raw property node (for conditional-format expressions that are not plain literals). */
 export function getRawProp(json: J, object: string, prop: string, selector?: string): J | undefined {
-  const key = CONTAINER_OBJECTS.has(object) ? "visualContainerObjects" : "objects";
-  return entryFor(json?.visual?.[key]?.[object], selector)?.properties?.[prop];
+  return entryFor(json?.visual?.[bagKey(object, prop)]?.[object], selector)?.properties?.[prop];
 }
 
 export function setRawProp(json: J, object: string, prop: string, node: J | null, selector?: string): void {
-  const b = bag(json, object);
+  const b = bag(json, object, prop);
   const list: J[] = (b[object] ??= []);
   let e = entryFor(list, selector);
   if (node === null) {
-    if (!e) return;
+    if (!e) {
+      if (list.length === 0) delete b[object];
+      return;
+    }
     delete e.properties[prop];
     if (Object.keys(e.properties).length === 0) list.splice(list.indexOf(e), 1);
     if (list.length === 0) delete b[object];
     return;
   }
   if (!e) {
-    e = { ...(selector !== undefined ? { selector: { metadata: selector } } : {}), properties: {} };
+    e = { ...(selector !== undefined ? { selector: selectorOf(selector) } : {}), properties: {} };
     list.push(e);
   }
   e.properties[prop] = node;
