@@ -17,6 +17,7 @@ import {
   type QueryOptions,
   type SlicerQuery,
 } from "./queryBuilder";
+import type { FilterDef } from "./filters";
 import type { PageModel, VisualModel } from "./visualDoc";
 import { visualType } from "./visualTypes";
 
@@ -74,6 +75,18 @@ export class ReportData {
     this.cache.set(key, p);
     if (this.cache.size > 300) this.cache.delete(this.cache.keys().next().value as string);
     return p;
+  }
+
+  /**
+   * Runs a query of an analysis visual (a node of a decomposition tree, one explaining field of key influencers): the
+   * synthetic visual says which fields, the filters are those the real visual is under plus the extra ones.
+   */
+  async rows(project: Project, page: PageModel, visual: VisualModel, view: ViewState, model: ModelInfo, synthetic: VisualModel, extra: FilterDef[] = []): Promise<{ query: BuiltQuery; rows: Value[][] } | null> {
+    const filters = [...filtersFor(project, page, visual, { drillthrough: view.drillthrough }), ...extra];
+    const q = buildVisualQuery(synthetic, model, { filters, drill: NO_DRILL });
+    if (!q) return null;
+    const [res] = await this.run(project, view.epoch, q.dax);
+    return { query: q, rows: res.rows.map((r) => r.map(decodeCell)) };
   }
 
   /** Distinct values of a column (Filters pane lists), ordered like a slicer. */

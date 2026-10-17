@@ -11,7 +11,7 @@ export interface RoleDef {
   max: number;
 }
 
-export type VisualFamily = "cartesian" | "pie" | "scatter" | "table" | "matrix" | "card" | "kpi" | "gauge" | "treemap" | "funnel" | "waterfall" | "slicer" | "map" | "textbox" | "shape" | "image" | "button" | "pageNavigator";
+export type VisualFamily = "decomposition" | "keyDrivers" | "cartesian" | "pie" | "scatter" | "table" | "matrix" | "card" | "kpi" | "gauge" | "treemap" | "funnel" | "waterfall" | "slicer" | "map" | "textbox" | "shape" | "image" | "button" | "pageNavigator";
 
 export interface VisualTypeDef {
   id: string;
@@ -168,6 +168,28 @@ export const VISUAL_TYPES: VisualTypeDef[] = [
     ],
     size: { width: 420, height: 300 },
     glyph: "▂▅",
+  },
+  {
+    id: "decompositionTreeVisual",
+    label: "Decomposition tree",
+    family: "decomposition",
+    roles: [
+      { name: "Analyze", label: "Analyze", accepts: "value", max: 1 },
+      { name: "ExplainBy", label: "Explain by", accepts: "column", max: 10 },
+    ],
+    size: { width: 620, height: 360 },
+    glyph: "⑂",
+  },
+  {
+    id: "keyDriversVisual",
+    label: "Key influencers",
+    family: "keyDrivers",
+    roles: [
+      { name: "Target", label: "Analyze", accepts: "any", max: 1 },
+      { name: "ExplainBy", label: "Explain by", accepts: "column", max: 10 },
+    ],
+    size: { width: 480, height: 360 },
+    glyph: "⚑",
   },
   { id: "slicer", label: "Slicer", family: "slicer", roles: [{ name: "Values", label: "Field", accepts: "column", max: 1 }], size: { width: 200, height: 240 }, glyph: "▽" },
   {

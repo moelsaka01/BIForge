@@ -15,6 +15,7 @@ import { agg, column, lit, type Lit } from "../report/fields";
 import { FormatReader } from "../report/formatReader";
 import { litExpr, queryRefOf } from "../report/pbir";
 import { buildMatrixQuery, buildVisualQuery } from "../report/queryBuilder";
+import { influencersStyle, treeStyle } from "../report/analysisStyle";
 import { readSlicer } from "../report/slicerSettings";
 import { buttonModel, imageModel, navigatorModel } from "../report/staticModels";
 import { readShape, shapeSvg } from "../report/staticVisuals";
@@ -176,6 +177,8 @@ const SCENARIOS: Record<string, Scenario> = {
     make: () => visualOf("kpi", { Indicator: [Qty], TrendAxis: [column("Date", "YearMonth")], Goal: [agg("Sales", "Quantity", 4)] }),
     render: (v) => buildKpi(v, grouped(v, [[n(202401), n(80), n(100)], [n(202402), n(120), n(100)]]), DEFAULT_THEME),
   },
+  decompositionTreeVisual: { make: () => visualOf("decompositionTreeVisual", { Analyze: [Qty], ExplainBy: [Cat] }), render: (v) => treeStyle(new FormatReader(v.json, DEFAULT_THEME, "decompositionTreeVisual"), DEFAULT_THEME) },
+  keyDriversVisual: { make: () => visualOf("keyDriversVisual", { Target: [Ch], ExplainBy: [Cat] }), render: (v) => influencersStyle(new FormatReader(v.json, DEFAULT_THEME, "keyDriversVisual")) },
   slicer: { make: () => visualOf("slicer", { Values: [Country] }), render: (v) => readSlicer(new FormatReader(v.json, DEFAULT_THEME, "slicer"), false) },
   shape: {
     make: () => visualOf("shape", {}),

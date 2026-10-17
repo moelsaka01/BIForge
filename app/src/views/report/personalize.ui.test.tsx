@@ -58,7 +58,7 @@ describe("personalize visuals", () => {
     const reg = createRegistry(e);
     await reg.execute("report.personalize.set", { enabled: false });
     expect(personalizeOn(e.store.project!, "page1")).toBe(false);
-    expect(e.store.project!.report.files["pages/page1/page.json"].objects).toBeUndefined();
+    expect((e.store.project!.report.files["pages/page1/page.json"] as { objects?: unknown }).objects).toBeUndefined();
   });
 
   it("a reader can change the type and the fields of a visual; it is a view change that Reset takes back", async () => {

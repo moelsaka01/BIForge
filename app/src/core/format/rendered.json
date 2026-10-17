@@ -2133,6 +2133,68 @@
    "transparency"
   ]
  },
+ "decompositionTreeVisual": {
+  "analysis": [
+   "aiMode"
+  ],
+  "categoryLabels": [
+   "categoryLabelBold",
+   "categoryLabelFontColor",
+   "categoryLabelFontFamily",
+   "categoryLabelFontSize",
+   "categoryLabelItalic",
+   "categoryLabelUnderline"
+  ],
+  "dataBars": [
+   "dataBarBackgroundColor",
+   "dataBarColor",
+   "dataBarScalingType",
+   "dataBarWidthPercent",
+   "negativeBarColor",
+   "positiveBarColor"
+  ],
+  "dataLabels": [
+   "dataLabelBold",
+   "dataLabelDisplayUnits",
+   "dataLabelFontColor",
+   "dataLabelFontFamily",
+   "dataLabelFontSize",
+   "dataLabelItalic",
+   "dataLabelPrecision",
+   "dataLabelUnderline"
+  ],
+  "levelHeader": [
+   "levelHeaderBackgroundColor",
+   "levelSubtitleBold",
+   "levelSubtitleFontColor",
+   "levelSubtitleFontFamily",
+   "levelSubtitleFontSize",
+   "levelSubtitleItalic",
+   "levelSubtitleUnderline",
+   "levelTitleBold",
+   "levelTitleFontColor",
+   "levelTitleFontFamily",
+   "levelTitleFontSize",
+   "levelTitleItalic",
+   "levelTitleUnderline",
+   "showSubtitles"
+  ],
+  "tree": [
+   "accentColor",
+   "barsPerLevel",
+   "connectorDefaultColor",
+   "connectorType",
+   "defaultClickAction",
+   "density"
+  ]
+ },
+ "keyDriversVisual": {
+  "keyDrivers": [
+   "selectedAnalysis",
+   "selectedSort",
+   "targetValue"
+  ]
+ },
  "slicer": {
   "data": [
    "mode"

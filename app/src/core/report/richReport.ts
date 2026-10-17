@@ -41,6 +41,8 @@ const FIELDS: Record<string, { role: string; field: unknown }[]> = {
   treemap: [{ role: "Group", field: Cat }, { role: "Values", field: Qty }],
   funnel: [{ role: "Category", field: Cat }, { role: "Y", field: Qty }],
   waterfallChart: [{ role: "Category", field: Cat }, { role: "Y", field: Qty }],
+  decompositionTreeVisual: [{ role: "Analyze", field: Qty }, { role: "ExplainBy", field: Cat }, { role: "ExplainBy", field: column("Customer", "Country") }],
+  keyDriversVisual: [{ role: "Target", field: column("Sales", "Channel") }, { role: "ExplainBy", field: Cat }],
   slicer: [{ role: "Values", field: column("Customer", "Country") }],
   map: [{ role: "Category", field: column("Customer", "City") }],
 };

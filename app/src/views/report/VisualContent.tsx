@@ -10,6 +10,8 @@ import type { PageModel, VisualModel } from "../../core/report/visualDoc";
 import { listPageNames } from "../../core/report/visualDoc";
 import { isStatic, visualType } from "../../core/report/visualTypes";
 import { ChartView } from "./ChartView";
+import { DecompositionTreeView } from "./DecompositionTreeView";
+import { KeyInfluencersView } from "./KeyInfluencersView";
 import { CardView, KpiView, MatrixView, MultiRowCardView, TableView } from "./DomVisuals";
 import { useReport } from "./reportContext";
 import { readSlicer } from "../../core/report/slicerSettings";
@@ -107,6 +109,8 @@ export function VisualContent({ page, visual, width, height, runOnClick }: { pag
       </Notice>
     );
   }
+  if (type.family === "decomposition") return <DecompositionTreeView page={page} visual={visual} width={width} height={height} />;
+  if (type.family === "keyDrivers") return <KeyInfluencersView page={page} visual={visual} width={width} height={height} />;
   const bound = Object.values(visual.roles).some((l) => l.length > 0);
   if (!bound) return <Notice>Add fields to this visual from the Data pane.</Notice>;
   if (!loaded) return <Notice muted>Loading…</Notice>;
