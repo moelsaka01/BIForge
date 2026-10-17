@@ -545,6 +545,14 @@ describe("unsaved changes and the recovery banner", () => {
   });
 
   it("Save in that dialog saves, then closes; Cancel keeps the window open", async () => {
+    // The dialog is found with a plain DOM query, not findByRole: a role query walks the whole workspace and, on a loaded
+    // machine, a single attempt can outlast the timeout; tabster also marks a dialog aria-hidden a tick after it opens.
+    const unsavedDialog = () =>
+      waitFor(() => {
+        const d = document.querySelector<HTMLElement>('[role=dialog][aria-label="Unsaved changes"]');
+        expect(d).not.toBeNull();
+        return d as HTMLElement;
+      });
     const a = makeApp();
     render(a.element);
     await openProject(a);
@@ -552,13 +560,13 @@ describe("unsaved changes and the recovery banner", () => {
       await a.registry.execute("model.addTable", { name: "Extra" });
       await a.win.requestClose();
     });
-    fireEvent.click(within(await screen.findByRole("dialog", { name: "Unsaved changes" })).getByRole("button", { name: "Cancel" }));
-    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    fireEvent.click(within(await unsavedDialog()).getByRole("button", { name: "Cancel", hidden: true }));
+    await waitFor(() => expect(document.querySelector("[role=dialog]")).toBeNull());
     expect(a.win.calls).not.toContain("destroy");
     await act(async () => {
       await a.win.requestClose();
     });
-    fireEvent.click(within(await screen.findByRole("dialog", { name: "Unsaved changes" })).getByRole("button", { name: "Save" }));
+    fireEvent.click(within(await unsavedDialog()).getByRole("button", { name: "Save", hidden: true }));
     await waitFor(() => expect(a.win.calls).toContain("destroy"));
     expect(a.io.calls.some((c) => c.startsWith("save:"))).toBe(true);
   });

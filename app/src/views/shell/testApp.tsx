@@ -44,7 +44,11 @@ export function fakeWindow() {
     destroy: async () => void calls.push("destroy"),
     onCloseRequested: async (h) => {
       handlers.push(h);
-      return () => undefined;
+      // like the real window API: the returned function removes the handler (Frame re-registers when its inputs change)
+      return () => {
+        const i = handlers.indexOf(h);
+        if (i >= 0) handlers.splice(i, 1);
+      };
     },
   };
   return { win, calls, requestClose: () => Promise.all(handlers.map((h) => h())) };
