@@ -109,7 +109,10 @@ pub fn config(spec: &SourceSpec, creds: &dyn CredentialStore) -> Result<Config> 
             };
             cfg.authentication(AuthMethod::sql_server(u, pw));
         }
+        #[cfg(windows)]
         None => cfg.authentication(AuthMethod::Integrated),
+        #[cfg(not(windows))]
+        None => return Err(EngineError::Source("SQL Server error: Windows authentication is only available on Windows; enter a user and password".into())),
     }
     Ok(cfg)
 }

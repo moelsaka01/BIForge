@@ -49,7 +49,9 @@ jobs:
           $data = Join-Path $env:RUNNER_TEMP "mysqldata"
           $sql = Join-Path $env:RUNNER_TEMP "mysql-seed.sql"
           & "$my\bin\mysqld.exe" --initialize-insecure "--datadir=$data" --console
-          $p = Start-Process -FilePath "$my\bin\mysqld.exe" -ArgumentList "--datadir=$data","--port=3307","--bind-address=127.0.0.1","--console" -PassThru -RedirectStandardError (Join-Path $env:RUNNER_TEMP "mysqld.err.log") -RedirectStandardOutput (Join-Path $env:RUNNER_TEMP "mysqld.out.log")
+          # a service, so that the server outlives this step (a child process is stopped when the step ends)
+          & "$mybinmysqld.exe" --install-manual BiforgeCiMySQL "--datadir=$data" --port=3307 --bind-address=127.0.0.1
+          Start-Service BiforgeCiMySQL
           for ($i = 0; $i -lt 60; $i++) { & "$my\bin\mysqladmin.exe" --protocol=tcp -h 127.0.0.1 -P 3307 -u root ping 2>$null | Out-Null; if ($LASTEXITCODE -eq 0) { break }; Start-Sleep -Seconds 1 }
           Set-Content -Path $sql -Value @(
             "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'ci-test-password';",
