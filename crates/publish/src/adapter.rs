@@ -138,6 +138,19 @@ pub trait Adapter: Send + Sync {
     fn unpublish(&self, _target: &Target) -> Result<()> {
         Err(self.unsupported("unpublish"))
     }
+    /// Puts the scheduled-refresh files into the destination and stores the secrets the runner needs
+    /// (secrets are passed in by the publisher; the adapter never reads the credential store for them).
+    fn configure_refresh(&self, _target: &Target, _files: &[(String, Vec<u8>)], _secrets: &[(String, String)]) -> Result<()> {
+        Err(self.unsupported("scheduled refresh"))
+    }
+    /// Removes the refresh files and secrets again.
+    fn disable_refresh(&self, _target: &Target) -> Result<()> {
+        Err(self.unsupported("scheduled refresh"))
+    }
+    /// Starts one refresh now; returns where to watch it.
+    fn trigger_refresh(&self, _target: &Target) -> Result<String> {
+        Err(self.unsupported("scheduled refresh"))
+    }
     /// Forgets the account connection (tokens). Never deletes published data.
     fn disconnect(&self, _target: &mut Target) -> Result<()> {
         Err(self.unsupported("disconnect"))

@@ -1,7 +1,8 @@
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { Button, Checkbox, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, Dropdown, Input, Option, Radio, RadioGroup } from "@fluentui/react-components";
 import { freeTierLines, getGuide, guideForAdapter, guideHiddenKey, type Guide } from "../../core/publish/guides";
-import type { AccessLevel, AdapterInfo, Envelope, IncludedTable, Target } from "../../core/publish/types";
+import { PROVIDER_OF } from "../../core/publish/publishUi";
+import type { AccessLevel, AdapterInfo, Envelope, IncludedTable, Provider, Target } from "../../core/publish/types";
 import { useEnv, useSettings } from "./ShellContext";
 
 const STATUS_TEXT: Record<Target["status"], string> = {
@@ -35,6 +36,56 @@ export function dataList(included: IncludedTable[]): string {
   return included.map((t) => `${t.table}: ${t.columns.join(", ")}`).join("\n");
 }
 
+// ---- connecting an account ----
+
+const PROVIDER_NAME: Record<Provider, string> = { github: "GitHub", cloudflare: "Cloudflare" };
+const GUIDE_OF: Record<Provider, string> = { github: "static-github-pages", cloudflare: "static-cloudflare-pages" };
+
+/** The click-by-click steps and the field where the token is pasted. The token goes straight to the Windows Credential Manager. */
+export function ConnectPanel({ provider }: { provider: Provider }) {
+  const env = useEnv();
+  const { state } = usePublishUi();
+  const [token, setToken] = useState("");
+  const [accountId, setAccountId] = useState("");
+  const name = PROVIDER_NAME[provider];
+  const account = state.connected[provider];
+  const steps = getGuide(GUIDE_OF[provider])?.steps ?? [];
+  if (account !== undefined)
+    return (
+      <div role="status" style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <span>{account ? `${name} is connected as ${account}.` : `${name} is connected.`}</span>
+        <Button size="small" onClick={() => void env.run("account.disconnect", { provider })}>
+          Disconnect {name}
+        </Button>
+      </div>
+    );
+  return (
+    <div role="group" aria-label={`Connect ${name}`} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <ol aria-label={`How to get a ${name} token`} style={{ margin: "0 0 0 18px" }}>
+        {steps.map((st) => (
+          <li key={st}>{st}</li>
+        ))}
+      </ol>
+      {provider === "cloudflare" && <Input aria-label="Cloudflare account ID" placeholder="Account ID (32 letters and digits)" value={accountId} onChange={(_, d) => setAccountId(d.value)} />}
+      <Input aria-label={`${name} token`} type="password" placeholder={provider === "github" ? "Token (ghp_…)" : "API token"} value={token} onChange={(_, d) => setToken(d.value)} />
+      <div style={{ fontSize: 12, opacity: 0.8 }}>The token is kept in Windows Credential Manager. It is never written into the project, a package or a log.</div>
+      <div>
+        <Button
+          appearance="primary"
+          disabled={!token.trim() || state.busy || (provider === "cloudflare" && !accountId.trim())}
+          onClick={async () => {
+            const ok = await env.run("account.connect", { provider, token, accountId });
+            if (ok) setToken("");
+          }}
+        >
+          Connect {name}
+        </Button>
+      </div>
+      {state.error && <div role="alert" style={{ color: "var(--colorPaletteRedForeground1)" }}>{state.error}</div>}
+    </div>
+  );
+}
+
 // ---- the setup pop-up ----
 
 export function GuideView({ guide, adapters, included, onDone, onFolder }: { guide: Guide; adapters: AdapterInfo[]; included: IncludedTable[]; onDone(): void; onFolder?(folder: string): void }) {
@@ -59,6 +110,7 @@ export function GuideView({ guide, adapters, included, onDone, onFolder }: { gui
           {included.length === 0 ? <li>No tables are selected.</li> : included.map((t) => <li key={t.table}>{`${t.table}: ${t.columns.join(", ")}`}</li>)}
         </ul>
       )}
+      {guide.buttons.map((b) => (b.action.kind === "connect" ? <ConnectPanel key={b.id} provider={b.action.provider} /> : null))}
       {how && guide.howItWorks && (
         <ul aria-label="How it works" style={{ margin: "0 0 0 18px" }}>
           {guide.howItWorks.map((l) => (
@@ -79,6 +131,7 @@ export function GuideView({ guide, adapters, included, onDone, onFolder }: { gui
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
         {guide.buttons.map((b) => {
           const a = b.action;
+          if (a.kind === "connect") return null;
           if (a.kind === "notImplemented")
             return (
               <Button key={b.id} disabled title={`Not implemented yet (planned for phase ${a.phase})`}>
@@ -167,14 +220,20 @@ function AddDestination({ onAdded }: { onAdded(): void }) {
   const [label, setLabel] = useState("");
   const [access, setAccess] = useState<AccessLevel>("private");
   const [folder, setFolder] = useState("");
+  const [repo, setRepo] = useState("");
+  const [accountId, setAccountId] = useState("");
+  const [siteName, setSiteName] = useState("");
   const [guideOpen, setGuideOpen] = useState(false);
+  const projectSlug = (env.session.store.project?.name ?? "report").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "report";
   const info = state.adapters.find((a) => a.id === adapterId);
   const guide = guideForAdapter(adapterId);
   const caps = info?.capabilities;
   const accessOk = caps ? (access === "public" ? caps.publicAccess : caps.privateAccess) : false;
   const hidden = settings.options[guideHiddenKey(guide?.id ?? "")] === true;
   const add = async () => {
-    const ok = await env.run("publish.addTarget", { adapterId, label, access, settings: adapterId === "local-folder" ? { folder } : {} });
+    const settings: Record<string, string> =
+      adapterId === "local-folder" ? { folder } : adapterId === "github-pages" ? { repo: repo.trim() || `biforge-${projectSlug}` } : adapterId === "cloudflare-pages" ? { accountId: accountId.trim(), name: siteName.trim() || `biforge-${projectSlug}` } : {};
+    const ok = await env.run("publish.addTarget", { adapterId, label, access, settings });
     if (ok) onAdded();
   };
   const startAdd = () => (guide && !hidden ? setGuideOpen(true) : void add());
@@ -217,6 +276,13 @@ function AddDestination({ onAdded }: { onAdded(): void }) {
           <Button onClick={async () => setFolder((await env.session.dialogs.pickFolder()) ?? folder)}>Browse…</Button>
         </div>
       )}
+      {adapterId === "github-pages" && <Input aria-label="Repository name" placeholder={`Repository for the site (default biforge-${projectSlug})`} value={repo} onChange={(_, d) => setRepo(d.value)} />}
+      {adapterId === "cloudflare-pages" && (
+        <>
+          <Input aria-label="Cloudflare account ID" placeholder="Account ID (32 letters and digits)" value={accountId} onChange={(_, d) => setAccountId(d.value)} />
+          <Input aria-label="Site name" placeholder={`Site name (default biforge-${projectSlug})`} value={siteName} onChange={(_, d) => setSiteName(d.value)} />
+        </>
+      )}
       {info && info.limitations.length > 0 && (
         <ul aria-label="Limitations" style={{ margin: "0 0 0 18px", fontSize: 12 }}>
           {info.limitations.map((l) => (
@@ -225,7 +291,7 @@ function AddDestination({ onAdded }: { onAdded(): void }) {
         </ul>
       )}
       <div>
-        <Button appearance="primary" disabled={!caps?.implemented || !accessOk || !label.trim() || (adapterId === "local-folder" && !folder.trim())} onClick={startAdd}>
+        <Button appearance="primary" disabled={!caps?.implemented || !accessOk || !label.trim() || (adapterId === "local-folder" && !folder.trim()) || (adapterId === "cloudflare-pages" && !accountId.trim())} onClick={startAdd}>
           Add destination
         </Button>
         {guide && hidden && (
@@ -248,6 +314,8 @@ function TargetDetails({ target, info }: { target: Target; info: AdapterInfo }) 
   const [shown, setShown] = useState<string | null>(null);
   const blocked = state.issues.find((i) => i.severity === "error");
   const sel = ui.selection();
+  const provider = PROVIDER_OF[target.adapterId];
+  const isStatic = info.method === "staticHosting";
   const canPublish = c.implemented && !state.busy && !blocked && sel.length > 0 && ui.confirmed && name.trim() !== "" && (target.status !== "published" || c.update);
   const row = (k: string, v: React.ReactNode) => (
     <div style={{ display: "flex", gap: 8 }}>
@@ -265,6 +333,13 @@ function TargetDetails({ target, info }: { target: Target; info: AdapterInfo }) 
       {row("Version", target.lastVersion === null ? "-" : String(target.lastVersion))}
       {target.lastError && <div role="alert" style={{ color: "var(--colorPaletteRedForeground1)" }}>{target.lastError}</div>}
       {!c.implemented && <div role="note">Not implemented yet (planned for phase {info.phase}). Nothing can be published here.</div>}
+      {provider && state.connected[provider] === undefined && (
+        <details open>
+          <summary>Connect {PROVIDER_NAME[provider]}</summary>
+          <ConnectPanel provider={provider} />
+        </details>
+      )}
+      {provider && state.connected[provider] !== undefined && <ConnectPanel provider={provider} />}
       {state.issues.map((i) => (
         <div key={i.message} role={i.severity === "error" ? "alert" : "note"} style={{ color: i.severity === "error" ? "var(--colorPaletteRedForeground1)" : undefined }}>
           {i.severity === "error" ? "Problem: " : "Note: "}
@@ -283,7 +358,11 @@ function TargetDetails({ target, info }: { target: Target; info: AdapterInfo }) 
         <>
           <ChooseData />
           <Checkbox
-            label="I have checked this list: these tables and columns will leave this computer."
+            label={
+              isStatic
+                ? "I have checked this list. I understand that these tables and columns will be put on a public web address and leave this computer: anyone on the internet can download them (a private report is encrypted, but the encrypted file is public)."
+                : "I have checked this list: these tables and columns will leave this computer."
+            }
             checked={ui.confirmed}
             disabled={sel.length === 0}
             onChange={(_, d) => ui.confirmShown(d.checked === true)}
@@ -390,7 +469,7 @@ export function PublishDialog() {
 
 // ---- open a shared report ----
 
-export function OpenPackageDialog({ request }: { request: { path?: string; fromLink?: boolean } }) {
+export function OpenPackageDialog({ request }: { request: { path?: string; feedUrl?: string; fromLink?: boolean } }) {
   const env = useEnv();
   const { state } = usePublishUi();
   const [path, setPath] = useState(request.path ?? "");
@@ -400,7 +479,32 @@ export function OpenPackageDialog({ request }: { request: { path?: string; fromL
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [checked, setChecked] = useState("");
+  const [pin, setPin] = useState<string | null>(null);
+  const [keep, setKeep] = useState(true);
+  const feedUrl = request.feedUrl;
   const close = () => env.session.shell.closeDialog();
+
+  // a link to a static host: download the package first (nothing is opened yet), then show what it is
+  useEffect(() => {
+    if (!feedUrl) return;
+    let live = true;
+    setBusy(true);
+    env.session
+      .publish!.linkedFetch(feedUrl)
+      .then((l) => {
+        if (!live) return;
+        setPath(l.path);
+        setChecked(l.path);
+        setEnv(l.envelope);
+        setPin(l.existingPin);
+      })
+      .catch((e) => live && setErr(e instanceof Error ? e.message : String(e)))
+      .finally(() => live && setBusy(false));
+    return () => {
+      live = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [feedUrl]);
 
   const check = async (p: string) => {
     setErr(null);
@@ -413,11 +517,11 @@ export function OpenPackageDialog({ request }: { request: { path?: string; fromL
       setErr(e instanceof Error ? e.message : String(e));
     }
   };
-  if (path && checked !== path && !err) void check(path);
+  if (!feedUrl && path && checked !== path && !err) void check(path);
 
   const open = async () => {
     setBusy(true);
-    const ok = await env.run("package.open.run", { path, accessKey: key });
+    const ok = await env.run("package.open.run", { path, accessKey: key, feedUrl, expectedPublisher: pin, subscribe: keep });
     setBusy(false);
     if (!ok) setErr(env.error ?? "The report could not be opened.");
   };
@@ -436,8 +540,9 @@ export function OpenPackageDialog({ request }: { request: { path?: string; fromL
       }
     >
       {request.fromLink && <div role="note">This link came from outside BIForge. Check the file and publisher below before opening it.</div>}
+      {feedUrl && <div>Address: <span style={{ fontFamily: "monospace", overflowWrap: "anywhere" }}>{feedUrl}</span></div>}
       <div style={{ display: "flex", gap: 6 }}>
-        <Input aria-label="Report file" style={{ flex: 1 }} placeholder="Path of a .biforge file" value={path} onChange={(_, d) => setPath(d.value)} />
+        <Input aria-label="Report file" disabled={!!feedUrl} style={{ flex: 1 }} placeholder="Path of a .biforge file" value={path} onChange={(_, d) => setPath(d.value)} />
         <Button
           onClick={async () => {
             const p = await env.session.dialogs.pickFile("BIForge shared report", ["biforge"]);
@@ -465,9 +570,11 @@ export function OpenPackageDialog({ request }: { request: { path?: string; fromL
           <div>Signature: valid (the file is unchanged since the publisher signed it).</div>
           <div>Publisher key: {env_.publisherPublicKey.slice(0, 16)}… Check with the publisher that this is theirs.</div>
           <div>Version {env_.version}, {env_.access === "private" ? "private (encrypted)" : "public (not encrypted)"}.</div>
+          {pin ? <div>You have opened this report before: the publisher is checked against the key you accepted then.</div> : feedUrl ? <div>First time: BIForge will remember this publisher key and refuse later versions signed by anyone else.</div> : null}
           <div>It opens as a read-only view. Nothing in the report is run and nothing is saved on this computer except a temporary copy.</div>
         </section>
       )}
+      {feedUrl && <Checkbox label="Keep this report and let me check for updates (the access key, if any, is kept in Windows Credential Manager)" checked={keep} onChange={(_, d) => setKeep(d.checked === true)} />}
       {needsKey && <Input aria-label="Access key" type="password" placeholder="Access key (AGE-SECRET-KEY-…)" value={key} onChange={(_, d) => setKey(d.value)} />}
       <details>
         <summary>Using a server or another way of sharing?</summary>

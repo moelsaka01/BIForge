@@ -124,8 +124,30 @@ export interface OpenedPackage {
 export interface DeepLink {
   src: string;
   path: string | null;
+  /** The feed address of a link that points at a static host. */
+  url: string | null;
   supported: boolean;
 }
+
+/** A package downloaded from a feed address, with its signed envelope; `existingPin` is the publisher key pinned earlier. */
+export interface Linked {
+  path: string;
+  envelope: Envelope;
+  existingPin: string | null;
+}
+
+export interface Subscription {
+  packageId: string;
+  feedUrl: string;
+  reportName: string;
+  pinnedPublisher: string;
+  haveVersion: number;
+  lastCheck: string | null;
+  lastError: string | null;
+  packagePath: string;
+}
+
+export type Provider = "github" | "cloudflare";
 
 /** Everything the app asks of the publishing engine. The Tauri implementation is in tauriPublish.ts; tests use fakes. */
 export interface PublishApi {
@@ -144,4 +166,19 @@ export interface PublishApi {
   openPackage(path: string, accessKey?: string | null, expectedPublisher?: string | null): Promise<OpenedPackage>;
   parseLink(link: string): Promise<DeepLink>;
   startupOpen(): Promise<string | null>;
+  /** Whether a token is stored for the provider (the token itself never reaches the window again). */
+  accountConnected(provider: Provider): Promise<boolean>;
+  /** Stores the token in the Credential Manager after the provider accepted it; returns the account name. */
+  accountConnect(provider: Provider, token: string, accountId?: string | null): Promise<string>;
+  accountDisconnect(provider: Provider): Promise<void>;
+  /** Checks the destination's account and records its name on the target. */
+  authenticate(root: string, targetId: string): Promise<Target>;
+  linkedFetch(feedUrl: string): Promise<Linked>;
+  subscriptionAccept(feedUrl: string, path: string, reportName: string, accessKey?: string | null): Promise<Subscription>;
+  subscriptions(): Promise<Subscription[]>;
+  subscriptionRemove(packageId: string): Promise<void>;
+  /** A newer version of a subscribed report, downloaded and checked against the pinned publisher; null when up to date. */
+  subscriptionCheck(packageId: string): Promise<Linked | null>;
+  subscriptionOpened(packageId: string, version: number, path: string): Promise<void>;
+  viewerKey(packageId: string): Promise<string | null>;
 }

@@ -67,15 +67,16 @@ describe("destinations are driven by what each adapter declares", () => {
     const opts = await screen.findAllByRole("option");
     const text = opts.map((o) => o.textContent ?? "");
     expect(text.some((t) => /Folder on this PC/.test(t) && !/not implemented/.test(t))).toBe(true);
-    for (const name of ["GitHub Pages", "Google Drive", "Direct connection", "Host from this PC"]) {
+    expect(text.some((t) => /GitHub Pages/.test(t) && !/not implemented/.test(t))).toBe(true);
+    for (const name of ["Google Drive", "Direct connection", "Host from this PC"]) {
       const o = opts.find((x) => (x.textContent ?? "").includes(name))!;
       expect(o.textContent, name).toMatch(/not implemented \(planned O\d\)/);
       expect(o.getAttribute("aria-disabled"), name).toBe("true");
     }
     // the command refuses too, even when the UI is bypassed
-    const r = await a.registry.execute("publish.addTarget", { adapterId: "github-pages", label: "x", access: "public" });
+    const r = await a.registry.execute("publish.addTarget", { adapterId: "google-drive", label: "x", access: "public" });
     expect(r.ok).toBe(false);
-    expect(!r.ok && r.message).toMatch(/not implemented yet \(planned for phase O2\)/);
+    expect(!r.ok && r.message).toMatch(/not implemented yet \(planned for phase O3\)/);
     expect(a.publish.calls.filter((c) => c.startsWith("put:"))).toEqual([]);
   });
 
@@ -432,5 +433,101 @@ describe("opening a shared report and deep links", () => {
     await act(async () => void (await a.registry.execute("package.startup")));
     const dlg = await screen.findByRole("dialog", { name: "Open a shared report" });
     expect((within(dlg).getByLabelText("Report file") as HTMLInputElement).value).toBe("C:\\Users\\ann\\Downloads\\pkg1.biforge");
+  });
+});
+
+describe("static hosting: connect an account, publish, open by link, check for updates", () => {
+  const FEED = "https://ann.github.io/site/feed.json";
+  const link = "biforge://open?src=url&url=" + encodeURIComponent(FEED);
+
+  it("asks for the data-leaving confirmation in plain words, and a token only goes to the credential store", async () => {
+    const a = makeApp();
+    withData(a);
+    render(a.element);
+    await openProject(a);
+    const dlg = await openPublish(a);
+    a.shell.settings.setOption("publish.guide.static-github-pages.hidden", true);
+    fireEvent.click(within(dlg).getByRole("combobox", { name: "Destination type" }));
+    fireEvent.click(await screen.findByRole("option", { name: /GitHub Pages/ }));
+    fireEvent.change(within(dlg).getByLabelText("Destination name"), { target: { value: "My site" } });
+    fireEvent.change(within(dlg).getByLabelText("Repository name"), { target: { value: "my-site" } });
+    fireEvent.click(within(dlg).getByRole("button", { name: "Add destination" }));
+    const sec = await within(dlg).findByRole("region", { name: "Destination My site" });
+    expect(sec.textContent).toMatch(/Account\s*Not connected/);
+    expect(a.publish.targetsByRoot.get(ROOT)![0].settings).toEqual({ repo: "my-site" });
+
+    // not connected: the steps and the token field are shown; a rejected token is not kept
+    const connect = within(dlg).getByRole("group", { name: "Connect GitHub" });
+    expect(within(connect).getByRole("list", { name: "How to get a GitHub token" }).textContent).toMatch(/Tokens \(classic\)/);
+    fireEvent.change(within(connect).getByLabelText("GitHub token"), { target: { value: "bad" } });
+    fireEvent.click(within(connect).getByRole("button", { name: "Connect GitHub" }));
+    expect((await within(connect).findByRole("alert")).textContent).toMatch(/did not accept the token/);
+    expect(a.publish.connected.has("github")).toBe(false);
+    fireEvent.change(within(connect).getByLabelText("GitHub token"), { target: { value: "ghp_good" } });
+    fireEvent.click(within(connect).getByRole("button", { name: "Connect GitHub" }));
+    await waitFor(() => expect(within(dlg).getByText(/GitHub is connected as ann/)).toBeTruthy());
+    expect(a.publish.calls).toContain("connect:github:");
+
+    // the confirmation names the public web address
+    const confirm = within(dlg).getByRole("checkbox", { name: /public web address/ });
+    const publish = within(dlg).getByRole("button", { name: "Publish" }) as HTMLButtonElement;
+    fireEvent.change(within(dlg).getByLabelText("Publisher name"), { target: { value: "Ann" } });
+    expect(publish.disabled).toBe(true);
+    fireEvent.click(confirm);
+    await waitFor(() => expect((within(dlg).getByRole("button", { name: "Publish" }) as HTMLButtonElement).disabled).toBe(false));
+    fireEvent.click(within(dlg).getByRole("button", { name: "Disconnect GitHub" }));
+    await waitFor(() => expect(a.publish.connected.has("github")).toBe(false));
+  });
+
+  it("a feed link downloads the package, shows who signed it, and Open then subscribes (pins the publisher)", async () => {
+    const a = makeApp({ withProjectOnDisk: false });
+    prepareOpened(a);
+    render(a.element);
+    await act(async () => {
+      expect((await a.registry.execute("link.open", { link })).ok).toBe(true);
+    });
+    const dlg = await screen.findByRole("dialog", { name: "Open a shared report" });
+    await waitFor(() => expect(within(dlg).getByRole("region", { name: "Package details" })).toBeTruthy());
+    expect(a.publish.calls).toContain("fetch:" + FEED);
+    expect(dlg.textContent).toContain(FEED);
+    expect(dlg.textContent).toMatch(/First time: BIForge will remember this publisher key/);
+    expect(a.session.getSnapshot().viewing).toBeNull(); // nothing opened by the link itself
+    fireEvent.click(within(dlg).getByRole("button", { name: "Open for viewing" }));
+    await waitFor(() => expect(a.session.getSnapshot().viewing?.feedUrl).toBe(FEED));
+    expect(a.publish.calls.some((c) => c.startsWith("subscribe:" + FEED))).toBe(true);
+    expect(a.publish.openedWith[0]).toEqual({ path: "C:\\Downloads\\pkg1.biforge", key: null });
+  });
+
+  it("Check for updates opens a newer version checked against the pinned publisher, or says it is up to date", async () => {
+    const a = makeApp({ withProjectOnDisk: false });
+    prepareOpened(a);
+    render(a.element);
+    await act(async () => {
+      expect((await a.registry.execute("package.open.run", { path: "C:/share/pkg1.biforge", feedUrl: FEED })).ok).toBe(true);
+    });
+    const bar = await screen.findByRole("region", { name: "Viewing mode" });
+    fireEvent.click(within(bar).getByRole("button", { name: "Check for updates" }));
+    await waitFor(() => expect(a.session.getSnapshot().lastMessage).toMatch(/is up to date \(version 4\)/));
+
+    a.publish.newer = { path: "C:\\Downloads\\pkg1.biforge", envelope: { ...a.publish.envelope, version: 5 }, existingPin: "pinned-key" };
+    a.publish.opened = { ...a.publish.opened!, manifest: { ...a.publish.opened!.manifest, version: 5 } };
+    fireEvent.click(within(bar).getByRole("button", { name: "Check for updates" }));
+    await waitFor(() => expect(a.session.getSnapshot().viewing?.version).toBe(5));
+    expect(a.publish.openedWith.at(-1)).toEqual({ path: "C:\\Downloads\\pkg1.biforge", key: null });
+    expect(a.publish.calls).toContain("opened:pkg1:5");
+    expect(a.session.getSnapshot().lastMessage).toMatch(/Updated "Sales report" to version 5/);
+  });
+
+  it("a report opened from a file has no update check", async () => {
+    const a = makeApp({ withProjectOnDisk: false });
+    prepareOpened(a);
+    render(a.element);
+    await act(async () => {
+      await a.registry.execute("package.open.run", { path: "C:/share/pkg1.biforge" });
+    });
+    const bar = await screen.findByRole("region", { name: "Viewing mode" });
+    expect(within(bar).queryByRole("button", { name: "Check for updates" })).toBeNull();
+    const r = await a.registry.execute("subscription.check", {});
+    expect(r.ok).toBe(false);
   });
 });

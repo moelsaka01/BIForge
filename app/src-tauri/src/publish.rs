@@ -202,13 +202,7 @@ impl PublishService {
             }
             let rel = format!("data/{base}.parquet");
             let out = tmp.path().join(format!("{base}.parquet.out"));
-            let cols = t.columns.iter().map(|c| format!("\"{}\"", c.replace('"', "\"\""))).collect::<Vec<_>>().join(", ");
-            let sql = format!(
-                "COPY (SELECT {cols} FROM \"{}\") TO '{}' (FORMAT PARQUET)",
-                t.table.replace('"', "\"\""),
-                out.display().to_string().replace('\\', "/").replace('\'', "''")
-            );
-            engine.connection().execute_batch(&sql).map_err(|e| format!("Could not export table \"{}\": {e}", t.table))?;
+            engine.export_parquet(&t.table, &t.columns, &out).map_err(|e| format!("Could not export table \"{}\": {e}", t.table))?;
             files.push(PackageFile { path: rel.clone(), bytes: fs::read(&out).map_err(msg)? });
             t.data_file = rel;
         }

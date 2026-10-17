@@ -45,6 +45,8 @@ export interface ViewingInfo {
   createdAt: string;
   /** Tables and columns the publisher chose to include. */
   included: { table: string; columns: string[] }[];
+  /** The feed address when the report was opened from a link or subscription (updates can be checked). */
+  feedUrl: string | null;
 }
 
 export interface SessionSnapshot {
@@ -177,7 +179,7 @@ export class Session {
    * can change it), its data snapshots are loaded into a store of their own, and nothing is added to the recent list
    * or written back.
    */
-  async openViewing(opened: OpenedPackage): Promise<void> {
+  async openViewing(opened: OpenedPackage, feedUrl: string | null = null): Promise<void> {
     const project = await this.io.openProject(opened.pbipPath);
     this.store.loadReadOnly(project);
     let dataNote = "";
@@ -205,6 +207,7 @@ export class Session {
         access: m.access,
         createdAt: m.createdAt,
         included: m.included.map((t) => ({ table: t.table, columns: t.columns })),
+        feedUrl,
       },
       pendingRecovery: null,
       dataTables: loaded,

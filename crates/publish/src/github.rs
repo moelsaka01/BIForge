@@ -18,6 +18,7 @@ use crate::deeplink;
 use crate::feed::{self, Feed, FEED_FILE};
 use crate::http::{Request, Response};
 use crate::manifest::AccessLevel;
+use crate::refresh::{self, CLI_VARIABLE, WORKFLOW_PATH};
 use crate::subscribe;
 use crate::targets::Target;
 use crate::{Error, Result};
@@ -28,6 +29,13 @@ const MARKER: &str = ".biforge-site.json";
 /// Files of a report's site that unpublishing removes. The marker and the workflow stay.
 const API: &str = "https://api.github.com";
 /// The Git Data API takes blobs up to 100 MB; the base64 form is a third larger, so stay well below.
+/// GitHub's libsodium sealed box: how a secret is encrypted for a repository's public key.
+fn seal(public_key: &[u8], message: &[u8]) -> Result<Vec<u8>> {
+    let arr: [u8; 32] = public_key.try_into().map_err(|_| Error::Adapter("GitHub's secret key has the wrong length".into()))?;
+    let pk = crypto_box::PublicKey::from(arr);
+    pk.seal(&mut crypto_box::aead::OsRng, message).map_err(|_| Error::Adapter("could not encrypt the secret".into()))
+}
+
 pub const MAX_FILE: usize = 60 * 1024 * 1024;
 
 pub struct GitHubAdapter {
@@ -96,6 +104,14 @@ impl GitHubAdapter {
             Some(a) if !a.is_empty() => Ok(a.clone()),
             _ => self.login(),
         }
+    }
+
+    /// (owner, repo, default branch) of a repository this target already published to.
+    fn site(&self, t: &Target) -> Result<(String, String, String)> {
+        let repo = Self::repo_name(t)?;
+        let owner = self.owner(t)?;
+        let info = self.expect(self.call("GET", &format!("/repos/{owner}/{repo}"), None)?, "read the repository")?;
+        Ok((owner, repo, info["default_branch"].as_str().unwrap_or("main").to_string()))
     }
 
     pub fn site_url(owner: &str, repo: &str) -> String {
@@ -307,6 +323,58 @@ impl Adapter for GitHubAdapter {
         let info = self.expect(self.call("GET", &format!("/repos/{owner}/{repo}"), None)?, "read the repository")?;
         let branch = info["default_branch"].as_str().unwrap_or("main").to_string();
         self.commit(&owner, &repo, &branch, &[], &[f.file, FEED_FILE.into(), feed::INDEX_FILE.into()], "BIForge: unpublish")
+    }
+
+    fn configure_refresh(&self, t: &Target, files: &[(String, Vec<u8>)], secrets: &[(String, String)]) -> Result<()> {
+        let (owner, repo, branch) = self.site(t)?;
+        // secrets first: a workflow without them would only fail on its first run
+        let key = self.expect(self.call("GET", &format!("/repos/{owner}/{repo}/actions/secrets/public-key"), None)?, "read the repository's secret key")?;
+        let key_id = key["key_id"].as_str().ok_or_else(|| Error::Adapter("GitHub did not return a key id".into()))?.to_string();
+        let pk = B64.decode(key["key"].as_str().unwrap_or("")).map_err(|_| Error::Adapter("GitHub's secret key is not valid".into()))?;
+        for (name, value) in secrets {
+            let sealed = seal(&pk, value.as_bytes())?;
+            let r = self.call("PUT", &format!("/repos/{owner}/{repo}/actions/secrets/{name}"), Some(&json!({"encrypted_value": B64.encode(sealed), "key_id": key_id})))?;
+            self.expect(r, "store a secret")?;
+        }
+        if let Some(url) = t.settings.get("cliUrl").filter(|u| !u.trim().is_empty()) {
+            let body = json!({"name": CLI_VARIABLE, "value": url});
+            let r = self.call("POST", &format!("/repos/{owner}/{repo}/actions/variables"), Some(&body))?;
+            if !r.ok() {
+                let r = self.call("PATCH", &format!("/repos/{owner}/{repo}/actions/variables/{CLI_VARIABLE}"), Some(&body))?;
+                self.expect(r, "set the download address of the command line")?;
+            }
+        }
+        self.commit(&owner, &repo, &branch, files, &[], "BIForge: turn on scheduled refresh")
+    }
+
+    fn disable_refresh(&self, t: &Target) -> Result<()> {
+        let (owner, repo, branch) = self.site(t)?;
+        for name in [refresh::SECRET_SIGNING, refresh::SECRET_ACCESS] {
+            let r = self.call("DELETE", &format!("/repos/{owner}/{repo}/actions/secrets/{name}"), None)?;
+            if !r.ok() && r.status != 404 {
+                return Err(Error::Adapter(format!("GitHub could not remove a secret: {}", r.describe())));
+            }
+        }
+        // remove the files that exist
+        let mut gone = Vec::new();
+        for path in [WORKFLOW_PATH, refresh::BUNDLE_FILE] {
+            if self.call("GET", &format!("/repos/{owner}/{repo}/contents/{path}"), None)?.ok() {
+                gone.push(path.to_string());
+            }
+        }
+        if gone.is_empty() {
+            return Ok(());
+        }
+        self.commit(&owner, &repo, &branch, &[], &gone, "BIForge: turn off scheduled refresh")
+    }
+
+    fn trigger_refresh(&self, t: &Target) -> Result<String> {
+        let (owner, repo, branch) = self.site(t)?;
+        let r = self.call("POST", &format!("/repos/{owner}/{repo}/actions/workflows/biforge-refresh.yml/dispatches"), Some(&json!({"ref": branch})))?;
+        if r.status != 204 {
+            return Err(Error::Adapter(format!("GitHub could not start the refresh: {}", r.describe())));
+        }
+        Ok(format!("https://github.com/{owner}/{repo}/actions"))
     }
 
     fn disconnect(&self, t: &mut Target) -> Result<()> {

@@ -2,7 +2,10 @@
 // (core/commands/publishCommands.ts) call these methods.
 import type { Session } from "../session/session";
 import { pruneForPublishing, sameSelection } from "./prune";
-import type { AccessLevel, AdapterInfo, AuditEvent, IncludedTable, Issue, Outcome, PublishApi, Target } from "./types";
+import type { AccessLevel, AdapterInfo, AuditEvent, IncludedTable, Issue, Outcome, Provider, PublishApi, Target } from "./types";
+
+/** The account behind a destination, for destinations that need one. */
+export const PROVIDER_OF: Record<string, Provider> = { "github-pages": "github", "cloudflare-pages": "cloudflare" };
 
 export interface PublishState {
   loaded: boolean;
@@ -22,9 +25,11 @@ export interface PublishState {
   outcome: (Outcome & { targetId: string; rotated: boolean }) | null;
   link: string | null;
   audit: AuditEvent[];
+  /** Providers with a stored token, with the account name the provider reported when it was connected. */
+  connected: Partial<Record<Provider, string>>;
 }
 
-const EMPTY: PublishState = { loaded: false, adapters: [], targets: [], selected: null, issues: [], available: [], chosen: [], warnings: [], busy: false, error: null, outcome: null, link: null, audit: [] };
+const EMPTY: PublishState = { loaded: false, adapters: [], targets: [], selected: null, issues: [], available: [], chosen: [], warnings: [], busy: false, error: null, outcome: null, link: null, audit: [], connected: {} };
 
 const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
@@ -64,9 +69,14 @@ export class PublishUi {
     try {
       const root = this.root;
       const [adapters, targets, audit] = await Promise.all([this.api.adapters(), this.api.targets(root), this.api.audit(root)]);
+      const connected = { ...this.snap.connected };
+      for (const p of ['github', 'cloudflare'] as Provider[]) {
+        if (await this.api.accountConnected(p)) connected[p] = connected[p] ?? '';
+        else delete connected[p];
+      }
       const available = await this.loadAvailable();
       const selected = this.snap.selected && targets.some((t) => t.id === this.snap.selected) ? this.snap.selected : (targets[0]?.id ?? null);
-      this.set({ loaded: true, adapters, targets, audit, available, chosen: available.map((t) => ({ ...t, columns: [...t.columns] })), selected, busy: false });
+      this.set({ loaded: true, connected, adapters, targets, audit, available, chosen: available.map((t) => ({ ...t, columns: [...t.columns] })), selected, busy: false });
       await this.checkSelected();
       this.recomputeWarnings();
     } catch (e) {
@@ -133,9 +143,34 @@ export class PublishUi {
     const id = `t${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
     const target: Target = { id, adapterId, label: name, settings, access, account: null, packageId: null, lastVersion: null, lastSync: null, history: [], status: "neverPublished", lastError: null };
     await this.api.putTarget(this.root, target);
+    const provider = PROVIDER_OF[adapterId];
+    if (provider && this.snap.connected[provider] !== undefined) await this.api.authenticate(this.root, id).catch(() => undefined);
     this.set({ targets: await this.api.targets(this.root) });
     await this.select(id);
     return id;
+  }
+
+  /** Stores a token after the provider accepted it. Cloudflare also needs the account id. */
+  async connect(provider: Provider, token: string, accountId?: string): Promise<string> {
+    this.set({ busy: true, error: null });
+    try {
+      const name = await this.api.accountConnect(provider, token, accountId ?? null);
+      this.set({ connected: { ...this.snap.connected, [provider]: name }, busy: false });
+      await this.checkSelected();
+      this.session.setMessage(`Connected ${provider === "github" ? "GitHub" : "Cloudflare"} as ${name}.`);
+      return name;
+    } catch (e) {
+      this.set({ busy: false, error: errText(e) });
+      throw e;
+    }
+  }
+
+  async disconnect(provider: Provider): Promise<void> {
+    await this.api.accountDisconnect(provider);
+    const next = { ...this.snap.connected };
+    delete next[provider];
+    this.set({ connected: next });
+    await this.checkSelected();
   }
 
   async removeTarget(id: string): Promise<void> {

@@ -1,0 +1,23 @@
+[package]
+name = "biforge-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "BIForge command line: headless refresh of a published report (used by the generated GitHub Actions workflow)"
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "biforge-cli"
+path = "src/main.rs"
+
+[dependencies]
+biforge-engine = { path = "../engine" }
+biforge-model = { path = "../model" }
+biforge-publish = { path = "../publish" }
+serde_json = "1"
+tempfile = "3"
+
+[dev-dependencies]
+tempfile = "3"

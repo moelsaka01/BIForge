@@ -20,6 +20,7 @@ pub mod local;
 pub mod manifest;
 pub mod package;
 pub mod publisher;
+pub mod refresh;
 pub mod subscribe;
 pub mod targets;
 pub mod time;

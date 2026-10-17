@@ -32,6 +32,11 @@ export function ViewingBar({ viewing }: { viewing: ViewingInfo }) {
       <Button size="small" onClick={() => void env.run("report.visuals.refresh")}>
         Refresh visuals
       </Button>
+      {viewing.feedUrl && (
+        <Button size="small" onClick={() => void env.run("subscription.check")}>
+          Check for updates
+        </Button>
+      )}
       <Button size="small" appearance="primary" onClick={() => void env.run("file.close")}>
         Close
       </Button>

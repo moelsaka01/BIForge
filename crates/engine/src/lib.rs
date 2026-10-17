@@ -110,6 +110,23 @@ impl Engine {
         Ok(TableInfo { name: name.into(), columns, row_count: row_count as u64 })
     }
 
+    /// Writes the chosen columns of a table to a Parquet file (the publishing snapshot).
+    pub fn export_parquet(&self, table: &str, columns: &[String], out: &Path) -> Result<()> {
+        let info = self.table_info(table)?;
+        for c in columns {
+            if !info.columns.iter().any(|x| &x.name == c) {
+                return Err(EngineError::NoSuchColumn { table: table.into(), column: c.clone() });
+            }
+        }
+        if columns.is_empty() {
+            return Err(EngineError::Source(format!("table \"{table}\" has no columns selected")));
+        }
+        let cols = columns.iter().map(|c| q(c)).collect::<Vec<_>>().join(", ");
+        let target = out.display().to_string().replace('\\', "/").replace('\'', "''");
+        self.conn.execute_batch(&format!("COPY (SELECT {cols} FROM {}) TO '{target}' (FORMAT PARQUET)", q(table)))?;
+        Ok(())
+    }
+
     pub fn drop_table(&self, name: &str) -> Result<()> {
         self.conn.execute_batch(&format!("DROP TABLE IF EXISTS {}", q(name)))?;
         self.data_changed();

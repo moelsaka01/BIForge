@@ -1,5 +1,5 @@
 // Test double for PublishApi: adapters are programmable, nothing touches a disk or the network.
-import type { AdapterInfo, AuditEvent, Capabilities, DeepLink, Envelope, Issue, OpenedPackage, Outcome, PublishApi, RemoteState, RunArgs, Target } from "../publish/types";
+import type { AdapterInfo, AuditEvent, Capabilities, DeepLink, Envelope, Issue, Linked, OpenedPackage, Outcome, Provider, PublishApi, RemoteState, RunArgs, Subscription, Target } from "../publish/types";
 
 const NONE: Capabilities = {
   implemented: false, publicAccess: false, privateAccess: false, update: false, sync: false, shareLink: false, unpublish: false, keyRotation: false,
@@ -16,13 +16,23 @@ export const fakeFolderAdapter: AdapterInfo = {
   freeTier: ["No account and no limits except the space on your disk."],
 };
 
+export const fakeGithubAdapter: AdapterInfo = {
+  id: "github-pages",
+  name: "GitHub Pages",
+  method: "staticHosting",
+  phase: "O2",
+  capabilities: { ...NONE, implemented: true, publicAccess: true, privateAccess: true, update: true, sync: true, shareLink: true, unpublish: true, keyRotation: true, versionHistory: true, scheduledRefresh: true, needsAccount: true },
+  limitations: ["The site is public: anyone with the address can download the package."],
+  freeTier: ["Free GitHub account, no payment card"],
+};
+
 export function planned(id: string, name: string, method: AdapterInfo["method"], phase: string, free: string[]): AdapterInfo {
   return { id, name, method, phase, capabilities: { ...NONE }, limitations: ["Planned."], freeTier: free };
 }
 
 export const defaultAdapters = (): AdapterInfo[] => [
   fakeFolderAdapter,
-  planned("github-pages", "GitHub Pages", "staticHosting", "O2", ["Free GitHub account, no payment card"]),
+  fakeGithubAdapter,
   planned("google-drive", "Google Drive", "personalStorage", "O3", ["Free Google account, 15 GB shared with Gmail and Photos"]),
   planned("p2p", "Direct connection (peer to peer)", "peerToPeer", "O4", ["Free; may use free public relay servers"]),
   planned("host-from-pc", "Host from this PC", "backend", "O5", ["Free; uses your PC"]),
@@ -104,10 +114,62 @@ export class FakePublish implements PublishApi {
   }
   async parseLink(link: string): Promise<DeepLink> {
     if (!link.startsWith("biforge://")) throw new Error("this is not a biforge:// link");
-    if (link.includes("src=p2p")) return { src: "p2p", path: null, supported: false };
-    return { src: "file", path: decodeURIComponent((link.split("path=")[1] ?? "").replace(/\+/g, " ")), supported: true };
+    if (link.includes("src=p2p")) return { src: "p2p", path: null, url: null, supported: false };
+    if (link.includes("src=url")) return { src: "url", path: null, url: decodeURIComponent(link.split("url=")[1] ?? ""), supported: true };
+    return { src: "file", url: null, path: decodeURIComponent((link.split("path=")[1] ?? "").replace(/\+/g, " ")), supported: true };
   }
   async startupOpen() {
     return this.startup;
+  }
+
+  connected = new Set<Provider>();
+  tokenError: string | null = null;
+  subs: Subscription[] = [];
+  /** What the next subscriptionCheck finds (null = up to date). */
+  newer: Linked | null = null;
+  linked: Linked = { path: "C:\\Downloads\\pkg1.biforge", envelope: this.envelope, existingPin: null };
+  async accountConnected(p: Provider) {
+    return this.connected.has(p);
+  }
+  async accountConnect(p: Provider, token: string, accountId?: string | null) {
+    this.calls.push(`connect:${p}:${accountId ?? ""}`);
+    if (this.tokenError || token === "bad") throw new Error(this.tokenError ?? "GitHub did not accept the token");
+    this.connected.add(p);
+    return p === "github" ? "ann" : "ann-subdomain";
+  }
+  async accountDisconnect(p: Provider) {
+    this.calls.push(`disconnect:${p}`);
+    this.connected.delete(p);
+  }
+  async authenticate(root: string, id: string) {
+    const t = (this.targetsByRoot.get(root) ?? []).find((x) => x.id === id)!;
+    t.account = "ann";
+    return structuredClone(t);
+  }
+  async linkedFetch(url: string) {
+    this.calls.push(`fetch:${url}`);
+    return this.linked;
+  }
+  async subscriptionAccept(feedUrl: string, path: string, reportName: string, key?: string | null) {
+    this.calls.push(`subscribe:${feedUrl}:${key ?? ""}`);
+    const s: Subscription = { packageId: this.envelope.packageId, feedUrl, reportName, pinnedPublisher: this.envelope.publisherPublicKey, haveVersion: this.envelope.version, lastCheck: null, lastError: null, packagePath: path };
+    this.subs = [...this.subs.filter((x) => x.packageId !== s.packageId), s];
+    return s;
+  }
+  async subscriptions() {
+    return this.subs;
+  }
+  async subscriptionRemove(id: string) {
+    this.subs = this.subs.filter((s) => s.packageId !== id);
+  }
+  async subscriptionCheck(id: string) {
+    this.calls.push(`check:${id}`);
+    return this.newer;
+  }
+  async subscriptionOpened(id: string, version: number) {
+    this.calls.push(`opened:${id}:${version}`);
+  }
+  async viewerKey() {
+    return "AGE-SECRET-KEY-1STORED";
   }
 }

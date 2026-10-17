@@ -8,6 +8,7 @@ export type GuideAction =
   | { kind: "reveal" }
   | { kind: "pickFolder" }
   | { kind: "pickPackage" }
+  | { kind: "connect"; provider: "github" | "cloudflare" }
   | { kind: "notImplemented"; phase: string };
 
 export interface GuideButton {
@@ -21,6 +22,8 @@ export interface Guide {
   id: string;
   title: string;
   paragraphs: string[];
+  /** Click-by-click steps to get the token this method needs (shown with the Connect button). */
+  steps?: string[];
   /** Shown after "How it works" is pressed. */
   howItWorks?: string[];
   /** The pop-up lists the tables and columns that will leave this computer. */
@@ -65,20 +68,35 @@ const GUIDES: Guide[] = [
   {
     id: "static-github-pages",
     title: "Publish with GitHub Pages",
-    paragraphs: [...STATIC_COMMON, "A free GitHub account is required. On the free plan GitHub Pages only serves public repositories, so a private report is a locked file in a public place."],
+    paragraphs: [...STATIC_COMMON, "A free GitHub account is required. On the free plan GitHub Pages only serves public repositories, so a private report is a locked file in a public place. BIForge makes one repository for the report (or reuses the one it made) and never touches your other repositories."],
+    steps: [
+      "Open github.com and sign in. Click your picture (top right), then Settings.",
+      "At the bottom of the left menu click Developer settings, then Personal access tokens, then Tokens (classic).",
+      "Click Generate new token, then Generate new token (classic). Name it BIForge and pick an expiry (90 days is fine).",
+      "Tick the boxes repo and workflow (workflow is only needed for scheduled refresh). Leave the others empty.",
+      "Click Generate token at the bottom, copy the token (it starts with ghp_), and paste it below. GitHub shows it only once.",
+    ],
     listsData: true,
     buttons: [
-      { id: "connect", label: "Connect GitHub", primary: true, action: { kind: "notImplemented", phase: "O2" } },
+      { id: "connect", label: "Connect GitHub", primary: true, action: { kind: "connect", provider: "github" } },
       { id: "ok", label: "Continue", action: { kind: "continue" } },
     ],
   },
   {
     id: "static-cloudflare-pages",
-    title: "Publish with Cloudflare Pages",
-    paragraphs: [...STATIC_COMMON, "A free Cloudflare account is required."],
+    title: "Publish with Cloudflare",
+    paragraphs: [...STATIC_COMMON, "A free Cloudflare account is required. The report is served from a free address of the form name.your-subdomain.workers.dev. BIForge has not been run against a real Cloudflare account yet, so the first publish may reveal problems; it will tell you."],
+    steps: [
+      "Open dash.cloudflare.com and sign in (create a free account if you have none; no card is needed).",
+      "In the left menu open Workers & Pages once. If it asks you to choose a workers.dev subdomain, pick one.",
+      "Your Account ID: on the same page, copy the Account ID shown on the right side, or open the three-dot menu next to your account name and choose Copy account ID.",
+      "Click your picture (top right), then My Profile, then API Tokens, then Create Token, then Create Custom Token.",
+      "Name it BIForge. Under Permissions choose Account, Workers Scripts, Edit. Under Account Resources choose your account. Click Continue to summary, then Create Token.",
+      "Copy the token (shown once) and paste it below together with your Account ID.",
+    ],
     listsData: true,
     buttons: [
-      { id: "connect", label: "Connect Cloudflare", primary: true, action: { kind: "notImplemented", phase: "O2" } },
+      { id: "connect", label: "Connect Cloudflare", primary: true, action: { kind: "connect", provider: "cloudflare" } },
       { id: "ok", label: "Continue", action: { kind: "continue" } },
     ],
   },

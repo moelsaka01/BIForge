@@ -9,6 +9,7 @@ use crate::audit::{self, AuditEvent};
 use crate::keys::{new_package_id, sha256_hex, AccessKey, Identity, KeyStore};
 use crate::manifest::*;
 use crate::package::{self, PackageFile};
+use crate::refresh::{self, RefreshConfig, Schedule};
 use crate::targets::{Target, TargetStatus, TargetStore};
 use crate::time::now_rfc3339;
 use crate::{Error, Result};
@@ -29,6 +30,24 @@ pub struct PublishRequest {
     pub confirmed: Vec<IncludedTable>,
     pub permissions: Vec<Permission>,
     pub files: Vec<PackageFile>,
+}
+
+#[derive(Debug)]
+pub struct RefreshRequest {
+    pub target_id: String,
+    pub report_name: String,
+    pub publisher_name: String,
+    pub included: Vec<IncludedTable>,
+    pub schedule: Schedule,
+    /// What the runner reloads: the table, the engine's source description (paths inside the bundle) and the file's
+    /// name on this PC.
+    pub sources: Vec<refresh::RefreshSource>,
+    /// The file names the user confirmed on screen; must equal the names in `sources`.
+    pub confirmed_sources: Vec<String>,
+    /// The pruned project exactly as published (paths start with project/).
+    pub project_files: Vec<PackageFile>,
+    /// The whole source files (paths start with data/src/).
+    pub source_files: Vec<PackageFile>,
 }
 
 #[derive(Debug)]
@@ -82,7 +101,16 @@ impl<'a> Publisher<'a> {
     fn run_publish(&self, req: &PublishRequest, rotate: bool) -> Result<PublishOutcome> {
         let mut target = self.store.get(&req.target_id)?;
         let (adapter, caps) = self.caps(&target)?;
-        let have_version = target.last_version.filter(|_| target.status != TargetStatus::Unpublished);
+        let mut have_version = target.last_version.filter(|_| target.status != TargetStatus::Unpublished);
+        if target.settings.contains_key("refresh") {
+            if rotate {
+                return Err(Error::Adapter("Turn off scheduled refresh before revoking access (it holds the old key), then turn it on again afterwards.".into()));
+            }
+            // the runner may have published newer versions since this PC last did
+            if let Ok(Some(remote)) = adapter.status(&target) {
+                have_version = have_version.map(|v| v.max(remote.version));
+            }
+        }
         match target.access {
             AccessLevel::Public if !caps.public_access => return Err(Error::Unsupported { adapter: adapter.info().name, operation: "public packages".into() }),
             AccessLevel::Private if !caps.private_access => return Err(Error::Unsupported { adapter: adapter.info().name, operation: "private (encrypted) packages".into() }),
@@ -165,6 +193,106 @@ impl<'a> Publisher<'a> {
                 Err(e)
             }
         }
+    }
+
+    /// Turns on scheduled refresh: the bundle (a signed, for private reports encrypted package with the project and
+    /// the whole source files) and the workflow go to the site, the signing and access keys become the runner's
+    /// secrets. `confirmed_sources` must equal the files the bundle will carry: whole source files leave this
+    /// computer, including columns that are not published.
+    pub fn enable_refresh(&self, req: &RefreshRequest) -> Result<()> {
+        let mut target = self.store.get(&req.target_id)?;
+        let (adapter, caps) = self.caps(&target)?;
+        if !caps.scheduled_refresh {
+            return Err(Error::Unsupported { adapter: adapter.info().name, operation: "scheduled refresh".into() });
+        }
+        let Some(package_id) = target.package_id.clone().filter(|_| target.status == TargetStatus::Published) else {
+            return Err(Error::Adapter("Publish the report first, then turn on scheduled refresh.".into()));
+        };
+        let mut shown: Vec<&String> = req.sources.iter().map(|s| &s.original).collect();
+        let mut confirmed: Vec<&String> = req.confirmed_sources.iter().collect();
+        shown.sort();
+        confirmed.sort();
+        if shown != confirmed {
+            return Err(Error::NotConfirmed);
+        }
+        if req.sources.is_empty() {
+            return Err(Error::Adapter("Choose at least one source file the runner can reload.".into()));
+        }
+        let signer = Identity::load_or_create(self.keys, SIGNING_KEY_NAME)?;
+        let key_name = access_key_name(&target.id);
+        let access_secret = if target.access == AccessLevel::Private {
+            Some(self.keys.get(&key_name)?.ok_or_else(|| Error::Adapter("The access key of this report is missing from the credential store.".into()))?)
+        } else {
+            None
+        };
+        let recipients = match &access_secret {
+            Some(s) => vec![AccessKey::public_of(s)?],
+            None => vec![],
+        };
+        let config = RefreshConfig {
+            format_version: 1,
+            report_name: req.report_name.clone(),
+            publisher_name: req.publisher_name.clone(),
+            package_id,
+            access: target.access,
+            included: req.included.clone(),
+            sources: req.sources.clone(),
+        };
+        let files: Vec<PackageFile> = refresh::bundle_files(&config, &req.project_files, &req.source_files)?;
+        let bundle = package::build(
+            package::BuildInput {
+                package_id: new_package_id(),
+                version: 1,
+                report_name: format!("{} (refresh bundle)", req.report_name),
+                publisher_name: req.publisher_name.clone(),
+                access: target.access,
+                included: vec![],
+                permissions: vec![],
+                created_at: now_rfc3339(),
+                files,
+                recipients,
+            },
+            &signer,
+        )?;
+        let site_files = vec![
+            (refresh::WORKFLOW_PATH.to_string(), refresh::workflow_yaml(req.schedule).into_bytes()),
+            (refresh::BUNDLE_FILE.to_string(), bundle),
+            (".gitignore".to_string(), refresh::GITIGNORE.as_bytes().to_vec()),
+        ];
+        let mut secrets = vec![(refresh::SECRET_SIGNING.to_string(), signer.secret())];
+        if let Some(s) = access_secret {
+            secrets.push((refresh::SECRET_ACCESS.to_string(), s));
+        }
+        adapter.configure_refresh(&target, &site_files, &secrets)?;
+        target.settings.insert("refresh".into(), req.schedule.as_str().into());
+        self.store.put(target.clone())?;
+        self.event(&target, "enable-refresh", format!("{}, sources: {}", req.schedule.as_str(), req.sources.iter().map(|s| s.original.clone()).collect::<Vec<_>>().join(", ")));
+        Ok(())
+    }
+
+    pub fn disable_refresh(&self, target_id: &str) -> Result<()> {
+        let mut target = self.store.get(target_id)?;
+        let (adapter, caps) = self.caps(&target)?;
+        if !caps.scheduled_refresh {
+            return Err(Error::Unsupported { adapter: adapter.info().name, operation: "scheduled refresh".into() });
+        }
+        adapter.disable_refresh(&target)?;
+        target.settings.remove("refresh");
+        self.store.put(target.clone())?;
+        self.event(&target, "disable-refresh", "workflow, bundle and secrets removed from the site".into());
+        Ok(())
+    }
+
+    /// Starts one refresh on the runner now; returns the address where it can be watched.
+    pub fn refresh_now(&self, target_id: &str) -> Result<String> {
+        let target = self.store.get(target_id)?;
+        let (adapter, caps) = self.caps(&target)?;
+        if !caps.scheduled_refresh || !target.settings.contains_key("refresh") {
+            return Err(Error::Adapter("Scheduled refresh is not turned on for this destination.".into()));
+        }
+        let url = adapter.trigger_refresh(&target)?;
+        self.event(&target, "refresh-now", format!("started: {url}"));
+        Ok(url)
     }
 
     pub fn status(&self, target_id: &str) -> Result<Option<RemoteState>> {

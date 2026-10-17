@@ -13,7 +13,8 @@ use biforge_publish::http::{Http, Request, Response};
 use biforge_publish::keys::{KeyStore, MemoryKeyStore};
 use biforge_publish::manifest::{AccessLevel, IncludedTable};
 use biforge_publish::package::{self, OpenOptions, PackageFile};
-use biforge_publish::publisher::{PublishRequest, Publisher};
+use biforge_publish::publisher::{PublishRequest, Publisher, RefreshRequest};
+use biforge_publish::refresh::{RefreshSource, Schedule};
 use biforge_publish::subscribe;
 use biforge_publish::targets::{Target, TargetStatus, TargetStore};
 use serde_json::{json, Value};
@@ -39,16 +40,21 @@ struct GhState {
     commits: Vec<String>,
     head: String,
     log: Vec<String>,
+    secrets: BTreeMap<String, String>,
+    vars: BTreeMap<String, String>,
+    dispatched: u32,
 }
 
 struct FakeGitHub {
     s: Mutex<GhState>,
+    /// GitHub's repository secret key pair: secrets arrive sealed for its public half.
+    sk: crypto_box::SecretKey,
 }
 
 impl FakeGitHub {
     fn new() -> Arc<Self> {
         let s = GhState { head: "c0".into(), ..GhState::default() };
-        Arc::new(Self { s: Mutex::new(s) })
+        Arc::new(Self { s: Mutex::new(s), sk: crypto_box::SecretKey::generate(&mut crypto_box::aead::OsRng) })
     }
 }
 
@@ -87,10 +93,31 @@ impl Http for FakeGitHub {
                 Some(b) => ok(json!({"content": B64.encode(b)})),
                 None => status(404, json!({})),
             },
-            ("GET", "/repos/ann/site/contents/feed.json") => match s.files.get("feed.json") {
+            ("GET", q) if q.starts_with("/repos/ann/site/contents/") => match s.files.get(&q["/repos/ann/site/contents/".len()..]) {
                 Some(b) => ok(json!({"content": B64.encode(b)})),
                 None => status(404, json!({})),
             },
+            ("GET", "/repos/ann/site/actions/secrets/public-key") => ok(json!({"key_id": "k1", "key": B64.encode(self.sk.public_key().as_bytes())})),
+            ("PUT", q) if q.starts_with("/repos/ann/site/actions/secrets/") => {
+                assert_eq!(body["key_id"], json!("k1"));
+                let sealed = B64.decode(body["encrypted_value"].as_str().unwrap()).unwrap();
+                let plain = self.sk.unseal(&sealed).expect("the secret is a valid sealed box for the repository key");
+                s.secrets.insert(q.rsplit('/').next().unwrap().to_string(), String::from_utf8(plain).unwrap());
+                status(201, json!({}))
+            }
+            ("DELETE", q) if q.starts_with("/repos/ann/site/actions/secrets/") => {
+                s.secrets.remove(q.rsplit('/').next().unwrap());
+                status(204, json!({}))
+            }
+            ("POST", "/repos/ann/site/actions/variables") => {
+                s.vars.insert(body["name"].as_str().unwrap().into(), body["value"].as_str().unwrap().into());
+                status(201, json!({}))
+            }
+            ("POST", "/repos/ann/site/actions/workflows/biforge-refresh.yml/dispatches") => {
+                assert!(s.files.contains_key(".github/workflows/biforge-refresh.yml"), "the workflow exists before it is started");
+                s.dispatched += 1;
+                status(204, json!({}))
+            }
             ("GET", "/repos/ann/site/pages") if s.pages => ok(json!({"html_url": "https://ann.github.io/site"})),
             ("GET", "/repos/ann/site/pages") => status(404, json!({})),
             ("POST", "/repos/ann/site/pages") => {
@@ -243,6 +270,98 @@ fn github_publish_update_status_link_unpublish_and_key_rotation() {
     assert!(subscribe::fetch_feed(gh.as_ref(), &url).unwrap_err().to_string().contains("Nothing is published"));
     p.publish(&request("t1", "four")).unwrap();
     assert!(p.status("t1").unwrap().is_some());
+}
+
+fn refresh_request(schedule: Schedule, project_files: Vec<PackageFile>) -> RefreshRequest {
+    RefreshRequest {
+        target_id: "t1".into(),
+        report_name: "Demo".into(),
+        publisher_name: "Ann".into(),
+        included: tables(),
+        schedule,
+        sources: vec![RefreshSource { table: "Sales".into(), spec: json!({"kind": "csv", "path": "data/src/sales.csv"}), original: "C:\\data\\sales.csv".into() }],
+        confirmed_sources: vec!["C:\\data\\sales.csv".into()],
+        project_files,
+        source_files: vec![PackageFile { path: "data/src/sales.csv".into(), bytes: b"City,Amount\nParis,1\n".to_vec() }],
+    }
+}
+
+#[test]
+fn github_scheduled_refresh_writes_the_workflow_and_bundle_seals_the_secrets_and_can_be_turned_off() {
+    let gh = FakeGitHub::new();
+    let r = rig(gh.clone(), None);
+    let mut t = Target::new("t1", github::ID, "site", AccessLevel::Private);
+    t.settings.insert("repo".into(), "site".into());
+    t.settings.insert("cliUrl".into(), "https://example.com/biforge-cli.exe".into());
+    r.store.put(t).unwrap();
+    let p = Publisher { registry: &r.reg, keys: r.keys.as_ref(), store: &r.store };
+    let project = vec![PackageFile { path: "project/Demo.pbip".into(), bytes: b"{}".to_vec() }];
+
+    // not published yet / not confirmed / not supported by the folder adapter
+    assert!(p.enable_refresh(&refresh_request(Schedule::Daily, project.clone())).unwrap_err().to_string().contains("Publish the report first"));
+    let out = p.publish(&request("t1", "one")).unwrap();
+    let key = out.new_access_key.unwrap();
+    let mut unconfirmed = refresh_request(Schedule::Daily, project.clone());
+    unconfirmed.confirmed_sources = vec![];
+    assert!(matches!(p.enable_refresh(&unconfirmed), Err(biforge_publish::Error::NotConfirmed)));
+    assert!(gh.s.lock().unwrap().secrets.is_empty(), "nothing was stored before the confirmation matched");
+
+    p.enable_refresh(&refresh_request(Schedule::Daily, project.clone())).unwrap();
+    {
+        let s = gh.s.lock().unwrap();
+        let yml = String::from_utf8(s.files[".github/workflows/biforge-refresh.yml"].clone()).unwrap();
+        assert!(yml.contains("cron: \"17 5 * * *\"") && yml.contains("secrets.BIFORGE_ACCESS_KEY"));
+        assert!(s.files[".gitignore"].starts_with(b"# BIForge refresh"));
+        // the secrets arrived through a real sealed box: the signing key is the publisher's, the access key is the report's
+        assert_eq!(s.secrets["BIFORGE_ACCESS_KEY"], key);
+        let signing = s.secrets["BIFORGE_SIGNING_KEY"].clone();
+        assert_eq!(biforge_publish::keys::Identity::from_secret(&signing).unwrap().public_key(), package::peek(&s.files[&format!("{}.biforge", r.store.get("t1").unwrap().package_id.unwrap())], None).unwrap().publisher_public_key);
+        assert_eq!(s.vars["BIFORGE_CLI_URL"], "https://example.com/biforge-cli.exe");
+        // the bundle is an encrypted package: the source file and the project are not readable without the key
+        let bundle = &s.files["refresh.bundle"];
+        assert!(!String::from_utf8_lossy(bundle).contains("Paris"));
+        assert!(package::open(bundle, &OpenOptions::default()).is_err());
+        let opened = package::open(bundle, &OpenOptions { access_key: Some(key.clone()), expected_publisher: None }).unwrap();
+        assert!(opened.files.contains_key("data/refresh.json") && opened.files.contains_key("data/src/sales.csv") && opened.files.contains_key("project/Demo.pbip"));
+    }
+    assert_eq!(r.store.get("t1").unwrap().settings["refresh"], "daily");
+
+    // revoking is refused while the runner holds the old key; a manual publish continues after the runner's versions
+    assert!(p.rotate_key(&request("t1", "x")).unwrap_err().to_string().contains("Turn off scheduled refresh"));
+    {
+        // the runner published version 5 meanwhile
+        let mut s = gh.s.lock().unwrap();
+        let mut f: biforge_publish::feed::Feed = serde_json::from_slice(&s.files["feed.json"]).unwrap();
+        f.version = 5;
+        s.files.insert("feed.json".into(), serde_json::to_vec(&f).unwrap());
+    }
+    assert_eq!(p.publish(&request("t1", "two")).unwrap().state.version, 6, "the next manual version follows the runner's");
+
+    assert!(p.refresh_now("t1").unwrap().ends_with("/actions"));
+    assert_eq!(gh.s.lock().unwrap().dispatched, 1);
+
+    p.disable_refresh("t1").unwrap();
+    {
+        let s = gh.s.lock().unwrap();
+        assert!(s.secrets.is_empty());
+        assert!(!s.files.contains_key(".github/workflows/biforge-refresh.yml") && !s.files.contains_key("refresh.bundle"));
+        assert!(s.files.contains_key("feed.json"), "the published report stays");
+    }
+    assert!(r.store.get("t1").unwrap().settings.get("refresh").is_none());
+    assert!(p.refresh_now("t1").is_err());
+    // key rotation works again
+    assert!(p.rotate_key(&request("t1", "three")).is_ok());
+}
+
+#[test]
+fn the_folder_and_cloudflare_cannot_do_scheduled_refresh() {
+    let r = rig(FakeGitHub::new(), None);
+    let mut t = Target::new("t1", biforge_publish::local::ID, "f", AccessLevel::Public);
+    t.settings.insert("folder".into(), "C:\\x".into());
+    r.store.put(t).unwrap();
+    let p = Publisher { registry: &r.reg, keys: r.keys.as_ref(), store: &r.store };
+    assert!(matches!(p.enable_refresh(&refresh_request(Schedule::Daily, vec![])), Err(biforge_publish::Error::Unsupported { .. })));
+    assert!(matches!(p.disable_refresh("t1"), Err(biforge_publish::Error::Unsupported { .. })));
 }
 
 #[test]
