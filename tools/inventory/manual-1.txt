@@ -53,9 +53,9 @@ D | Exit
 N | Recover unsaved files list (autorecovery folder)
 ## 4. Report view ribbon: Home tab
 ### Clipboard
-N | Paste
-N | Cut
-N | Copy
+D | Paste
+D | Cut
+D | Copy
 N | Format painter
 ### Data
 D | Get data menu
@@ -70,7 +70,7 @@ N | Transform data menu: Edit parameters
 D | Refresh
 ### Insert
 D | New visual
-N | Text box
+D | Text box
 N | More visuals (from file)
 ### Calculations
 D | New measure
@@ -92,11 +92,11 @@ N | Forecast
 N | Sparklines
 N | Paginated report visual (local .rdl)
 ### Elements
-N | Text box
-N | Buttons gallery (back, information, help, Q&A, bookmark, page navigation, blank, reset, previous, next, clear all slicers, apply all slicers)
-N | Shapes gallery (rectangle, rounded rectangle, oval, line, arrow, triangle, ...)
-N | Image
-N | Page navigator
+D | Text box
+P | Buttons gallery (back, information, help, Q&A, bookmark, page navigation, blank, reset, previous, next, clear all slicers, apply all slicers)
+P | Shapes gallery (rectangle, rounded rectangle, oval, line, arrow, triangle, ...)
+D | Image
+D | Page navigator
 N | Bookmark navigator
 ## 6. Report view ribbon: Modeling tab
 ### Relationships
@@ -144,8 +144,8 @@ N | Lock objects
 ### Show panes
 D | Filters pane
 D | Bookmarks pane
-N | Selection pane
-N | Sync slicers pane
+D | Selection pane
+D | Sync slicers pane
 N | Performance analyzer pane
 D | Data pane
 D | Format pane
@@ -174,10 +174,10 @@ N | Align (left, center, right, top, middle, bottom)
 N | Distribute horizontally / vertically
 N | Group / Ungroup
 D | Bring forward / Send backward (to front / to back)
-N | Selection pane
+D | Selection pane
 D | Size and position
 N | Format painter
-N | Alt text
+D | Alt text
 ### Data/Drill tab (visual selected)
 D | Drill down / Drill up
 D | Expand all down one level
@@ -191,9 +191,9 @@ N | Spotlight
 N | Focus mode
 N | Copy visual as image
 ### Shape / Text box / Image tabs
-N | Shape fill, outline, effects, rotation
-N | Text box font, size, bold, italic, underline, color, alignment, bullets, link
-N | Image scaling and fit
+P | Shape fill, outline, effects, rotation
+P | Text box font, size, bold, italic, underline, color, alignment, bullets, link
+D | Image scaling and fit
 ### Table tools (Table view)
 D | Mark as date table
 N | New column
@@ -217,16 +217,16 @@ D | Page size (16:9, 4:3, Letter, Tooltip, Custom)
 D | Page background
 D | Visual frames: drag, resize (8 handles), nudge, delete, z-order, duplicate
 D | Zoom: fit, 50%, 75%, 100%, 150%
-N | Multi-selection with rubber band and Shift/Ctrl click
-N | Align and distribute with smart guides
+D | Multi-selection with rubber band and Shift/Ctrl click
+P | Align and distribute with smart guides
 N | Group visuals and nested groups
-N | Copy and paste visuals between pages and reports
-N | Rotation (shapes, images, text box)
-N | Selection pane (rename, show/hide, reorder, tab order)
+D | Copy and paste visuals between pages and reports
+D | Rotation (shapes, images, text box)
+P | Selection pane (rename, show/hide, reorder, tab order)
 N | Wallpaper and canvas background image
 N | Gridlines, snap to grid, lock objects
 N | Mobile layout canvas (phone portrait)
-N | Alt text for visuals
+D | Alt text for visuals
 N | Tab order
 N | Per-visual header icons (focus mode, more options, filters)
 ### Interactions
@@ -235,7 +235,7 @@ D | Edit interactions: filter / highlight / none
 D | Drill down / drill up / next level / expand all
 D | Drillthrough to pages with Back button
 D | Report-page tooltips
-N | Sync slicers across pages
+D | Sync slicers across pages
 N | Hierarchy slicer
 N | Show data point as a table / See records
 N | Spotlight

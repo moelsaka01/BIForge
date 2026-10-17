@@ -9,10 +9,10 @@ D | 100% stacked column chart
 D | Line chart
 D | Area chart
 D | Stacked area chart
-N | 100% stacked area chart
+D | 100% stacked area chart
 D | Line and stacked column chart
 D | Line and clustered column chart
-N | Ribbon chart
+D | Ribbon chart
 D | Waterfall chart
 D | Funnel chart
 D | Scatter chart (bubble)
@@ -51,23 +51,23 @@ N | Table/matrix: conditional formatting icons
 N | Table/matrix: web URL formatting
 N | Table/matrix: cell elements (data bars, icons, web URL, field value)
 ### Non-data visuals
-N | Text box
-N | Shape
-N | Image
-N | Button
-N | Page navigator
+D | Text box
+D | Shape
+D | Image
+D | Button
+D | Page navigator
 N | Bookmark navigator
 ### Analytics pane
-N | Constant line
-N | Min line
-N | Max line
-N | Average line
-N | Median line
-N | Percentile line
+D | Constant line
+D | Min line
+D | Max line
+D | Average line
+D | Median line
+D | Percentile line
 N | X-axis constant line
 N | Y-axis constant line
 N | Symmetry shading
-N | Trend line
+D | Trend line
 N | Error bars
 N | Forecast
 N | Find anomalies
@@ -525,8 +525,8 @@ N | Calculation group editor
 N | Field parameters dialog
 N | Hierarchy editor
 N | Mobile layout tools
-N | Selection pane
-N | Sync slicers pane
+D | Selection pane
+D | Sync slicers pane
 N | Relative date filter dialog
 N | Data bars dialog
 N | Icons dialog
@@ -550,10 +550,10 @@ N | Ctrl+P print
 N | Ctrl+Z undo
 N | Ctrl+Y redo
 N | Ctrl+C copy
-N | Ctrl+X cut
+D | Ctrl+X cut
 N | Ctrl+V paste
 N | Ctrl+A select all
-N | Delete delete selection
+D | Delete delete selection
 N | F11 full screen
 N | Alt+key tips for tabs and commands
 D | Alt key tips for tabs and main controls
@@ -603,7 +603,7 @@ N | Screen reader names for ribbon, panes and visuals
 N | High-contrast mode
 N | Focus indicators
 N | Text scaling
-N | Alt text and tab order for visuals
+P | Alt text and tab order for visuals
 N | Localization of UI strings
 D | Windows window smoke test
 N | Installer (NSIS)

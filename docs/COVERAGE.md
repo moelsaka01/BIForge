@@ -78,7 +78,7 @@ Last updated: 2026-10-17, after the scope-change session was completed (see PROG
 | Reports | Format pane (Visual and General tabs, search): legend, axes, data labels, colors, line styles, slices, totals, slicer settings, title, background, border, shadow, tooltip, size and position | Done-tested; a test checks that every listed setting is read by a renderer. One Format pane serves both shells. **Not started:** on-object formatting (Modern shell, Phase 6), per-category data colors, font family choice, number format string editing |
 | Reports | Number display: format strings of columns and measures, display units, decimals | Done-tested (numberFormat.test.ts: custom numeric formats, sections, percent, scaling commas, scientific). Date format strings are not interpreted (dates show as the engine prints them) |
 | Reports | Report-level performance | Partial: the loaded DAX engine is reused while model and data are unchanged (a query on the fixture drops from ~135 ms to ~0-40 ms in a debug build). First load of a large model, queries over large tables and a page of many visuals have not been measured |
-| Reports | Text boxes, shapes, images, buttons, page navigation, sync slicers, Selection pane, mobile layout, personalize visuals, export data | Not started |
+| Reports | Text box, shape (5 kinds, fill, outline, rotation), image (file to data URI, scaling, alt text), button (blank/back/bookmark/page/web URL actions), page navigator, multi-select (Shift/Ctrl click, rubber band, Ctrl+A), align/distribute, cut/copy/paste (also across reports through the system clipboard), Selection pane (rename, hide, order), Sync slicers pane, Analytics (constant/min/max/average/median/percentile lines, trend line), ribbon chart, 100% stacked area | Partial, Done-tested (core/report/{staticVisuals,arrange,analytics}.test.ts, commands/{staticVisual,arrange}Commands.test.ts, syncSlicers.test.ts, views/report/{staticVisuals,multiSelect,panes,analytics}.ui.test.tsx). Not started: groups, smart guides, mobile layout, personalize visuals, export data, tab order, bookmark buttons in viewing mode. Alt text (`altText`), Selection-pane names (annotation `biforge.displayName`) and the analytics lines use BIForge-specific names that Desktop ignores |
 | Interop | TMDL parser and printer (generic syntax, canonical output) | Done-tested (16 tests in crates/model/tests/tmdl_roundtrip.rs; hand-written fixtures from the public spec) |
 | Interop | TMDL files written by Power BI Desktop parse and round-trip | Not started (no Desktop-written samples tested yet; planned Phase 7) |
 | Interop | PBIP-shaped project open / save / new (TMDL model + PBIR JSON report) | Done-tested on a hand-written sample (crates/model/tests/project.rs, 15 tests: unmanaged files untouched, unchanged files not rewritten, failed save leaves files intact) |
@@ -97,7 +97,7 @@ Last updated: 2026-10-17, after the scope-change session was completed (see PROG
 | UI | Data view: virtualized grid, column types, sort | Done-tested (jsdom, 100,000-row fake engine). Single-column sort, read-only; no column resize. Decimal numbers use the default General format (format.test.ts); dates still show DuckDB text, not the Power BI locale format |
 | UI | Model view: table cards, drag-to-create relationship, edit panel | Done-tested (jsdom drag events). Cards sit in an automatic grid: no moving, zoom or hiding columns |
 | UI | Report view (canvas, page tabs, Filters, Visualizations, Data panes) laid out like the Desktop reference | Done-tested (jsdom: shell.ui.test.tsx, reportView*.test.tsx) and looked at in a browser against the real engine. Panes collapse to a rail with the » and « arrows, resize from their edge (pointer or arrow keys) and are remembered per shell. Docking is fixed per shell (Classic: three panes on the right; Modern: Data left, one switcher sidebar right); dragging a pane to another side is not implemented |
-| UI | Ribbon bound to command ids | Done-tested (core/shell/ribbon.ts, shell.test.ts, shell.ui.test.tsx). Tabs, groups and controls are data; every control names a registered command or says why it does nothing (Not yet implemented / Deferred) and is drawn disabled. Real: Home, Insert, Modeling, View, Help, Design (Modern), Format and Data / Drill (visual selected), Table tools, plus the Model, DAX query and TMDL views. Alt key tips for tabs and the main controls. Not implemented (shown disabled): Cut/Copy/Paste, Format painter, Enter data, Recent sources, Text box, buttons, shapes, images, more visuals, quick measure, new column, calculation groups, roles, Q&A, gridlines, snap, lock, mobile layout, Selection and Sync slicers panes, Performance analyzer, Align, Group, Mark as date table. Save as, Import (theme), Export (project copy, theme) and the Optimize tab (pause / refresh visuals) work. Cloud items are excluded, not shown. Ribbon search (title bar) finds the commands of the current ribbon |
+| UI | Ribbon bound to command ids | Done-tested (core/shell/ribbon.ts, shell.test.ts, shell.ui.test.tsx). Tabs, groups and controls are data; every control names a registered command or says why it does nothing (Not yet implemented / Deferred) and is drawn disabled. Real: Home, Insert, Modeling, View, Help, Design (Modern), Format and Data / Drill (visual selected), Table tools, plus the Model, DAX query and TMDL views. Alt key tips for tabs and the main controls. Not implemented (shown disabled): Format painter, Enter data, Recent sources, more visuals, quick measure, new column, calculation groups, roles, Q&A, gridlines, snap, lock, mobile layout, Performance analyzer, Group, Mark as date table. Save as, Import (theme), Export (project copy, theme) and the Optimize tab (pause / refresh visuals) work. Cloud items are excluded, not shown. Ribbon search (title bar) finds the commands of the current ribbon |
 | UI | Classic shell | Done-tested (shell.ui.test.tsx): multi-line ribbon, Filters, Visualizations and Data panes side by side on the right, dark title bar. Layout only: it uses the same commands, views and document as Modern |
 | UI | Modern shell | Done-tested (shell.ui.test.tsx): single-line ribbon (labels shown only on wide windows) with a Design tab that holds the themes, Data pane on the left, one sidebar with Visualizations / Filters / Bookmarks tabs, light title bar. **On-object formatting, which Desktop turns on with this layout, is not implemented**, and the Modern Power Query editor is not started (see above) |
 | UI | Per-shell layout persistence | Done-tested (shell.test.ts, shell.ui.test.tsx): ribbon collapsed, ribbon mode, pane open state and widths, shell choice, theme and recent projects are stored in the window's local storage, separately for each shell, never in the project. Switching shell or theme leaves the document untouched (tested). Only the real window's storage was not tried by hand |
@@ -124,16 +124,16 @@ Last updated: 2026-10-17, after the scope-change session was completed (see PROG
 | Start screen | 12 | 7 | 1 | 4 |
 | Title bar and window | 13 | 9 | 0 | 4 |
 | File menu and backstage | 20 | 10 | 1 | 9 |
-| Report view ribbon: Home tab | 19 | 5 | 0 | 14 |
-| Report view ribbon: Insert tab | 19 | 2 | 0 | 17 |
+| Report view ribbon: Home tab | 19 | 9 | 0 | 10 |
+| Report view ribbon: Insert tab | 19 | 5 | 2 | 12 |
 | Report view ribbon: Modeling tab | 22 | 3 | 0 | 19 |
-| Report view ribbon: View tab | 19 | 7 | 1 | 11 |
+| Report view ribbon: View tab | 19 | 9 | 1 | 9 |
 | Report view ribbon: Optimize tab | 4 | 2 | 0 | 2 |
 | Report view ribbon: Help tab | 5 | 1 | 0 | 4 |
 | Report view ribbon: External Tools tab | 2 | 0 | 0 | 2 |
-| Report view contextual tabs | 35 | 9 | 0 | 26 |
-| Report canvas and page features | 53 | 17 | 0 | 36 |
-| Visuals | 76 | 24 | 0 | 52 |
+| Report view contextual tabs | 35 | 12 | 2 | 21 |
+| Report canvas and page features | 53 | 22 | 2 | 29 |
+| Visuals | 76 | 38 | 0 | 38 |
 | Table view | 18 | 3 | 0 | 15 |
 | Model view | 23 | 3 | 2 | 18 |
 | DAX query view | 15 | 2 | 0 | 13 |
@@ -145,14 +145,14 @@ Last updated: 2026-10-17, after the scope-change session was completed (see PROG
 | Get data: connectors | 47 | 7 | 0 | 40 |
 | Options dialog: Global | 61 | 4 | 0 | 57 |
 | Options dialog: Current File | 23 | 0 | 0 | 23 |
-| Dialogs | 48 | 10 | 0 | 38 |
-| Keyboard shortcuts | 37 | 4 | 0 | 33 |
+| Dialogs | 48 | 12 | 0 | 36 |
+| Keyboard shortcuts | 37 | 6 | 0 | 31 |
 | Export, print and file formats | 15 | 2 | 0 | 13 |
-| Accessibility and platform | 12 | 1 | 0 | 11 |
-| Format pane cards per visual | 1264 | 0 | 222 | 1042 |
+| Accessibility and platform | 12 | 1 | 1 | 10 |
+| Format pane cards per visual | 1264 | 0 | 274 | 990 |
 | DAX functions | 317 | 268 | 0 | 49 |
 | M standard library | 652 | 120 | 0 | 532 |
-| **Total** | **3008** | **569** | **228** | **2211** |
+| **Total** | **3008** | **604** | **287** | **2117** |
 <!-- inventory-status:end -->
 
 ## Online track (Publish & Share; plan in docs/ONLINE_PLAN.md)
