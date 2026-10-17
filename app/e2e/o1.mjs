@@ -67,9 +67,27 @@ try {
   // 1b. the Phase 7 objects and panes in the real window: text box, map from the bundled outlines, Format pane, group, Selection pane
   const frames = () => page.locator("[data-visual]");
   await page.waitForTimeout(1500);
+  // group two cards (done first: the new objects below would cover them) from the Format tab, then see the group in the Selection pane
+  const cards = page.locator('[aria-label="Visual: Card"]');
+  await cards.nth(0).click({ position: { x: 5, y: 5 } });
+  await cards.nth(1).click({ modifiers: ["Control"], position: { x: 5, y: 5 } });
+  await page.getByRole("tab", { name: "Format", exact: true }).click();
+  await page.getByRole("button", { name: "Group", exact: true }).click();
+  await page.getByRole("menuitem", { name: /^Group \(Ctrl\+G\)/ }).click();
+  await page.getByRole("tab", { name: "View", exact: true }).click();
+  await page.getByRole("button", { name: "Selection", exact: true }).click();
+  const tree = page.getByRole("tree", { name: "Visuals and groups" });
+  await tree.waitFor();
+  check((await page.getByRole("treeitem", { name: /Group/ }).count()) > 0, "Group creates a group that the Selection pane lists");
+  await page.screenshot({ path: join(work, "editing.png") });
+  await page.getByRole("tab", { name: "Home", exact: true }).click();
   const before = await frames().count();
   await page.getByRole("button", { name: "Text box", exact: true }).click();
   check((await frames().count()) === before + 1, "Text box adds an object to the page");
+  // a click on empty page area clears the selection, so that the Visualizations pane offers the gallery again
+  const surface = page.locator('[aria-label^="Page Page"]').first();
+  const sb = await surface.boundingBox();
+  await page.mouse.click(sb.x + sb.width - 8, sb.y + sb.height - 8);
   await page.getByRole("button", { name: "Map", exact: true }).click();
   check((await frames().count()) === before + 2, "the Map gallery button adds a map visual");
   const mapBox = await frames().last().boundingBox();
@@ -93,19 +111,6 @@ try {
   await bubble.press("Tab");
   await page.waitForTimeout(500);
   check((await bubble.inputValue()) === "40", "a typed Format pane control keeps its value");
-  // group two visuals from the Format tab, then see the group in the Selection pane
-  await frames().nth(1).click({ position: { x: 5, y: 5 } });
-  await frames().nth(2).click({ modifiers: ["Control"], position: { x: 5, y: 5 } });
-  await page.getByRole("tab", { name: "Format", exact: true }).click();
-  await page.getByRole("button", { name: "Group", exact: true }).click();
-  await page.getByRole("menuitem", { name: /^Group \(Ctrl\+G\)/ }).click();
-  await page.getByRole("tab", { name: "View", exact: true }).click();
-  await page.getByRole("button", { name: "Selection", exact: true }).click();
-  const tree = page.getByRole("tree", { name: "Visuals and groups" });
-  await tree.waitFor();
-  check((await page.getByRole("treeitem", { name: /Group/ }).count()) > 0, "Group creates a group that the Selection pane lists");
-  await page.screenshot({ path: join(work, "editing.png") });
-  await page.getByRole("tab", { name: "Home", exact: true }).click();
 
   // 2. Publish & Share to the folder adapter
   await page.getByRole("button", { name: /Publish & Share/ }).first().click();
