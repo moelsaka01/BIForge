@@ -177,6 +177,20 @@ pub fn engine_odbc_drivers() -> Result<Vec<String>, String> {
     biforge_engine::odbc_drivers().map_err(msg)
 }
 #[tauri::command]
+pub fn engine_credential_exists(state: tauri::State<DataService>, spec: SourceSpec) -> Result<bool, String> {
+    match spec.credential_key() {
+        Some(k) => Ok(state.creds.get(&k).map_err(msg)?.is_some()),
+        None => Ok(false),
+    }
+}
+#[tauri::command]
+pub fn engine_clear_credential(state: tauri::State<DataService>, spec: SourceSpec) -> Result<(), String> {
+    match spec.credential_key() {
+        Some(k) => state.creds.delete(&k).map_err(msg),
+        None => Ok(()),
+    }
+}
+#[tauri::command]
 pub fn engine_set_credential(state: tauri::State<DataService>, spec: SourceSpec, secret: String) -> Result<(), String> {
     state.set_credential(&spec, &secret)
 }

@@ -4,6 +4,7 @@ import type { Project, SaveReport } from "../model/types";
 import type { EngineApi, SourceSpec } from "../data/types";
 import { applyImport, getTableSource, importedTables } from "../model/tables";
 import { listTables, deleteTable } from "../model/ops";
+import { listDataSources, withLocation, type SourceLocation } from "../data/dataSources";
 import { QueryDraft } from "../queries/draft";
 import type { MApi } from "../queries/types";
 import { applyQueryLoad, expressionExists, listQueries, queryTexts, removeExpression, upsertExpression, userMTables } from "../queries/queries";
@@ -387,6 +388,31 @@ export class Session {
       `${created ? "Imported" : "Refreshed"} "${info.name}": ${info.rowCount} rows, ${info.columns.length} columns.` +
         (removed.length ? ` ${removed.length} relationship(s) removed because their columns no longer exist.` : ""),
     );
+  }
+
+  /** Points every table that reads from the data source `id` at a new location and refreshes them (a table whose refresh fails keeps its old data). */
+  async changeDataSource(id: string, loc: SourceLocation): Promise<void> {
+    const p = this.store.project;
+    if (!p) throw new Error("Open or create a project first.");
+    const src = listDataSources(p).find((x) => x.id === id);
+    if (!src) throw new Error("That data source is no longer used by any table.");
+    const next = src.tables.map((t) => {
+      const r = withLocation(getTableSource(p, t)!, loc);
+      if ("error" in r) throw new Error(r.error);
+      return [t, r] as const;
+    });
+    for (const [t, spec] of next) await this.importTable(t, spec);
+  }
+
+  /** Stores (or with null removes) the password or token of a data source in the credential store. */
+  async setDataSourceSecret(id: string, secret: string | null): Promise<void> {
+    const p = this.store.project;
+    const src = p ? listDataSources(p).find((x) => x.id === id) : undefined;
+    if (!src) throw new Error("That data source is no longer used by any table.");
+    if (!src.hasSecret) throw new Error("This kind of data source has no stored password.");
+    const engine = this.requireEngine();
+    if (secret === null) await engine.clearCredential(src.spec);
+    else await engine.setCredential(src.spec, secret);
   }
 
   async refreshTable(name: string): Promise<void> {

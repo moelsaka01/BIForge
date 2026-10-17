@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Button, Checkbox, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, Input, Select, Textarea } from "@fluentui/react-components";
-import type { EngineApi, RowPage, SourceSpec } from "../core/data/types";
+import type { EngineApi, InlineType, RowPage, SourceSpec } from "../core/data/types";
 import type { Dialogs } from "../core/session/session";
 import { errText } from "../core/session/session";
 import {
@@ -51,6 +51,76 @@ const HOST_LABEL: Partial<Record<ConnectorId, string>> = {
   redshift: "Server (cluster endpoint)",
   db2: "Server (host name)",
 };
+
+const INLINE_TYPES: { value: InlineType; label: string }[] = [
+  { value: "text", label: "Text" },
+  { value: "whole", label: "Whole number" },
+  { value: "decimal", label: "Decimal number" },
+  { value: "logical", label: "True/False" },
+  { value: "date", label: "Date (yyyy-mm-dd)" },
+  { value: "datetime", label: "Date and time" },
+];
+
+/** The Enter data grid: named, typed columns and rows of cells. */
+function EnterDataGrid({ f, set }: { f: ImportForm; set(patch: Partial<ImportForm>): void }) {
+  const cols = f.inlineColumns;
+  const setCol = (i: number, patch: Partial<(typeof cols)[number]>) => set({ inlineColumns: cols.map((c, j) => (j === i ? { ...c, ...patch } : c)) });
+  const setCell = (r: number, c: number, v: string) => set({ inlineRows: f.inlineRows.map((row, i) => (i === r ? row.map((x, j) => (j === c ? v : x)) : row)) });
+  return (
+    <div role="group" aria-label="Enter data" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <div style={{ overflow: "auto", maxHeight: 260 }}>
+        <table style={{ borderCollapse: "collapse" }}>
+          <thead>
+            <tr>
+              {cols.map((c, i) => (
+                <th key={i} style={{ padding: 2, verticalAlign: "top" }}>
+                  <Input size="small" aria-label={`Name of column ${i + 1}`} value={c.name} onChange={(_, d) => setCol(i, { name: d.value })} />
+                  <Select size="small" aria-label={`Type of column ${i + 1}`} value={c.type} onChange={(_, d) => setCol(i, { type: d.value as InlineType })}>
+                    {INLINE_TYPES.map((t) => (
+                      <option key={t.value} value={t.value}>
+                        {t.label}
+                      </option>
+                    ))}
+                  </Select>
+                  <Button size="small" appearance="subtle" aria-label={`Remove column ${i + 1}`} disabled={cols.length < 2} onClick={() => set({ inlineColumns: cols.filter((_, j) => j !== i), inlineRows: f.inlineRows.map((r) => r.filter((_, j) => j !== i)) })}>
+                    ✕
+                  </Button>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {f.inlineRows.map((row, r) => (
+              <tr key={r}>
+                {cols.map((_, c) => (
+                  <td key={c} style={{ padding: 2 }}>
+                    <Input size="small" aria-label={`Row ${r + 1}, column ${c + 1}`} value={row[c] ?? ""} onChange={(_, d) => setCell(r, c, d.value)} />
+                  </td>
+                ))}
+                <td>
+                  <Button size="small" appearance="subtle" aria-label={`Remove row ${r + 1}`} onClick={() => set({ inlineRows: f.inlineRows.filter((_, i) => i !== r) })}>
+                    ✕
+                  </Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div style={{ display: "flex", gap: 6 }}>
+        <Button size="small" onClick={() => set({ inlineRows: [...f.inlineRows, cols.map(() => "")] })}>
+          Add row
+        </Button>
+        <Button
+          size="small"
+          onClick={() => set({ inlineColumns: [...cols, { name: `Column${cols.length + 1}`, type: "text" }], inlineRows: f.inlineRows.map((r) => [...r, ""]) })}
+        >
+          Add column
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 export function ImportDialog({ open, initialKind, engine, dialogs, onSubmit, onClose }: ImportDialogProps) {
   const [f, setF] = useState<ImportForm>(emptyForm(initialKind));
@@ -296,6 +366,8 @@ export function ImportDialog({ open, initialKind, engine, dialogs, onSubmit, onC
             )}
             {f.kind === "sqlserver" && <Checkbox label="Trust the server certificate (for a self-signed certificate; the connection stays encrypted)" checked={f.trustCert} onChange={(_, d) => set({ trustCert: !!d.checked })} />}
             {(f.kind === "sqlserver" || f.kind === "postgres") && <Input aria-label="Schema" placeholder="Schema" value={f.schema} onChange={(_, d) => set({ schema: d.value })} />}
+
+            {f.kind === "inline" && <EnterDataGrid f={f} set={set} />}
 
             {SQL_KINDS.includes(f.kind) && (
               <details>

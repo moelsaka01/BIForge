@@ -6,6 +6,7 @@ import { APP_NAME, APP_VERSION, NOT_YET_IMPLEMENTED, WORKING_FEATURES } from "..
 import { dirname, joinPath } from "../../core/session/session";
 import type { DialogRequest } from "../../core/shell/shellStore";
 import { OptionsDialog } from "./OptionsDialog";
+import { DataSourcesDialog } from "./DataSourcesDialog";
 import { GuideDialog, OpenPackageDialog, PublishDialog } from "./PublishDialog";
 import { resolveTheme } from "../../core/report/theme";
 import { themeToJson } from "../../core/report/theme";
@@ -409,5 +410,7 @@ export function Dialogs() {
       return <OpenPackageDialog request={dialog} />;
     case "guide":
       return <GuideDialog guideId={dialog.guideId} />;
+    case "dataSources":
+      return <DataSourcesDialog />;
   }
 }

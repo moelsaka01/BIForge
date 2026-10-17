@@ -66,6 +66,69 @@ pub fn parse_fixed(text: &str, widths: &[usize], header: bool) -> Result<RawTabl
     Ok(textinfer::infer(RawTable { columns: clean_names(names), rows }))
 }
 
+/// Typed rows from the Enter data grid. A cell that does not fit its column type is an error that names the cell.
+pub fn parse_inline(columns: &[crate::types::InlineColumn], rows: &[Vec<Option<String>>]) -> Result<RawTable> {
+    if columns.is_empty() {
+        return Err(EngineError::Source("Add at least one column.".into()));
+    }
+    let names = clean_names(columns.iter().map(|c| c.name.clone()).collect());
+    let mut out = Vec::with_capacity(rows.len());
+    for (ri, r) in rows.iter().enumerate() {
+        let mut row = Vec::with_capacity(columns.len());
+        for (ci, c) in columns.iter().enumerate() {
+            let bad = |what: &str| EngineError::Source(format!("Row {}, column \"{}\": \"{}\" is not {what}.", ri + 1, names[ci], r.get(ci).cloned().flatten().unwrap_or_default()));
+            let raw = r.get(ci).cloned().flatten();
+            let t = raw.as_deref().map(str::trim).filter(|t| !t.is_empty());
+            row.push(match (c.ty.as_str(), t) {
+                (_, None) => if c.ty == "text" { raw.map_or(Cell::Null, Cell::Text) } else { Cell::Null },
+                ("text", Some(_)) => Cell::Text(raw.unwrap()),
+                ("whole", Some(t)) => Cell::Int(t.parse().map_err(|_| bad("a whole number"))?),
+                ("decimal", Some(t)) => Cell::Float(t.replace(',', ".").parse().map_err(|_| bad("a number"))?),
+                ("logical", Some(t)) => match t.to_ascii_lowercase().as_str() {
+                    "true" | "yes" | "1" => Cell::Bool(true),
+                    "false" | "no" | "0" => Cell::Bool(false),
+                    _ => return Err(bad("true or false")),
+                },
+                ("date", Some(t)) => Cell::Timestamp(chrono::NaiveDate::parse_from_str(t, "%Y-%m-%d").map_err(|_| bad("a date (yyyy-mm-dd)"))?.and_hms_opt(0, 0, 0).unwrap().and_utc().timestamp_micros()),
+                ("datetime", Some(t)) => Cell::Timestamp(
+                    chrono::NaiveDateTime::parse_from_str(t, "%Y-%m-%d %H:%M:%S").or_else(|_| chrono::NaiveDateTime::parse_from_str(t, "%Y-%m-%dT%H:%M:%S")).or_else(|_| chrono::NaiveDateTime::parse_from_str(t, "%Y-%m-%d %H:%M")).map_err(|_| bad("a date and time (yyyy-mm-dd hh:mm:ss)"))?.and_utc().timestamp_micros(),
+                ),
+                (other, _) => return Err(EngineError::Source(format!("Unknown column type \"{other}\"."))),
+            });
+        }
+        out.push(row);
+    }
+    Ok(RawTable { columns: names, rows: out })
+}
+
+/// A JSON file: an array of records, one record, an object holding arrays (the first is used), or JSON lines.
+/// Nested records are expanded into dotted columns. Files over 100 MB are left to DuckDB (no nested expansion there).
+pub fn read_json_file(path: &str, table: Option<&str>) -> Result<Option<RawTable>> {
+    let meta = std::fs::metadata(path).map_err(|_| EngineError::FileNotFound(path.into()))?;
+    if meta.len() > 100 * 1024 * 1024 {
+        return Ok(None);
+    }
+    let text = String::from_utf8_lossy(&read_file(path)?).to_string();
+    let text = text.trim_start_matches('﻿');
+    let doc: serde_json::Value = match serde_json::from_str(text) {
+        Ok(v) => v,
+        Err(e) => {
+            // JSON lines: every non-empty line is a value
+            let lines: std::result::Result<Vec<serde_json::Value>, _> = text.lines().filter(|l| !l.trim().is_empty()).map(serde_json::from_str).collect();
+            match lines {
+                Ok(v) if !v.is_empty() => serde_json::Value::Array(v),
+                _ => return Err(EngineError::Source(format!("Could not read JSON file \"{path}\": {e}"))),
+            }
+        }
+    };
+    let tables = web_src::json_tables(&doc);
+    let items = match table.filter(|t| !t.is_empty()) {
+        Some(t) => tables.into_iter().find(|(n, _)| n == t).map(|(_, a)| a).ok_or_else(|| EngineError::Source(format!("The JSON file has no list named \"{t}\".")))?,
+        None => tables.into_iter().next().map(|(_, a)| a).unwrap_or_default(),
+    };
+    Ok(Some(web_src::json_rows_with(&items, true)))
+}
+
 fn read_file(path: &str) -> Result<Vec<u8>> {
     std::fs::read(path).map_err(|_| EngineError::FileNotFound(path.into()))
 }
@@ -87,6 +150,7 @@ fn read_other_n(spec: &SourceSpec, creds: &dyn CredentialStore, limit: Option<us
             read_file(path)?;
             pdf_src::read(path, table.as_deref())
         }
+        SourceSpec::Inline { columns, rows } => parse_inline(columns, rows),
         SourceSpec::FixedWidth { path, widths, header } => parse_fixed(&String::from_utf8_lossy(&read_file(path)?), widths, *header),
         SourceSpec::Web { .. } | SourceSpec::OData { .. } => {
             let f = web_src::load(spec, creds)?;
@@ -130,6 +194,7 @@ pub fn preview_page(spec: &SourceSpec, creds: &dyn CredentialStore, limit: usize
         | SourceSpec::Xml { .. }
         | SourceSpec::Pdf { .. }
         | SourceSpec::FixedWidth { .. }
+        | SourceSpec::Inline { .. }
         | SourceSpec::Web { .. }
         | SourceSpec::OData { .. } => read_other_n(spec, creds, Some(limit))?,
         _ => return Err(EngineError::Source("Preview is available for database, workbook and web sources; files are previewed after import.".into())),
@@ -158,6 +223,20 @@ mod tests {
         assert_eq!(t.rows[1][1], Cell::Text("say \"hi\"".into()));
         assert_eq!(t.rows[1][2], Cell::Text(String::new()));
         assert!(parse_csv(b"").columns.is_empty());
+    }
+
+    #[test]
+    fn typed_in_data_is_converted_by_column_type_and_bad_cells_are_named() {
+        use crate::types::InlineColumn as C;
+        let cols = vec![C { name: "Name".into(), ty: "text".into() }, C { name: "Qty".into(), ty: "whole".into() }, C { name: "Price".into(), ty: "decimal".into() }, C { name: "Ok".into(), ty: "logical".into() }, C { name: "Day".into(), ty: "date".into() }];
+        let rows = vec![vec![Some("a".into()), Some("2".into()), Some("1,5".into()), Some("yes".into()), Some("2024-01-02".into())], vec![Some("".into()), None, None, None, None]];
+        let t = parse_inline(&cols, &rows).unwrap();
+        assert_eq!(t.rows[0][..4], [Cell::Text("a".into()), Cell::Int(2), Cell::Float(1.5), Cell::Bool(true)]);
+        assert!(matches!(t.rows[0][4], Cell::Timestamp(_)));
+        assert_eq!(t.rows[1], vec![Cell::Text(String::new()), Cell::Null, Cell::Null, Cell::Null, Cell::Null]);
+        let bad = vec![vec![Some("a".into()), Some("x".into()), None, None, None]];
+        assert_eq!(parse_inline(&cols, &bad).unwrap_err().to_string(), "Row 1, column \"Qty\": \"x\" is not a whole number.");
+        assert!(parse_inline(&[], &[]).is_err());
     }
 
     #[test]

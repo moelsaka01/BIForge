@@ -78,6 +78,8 @@ fn main() {
             data::engine_set_credential,
             data::engine_source_choices,
             data::engine_odbc_drivers,
+            data::engine_credential_exists,
+            data::engine_clear_credential,
             data::engine_source_preview,
             publish::publish_adapters,
             publish::publish_targets,

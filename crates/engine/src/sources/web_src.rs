@@ -134,22 +134,52 @@ fn json_cell(v: &Value) -> Cell {
     }
 }
 
-/// Rows of objects (or of scalars, in a column "Value") to a table.
+/// Nested records become columns "parent.child" (what Expand does in Power Query), up to four levels; lists stay JSON text.
+pub fn flatten_object(v: &Value, prefix: &str, depth: usize, out: &mut Vec<(String, Value)>) {
+    match v {
+        Value::Object(m) if depth < 4 && !m.is_empty() => {
+            for (k, x) in m {
+                let name = if prefix.is_empty() { k.clone() } else { format!("{prefix}.{k}") };
+                flatten_object(x, &name, depth + 1, out);
+            }
+        }
+        other => out.push((prefix.to_string(), other.clone())),
+    }
+}
+
+/// Rows of objects (or of scalars, in a column "Value") to a table; nested records are kept as JSON text.
 pub fn json_rows(items: &[Value]) -> RawTable {
-    let mut cols: Vec<String> = Vec::new();
-    for it in items {
-        if let Value::Object(m) = it {
-            for k in m.keys() {
-                if !cols.contains(k) {
-                    cols.push(k.clone());
+    json_rows_with(items, false)
+}
+
+/// Like json_rows; with `flatten` nested records are expanded into dotted columns.
+pub fn json_rows_with(items: &[Value], flatten: bool) -> RawTable {
+    let rows_of: Vec<Vec<(String, Value)>> = items
+        .iter()
+        .map(|it| match it {
+            Value::Object(m) if flatten => {
+                let mut o = Vec::new();
+                for (k, x) in m {
+                    flatten_object(x, k, 1, &mut o);
                 }
+                o
+            }
+            Value::Object(m) => m.iter().map(|(k, x)| (k.clone(), x.clone())).collect(),
+            _ => vec![],
+        })
+        .collect();
+    let mut cols: Vec<String> = Vec::new();
+    for r in &rows_of {
+        for (k, _) in r {
+            if !cols.contains(k) {
+                cols.push(k.clone());
             }
         }
     }
     if cols.is_empty() {
         return textinfer::infer(RawTable { columns: vec!["Value".into()], rows: items.iter().map(|v| vec![json_cell(v)]).collect() });
     }
-    let rows = items.iter().map(|it| cols.iter().map(|c| it.get(c).map_or(Cell::Null, json_cell)).collect()).collect();
+    let rows = rows_of.iter().map(|r| cols.iter().map(|c| r.iter().find(|(k, _)| k == c).map_or(Cell::Null, |(_, v)| json_cell(v))).collect()).collect();
     // text columns that came from JSON strings keep their text: dates stay text unless every value is an ISO date
     textinfer::infer(RawTable { columns: clean_names(cols), rows })
 }
@@ -188,7 +218,7 @@ pub fn load(spec: &SourceSpec, creds: &dyn CredentialStore) -> Result<Fetched> {
                 }
                 Format::Json => {
                     let v: Value = serde_json::from_slice(&body).map_err(|e| err(format!("the response is not valid JSON: {e}")))?;
-                    Ok(Fetched { tables: json_tables(&v).into_iter().map(|(n, a)| (n, json_rows(&a))).collect(), csv: None })
+                    Ok(Fetched { tables: json_tables(&v).into_iter().map(|(n, a)| (n, json_rows_with(&a, true))).collect(), csv: None })
                 }
                 Format::Xml => {
                     let text = String::from_utf8_lossy(&body).to_string();
@@ -309,6 +339,17 @@ mod tests {
         assert_eq!(t[0].1.rows[1], vec![Cell::Text("South & East".into()), Cell::Int(12)]);
         assert_eq!(t[1].0, "Table 3");
         assert_eq!(t[1].1.rows[0], vec![Cell::Int(1), Cell::Null]);
+    }
+
+    #[test]
+    fn nested_records_expand_into_dotted_columns_and_lists_stay_text() {
+        let v: Value = serde_json::from_str(r#"[{"id":1,"addr":{"city":"Oslo","geo":{"lat":1.5}},"tags":["a","b"]},{"id":2,"addr":{"city":"Rome"},"tags":[]}]"#).unwrap();
+        let t = json_rows_with(v.as_array().unwrap(), true);
+        assert_eq!(t.columns, vec!["id", "addr.city", "addr.geo.lat", "tags"]);
+        assert_eq!(t.rows[0], vec![Cell::Int(1), Cell::Text("Oslo".into()), Cell::Float(1.5), Cell::Text("[\"a\",\"b\"]".into())]);
+        assert_eq!(t.rows[1][2], Cell::Null);
+        // without flattening the record stays one text column
+        assert_eq!(json_rows(v.as_array().unwrap()).columns, vec!["id", "addr", "tags"]);
     }
 
     #[test]

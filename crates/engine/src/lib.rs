@@ -190,6 +190,9 @@ impl Engine {
             }
             SourceSpec::Json { path } => {
                 require_file(path)?;
+                if let Some(raw) = sources::read_json_file(path, None)? {
+                    return sources::load(&self.conn, STAGE, &raw);
+                }
                 self.conn
                     .execute_batch(&format!("CREATE TABLE {} AS SELECT * FROM read_json_auto({})", q(STAGE), lit(path)))
                     .map_err(|e| src_err(&format!("JSON file \"{path}\""), e))
@@ -216,7 +219,7 @@ impl Engine {
                 let raw = sources::sqlserver_src::read(spec, creds)?;
                 sources::load(&self.conn, STAGE, &raw)
             }
-            SourceSpec::MySql { .. } | SourceSpec::Odbc { .. } | SourceSpec::Xml { .. } | SourceSpec::Web { .. } | SourceSpec::OData { .. } | SourceSpec::Pdf { .. } | SourceSpec::FixedWidth { .. } => {
+            SourceSpec::MySql { .. } | SourceSpec::Odbc { .. } | SourceSpec::Xml { .. } | SourceSpec::Web { .. } | SourceSpec::OData { .. } | SourceSpec::Pdf { .. } | SourceSpec::FixedWidth { .. } | SourceSpec::Inline { .. } => {
                 let raw = sources::read_other(spec, creds)?;
                 sources::load(&self.conn, STAGE, &raw)
             }

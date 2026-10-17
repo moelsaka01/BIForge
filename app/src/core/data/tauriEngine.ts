@@ -17,5 +17,7 @@ export const tauriEngine: EngineApi = {
   sourceChoices: (spec: SourceSpec) => invoke<string[]>("engine_source_choices", { spec }),
   sourcePreview: (spec: SourceSpec, limit: number) => invoke<RowPage>("engine_source_preview", { spec, limit }),
   odbcDrivers: () => invoke<string[]>("engine_odbc_drivers"),
+  credentialExists: (spec: SourceSpec) => invoke<boolean>("engine_credential_exists", { spec }),
+  clearCredential: (spec: SourceSpec) => invoke<void>("engine_clear_credential", { spec }),
   setCredential: (spec, secret) => invoke<void>("engine_set_credential", { spec, secret }),
 };

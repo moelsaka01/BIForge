@@ -17,7 +17,11 @@ export type SourceSpec =
   | { kind: "web"; url: string; format?: string | null; table?: string | null; user?: string | null }
   | { kind: "odata"; url: string; entity: string; user?: string | null }
   | { kind: "pdf"; path: string; table?: string | null }
-  | { kind: "fixedWidth"; path: string; widths: number[]; header?: boolean };
+  | { kind: "fixedWidth"; path: string; widths: number[]; header?: boolean }
+  /** Data typed into the Enter data grid. Cells are text (null = empty). */
+  | { kind: "inline"; columns: { name: string; type: InlineType }[]; rows: (string | null)[][] };
+
+export type InlineType = "text" | "whole" | "decimal" | "logical" | "date" | "datetime";
 
 export type OdbcFlavor = "odbc" | "access" | "oracle" | "db2" | "teradata" | "saphana" | "redshift" | "snowflake";
 
@@ -73,6 +77,10 @@ export interface EngineApi {
   sourceChoices(spec: SourceSpec): Promise<string[]>;
   /** The first rows of a source, as text, without importing it. */
   sourcePreview(spec: SourceSpec, limit: number): Promise<RowPage>;
+  /** True when a password or token is stored for the source (Windows Credential Manager). */
+  credentialExists(spec: SourceSpec): Promise<boolean>;
+  /** Removes the stored password or token of the source. */
+  clearCredential(spec: SourceSpec): Promise<void>;
   /** Names of the ODBC drivers installed on this computer. */
   odbcDrivers(): Promise<string[]>;
   setCredential(spec: SourceSpec, secret: string): Promise<void>;

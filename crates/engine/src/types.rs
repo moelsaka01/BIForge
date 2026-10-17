@@ -113,6 +113,11 @@ pub enum SourceSpec {
         #[serde(default)]
         table: Option<String>,
     },
+    /// Data typed in by the user (Enter data). Values are text; `ty` is text, whole, decimal, logical, date or datetime.
+    Inline {
+        columns: Vec<InlineColumn>,
+        rows: Vec<Vec<Option<String>>>,
+    },
     /// Text file with columns at fixed character positions: `widths` are the column widths.
     FixedWidth {
         path: String,
@@ -120,6 +125,17 @@ pub enum SourceSpec {
         #[serde(default = "yes")]
         header: bool,
     },
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct InlineColumn {
+    pub name: String,
+    #[serde(rename = "type", default = "inline_text")]
+    pub ty: String,
+}
+
+fn inline_text() -> String {
+    "text".into()
 }
 
 fn mysql_port() -> u16 {

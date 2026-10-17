@@ -1,4 +1,5 @@
 import { CommandRegistry } from "./registry";
+import type { SourceLocation } from "../data/dataSources";
 import type { Session } from "../session/session";
 import * as ops from "../model/ops";
 import * as rel from "../model/relationships";
@@ -181,6 +182,45 @@ export function createRegistry(session: Session): CommandRegistry<Session> {
       const a = args as { name?: string; spec?: SourceSpec } | undefined;
       if (!a?.name?.trim() || !a.spec) throw new Error("Missing table name or source.");
       await s.importTable(a.name.trim(), a.spec);
+    },
+  });
+  r.register({
+    id: "data.sourceSettings",
+    label: "Data source settings",
+    category: "Data",
+    isEnabled: (s) => hasProject(s),
+    run: (s) => s.shell.openDialog({ kind: "dataSources" }),
+  });
+  r.register({
+    id: "data.source.change",
+    label: "Change data source",
+    category: "Data",
+    isEnabled: hasEngineProject,
+    run: async (s, args) => {
+      const a = argsOf<{ id: string }>(args, ["id"]);
+      const location = (args as { location?: SourceLocation }).location;
+      if (!location || typeof location !== "object") throw new Error("Missing value: location.");
+      await s.changeDataSource(a.id, location);
+    },
+  });
+  r.register({
+    id: "data.source.setSecret",
+    label: "Set data source password",
+    category: "Data",
+    isEnabled: hasEngineProject,
+    run: async (s, args) => {
+      const a = argsOf<{ id: string; secret: string }>(args, ["id", "secret"]);
+      await s.setDataSourceSecret(a.id, a.secret);
+    },
+  });
+  r.register({
+    id: "data.source.clearSecret",
+    label: "Clear data source password",
+    category: "Data",
+    isEnabled: hasEngineProject,
+    run: async (s, args) => {
+      const a = argsOf<{ id: string }>(args, ["id"]);
+      await s.setDataSourceSecret(a.id, null);
     },
   });
   r.register({

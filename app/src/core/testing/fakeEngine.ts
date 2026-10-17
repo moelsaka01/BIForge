@@ -24,6 +24,11 @@ export class FakeEngine implements EngineApi {
   async importSource(table: string, spec: SourceSpec): Promise<TableInfo> {
     this.calls.push(`import:${table}`);
     if (this.fail) throw new Error(this.fail);
+    if (spec.kind === "inline") {
+      const cols = spec.columns.map((c) => col(c.name, c.type === "whole" ? "int64" : c.type === "decimal" ? "double" : c.type === "logical" ? "boolean" : c.type.startsWith("date") ? "dateTime" : "string"));
+      this.tables.set(table, { columns: cols, rows: spec.rows.map((r) => [...r]) });
+      return { name: table, columns: cols, rowCount: spec.rows.length };
+    }
     const key = "path" in spec ? spec.path : "url" in spec ? spec.url : "table" in spec && spec.table ? spec.table : "connection" in spec ? spec.connection : "";
     const src = this.sources.get(key);
     if (!src) throw new Error(`File not found: ${key}`);
@@ -94,11 +99,20 @@ export class FakeEngine implements EngineApi {
     const key = "table" in spec && spec.table ? spec.table : "path" in spec ? spec.path : "";
     return this.previews.get(key) ?? { columns: [], rows: [], total: 0 };
   }
+  stored = new Set<string>();
+  async credentialExists(spec: SourceSpec): Promise<boolean> {
+    return this.stored.has(JSON.stringify(spec));
+  }
+  async clearCredential(spec: SourceSpec): Promise<void> {
+    this.calls.push(`clear:${spec.kind}`);
+    this.stored.delete(JSON.stringify(spec));
+  }
   async odbcDrivers(): Promise<string[]> {
     return this.drivers;
   }
   async setCredential(spec: SourceSpec, secret: string): Promise<void> {
     this.calls.push(`cred:${spec.kind}:${secret.length}`);
+    this.stored.add(JSON.stringify(spec));
   }
 }
 

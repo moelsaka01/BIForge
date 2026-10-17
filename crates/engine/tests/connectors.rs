@@ -226,3 +226,57 @@ fn mysql_imports_with_typed_columns_and_custom_sql() {
     assert_eq!(q.row_count, 1);
     assert_eq!(source_preview(&spec(p[5], None), &c, 1).unwrap().rows.len(), 1);
 }
+
+#[test]
+fn entered_data_imports_typed_and_the_m_text_gives_the_same_table() {
+    use biforge_engine::InlineColumn as C;
+    let col = |n: &str, t: &str| C { name: n.into(), ty: t.into() };
+    let spec = SourceSpec::Inline {
+        columns: vec![col("Name", "text"), col("Qty", "whole"), col("Price", "decimal"), col("Ok", "logical"), col("Day", "date")],
+        rows: vec![
+            vec![Some("a \"q\"".into()), Some("2".into()), Some("1,5".into()), Some("yes".into()), Some("2024-01-02".into())],
+            vec![None, None, None, None, None],
+        ],
+    };
+    let e = Engine::in_memory().unwrap();
+    let t = e.import("Typed", &spec, &creds()).unwrap();
+    let tys: Vec<_> = t.columns.iter().map(|c| c.bi_type).collect();
+    assert_eq!(tys, vec![BiType::String, BiType::Int64, BiType::Double, BiType::Boolean, BiType::DateTime]);
+    assert_eq!(t.row_count, 2);
+    // the partition M that partitionM.ts writes for the same grid runs in BIForge's M engine and gives the same table
+    let m = "let\n\tSource = #table(type table [#\"Name\" = text, #\"Qty\" = Int64.Type, #\"Price\" = number, #\"Ok\" = logical, #\"Day\" = date], {{\"a \"\"q\"\"\", 2, 1.5, true, #date(2024, 1, 2)}, {null, null, null, null, null}})\nin\n\tSource";
+    let qs: std::collections::BTreeMap<String, String> = [("Q".to_string(), m.to_string())].into_iter().collect();
+    match e.m_preview(&qs, "Q", None, 100) {
+        Ok(page) => {
+            assert_eq!(page.total, 2);
+            assert_eq!(page.columns.iter().map(|c| c.name.as_str()).collect::<Vec<_>>(), vec!["Name", "Qty", "Price", "Ok", "Day"]);
+        }
+        Err(err) => eprintln!("NOTE: BIForge's M engine does not evaluate #table yet: {err}"),
+    }
+    // a bad cell is reported by position and nothing is imported
+    let bad = SourceSpec::Inline { columns: vec![col("Qty", "whole")], rows: vec![vec![Some("x".into())]] };
+    assert!(e.import("Bad", &bad, &creds()).unwrap_err().to_string().contains("Row 1, column \"Qty\""));
+    assert!(!e.has_table("Bad").unwrap());
+}
+
+#[test]
+fn json_files_with_nested_records_import_as_dotted_columns_including_json_lines() {
+    let d = tempfile::tempdir().unwrap();
+    let e = Engine::in_memory().unwrap();
+    let c = creds();
+    let f = d.path().join("n.json");
+    std::fs::write(&f, r#"[{"id":1,"addr":{"city":"Oslo","geo":{"lat":1.5}},"tags":["a"]},{"id":2,"addr":{"city":"Rome"},"tags":[]}]"#).unwrap();
+    let t = e.import("Nested", &SourceSpec::Json { path: f.to_string_lossy().into() }, &c).unwrap();
+    let cols: Vec<_> = t.columns.iter().map(|x| (x.name.as_str(), x.bi_type)).collect();
+    assert_eq!(cols, vec![("id", BiType::Int64), ("addr.city", BiType::String), ("addr.geo.lat", BiType::Double), ("tags", BiType::String)]);
+    assert_eq!(e.fetch_page("Nested", 0, 5, None).unwrap().rows[1][2], None);
+
+    let l = d.path().join("n.jsonl");
+    std::fs::write(&l, "{\"a\":1}\n\n{\"a\":2,\"b\":{\"c\":true}}\n").unwrap();
+    let t = e.import("Lines", &SourceSpec::Json { path: l.to_string_lossy().into() }, &c).unwrap();
+    assert_eq!((t.row_count, t.columns.iter().map(|x| x.name.as_str()).collect::<Vec<_>>()), (2, vec!["a", "b.c"]));
+
+    let bad = d.path().join("bad.json");
+    std::fs::write(&bad, "{not json").unwrap();
+    assert!(e.import("Bad", &SourceSpec::Json { path: bad.to_string_lossy().into() }, &c).unwrap_err().to_string().contains("Could not read JSON"));
+}

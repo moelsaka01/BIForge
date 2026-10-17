@@ -1,4 +1,4 @@
-import type { OdbcFlavor, SourceSpec } from "../core/data/types";
+import type { InlineType, OdbcFlavor, SourceSpec } from "../core/data/types";
 
 export type SourceKind = SourceSpec["kind"];
 /** What the user picks in Get data: a spec kind, or one of the ODBC flavors (which all produce an `odbc` spec). */
@@ -35,6 +35,7 @@ export const CONNECTORS: Connector[] = [
   { id: "redshift", label: "Amazon Redshift", group: "Database" },
   { id: "snowflake", label: "Snowflake (ODBC)", group: "Database" },
   { id: "odbc", label: "ODBC (any other database)", group: "Database", keywords: "bigquery databricks sybase generic dsn" },
+  { id: "inline", label: "Enter data (type the table in)", group: "Online and other", keywords: "manual table grid" },
   { id: "web", label: "Web", group: "Online and other", keywords: "html url api rest" },
   { id: "odata", label: "OData feed", group: "Online and other" },
 ];
@@ -67,6 +68,9 @@ export interface ImportForm {
   selected: string[];
   /** SQL Server: accept a certificate that does not validate (self-signed). */
   trustCert: boolean;
+  /** Enter data: the columns and the cells of the grid. */
+  inlineColumns: { name: string; type: InlineType }[];
+  inlineRows: string[][];
 }
 
 export const DEFAULT_PORTS: Partial<Record<ConnectorId, string>> = { postgres: "5432", mysql: "3306", db2: "50000", redshift: "5439" };
@@ -92,6 +96,11 @@ export const emptyForm = (kind: ConnectorId = "csv"): ImportForm => ({
   widths: "",
   selected: [],
   trustCert: false,
+  inlineColumns: [
+    { name: "Column1", type: "text" },
+    { name: "Column2", type: "text" },
+  ],
+  inlineRows: [["", ""], ["", ""], ["", ""]],
 });
 
 export const FILE_FILTERS: Record<string, { label: string; extensions: string[] }> = {
@@ -209,6 +218,14 @@ export function buildSpec(f: ImportForm, table: string = f.pgTable): { spec: Sou
       if (e) return { error: e };
       return { spec: { kind: "mysql", host: f.host.trim(), port, database: f.database.trim(), user: f.user.trim(), table: table.trim(), ...withQuery } };
     }
+    case "inline": {
+      const names = f.inlineColumns.map((c) => c.name.trim());
+      if (names.length === 0 || names.some((n) => n === "")) return { error: "Every column needs a name." };
+      if (new Set(names.map((n) => n.toLowerCase())).size !== names.length) return { error: "Column names must be different." };
+      const rows = f.inlineRows.filter((r) => r.some((c) => c.trim() !== ""));
+      if (rows.length === 0) return { error: "Type at least one row." };
+      return { spec: { kind: "inline", columns: f.inlineColumns.map((c, i) => ({ name: names[i], type: c.type })), rows: rows.map((r) => f.inlineColumns.map((_, i) => (r[i] ?? "").trim() === "" ? null : r[i])) } };
+    }
     case "web": {
       if (!/^https?:\/\/\S+$/i.test(f.url.trim())) return { error: "Enter an http:// or https:// web address." };
       return { spec: { kind: "web", url: f.url.trim(), format: f.format === "auto" ? null : f.format, table: table || null, user: f.user.trim() || null } };
@@ -256,6 +273,8 @@ export function defaultTableName(spec: SourceSpec): string {
       return spec.table ? last(spec.table) : "Query";
     case "odata":
       return spec.entity;
+    case "inline":
+      return "Table";
     case "web":
       return spec.table ? spec.table : (() => {
         try {

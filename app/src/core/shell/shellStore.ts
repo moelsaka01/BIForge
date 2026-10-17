@@ -19,6 +19,7 @@ export type DialogRequest =
   | { kind: "publish" }
   | { kind: "openPackage"; /** the package file (from a link, a file association or the file picker) */ path?: string; /** a feed address from a link: the package is downloaded first */ feedUrl?: string; fromLink?: boolean }
   | { kind: "guide"; guideId: string; /** shows only when not hidden by the user */ once?: boolean }
+  | { kind: "dataSources" }
   | { kind: "shortcuts" };
 
 export interface ShellState {

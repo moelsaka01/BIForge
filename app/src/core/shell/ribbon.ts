@@ -156,8 +156,8 @@ const dataGroup = (): RibbonGroup => ({
   controls: [
     cmd("getData", "Get data", "database", "data.getData", { size: "large", menu: getDataMenu, keytip: "G" }),
     cmd("excel", "Excel workbook", "excel", "data.getData", { size: "large", args: { source: "excel" }, keytip: "X" }),
-    todo("sqlServer", "SQL Server", "sql", { size: "large" }),
-    todo("enterData", "Enter data", "enterData", { size: "large" }),
+    cmd("sqlServer", "SQL Server", "sql", "data.getData", { size: "large", args: { source: "sqlserver" } }),
+    cmd("enterData", "Enter data", "enterData", "data.getData", { size: "large", args: { source: "inline" } }),
     todo("recentSources", "Recent sources", "recent", { size: "large" }),
   ],
 });
@@ -168,6 +168,7 @@ const queriesGroup = (): RibbonGroup => ({
   controls: [
     cmd("transform", "Transform data", "transform", "query.editor.open", { size: "large", keytip: "TD" }),
     cmd("refresh", "Refresh", "refresh", "data.refreshAll", { size: "large", keytip: "R" }),
+    cmd("dataSourceSettings", "Data source settings", "database", "data.sourceSettings", { size: "small" }),
   ],
 });
 

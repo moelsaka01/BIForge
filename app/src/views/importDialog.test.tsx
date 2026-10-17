@@ -142,6 +142,33 @@ describe("Get data dialog", () => {
     expect((await within(bad.dlg()).findByRole("alert")).textContent).toMatch(/http:\/\/ or https:\/\//);
   });
 
+  it("Enter data: type a table in the grid, add a column and a row, and import it with the chosen types", async () => {
+    const { dlg, submitted, closed } = setup("inline");
+    const grid = within(dlg()).getByRole("group", { name: "Enter data" });
+    fireEvent.change(within(grid).getByLabelText("Name of column 1"), { target: { value: "Item" } });
+    fireEvent.change(within(grid).getByLabelText("Name of column 2"), { target: { value: "Qty" } });
+    fireEvent.change(within(grid).getByLabelText("Type of column 2"), { target: { value: "whole" } });
+    fireEvent.click(within(grid).getByRole("button", { name: "Add column" }));
+    fireEvent.change(within(grid).getByLabelText("Name of column 3"), { target: { value: "Day" } });
+    fireEvent.change(within(grid).getByLabelText("Type of column 3"), { target: { value: "date" } });
+    fireEvent.click(within(grid).getByRole("button", { name: "Add row" }));
+    expect(within(grid).getAllByLabelText(/^Row \d+, column 1$/)).toHaveLength(4);
+    fireEvent.change(within(grid).getByLabelText("Row 1, column 1"), { target: { value: "Pen" } });
+    fireEvent.change(within(grid).getByLabelText("Row 1, column 2"), { target: { value: "3" } });
+    fireEvent.change(within(grid).getByLabelText("Row 1, column 3"), { target: { value: "2024-05-06" } });
+    fireEvent.change(within(grid).getByLabelText("Row 4, column 1"), { target: { value: "Ink" } });
+    fireEvent.click(within(grid).getByRole("button", { name: "Remove row 2" }));
+    type(dlg(), "Table name", "Items");
+    fireEvent.click(within(dlg()).getByRole("button", { name: "Import" }));
+    await waitFor(() => expect(closed()).toBe(true));
+    expect(submitted[0].name).toBe("Items");
+    expect(submitted[0].spec).toEqual({
+      kind: "inline",
+      columns: [{ name: "Item", type: "text" }, { name: "Qty", type: "whole" }, { name: "Day", type: "date" }],
+      rows: [["Pen", "3", "2024-05-06"], ["Ink", null, null]],
+    });
+  });
+
   it("Basic authentication for a web address shows the password field only when a user is entered", () => {
     const { dlg } = setup("odata");
     expect(within(dlg()).queryByLabelText("Password")).toBeNull();

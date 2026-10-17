@@ -10,6 +10,7 @@ import { CONNECTORS, buildSpec, defaultTableName, emptyForm, odbcConnection, typ
 const I = (n: string): ColumnInfo => ({ name: n, biType: "int64", duckdbType: "BIGINT" });
 const T = (n: string): ColumnInfo => ({ name: n, biType: "string", duckdbType: "VARCHAR" });
 const cols = [I("Id"), T("Name")];
+const nestedCols = [I("id"), T("addr.city"), T("addr.geo.lat"), T("tags")];
 
 const spec = (r: ReturnType<typeof buildSpec>): SourceSpec => {
   if (!("spec" in r)) throw new Error(r.error);
@@ -39,6 +40,8 @@ const cases: [string, SourceSpec][] = [
   ["web_json", { kind: "web", url: "https://example.com/api?x=1", format: "json", table: "rows" }],
   ["web_csv", { kind: "web", url: "https://example.com/d.csv", format: "csv" }],
   ["web_xml", { kind: "web", url: "https://example.com/d.xml", format: "xml", table: "item" }],
+  ["inline_table", { kind: "inline", columns: [{ name: "Name", type: "text" }, { name: "Qty", type: "whole" }, { name: "Price", type: "decimal" }, { name: "Ok", type: "logical" }, { name: "Day", type: "date" }, { name: "At", type: "datetime" }], rows: [["a \"q\"", "2", "1,5", "yes", "2024-01-02", "2024-01-02 03:04"], [null, null, null, null, null, null]] }],
+  ["json_nested", { kind: "json", path: "C:/data/nested.json" }],
   ["odata_entity", { kind: "odata", url: "https://svc.example.com/odata", entity: "Products" }],
 ];
 
@@ -46,7 +49,7 @@ describe("partition M written for each connector", () => {
   const out: Record<string, string> = {};
   for (const [name, s] of cases) {
     it(name, async () => {
-      const m = partitionM(s, cols);
+      const m = partitionM(s, name === "json_nested" ? nestedCols : cols);
       out[name] = m;
       expect(m.startsWith("let\n")).toBe(true);
       expect(m).not.toMatch(/password|pwd=|secret/i);
@@ -84,6 +87,13 @@ describe("partition M written for each connector", () => {
     expect(m("web_html_numbered")).toContain('Source{[Id="Table 2"]}[Data]'); // Power Query counts from 0
     expect(m("web_json")).toContain('Source["rows"]');
     expect(m("odata_entity")).toContain('OData.Feed("https://svc.example.com/odata", null, [Implementation="2.0"])');
+    expect(m("inline_table")).toContain('#table(type table [#"Name" = text, #"Qty" = Int64.Type, #"Price" = number, #"Ok" = logical, #"Day" = date, #"At" = datetime], {{"a ""q""", 2, 1.5, true, #date(2024, 1, 2), #datetime(2024, 1, 2, 3, 4, 0)}, {null, null, null, null, null, null}})');
+    // nested JSON: the records that the import expanded are expanded in M too, level by level
+    const nested = partitionM({ kind: "json", path: "x.json" }, nestedCols);
+    expect(nested).toContain('Table.ExpandRecordColumn(#"Converted to Table", "addr", {"city", "geo"}, {"addr.city", "addr.geo"})');
+    expect(nested).toContain('Table.ExpandRecordColumn(#"Expanded addr", "addr.geo", {"lat"}, {"addr.geo.lat"})');
+    expect(nested.indexOf("Expanded addr")).toBeLessThan(nested.indexOf("Changed Type"));
+    expect(partitionM({ kind: "json", path: "x.json" }, cols)).not.toContain("ExpandRecordColumn");
     expect(m("fixed_width")).toContain("Splitter.SplitTextByPositions({0, 4, 14})");
   });
 });
@@ -131,6 +141,14 @@ describe("Get data form", () => {
     expect(spec(buildSpec(form({ kind: "fixedWidth", path: "a.txt", widths: "4, 10 3" })))).toMatchObject({ widths: [4, 10, 3] });
     expect(buildSpec(form({ kind: "fixedWidth", path: "a.txt", widths: "4, x" }))).toMatchObject({ error: expect.stringContaining("column widths") });
     expect(buildSpec(form({ kind: "pdf" }))).toEqual({ error: "Choose a file." });
+  });
+
+  it("Enter data: builds a typed grid source and refuses empty or duplicate column names and an empty grid", () => {
+    const f = form({ kind: "inline", inlineColumns: [{ name: "A", type: "whole" }, { name: "B", type: "text" }], inlineRows: [["1", "x"], ["", ""], ["2", ""]] });
+    expect(spec(buildSpec(f))).toEqual({ kind: "inline", columns: [{ name: "A", type: "whole" }, { name: "B", type: "text" }], rows: [["1", "x"], ["2", null]] });
+    expect(buildSpec({ ...f, inlineRows: [["", ""]] })).toEqual({ error: "Type at least one row." });
+    expect(buildSpec({ ...f, inlineColumns: [{ name: "A", type: "text" }, { name: "a", type: "text" }] })).toEqual({ error: "Column names must be different." });
+    expect(buildSpec({ ...f, inlineColumns: [{ name: " ", type: "text" }, { name: "b", type: "text" }] })).toEqual({ error: "Every column needs a name." });
   });
 
   it("names the table from the source", () => {

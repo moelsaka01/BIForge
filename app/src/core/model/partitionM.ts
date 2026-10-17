@@ -54,6 +54,25 @@ function splitName(t: string): [string, string] {
   return i < 0 ? ["", t] : [t.slice(0, i), t.slice(i + 1)];
 }
 
+/**
+ * JSON records that were expanded on import ("address.city" came from the record column "address"): the Table.ExpandRecordColumn
+ * steps that give Power Query the same columns. A name with a dot whose first part is not a column of its own counts as expanded.
+ */
+function expandSteps(columns: ColumnInfo[], steps: Step[]): void {
+  const names = columns.map((c) => c.name);
+  const have = new Set(names);
+  // the columns of the table before any expansion: the first part of each dotted name that is not a column of its own
+  let current = [...new Set(names.map((n) => (n.indexOf(".") > 0 && !have.has(n.slice(0, n.indexOf("."))) ? n.slice(0, n.indexOf(".")) : n)))];
+  for (let guard = 0; guard < 30; guard++) {
+    const todo = current.find((n) => !have.has(n) && names.some((x) => x.startsWith(`${n}.`)));
+    if (!todo) return;
+    const subs = [...new Set(names.filter((x) => x.startsWith(`${todo}.`)).map((x) => x.slice(todo.length + 1).split(".")[0]))];
+    const prev = steps[steps.length - 1].name;
+    steps.push(step(`#"Expanded ${todo.replace(/"/g, "")}"`, `Table.ExpandRecordColumn(${prev}, ${mText(todo)}, {${subs.map(mText).join(", ")}}, {${subs.map((x) => mText(`${todo}.${x}`)).join(", ")}})`));
+    current = current.flatMap((n) => (n === todo ? subs.map((x) => `${todo}.${x}`) : [n]));
+  }
+}
+
 function odbcSteps(source: Extract<SourceSpec, { kind: "odbc" }>, steps: Step[]): void {
   const [schema, item] = splitName(source.table ?? "");
   const q = hasQuery(source.query);
@@ -101,6 +120,7 @@ function webSteps(source: Extract<SourceSpec, { kind: "web" }>, columns: ColumnI
       steps.push(step("Source", `Json.Document(Web.Contents(${url}))`));
       if (source.table) steps.push(step('#"Navigation"', `Source[${mText(source.table)}]`));
       steps.push(step('#"Converted to Table"', `Table.FromRecords(${prev()})`));
+      expandSteps(columns, steps);
       steps.push(typeStep(prev(), columns));
       return;
     case "csv":
@@ -119,6 +139,34 @@ function webSteps(source: Extract<SourceSpec, { kind: "web" }>, columns: ColumnI
       steps.push(step("Source", `Web.Page(Web.Contents(${url}))`));
       steps.push(step('#"Table"', m ? `Source{[Id=${mText(`Table ${Number(m[1]) - 1}`)}]}[Data]` : source.table ? `Source{[Caption=${mText(source.table)}]}[Data]` : "Source{0}[Data]"));
       steps.push(typeStep(prev(), columns));
+    }
+  }
+}
+
+const INLINE_TYPE: Record<string, string> = { text: "text", whole: "Int64.Type", decimal: "number", logical: "logical", date: "date", datetime: "datetime" };
+
+/** M literal of a typed-in cell. The values were validated by the engine on import; a cell that does not parse becomes null. */
+function inlineValue(ty: string, v: string | null): string {
+  if (v === null) return "null";
+  const t = v.trim();
+  if (ty === "text") return mText(v);
+  if (t === "") return "null";
+  switch (ty) {
+    case "whole":
+      return /^-?\d+$/.test(t) ? t : "null";
+    case "decimal": {
+      const n = t.replace(",", ".");
+      return /^-?\d+(\.\d+)?$/.test(n) ? n : "null";
+    }
+    case "logical":
+      return /^(true|yes|1)$/i.test(t) ? "true" : /^(false|no|0)$/i.test(t) ? "false" : "null";
+    case "date": {
+      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t);
+      return m ? `#date(${Number(m[1])}, ${Number(m[2])}, ${Number(m[3])})` : "null";
+    }
+    default: {
+      const m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?$/.exec(t);
+      return m ? `#datetime(${Number(m[1])}, ${Number(m[2])}, ${Number(m[3])}, ${Number(m[4])}, ${Number(m[5])}, ${Number(m[6] ?? 0)})` : "null";
     }
   }
 }
@@ -155,6 +203,7 @@ export function partitionM(source: SourceSpec, columns: ColumnInfo[]): string {
     case "json":
       steps.push(step("Source", `Json.Document(File.Contents(${mText(source.path)}))`));
       steps.push(step('#"Converted to Table"', `Table.FromRecords(${prev()})`));
+      expandSteps(columns, steps);
       steps.push(typeStep(prev(), columns));
       break;
     case "parquet":
@@ -210,6 +259,12 @@ export function partitionM(source: SourceSpec, columns: ColumnInfo[]): string {
     case "web":
       webSteps(source, columns, steps);
       break;
+    case "inline": {
+      const type = source.columns.map((c) => `#${mText(c.name)} = ${INLINE_TYPE[c.type] ?? "text"}`).join(", ");
+      const rows = source.rows.map((r) => `{${source.columns.map((c, i) => inlineValue(c.type, r[i] ?? null)).join(", ")}}`).join(", ");
+      steps.push(step("Source", `#table(type table [${type}], {${rows}})`));
+      break;
+    }
     case "odata":
       steps.push(step("Source", `OData.Feed(${mText(source.url)}, null, [Implementation="2.0"])`));
       steps.push(step('#"Table"', `Source{[Name=${mText(source.entity)}]}[Data]`));

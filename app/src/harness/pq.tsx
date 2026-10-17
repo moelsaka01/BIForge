@@ -37,6 +37,8 @@ const httpEngine: EngineApi = {
   sourceChoices: unsupported,
   sourcePreview: unsupported,
   odbcDrivers: () => Promise.resolve([]),
+  credentialExists: () => Promise.resolve(false),
+  clearCredential: unsupported,
   setCredential: unsupported,
 };
 
