@@ -83,7 +83,8 @@
    "showDrillDownLevelButton",
    "showDrillToggleButton",
    "showDrillUpButton",
-   "showOptionsMenu"
+   "showOptionsMenu",
+   "showPersonalizeVisualButton"
   ],
   "general": [
    "altText"

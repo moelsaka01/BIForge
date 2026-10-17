@@ -28,7 +28,7 @@ export interface ContainerModel {
   headerShown: boolean;
   headerStyle: CSSProperties;
   /** Which buttons of the hover toolbar are on. */
-  headerButtons: { drillUp: boolean; drillToggle: boolean; nextLevel: boolean; expandAll: boolean; options: boolean };
+  headerButtons: { drillUp: boolean; drillToggle: boolean; nextLevel: boolean; expandAll: boolean; options: boolean; personalize: boolean };
   /** type: "Default" or "Canvas" (a report page is the tooltip). */
   tooltip: { show: boolean; type: string; section: string };
   lockAspect: boolean;
@@ -135,6 +135,7 @@ export function buildContainer(inp: ContainerInput): ContainerModel {
       nextLevel: f.bool("visualHeader", "showDrillDownLevelButton", true),
       expandAll: f.bool("visualHeader", "showDrillDownExpandButton", true),
       options: f.bool("visualHeader", "showOptionsMenu", true),
+      personalize: f.bool("visualHeader", "showPersonalizeVisualButton", true),
     },
     tooltip: { show: f.bool("visualTooltip", "show", true), type: f.str("visualTooltip", "type", "Default"), section: f.str("visualTooltip", "section", "") },
     lockAspect: f.bool("lockAspect", "show", false),

@@ -182,6 +182,7 @@ export const OPTION_PAGES: OptionPage[] = [
       b("file.report.persistentFilters", "Persistent filters", false),
       b("file.report.showTablesDefault", "Export data allowed", true),
       b("file.report.hiddenPages", "Show hidden pages to users", false),
+      b("file.report.personalize", "Let report readers personalize visuals (change the type and fields of a visual)", false, true, "Stored as the personalizeVisual setting of every page; the visual header then shows the Personalize button."),
     ],
   },
 ];

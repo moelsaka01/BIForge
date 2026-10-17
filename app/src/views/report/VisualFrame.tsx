@@ -7,6 +7,8 @@ import type { PageModel, Position, VisualModel } from "../../core/report/visualD
 import { visualType } from "../../core/report/visualTypes";
 import { rotationOf } from "../../core/report/staticVisuals";
 import { effectivelyHidden } from "../../core/report/groups";
+import { personalizeOn } from "../../core/report/reportOps";
+import { PersonalizePanel } from "./PersonalizePanel";
 import { buildContainer } from "../../core/report/containerModel";
 import { drillPlan } from "../../core/report/queryBuilder";
 import { useReport, type MenuItem } from "./reportContext";
@@ -65,6 +67,7 @@ export function VisualFrame(p: FrameProps) {
   const c = useReport();
   const { visual, page, position: pos } = p;
   const [hover, setHover] = useState(false);
+  const [personalizing, setPersonalizing] = useState(false);
   const f = new FormatReader(visual.json, c.theme, visual.visualType);
   const type = visualType(visual.visualType);
   const fam = type?.family;
@@ -188,6 +191,22 @@ export function VisualFrame(p: FrameProps) {
           </div>
         )}
       </div>
+      {c.readOnly && showBar && model.headerShown && model.headerButtons.personalize && !!type && !type.static && personalizeOn(c.project, page.name) && (
+        <button
+          aria-label="Personalize this visual"
+          title="Personalize this visual"
+          aria-pressed={personalizing}
+          onClick={(e) => {
+            e.stopPropagation();
+            setPersonalizing((x) => !x);
+          }}
+          onPointerDown={(e) => e.stopPropagation()}
+          style={{ position: "absolute", right: 4, top: 2, height: 20, padding: "0 6px", border: "none", borderRadius: 3, cursor: "pointer", zIndex: 8, fontSize: 13, ...model.headerStyle }}
+        >
+          ✎
+        </button>
+      )}
+      {c.readOnly && personalizing && <PersonalizePanel page={page} visual={visual} onClose={() => setPersonalizing(false)} />}
       {p.editing && !c.readOnly && showBar && !editingSource && model.headerShown && (
         <div
           data-testid="visual-bar"

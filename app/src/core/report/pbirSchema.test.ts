@@ -114,6 +114,7 @@ describe("saved reports match the published PBIR schemas", () => {
     expect(visuals.some((v) => v.visual.objects?.referenceLine?.[0]?.selector?.id === "average")).toBe(true);
     expect(visuals.some((v) => v.visual.objects?.image?.[0]?.properties?.sourceUrl)).toBe(true);
     expect(visuals.every((v) => v.syncGroup === undefined)).toBe(true);
+    expect((report.files["pages/page1/page.json"] as J).objects.personalizeVisual[0].properties.show.expr.Literal.Value).toBe("true");
     const mobile = Object.entries(report.files).filter(([k]) => /mobile.json$/.test(k));
     expect(mobile).toHaveLength(1);
     expect((mobile[0][1] as J).position).toMatchObject({ x: 10, y: 20, width: 300, height: 200 });

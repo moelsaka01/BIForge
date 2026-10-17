@@ -3,7 +3,7 @@
 import type { Project } from "../model/types";
 import { sameField, type FieldRef, type Lit } from "./fields";
 import { readFilters, writeFilters, type FilterDef } from "./filters";
-import { fieldToPbir, type J } from "./pbir";
+import { fieldToPbir, litExpr, readLitProp, type J } from "./pbir";
 import {
   activePageName,
   hasField,
@@ -458,6 +458,30 @@ export function setPosition(p: Project, page: string, visual: string, pos: Parti
   j.position = Object.fromEntries(Object.entries(next).map(([k, v]) => [k, typeof v === "number" ? Math.round(v * 100) / 100 : v]));
   if (isGroupJson(j)) transformMembers(p, page, j, old);
   else refitAncestors(p, page, j);
+}
+
+// ---- personalize visuals -----------------------------------------------------------------------
+// A page lets readers personalize its visuals when objects.personalizeVisual.show is true (the report format's own
+// object); each visual's header then offers the Personalize button unless visualHeader.showPersonalizeVisualButton is off.
+
+/** Whether readers may personalize the visuals of a page. */
+export function personalizeOn(p: Project, page: string): boolean {
+  const l = readLitProp(pageJson(p, page).objects?.personalizeVisual?.[0]?.properties?.show);
+  return l?.t === "bool" && l.v;
+}
+
+/** Turns personalizing on or off for every page of the report. */
+export function setPersonalize(p: Project, enabled: boolean): void {
+  for (const name of listPageNames(p)) {
+    const pj = pageJson(p, name);
+    if (enabled) {
+      pj.objects ??= {};
+      pj.objects.personalizeVisual = [{ properties: { show: litExpr({ t: "bool", v: true }) } }];
+    } else if (pj.objects?.personalizeVisual) {
+      delete pj.objects.personalizeVisual;
+      if (Object.keys(pj.objects).length === 0) delete pj.objects;
+    }
+  }
 }
 
 // ---- phone layout ------------------------------------------------------------------------------

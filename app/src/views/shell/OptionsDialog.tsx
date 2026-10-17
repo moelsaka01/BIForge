@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Button, Checkbox, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, Input } from "@fluentui/react-components";
 import { OPTION_PAGES, optionValue, type OptionDef, type OptionPage, type OptionValue } from "../../core/options/schema";
 import { getModelCulture } from "../../core/model/ops";
+import { personalizeOn } from "../../core/report/reportOps";
+import { listPageNames } from "../../core/report/visualDoc";
 import { useDoc, useEnv, useSettings, useShellState } from "./ShellContext";
 
 const NOT_YET = "Not yet implemented";
@@ -28,6 +30,8 @@ export function OptionsDialog({ page }: { page?: string }) {
         return layout.ribbonMode;
       case "model.culture":
         return (doc.project && getModelCulture(doc.project)) || (def.default as string);
+      case "file.report.personalize":
+        return doc.project ? listPageNames(doc.project).some((n) => personalizeOn(doc.project!, n)) : false;
       default:
         return optionValue(settings.options, def);
     }
@@ -42,6 +46,8 @@ export function OptionsDialog({ page }: { page?: string }) {
         return void env.run("app.ribbon.mode", { mode: value });
       case "model.culture":
         return void env.run("model.setCulture", { culture: value });
+      case "file.report.personalize":
+        return void env.run("report.personalize.set", { enabled: value === true });
       default:
         return void env.run("app.option.set", { id: def.id, value });
     }

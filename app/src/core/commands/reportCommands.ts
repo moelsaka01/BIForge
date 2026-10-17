@@ -43,6 +43,11 @@ export function registerReportCommands(r: CommandRegistry<Session>): void {
     r.register({ id, label, category: "Report", shortcut: extra.shortcut, isEnabled: extra.enabled ?? hasProject, run });
   const edit = (s: Session, label: string, fn: (p: NonNullable<Session["store"]["project"]>) => void) => s.store.transact(label, (p) => fn(p));
   /** A change of what is shown (slicers, filters, bookmarks): an edit for a project, a view change for a report open for viewing. */
+  /** A reader personalizing a visual (type and fields) when the page allows it; for an editable project a normal edit. */
+  const editPersonalize = (s: Session, page: string, label: string, fn: (p: NonNullable<Session["store"]["project"]>) => void) => {
+    if (s.store.getSnapshot().readOnly && !ops.personalizeOn(s.store.project!, page)) throw new Error("This report does not let readers personalize its visuals.");
+    return s.store.getSnapshot().readOnly ? s.store.applyViewChange(fn) : s.store.transact(label, (p) => fn(p));
+  };
   const editView = (s: Session, label: string, fn: (p: NonNullable<Session["store"]["project"]>) => void) => (s.store.getSnapshot().readOnly ? s.store.applyViewChange(fn) : s.store.transact(label, (p) => fn(p)));
 
   // ---- pages ----
@@ -181,6 +186,10 @@ export function registerReportCommands(r: CommandRegistry<Session>): void {
       }
     },
   );
+  reg("report.personalize.set", "Allow readers to personalize visuals", (s, a) => {
+    const { enabled } = need<{ enabled: boolean }>(a, ["enabled"]);
+    edit(s, "Personalize visuals setting", (p) => ops.setPersonalize(p, enabled));
+  });
   // ---- phone layout ----
   reg("view.mobileLayout", "Mobile layout", (s) => s.report.setMobile(!s.report.getSnapshot().mobile));
   reg("report.mobile.place", "Add to the phone layout", (s, a) => {
@@ -320,7 +329,7 @@ export function registerReportCommands(r: CommandRegistry<Session>): void {
   });
   reg("report.visual.setType", "Change visual type", (s, a) => {
     const x = need<{ page: string; visual: string; type: string }>(a, ["page", "visual", "type"]);
-    edit(s, "Change visual type", (p) => ops.setVisualType(p, x.page, x.visual, x.type));
+    editPersonalize(s, x.page, "Change visual type", (p) => ops.setVisualType(p, x.page, x.visual, x.type));
     s.report.resetDrill(x.visual);
   });
   reg("report.visual.setHidden", "Show or hide visual", (s, a) => {
@@ -342,12 +351,12 @@ export function registerReportCommands(r: CommandRegistry<Session>): void {
   reg("report.field.add", "Add field to visual", (s, a) => {
     const x = need<{ page: string; visual: string; field: FieldRef }>(a, ["page", "visual", "field"]);
     const args = a as { role?: string | null; index?: number };
-    edit(s, "Add field", (p) => ops.addField(p, x.page, x.visual, args.role ?? null, x.field, args.index));
+    editPersonalize(s, x.page, "Add field", (p) => ops.addField(p, x.page, x.visual, args.role ?? null, x.field, args.index));
     s.report.resetDrill(x.visual);
   });
   reg("report.field.remove", "Remove field from visual", (s, a) => {
     const x = need<{ page: string; visual: string; role: string; index: number }>(a, ["page", "visual", "role", "index"]);
-    edit(s, "Remove field", (p) => ops.removeField(p, x.page, x.visual, x.role, x.index));
+    editPersonalize(s, x.page, "Remove field", (p) => ops.removeField(p, x.page, x.visual, x.role, x.index));
     s.report.resetDrill(x.visual);
   });
   reg("report.field.move", "Reorder field", (s, a) => {
@@ -357,7 +366,7 @@ export function registerReportCommands(r: CommandRegistry<Session>): void {
   });
   reg("report.field.setAggregation", "Summarize field", (s, a) => {
     const x = need<{ page: string; visual: string; role: string; index: number; fn: number }>(a, ["page", "visual", "role", "index", "fn"]);
-    edit(s, "Summarize field", (p) => ops.setAggregation(p, x.page, x.visual, x.role, x.index, x.fn));
+    editPersonalize(s, x.page, "Summarize field", (p) => ops.setAggregation(p, x.page, x.visual, x.role, x.index, x.fn));
   });
   reg("report.field.rename", "Rename field in visual", (s, a) => {
     const x = need<{ page: string; visual: string; role: string; index: number; name: string }>(a, ["page", "visual", "role", "index", "name"]);

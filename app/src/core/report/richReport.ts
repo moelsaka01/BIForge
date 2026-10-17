@@ -148,6 +148,7 @@ export async function buildRichReport(): Promise<RichReport> {
   await run("report.group.format", { page: "page1", group: groupName, object: "background", prop: "show", value: lit.bool(true) });
   await run("report.group.format", { page: "page1", group: groupName, object: "background", prop: "color", value: lit.str("#eeeeee") });
   await run("report.group.format", { page: "page1", group: groupName, object: "general", prop: "altText", value: lit.str("Header group") });
+  await run("report.personalize.set", { enabled: true });
   // the chart is also on the phone layout
   await run("report.mobile.place", { page: "page1", visual: chart.name });
   await run("report.mobile.setPositions", { page: "page1", items: [{ visual: chart.name, position: { x: 10, y: 20, width: 300, height: 200 } }] });
