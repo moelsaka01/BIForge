@@ -857,7 +857,7 @@ export function removeBookmarksOf(p: Project, page: string): void {
     if (k.startsWith("bookmarks/") && k.endsWith(".bookmark.json") && v?.explorationState?.activeSection === page) {
       delete files(p)[k];
       const idx = files(p)["bookmarks/bookmarks.json"];
-      if (idx) idx.items = (idx.items ?? []).filter((i: J) => i.name !== v.name);
+      if (idx) idx.items = (idx.items ?? []).map((i: J) => (Array.isArray(i.children) ? { ...i, children: i.children.filter((c: string) => c !== v.name) } : i)).filter((i: J) => (Array.isArray(i.children) ? i.children.length > 0 : i.name !== v.name));
       const r = files(p)["report.json"];
       if (r?.annotations) r.annotations = r.annotations.filter((a: J) => a.name !== `biforge.bookmark.${v.name}`);
     }

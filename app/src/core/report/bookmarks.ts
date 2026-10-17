@@ -42,6 +42,15 @@ export interface BookmarkInfo {
   name: string;
   page: string;
   options: BookmarkOptions;
+  /** The bookmark group this bookmark is in (its name in the index), if any. */
+  group?: string;
+}
+
+export interface BookmarkGroup {
+  id: string;
+  name: string;
+  /** Bookmark ids in order. */
+  children: string[];
 }
 
 const files = (p: Project) => p.report.files as Record<string, J>;
@@ -74,9 +83,14 @@ function index(p: Project): J {
   return (files(p)[INDEX] ??= { $schema: INDEX_SCHEMA, items: [] });
 }
 
+const isGroup = (i: J) => Array.isArray(i?.children);
+
+/** Bookmarks in display order: groups are flattened in place, each member carrying its group. */
 export function listBookmarks(p: Project): BookmarkInfo[] {
-  const order: string[] = (files(p)[INDEX]?.items ?? []).map((i: J) => i.name);
-  return order.flatMap((id) => {
+  const order: { id: string; group?: string }[] = (files(p)[INDEX]?.items ?? []).flatMap((i: J) =>
+    isGroup(i) ? (i.children as string[]).map((id) => ({ id, group: i.name as string })) : [{ id: i.name as string }],
+  );
+  return order.flatMap(({ id, group }) => {
     const f = files(p)[fileKey(id)];
     if (!f) return [];
     const o = f.options ?? {};
@@ -86,9 +100,78 @@ export function listBookmarks(p: Project): BookmarkInfo[] {
         name: f.displayName ?? id,
         page: f.explorationState?.activeSection ?? "",
         options: { data: !o.suppressData, display: !o.suppressDisplay, currentPage: !!o.suppressActiveSection },
+        ...(group ? { group } : {}),
       },
     ];
   });
+}
+
+export function listBookmarkGroups(p: Project): BookmarkGroup[] {
+  return (files(p)[INDEX]?.items ?? []).filter(isGroup).map((g: J) => ({ id: g.name, name: g.displayName ?? g.name, children: [...g.children] }));
+}
+
+const groupItem = (p: Project, id: string): J => {
+  const g = (files(p)[INDEX]?.items ?? []).find((i: J) => isGroup(i) && i.name === id);
+  if (!g) throw new ReportError("That bookmark group does not exist.");
+  return g;
+};
+
+/** Removes the bookmark from wherever it is in the index (top level or a group); an emptied group disappears. */
+function detach(p: Project, id: string): void {
+  const idx = index(p);
+  idx.items = idx.items
+    .map((i: J) => (isGroup(i) ? { ...i, children: i.children.filter((c: string) => c !== id) } : i))
+    .filter((i: J) => (isGroup(i) ? i.children.length > 0 : i.name !== id));
+}
+
+const groupNameTaken = (p: Project, name: string, except?: string) => listBookmarkGroups(p).some((g) => g.id !== except && g.name.toLowerCase() === name.toLowerCase());
+
+/** Puts the bookmarks (in the order given) into a new group at the position of the first of them. */
+export function createGroup(p: Project, displayName: string, ids: string[], newId: () => string = newName): string {
+  const n = displayName.trim();
+  if (!n) throw new ReportError("A bookmark group needs a name.");
+  if (groupNameTaken(p, n)) throw new ReportError(`A bookmark group named "${n}" already exists.`);
+  const known = new Set(listBookmarks(p).map((b) => b.id));
+  const members = ids.filter((id) => known.has(id));
+  if (members.length === 0) throw new ReportError("Choose at least one bookmark for the group.");
+  const idx = index(p);
+  const at = idx.items.findIndex((i: J) => (isGroup(i) ? i.children.some((c: string) => members.includes(c)) : members.includes(i.name)));
+  members.forEach((m) => detach(p, m)); // nothing before position `at` held a member, so `at` is still the right place
+  const gid = newId();
+  const items: J[] = index(p).items;
+  items.splice(Math.min(Math.max(at, 0), items.length), 0, { name: gid, displayName: n, children: members });
+  return gid;
+}
+
+export function renameGroup(p: Project, id: string, displayName: string): void {
+  const g = groupItem(p, id);
+  const n = displayName.trim();
+  if (!n) throw new ReportError("A bookmark group needs a name.");
+  if (groupNameTaken(p, n, id)) throw new ReportError(`A bookmark group named "${n}" already exists.`);
+  g.displayName = n;
+}
+
+/** Dissolves the group; its bookmarks stay, in the same place, at the top level. */
+export function ungroup(p: Project, id: string): void {
+  const g = groupItem(p, id);
+  const idx = index(p);
+  idx.items = idx.items.flatMap((i: J) => (i === g ? g.children.map((c: string) => ({ name: c })) : [i]));
+}
+
+/** Deletes the group and the bookmarks in it. */
+export function deleteGroup(p: Project, id: string): void {
+  const g = groupItem(p, id);
+  for (const c of [...g.children]) deleteBookmark(p, c);
+}
+
+/** Moves a bookmark into a group (at the end) or, with null, out of its group to the end of the list. */
+export function moveToGroup(p: Project, id: string, group: string | null): void {
+  if (!files(p)[fileKey(id)]) throw new ReportError("That bookmark does not exist.");
+  const target = group ? groupItem(p, group) : null;
+  detach(p, id);
+  const items: J[] = index(p).items;
+  if (target) (items.find((i: J) => i.name === target.name) as J).children.push(id);
+  else items.push({ name: id });
 }
 
 function capture(p: Project, page: string, runtime: RuntimeState): BookmarkData {
@@ -159,20 +242,35 @@ export function renameBookmark(p: Project, id: string, displayName: string): voi
 export function deleteBookmark(p: Project, id: string): void {
   if (!files(p)[fileKey(id)]) throw new ReportError("That bookmark does not exist.");
   delete files(p)[fileKey(id)];
+  detach(p, id);
   const idx = index(p);
-  idx.items = idx.items.filter((i: J) => i.name !== id);
   const r = files(p)["report.json"];
   r.annotations = (r.annotations ?? []).filter((a: J) => a.name !== ANN + id);
   if (!r.annotations.length) delete r.annotations;
   if (!idx.items.length) delete files(p)[INDEX];
 }
 
+/** Moves a bookmark to `toIndex` of the displayed list, within the group (or the top level) it is in. */
 export function moveBookmark(p: Project, id: string, toIndex: number): void {
+  const flat = listBookmarks(p);
+  const me = flat.find((b) => b.id === id);
+  if (!me) throw new ReportError("That bookmark does not exist.");
   const idx = index(p);
-  const items = idx.items.filter((i: J) => i.name !== id);
-  if (items.length === idx.items.length) throw new ReportError("That bookmark does not exist.");
-  items.splice(Math.max(0, Math.min(items.length, toIndex)), 0, { name: id });
-  idx.items = items;
+  const container: string[] | null = me.group ? (groupItem(p, me.group).children as string[]) : null;
+  const top: J[] = idx.items;
+  const names = container ?? top.filter((i: J) => !isGroup(i)).map((i: J) => i.name as string);
+  const peers = flat.filter((b) => (b.group ?? null) === (me.group ?? null)).map((b) => b.id);
+  const target = flat[Math.max(0, Math.min(flat.length - 1, toIndex))];
+  const local = target && (target.group ?? null) === (me.group ?? null) ? peers.indexOf(target.id) : toIndex < flat.indexOf(me) ? 0 : peers.length - 1;
+  const rest = names.filter((n) => n !== id);
+  rest.splice(Math.max(0, Math.min(rest.length, local)), 0, id);
+  if (container) {
+    container.splice(0, container.length, ...rest);
+  } else {
+    // top-level standalone bookmarks are reordered among themselves; groups keep their positions
+    const queue = [...rest];
+    idx.items = top.map((i: J) => (isGroup(i) ? i : { name: queue.shift() as string }));
+  }
 }
 
 export interface Applied {

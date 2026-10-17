@@ -461,6 +461,28 @@ export function registerReportCommands(r: CommandRegistry<Session>): void {
     edit(s, "Reorder bookmarks", (p) => bm.moveBookmark(p, x.id, x.index));
   });
 
+  reg("report.bookmark.group", "Group bookmarks", (s, a) => {
+    const x = need<{ name: string; ids: string[] }>(a, ["name", "ids"]);
+    edit(s, "Group bookmarks", (p) => bm.createGroup(p, x.name, x.ids));
+  });
+  reg("report.bookmark.group.rename", "Rename bookmark group", (s, a) => {
+    const x = need<{ id: string; name: string }>(a, ["id", "name"]);
+    edit(s, "Rename bookmark group", (p) => bm.renameGroup(p, x.id, x.name));
+  });
+  reg("report.bookmark.group.ungroup", "Ungroup bookmarks", (s, a) => {
+    const { id } = need<{ id: string }>(a, ["id"]);
+    edit(s, "Ungroup bookmarks", (p) => bm.ungroup(p, id));
+  });
+  reg("report.bookmark.group.delete", "Delete bookmark group", (s, a) => {
+    const { id } = need<{ id: string }>(a, ["id"]);
+    edit(s, "Delete bookmark group", (p) => bm.deleteGroup(p, id));
+  });
+  reg("report.bookmark.moveToGroup", "Move bookmark to a group", (s, a) => {
+    const x = (a ?? {}) as { id?: string; group?: string | null };
+    if (!x.id) throw new Error("Missing value: id.");
+    edit(s, "Move bookmark", (p) => bm.moveToGroup(p, x.id as string, x.group ?? null));
+  });
+
   // ---- themes ----
   reg("report.theme.apply", "Apply theme", (s, a) => {
     const args = (a ?? {}) as { builtin?: string; json?: unknown };

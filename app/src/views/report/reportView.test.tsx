@@ -325,6 +325,26 @@ describe("ReportView: format, filters, bookmarks", () => {
     await waitFor(() => expect(t.page().visuals[0].filters.defs).toHaveLength(0));
   });
 
+  it("bookmark groups: tick bookmarks, name the group, rename and ungroup it from the pane", async () => {
+    const t = setup((api) => ({ right: <div style={{ width: 230 }}><BookmarksPane /></div> }));
+    render(<t.Host />);
+    for (const n of ["One", "Two", "Three"]) {
+      fireEvent.change(await screen.findByLabelText("Bookmark name"), { target: { value: n } });
+      fireEvent.click(screen.getByRole("button", { name: "Add" }));
+      await waitFor(() => expect(listBookmarks(t.session.store.project!).map((b) => b.name)).toContain(n));
+    }
+    fireEvent.click(screen.getByRole("checkbox", { name: "Select bookmark Two" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Select bookmark Three" }));
+    fireEvent.change(screen.getByLabelText("Group name"), { target: { value: "Later" } });
+    fireEvent.click(screen.getByRole("button", { name: "Group" }));
+    const group = await screen.findByRole("group", { name: "Bookmark group Later" });
+    expect(group).toBeTruthy();
+    expect(listBookmarks(t.session.store.project!).map((b) => [b.name, !!b.group])).toEqual([["One", false], ["Two", true], ["Three", true]]);
+    fireEvent.click(screen.getByRole("button", { name: "Ungroup Later" }));
+    await waitFor(() => expect(screen.queryByRole("group", { name: "Bookmark group Later" })).toBeNull());
+    expect(listBookmarks(t.session.store.project!).every((b) => !b.group)).toBe(true);
+  });
+
   it("errors from a command are not thrown into the UI", async () => {
     const t = setup();
     render(<t.Host />);

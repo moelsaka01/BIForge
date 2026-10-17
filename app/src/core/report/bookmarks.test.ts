@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyBookmark, createBookmark, deleteBookmark, listBookmarks, moveBookmark, renameBookmark, setBookmarkOptions, updateBookmark } from "./bookmarks";
+import { applyBookmark, createBookmark, createGroup, deleteGroup, listBookmarkGroups, moveToGroup, renameGroup, ungroup, deleteBookmark, listBookmarks, moveBookmark, renameBookmark, setBookmarkOptions, updateBookmark } from "./bookmarks";
 import { agg, column, lit } from "./fields";
 import { ReportRuntime } from "./runtime";
 import * as ops from "./reportOps";
@@ -177,5 +177,73 @@ describe("runtime state", () => {
     expect(calls).toBe(2);
     r.refreshData();
     expect(r.getSnapshot().epoch).toBe(1);
+  });
+});
+
+describe("bookmark groups", () => {
+  const three = () => {
+    const s = setup();
+    const [a, b, c] = ["A", "B", "C"].map((nm) => createBookmark(s.p, nm, "page1", rt, undefined, id));
+    return { ...s, a, b, c };
+  };
+  const index = (p: ReturnType<typeof setup>["p"]) => (p.report.files["bookmarks/bookmarks.json"] as { items: unknown[] }).items;
+
+  it("a group holds bookmarks in the PBIR index (name, displayName, children) and the list shows them in place with their group", () => {
+    const s = three();
+    const g = createGroup(s.p, "Overview", [s.b, s.c], id);
+    expect(index(s.p)).toEqual([{ name: s.a }, { name: g, displayName: "Overview", children: [s.b, s.c] }]);
+    expect(listBookmarks(s.p).map((b) => [b.name, b.group])).toEqual([["A", undefined], ["B", g], ["C", g]]);
+    expect(listBookmarkGroups(s.p)).toEqual([{ id: g, name: "Overview", children: [s.b, s.c] }]);
+    expect(() => createGroup(s.p, "overview", [s.a], id)).toThrow(/already exists/);
+    expect(() => createGroup(s.p, " ", [s.a], id)).toThrow(/needs a name/);
+    expect(() => createGroup(s.p, "X", ["nope"], id)).toThrow(/at least one/);
+  });
+
+  it("the group goes where its first member was; a group made of every bookmark of an older group removes that group", () => {
+    const s = three();
+    const g1 = createGroup(s.p, "First", [s.b], id);
+    createGroup(s.p, "Second", [s.a, s.b], id);
+    expect(listBookmarkGroups(s.p).map((g) => g.name)).toEqual(["Second"]);
+    expect(index(s.p)).toHaveLength(2);
+    expect(index(s.p)[0]).toMatchObject({ displayName: "Second", children: [s.a, s.b] });
+    expect(listBookmarkGroups(s.p).some((g) => g.id === g1)).toBe(false);
+  });
+
+  it("rename, move in and out, ungroup (bookmarks stay) and delete (bookmarks go)", () => {
+    const s = three();
+    const g = createGroup(s.p, "G", [s.a], id);
+    renameGroup(s.p, g, "Renamed");
+    moveToGroup(s.p, s.b, g);
+    expect(listBookmarkGroups(s.p)[0]).toEqual({ id: g, name: "Renamed", children: [s.a, s.b] });
+    moveToGroup(s.p, s.a, null);
+    expect(index(s.p)).toEqual([{ name: g, displayName: "Renamed", children: [s.b] }, { name: s.c }, { name: s.a }]);
+    ungroup(s.p, g);
+    expect(index(s.p)).toEqual([{ name: s.b }, { name: s.c }, { name: s.a }]);
+    const g2 = createGroup(s.p, "Gone", [s.b, s.c], id);
+    deleteGroup(s.p, g2);
+    expect(listBookmarks(s.p).map((b) => b.name)).toEqual(["A"]);
+    expect(s.p.report.files[`bookmarks/${s.b}.bookmark.json`]).toBeUndefined();
+    expect(() => renameGroup(s.p, "nope", "x")).toThrow(/does not exist/);
+  });
+
+  it("deleting a bookmark removes it from its group, and an emptied group disappears; moving stays inside the group", () => {
+    const s = three();
+    const g = createGroup(s.p, "G", [s.a, s.b, s.c], id);
+    moveBookmark(s.p, s.c, 0);
+    expect(listBookmarkGroups(s.p)[0].children).toEqual([s.c, s.a, s.b]);
+    deleteBookmark(s.p, s.a);
+    deleteBookmark(s.p, s.b);
+    expect(listBookmarkGroups(s.p)[0].children).toEqual([s.c]);
+    deleteBookmark(s.p, s.c);
+    expect(listBookmarkGroups(s.p)).toEqual([]);
+    expect(s.p.report.files["bookmarks/bookmarks.json"]).toBeUndefined();
+    expect(g).toBeTruthy();
+  });
+
+  it("deleting a page removes its bookmarks from groups too", () => {
+    const s = three();
+    createGroup(s.p, "G", [s.a, s.b], id);
+    ops.removeBookmarksOf(s.p, "page1");
+    expect(listBookmarkGroups(s.p)).toEqual([]);
   });
 });

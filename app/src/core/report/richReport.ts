@@ -2,6 +2,7 @@
 // page, a tooltip page, static objects, Analytics lines and a theme, through the same commands the app uses. The files
 // of it are what pbirSchema.test.ts validates against the published PBIR schemas.
 import { createRegistry } from "../commands/builtin";
+import { listBookmarks } from "./bookmarks";
 import { FakeDialogs, FakeIO } from "../testing/fakes";
 import { Session } from "../session/session";
 import { visualObjects, type Kind } from "../format/capabilities";
@@ -156,6 +157,12 @@ export async function buildRichReport(): Promise<RichReport> {
   await run("report.mobile.place", { page: "page1", visual: chart.name });
   await run("report.mobile.setPositions", { page: "page1", items: [{ visual: chart.name, position: { x: 10, y: 20, width: 300, height: 200 } }] });
   await run("report.bookmark.add", { name: "B1" });
+  await run("report.bookmark.add", { name: "B2" });
+  await run("report.bookmark.add", { name: "B3" });
+  {
+    const ids = listBookmarks(session.store.project!).map((b) => b.id);
+    await run("report.bookmark.group", { name: "Overview", ids: [ids[1], ids[2]] });
+  }
   await run("report.theme.apply", { builtin: "BIForge Dark" });
 
   // every property of every formatting object of every authored visual, set on one more visual of each type
