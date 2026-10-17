@@ -31,11 +31,15 @@ const cat = (max = 8): RoleDef => ({ name: "Category", label: "X-axis", accepts:
 const series: RoleDef = { name: "Series", label: "Legend", accepts: "column", max: 1 };
 const y = (label = "Y-axis", max = 12): RoleDef => ({ name: "Y", label, accepts: "value", max });
 
+/** Small multiples split a chart into one small chart per value of a field (the report format calls the well Rows). */
+const SMALL_MULTIPLES: RoleDef = { name: "Rows", label: "Small multiples", accepts: "column", max: 1 };
+const NO_SMALL_MULTIPLES = new Set(["ribbonChart", "lineClusteredColumnComboChart"]);
+
 const cartesian = (id: string, label: string, glyph: string, extra: RoleDef[] = []): VisualTypeDef => ({
   id,
   label,
   family: "cartesian",
-  roles: [cat(), series, y(), ...extra],
+  roles: [cat(), series, y(), ...extra, ...(NO_SMALL_MULTIPLES.has(id) ? [] : [SMALL_MULTIPLES])],
   size: { width: 400, height: 300 },
   glyph,
 });

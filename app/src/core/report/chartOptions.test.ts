@@ -8,6 +8,7 @@ import { buildVisualQuery } from "./queryBuilder";
 import { fixtureModel, visualOf } from "./testFixture";
 import { DEFAULT_THEME } from "./theme";
 import { setFormat, setRawProp, type VisualModel } from "./visualDoc";
+import { visualType } from "./visualTypes";
 
 const model = fixtureModel();
 const Cat = column("Product", "Category");
@@ -212,5 +213,85 @@ describe("other charts", () => {
   it("non-chart visuals return null", () => {
     const v = visualOf("tableEx", { Values: [Cat] });
     expect(buildChart({ visual: v, loaded: grouped(v, [[c("Bikes")]]), theme: DEFAULT_THEME, selected: [] })).toBeNull();
+  });
+});
+
+describe("small multiples", () => {
+  const Channel = column("Sales", "Channel");
+  const rows = [
+    [c("Bikes"), c("France"), c("Online"), c(30)],
+    [c("Shoes"), c("France"), c("Online"), c(10)],
+    [c("Bikes"), c("Canada"), c("Online"), c(20)],
+    [c("Bikes"), c("France"), c("Store"), c(50)],
+    [c("Shoes"), c("Canada"), c("Store"), c(70)],
+    [c("Bikes"), c("Canada"), c("Store"), c(5)],
+  ];
+  const mk = (type = "clusteredColumnChart") => visualOf(type, { Category: [Cat], Series: [Country], Rows: [Channel], Y: [Qty] });
+
+  it("one panel per value of the field: a grid, axes and series for each, a title for each", () => {
+    const v = mk();
+    const o = build(v, grouped(v, rows)).option;
+    expect(o.grid).toHaveLength(2);
+    expect(o.xAxis).toHaveLength(2);
+    expect(o.yAxis).toHaveLength(2);
+    expect(o.title.map((t: { text: string }) => t.text)).toEqual(["Online", "Store"]);
+    expect(o.series.map((s: { xAxisIndex: number }) => s.xAxisIndex)).toEqual([0, 0, 1, 1]); // France and Canada in each panel
+    expect(o.series.map((s: { name: string }) => s.name)).toEqual(["France", "Canada", "France", "Canada"]);
+    expect(o.legend.data).toEqual(["France", "Canada"]);
+  });
+
+  it("every panel uses the same colors for the series and the same value scale", () => {
+    const v = mk();
+    const o = build(v, grouped(v, rows)).option;
+    const color = (s: { itemStyle: { color: string } }) => s.itemStyle.color;
+    expect(color(o.series[0])).toBe(color(o.series[2]));
+    expect(color(o.series[1])).toBe(color(o.series[3]));
+    expect(color(o.series[0])).not.toBe(color(o.series[1]));
+    // the largest value of any panel is the top of all of them
+    expect(o.yAxis[0].max).toBe(70);
+    expect(o.yAxis[1].max).toBe(70);
+    expect(o.yAxis[0].min).toBe(0);
+    // value labels at the left edge only, category labels at the bottom row
+    expect(o.yAxis[0].axisLabel.show).toBe(true);
+    expect(o.yAxis[1].axisLabel.show).toBe(false);
+    expect(o.xAxis[0].axisLabel.show).toBe(true);
+  });
+
+  it("an axis with its own bounds keeps them", () => {
+    const v = mk();
+    setFormat(v.json, "valueAxis", "end", lit.num(200));
+    const o = build(v, grouped(v, rows)).option;
+    expect(o.yAxis[0].max).toBe(200);
+  });
+
+  it("selecting a bar selects the panel's value too; the tooltip names the panel", () => {
+    const v = mk();
+    const b = build(v, grouped(v, rows));
+    const Channel2 = column("Sales", "Channel");
+    expect(b.pointAt(2, 0)).toEqual({ fields: [Cat, Country, Channel2], values: [lit.str("Shoes"), lit.str("France"), lit.str("Store")] }); // in the Store panel Shoes (70) comes before Bikes (55)
+    const tip = b.option.tooltip.formatter([{ seriesIndex: 3, seriesName: "Canada", name: "Shoes", marker: "", data: { raw: 70 }, value: 70 }]);
+    expect(tip).toContain("Store");
+    expect(tip).toContain("Canada");
+  });
+
+  it("the layout follows the number of panels, or the chosen columns; the subheader can move to the bottom or be hidden", () => {
+    const v = mk();
+    const three = [...rows, [c("Bikes"), c("France"), c("Phone"), c(9)]];
+    expect(build(v, grouped(v, three)).option.grid).toHaveLength(3);
+    setFormat(v.json, "smallMultiplesLayout", "layoutType", lit.str("custom"));
+    setFormat(v.json, "smallMultiplesLayout", "columnCount", lit.num(1));
+    const grids = build(v, grouped(v, three)).option.grid as { left: string; top: string }[];
+    expect(new Set(grids.map((g) => g.left)).size).toBe(1); // one column
+    expect(new Set(grids.map((g) => g.top)).size).toBe(3);
+    setFormat(v.json, "subheader", "show", lit.bool(false));
+    expect(build(v, grouped(v, three)).option.title).toEqual([]);
+  });
+
+  it("a chart without the field is drawn as before; ribbon and combo charts have no small multiples well", () => {
+    const v = visualOf("clusteredColumnChart", { Category: [Cat], Series: [Country], Y: [Qty] });
+    expect(Array.isArray(build(v, grouped(v, rows.map((r) => [r[0], r[1], r[3]]))).option.grid)).toBe(false);
+    expect(visualType("clusteredColumnChart")!.roles.map((r) => r.name)).toContain("Rows");
+    expect(visualType("ribbonChart")!.roles.map((r) => r.name)).not.toContain("Rows");
+    expect(visualType("lineClusteredColumnComboChart")!.roles.map((r) => r.name)).not.toContain("Rows");
   });
 });

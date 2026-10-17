@@ -20,7 +20,7 @@ const FIELDS: Record<string, { role: string; field: unknown }[]> = {
   clusteredBarChart: [{ role: "Category", field: Cat }, { role: "Y", field: T }],
   barChart: [{ role: "Category", field: Cat }, { role: "Series", field: column("Customer", "Country") }, { role: "Y", field: Qty }],
   hundredPercentStackedBarChart: [{ role: "Category", field: Cat }, { role: "Y", field: Qty }],
-  clusteredColumnChart: [{ role: "Category", field: Cat }, { role: "Category", field: column("Product", "Subcategory") }, { role: "Y", field: Qty }],
+  clusteredColumnChart: [{ role: "Category", field: Cat }, { role: "Category", field: column("Product", "Subcategory") }, { role: "Y", field: Qty }, { role: "Rows", field: column("Sales", "Channel") }],
   columnChart: [{ role: "Category", field: Cat }, { role: "Y", field: Qty }],
   hundredPercentStackedColumnChart: [{ role: "Category", field: Cat }, { role: "Y", field: Qty }],
   lineChart: [{ role: "Category", field: column("Date", "Month") }, { role: "Y", field: Qty }],

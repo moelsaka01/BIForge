@@ -195,6 +195,19 @@ const SCENARIOS: Record<string, Scenario> = {
   image: { make: () => visualOf("image", {}), render: (v) => imageModel(new FormatReader(v.json, DEFAULT_THEME, "image"), 200, 100) },
 };
 
+/** The chart types that can be split into small multiples, measured with a small multiples field bound. */
+const SM_TYPES = ["clusteredColumnChart", "clusteredBarChart", "columnChart", "barChart", "hundredPercentStackedColumnChart", "hundredPercentStackedBarChart", "lineChart", "areaChart", "stackedAreaChart", "hundredPercentStackedAreaChart"];
+const smScenario = (type: string): Scenario => ({
+  make: () => visualOf(type, { Category: [Cat], Series: [Country], Rows: [Ch], Y: [Qty] }),
+  render: (v) =>
+    buildChart({
+      visual: v,
+      loaded: grouped(v, [[t("A"), t("France"), t("Online"), n(30)], [t("B"), t("France"), t("Online"), n(10)], [t("A"), t("Canada"), t("Store"), n(50)], [t("B"), t("Canada"), t("Store"), n(70)], [t("A"), t("France"), t("Phone"), n(5)]]),
+      theme: DEFAULT_THEME,
+      selected: [],
+    }),
+});
+
 /** Same function for every visual type: the look of the container. */
 const containerScenario: Scenario = {
   make: () => visualOf("clusteredColumnChart", { Category: [Cat], Y: [Qty] }),
@@ -297,6 +310,7 @@ function computeAll(): Coverage {
   for (const [id, sc] of Object.entries(SCENARIOS)) {
     const objs = Object.keys(visualObjects(id) ?? {}).filter((o) => !CONTAINER_OBJECTS.has(o) && o !== "general" && o !== "actionButtonSection");
     const own = measure(sc, id, objs);
+    if (SM_TYPES.includes(id)) Object.assign(own, measure(smScenario(id), id, ["smallMultiplesLayout", "subheader"]));
     if (Object.keys(own).length) result[id] = own;
   }
   return result;

@@ -1,6 +1,6 @@
 // Builds Apache ECharts options for the chart visuals from query results, format settings and the theme.
 // Pure: no DOM, no echarts import. Event handlers map chart events back to data points via `pointAt`.
-import type { Value } from "./cells";
+import { valueKey, type Value } from "./cells";
 import { BLANK_LABEL, columnsOf, labelOf, num as valueNum, pivot, pointOfCategory, valueToLit, type Pivot } from "./chartData";
 import { condFormatFromPbir, colorFn } from "./condFormat";
 import { REFERENCE_KINDS, linearTrend, referenceValue, ribbonLayout } from "./analytics";
@@ -23,6 +23,8 @@ export interface ChartInput {
   theme: Theme;
   /** Points selected in this visual (the others are dimmed). */
   selected: SelectedPoint[];
+  /** Small multiples: the color index of a series by its label, so that every panel colors a series alike. */
+  colorBy?: (seriesLabel: string) => number | undefined;
 }
 
 export interface ChartBuild {
@@ -65,7 +67,7 @@ function alignHighlight(base: Pivot, hl: Pivot): (number | null)[][][] {
 
 // ---- cartesian ----------------------------------------------------------------------------------------
 
-function cartesian(inp: ChartInput): ChartBuild {
+function cartesianPanel(inp: ChartInput): ChartBuild {
   const { visual, loaded, theme } = inp;
   const q = loaded.query;
   const f = new FormatReader(visual.json, theme, visual.visualType);
@@ -111,7 +113,7 @@ function cartesian(inp: ChartInput): ChartBuild {
     const asLine = lineOnly || areaOnly || (combo && role === "Y2");
     const name = hasSeries ? (multiMeasure ? `${p.series[si].label || BLANK_LABEL} · ${valueCols[vi].label}` : p.series[si].label || BLANK_LABEL) : valueCols[vi].label;
     const colorIndex = hasSeries && !multiMeasure ? si : multiMeasure && !hasSeries ? vi : si * valueCols.length + vi;
-    const color = f.color("dataPoint", "fill", name) ?? f.color("dataPoint", "defaultColor") ?? seriesColor(theme, colorIndex);
+    const color = f.color("dataPoint", "fill", name) ?? f.color("dataPoint", "defaultColor") ?? seriesColor(theme, (hasSeries && !multiMeasure ? inp.colorBy?.(p.series[si].label || BLANK_LABEL) : undefined) ?? colorIndex);
     const cond = !hasSeries || p.series.length === 1 ? pointColors(f, p, valueCols, vi, si) : null;
     const cells = isHighlight ? hl! : p.cells;
     const data = p.categories.map((_, ci) => {
@@ -287,6 +289,173 @@ function cartesian(inp: ChartInput): ChartBuild {
       return pointOfCategory(p, di, hasSeries ? m.si : null);
     },
   };
+}
+
+// ---- small multiples ---------------------------------------------------------------------------------------
+
+const FIXED_LAYOUT_LIMIT = 36;
+
+/** #rrggbb with an opacity as an rgba() color (ECharts backgrounds take no separate opacity). */
+function rgba(hex: string, alpha: number): string {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex);
+  if (!m) return hex;
+  const n = parseInt(m[1], 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+}
+
+/** Columns and rows of a grid of n panels: the chosen counts, else the grid closest to the shape of the visual. */
+export function panelGrid(n: number, layout: { type: string; columns: number | null; rows: number | null }, aspect: number): { columns: number; rows: number } {
+  const count = Math.min(n, FIXED_LAYOUT_LIMIT);
+  if (layout.type === "custom" && (layout.columns || layout.rows)) {
+    const columns = layout.columns ? Math.max(1, Math.min(count, Math.round(layout.columns))) : Math.max(1, Math.ceil(count / Math.max(1, Math.round(layout.rows!))));
+    return { columns, rows: Math.ceil(count / columns) };
+  }
+  const columns = Math.max(1, Math.min(count, Math.round(Math.sqrt(count * aspect))));
+  return { columns, rows: Math.ceil(count / columns) };
+}
+
+/** The values of the small multiples field in a stable order: numbers by value, text alphabetically, blank last. */
+function panelValues(rows: Value[][], col: { index: number }): Value[] {
+  const seen = new Map<string, Value>();
+  for (const r of rows) if (!seen.has(valueKey(r[col.index]))) seen.set(valueKey(r[col.index]), r[col.index]);
+  return [...seen.values()].sort((a, b) => {
+    if (a.kind === "blank" || b.kind === "blank") return a.kind === "blank" ? (b.kind === "blank" ? 0 : 1) : -1;
+    const x = valueNum(a);
+    const y = valueNum(b);
+    if (x !== null && y !== null) return x - y;
+    return a.text.localeCompare(b.text);
+  });
+}
+
+function smallMultiples(inp: ChartInput, sm: { index: number; format: string | null; field: FieldRef }): ChartBuild {
+  const { visual, loaded, theme } = inp;
+  const q = loaded.query;
+  const f = new FormatReader(visual.json, theme, visual.visualType);
+  const horizontal = visual.visualType === "barChart" || /BarChart$/.test(visual.visualType);
+  const values = panelValues(loaded.rows, sm).slice(0, FIXED_LAYOUT_LIMIT);
+  // series keep their color in every panel
+  const all = pivot(loaded.rows, q, "Category", "Series", ["Y", "Y2"]);
+  const order = new Map(all.series.map((s, i) => [s.label || BLANK_LABEL, i]));
+  const colorBy = (label: string) => order.get(label);
+  const subs = values.map((v) => cartesianPanel({ ...inp, loaded: { ...loaded, rows: loaded.rows.filter((r) => valueKey(r[sm.index]) === valueKey(v)), highlightRows: loaded.highlightRows?.filter((r) => valueKey(r[sm.index]) === valueKey(v)) ?? null }, colorBy }));
+  const n = subs.length;
+  const layoutType = f.str("smallMultiplesLayout", "layoutType", "auto");
+  const { columns, rows } = panelGrid(n, { type: layoutType, columns: f.has("smallMultiplesLayout", "columnCount") ? f.num("smallMultiplesLayout", "columnCount", 0) : null, rows: f.has("smallMultiplesLayout", "rowCount") ? f.num("smallMultiplesLayout", "rowCount", 0) : null }, 1.4);
+  const pad = Math.max(0, f.num("smallMultiplesLayout", "gridPadding", 4));
+  const headerShow = f.bool("subheader", "show", true);
+  const headerAtBottom = f.str("subheader", "position", "top") === "bottom";
+  const headerH = headerShow ? 22 : 0;
+  const font = readFont(f, "subheader", {});
+  const align = f.str("subheader", "alignment", "center");
+  const legendShown = subs[0]?.option.legend?.show !== false && (all.series.length > 1 || subs[0]?.option.series.length > 1);
+  const topMargin = legendShown ? 30 : 6;
+  const bg = f.color("smallMultiplesLayout", "backgroundColor");
+  const panelAlpha = opacityOf(f.num("smallMultiplesLayout", "backgroundTransparency", 0));
+  const grids: O[] = [];
+  const xAxes: O[] = [];
+  const yAxes: O[] = [];
+  const series: O[] = [];
+  const titles: O[] = [];
+  const seriesMap: { panel: number; local: number }[] = [];
+  const valueAxisKey = horizontal ? "xAxis" : "yAxis";
+  // one value scale for all panels, unless the axis has its own bounds
+  let lo = 0;
+  let hi = -Infinity;
+  subs.forEach((s) => {
+    const sums = new Map<number, number>();
+    for (const se of s.option.series as O[]) {
+      for (const [di, d] of (se.data as O[]).entries()) {
+        const x = typeof d === "object" && d ? d.value : d;
+        if (typeof x !== "number" || !Number.isFinite(x)) continue;
+        if (se.stack) sums.set(di, (sums.get(di) ?? 0) + x);
+        else {
+          hi = Math.max(hi, x);
+          lo = Math.min(lo, x);
+        }
+      }
+    }
+    for (const t of sums.values()) hi = Math.max(hi, t);
+  });
+  const userMin = f.has("valueAxis", "start");
+  const userMax = f.has("valueAxis", "end");
+  subs.forEach((sub, i) => {
+    const c = i % columns;
+    const r = Math.floor(i / columns);
+    const area = (k: number, count: number) => `${(k * 100) / count}%`;
+    const cellW = `${100 / columns}%`;
+    const cellH = `${100 / rows}%`;
+    const top = `calc(${area(r, rows)} + ${topMargin + headerH * (headerAtBottom ? 0 : 1)}px)`;
+    grids.push({ ...(bg ? { show: true, backgroundColor: rgba(bg, panelAlpha) } : {}), left: `calc(${area(c, columns)} + ${pad + 4}px)`, top, width: `calc(${cellW} - ${pad * 2 + 8}px)`, height: `calc(${cellH} - ${topMargin / rows + headerH + pad * 2}px)`, containLabel: true });
+    const first = (x: unknown): O => (Array.isArray(x) ? x[0] : x) as O;
+    const xa: O = { ...first(sub.option.xAxis), gridIndex: i };
+    const ya: O = { ...first(sub.option.yAxis), gridIndex: i };
+    const valueAxis = horizontal ? xa : ya;
+    if (valueAxis.type === "value" && Number.isFinite(hi) && valueAxis.min === undefined && valueAxis.max === undefined && !userMin && !userMax) {
+      valueAxis.min = Math.min(0, lo);
+      valueAxis.max = hi;
+    }
+    // labels: values at the left (bars: bottom) edge only, categories at the bottom (bars: left) edge only
+    const lastRow = r === rows - 1 || i + columns >= n;
+    const firstCol = c === 0;
+    const catAxis = horizontal ? ya : xa;
+    if (catAxis.axisLabel) catAxis.axisLabel = { ...catAxis.axisLabel, show: horizontal ? firstCol : lastRow };
+    if (valueAxis.axisLabel) valueAxis.axisLabel = { ...valueAxis.axisLabel, show: horizontal ? lastRow : firstCol };
+    if (valueAxis.name) valueAxis.name = undefined;
+    if (catAxis.name) catAxis.name = undefined;
+    xAxes.push(xa);
+    yAxes.push(ya);
+    (sub.option.series as O[]).forEach((s, k) => {
+      series.push({ ...s, xAxisIndex: i, yAxisIndex: i });
+      seriesMap.push({ panel: i, local: k });
+    });
+    if (headerShow) {
+      titles.push({
+        text: labelOf(values[i], sm.format),
+        left: `calc(${area(c, columns)} + ${pad + 4}px)`,
+        top: headerAtBottom ? `calc(${area(r + 1, rows)} - ${headerH + pad}px)` : `calc(${area(r, rows)} + ${topMargin}px)`,
+        textAlign: align,
+        textStyle: echartsText(font, { family: theme.textClasses.label.fontFace, size: theme.textClasses.label.fontSize, color: theme.textClasses.label.color }),
+      });
+    }
+  });
+  // the legend of the first panel, for the series of all panels
+  const legend = { ...(subs[0]?.option.legend ?? {}), show: legendShown, data: all.series.map((s) => s.label || BLANK_LABEL) };
+  const option: O = {
+    ...subs[0]?.option,
+    title: titles,
+    legend,
+    grid: grids,
+    xAxis: xAxes,
+    yAxis: yAxes,
+    series,
+    tooltip: {
+      ...(subs[0]?.option.tooltip ?? {}),
+      formatter: (params: O | O[]) => {
+        const list = Array.isArray(params) ? params : [params];
+        const first = seriesMap[list[0]?.seriesIndex];
+        if (!first) return "";
+        const sub = subs[first.panel];
+        const mapped = list.filter((x) => seriesMap[x.seriesIndex]?.panel === first.panel).map((x) => ({ ...x, seriesIndex: seriesMap[x.seriesIndex].local }));
+        return `${labelOf(values[first.panel], sm.format)}<br/>${sub.option.tooltip.formatter(mapped)}`;
+      },
+    },
+  };
+  return {
+    option,
+    count: subs.reduce((a, s) => a + s.count, 0),
+    pointAt: (si, di) => {
+      const m = seriesMap[si];
+      if (!m) return null;
+      const pt = subs[m.panel].pointAt(m.local, di);
+      if (!pt) return null;
+      return { fields: [...pt.fields, sm.field], values: [...pt.values, valueToLit(values[m.panel])] };
+    },
+  };
+}
+
+function cartesian(inp: ChartInput): ChartBuild {
+  const sm = columnsOf(inp.loaded.query, "Rows", "group")[0];
+  return sm && inp.loaded.rows.length > 0 ? smallMultiples(inp, sm) : cartesianPanel(inp);
 }
 
 // ---- pie, donut, funnel, treemap ---------------------------------------------------------------------

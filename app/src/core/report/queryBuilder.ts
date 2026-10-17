@@ -83,7 +83,7 @@ function slotsFor(v: VisualModel, family: VisualFamily, drill?: DrillState): { g
   switch (family) {
     case "cartesian": {
       const dp = drillPlan(rolesOf(v, "Category"), drill);
-      return { groups: dedupe([...slot("Category", dp.fields), ...roleSlots("Series")]), values: [...roleSlots("Y"), ...roleSlots("Y2")], extra: dp.filters };
+      return { groups: dedupe([...slot("Category", dp.fields), ...roleSlots("Series"), ...roleSlots("Rows")]), values: [...roleSlots("Y"), ...roleSlots("Y2")], extra: dp.filters };
     }
     case "pie":
     case "funnel":

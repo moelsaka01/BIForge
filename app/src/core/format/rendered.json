@@ -217,6 +217,20 @@
    "transparency",
    "value",
    "width"
+  ],
+  "smallMultiplesLayout": [
+   "backgroundColor",
+   "gridPadding"
+  ],
+  "subheader": [
+   "alignment",
+   "bold",
+   "fontColor",
+   "fontFamily",
+   "fontSize",
+   "italic",
+   "position",
+   "show"
   ]
  },
  "clusteredBarChart": {
@@ -347,6 +361,20 @@
    "transparency",
    "value",
    "width"
+  ],
+  "smallMultiplesLayout": [
+   "backgroundColor",
+   "gridPadding"
+  ],
+  "subheader": [
+   "alignment",
+   "bold",
+   "fontColor",
+   "fontFamily",
+   "fontSize",
+   "italic",
+   "position",
+   "show"
   ]
  },
  "columnChart": {
@@ -453,6 +481,20 @@
    "transparency",
    "value",
    "width"
+  ],
+  "smallMultiplesLayout": [
+   "backgroundColor",
+   "gridPadding"
+  ],
+  "subheader": [
+   "alignment",
+   "bold",
+   "fontColor",
+   "fontFamily",
+   "fontSize",
+   "italic",
+   "position",
+   "show"
   ]
  },
  "barChart": {
@@ -559,6 +601,20 @@
    "transparency",
    "value",
    "width"
+  ],
+  "smallMultiplesLayout": [
+   "backgroundColor",
+   "gridPadding"
+  ],
+  "subheader": [
+   "alignment",
+   "bold",
+   "fontColor",
+   "fontFamily",
+   "fontSize",
+   "italic",
+   "position",
+   "show"
   ]
  },
  "hundredPercentStackedColumnChart": {
@@ -645,6 +701,20 @@
    "titleFontSize",
    "titleItalic",
    "titleText"
+  ],
+  "smallMultiplesLayout": [
+   "backgroundColor",
+   "gridPadding"
+  ],
+  "subheader": [
+   "alignment",
+   "bold",
+   "fontColor",
+   "fontFamily",
+   "fontSize",
+   "italic",
+   "position",
+   "show"
   ]
  },
  "hundredPercentStackedBarChart": {
@@ -731,6 +801,20 @@
    "titleFontSize",
    "titleItalic",
    "titleText"
+  ],
+  "smallMultiplesLayout": [
+   "backgroundColor",
+   "gridPadding"
+  ],
+  "subheader": [
+   "alignment",
+   "bold",
+   "fontColor",
+   "fontFamily",
+   "fontSize",
+   "italic",
+   "position",
+   "show"
   ]
  },
  "lineChart": {
@@ -866,6 +950,20 @@
    "transparency",
    "value",
    "width"
+  ],
+  "smallMultiplesLayout": [
+   "backgroundColor",
+   "gridPadding"
+  ],
+  "subheader": [
+   "alignment",
+   "bold",
+   "fontColor",
+   "fontFamily",
+   "fontSize",
+   "italic",
+   "position",
+   "show"
   ]
  },
  "areaChart": {
@@ -1000,6 +1098,20 @@
    "transparency",
    "value",
    "width"
+  ],
+  "smallMultiplesLayout": [
+   "backgroundColor",
+   "gridPadding"
+  ],
+  "subheader": [
+   "alignment",
+   "bold",
+   "fontColor",
+   "fontFamily",
+   "fontSize",
+   "italic",
+   "position",
+   "show"
   ]
  },
  "stackedAreaChart": {
@@ -1110,6 +1222,20 @@
    "transparency",
    "value",
    "width"
+  ],
+  "smallMultiplesLayout": [
+   "backgroundColor",
+   "gridPadding"
+  ],
+  "subheader": [
+   "alignment",
+   "bold",
+   "fontColor",
+   "fontFamily",
+   "fontSize",
+   "italic",
+   "position",
+   "show"
   ]
  },
  "hundredPercentStackedAreaChart": {
@@ -1200,6 +1326,20 @@
    "titleFontSize",
    "titleItalic",
    "titleText"
+  ],
+  "smallMultiplesLayout": [
+   "backgroundColor",
+   "gridPadding"
+  ],
+  "subheader": [
+   "alignment",
+   "bold",
+   "fontColor",
+   "fontFamily",
+   "fontSize",
+   "italic",
+   "position",
+   "show"
   ]
  },
  "ribbonChart": {
