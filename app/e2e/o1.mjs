@@ -1,5 +1,10 @@
-// Real-window test of the O1 flow: drives the built Tauri app (WebView2) over the DevTools protocol.
+// Real-window test of the O1 and O2 flows: drives the built Tauri app (WebView2) over the DevTools protocol.
 // Run: npm run e2e   (needs `npx tauri build --debug --no-bundle` first; see docs/PROGRESS.md)
+//
+// With BIFORGE_TEST_GITHUB_TOKEN set (a token of the account that owns the test repository; the debug build of the app
+// reads it as its GitHub token, nothing is typed anywhere) the test also publishes the report to GitHub Pages in a
+// dedicated repository, opens it again from the share link, and stops sharing. Without the token those steps are
+// skipped and reported as skipped.
 import { execSync, spawn } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, openSync, readdirSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -10,6 +15,11 @@ const exe = resolve(process.env.BIFORGE_EXE ?? "../target/debug/biforge-app.exe"
 const work = mkdtempSync(join(tmpdir(), "biforge-e2e-"));
 const parent = join(work, "projects");
 const share = join(work, "share");
+const ghToken = process.env.BIFORGE_TEST_GITHUB_TOKEN ?? "";
+const ghRepo = `biforge-e2e-${Math.random().toString(36).slice(2, 10)}`;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const ghApi = (path, init = {}) => fetch(`https://api.github.com${path}`, { ...init, headers: { Authorization: `Bearer ${ghToken}`, Accept: "application/vnd.github+json", "User-Agent": "biforge-e2e", ...(init.headers ?? {}) } });
+let ghLink = null, ghKey = null, ghLogin = null;
 const port = 9333;
 mkdirSync(parent); mkdirSync(share);
 
@@ -128,6 +138,39 @@ try {
   console.log("files in share:", files);
   check(files.some((f) => f.endsWith(".biforge")), "a .biforge file was written to the shared folder");
 
+  // 2b. Publish & Share to GitHub Pages (real GitHub, a dedicated repository)
+  if (ghToken) {
+    ghLogin = (await (await ghApi("/user")).json()).login;
+    await dlg.getByRole("button", { name: "Add a destination" }).click();
+    await dlg.getByRole("combobox", { name: "Destination type" }).click();
+    await page.getByRole("option", { name: /GitHub Pages/ }).click();
+    await dlg.getByLabel("Destination name").fill("E2E site");
+    await dlg.getByLabel("Repository name").fill(ghRepo);
+    await dlg.getByRole("button", { name: "Add destination" }).click();
+    await page.getByRole("button", { name: "Continue", exact: true }).click(); // the GitHub setup guide
+    const sec = dlg.getByRole("region", { name: "Destination E2E site" });
+    await sec.waitFor();
+    check(/GitHub is connected as/.test(await sec.innerText()) || (await sec.innerText()).includes(ghLogin), "the GitHub destination shows the connected account");
+    await sec.getByRole("checkbox", { name: /public web address/ }).check();
+    await sec.getByLabel("Publisher name").fill("E2E Tester");
+    await sec.getByRole("button", { name: "Publish", exact: true }).click();
+    const gstatus = sec.getByRole("status").filter({ hasText: /Published version/ });
+    await gstatus.waitFor({ timeout: 120000 });
+    ghKey = /(AGE-SECRET-KEY-[A-Z0-9]+)/.exec(await gstatus.innerText())?.[1] ?? null;
+    check(!!ghKey, "publish to GitHub Pages shows an access key once");
+    await sec.getByRole("button", { name: "Create share link" }).click();
+    const linkBox = sec.getByRole("status").filter({ hasText: /Share link/ });
+    await linkBox.waitFor();
+    ghLink = /(biforge:\/\/open\?src=url&url=\S+)/.exec(await linkBox.innerText())?.[1] ?? null;
+    check(!!ghLink && !(ghLink.includes("AGE-SECRET")), "the share link points at the site's feed and holds no key");
+    const feedUrl = decodeURIComponent(ghLink.split("url=")[1]);
+    let live = false;
+    for (let i = 0; i < 90 && !live; i++) { live = (await fetch(feedUrl).catch(() => ({ ok: false }))).ok; if (!live) await sleep(5000); }
+    check(live, `GitHub Pages serves the feed (${feedUrl})`);
+  } else {
+    console.log("SKIPPED: GitHub publishing (set BIFORGE_TEST_GITHUB_TOKEN to run it)");
+  }
+
   // 3. Open shared report: read-only viewing mode
   await dlg.getByRole("button", { name: "Close", exact: true }).click();
   await page.waitForTimeout(800);
@@ -163,6 +206,43 @@ try {
   await page.waitForSelector("text=Recent");
   check(true, "Close leaves viewing mode and returns to the start screen");
 
+  // 4. Open the GitHub report by its share link (the link carries no key; the dialog asks for it)
+  if (ghLink) {
+    await page.locator("button", { hasText: /Open shared/ }).first().click();
+    const odlg = page.getByRole("dialog", { name: /shared report/i });
+    await odlg.getByLabel("Link").fill(ghLink);
+    await odlg.getByRole("button", { name: "Use link" }).click();
+    const details = page.getByRole("region", { name: "Package details" });
+    await details.waitFor({ timeout: 120000 });
+    const dtext = await details.innerText();
+    check(/First time: BIForge will remember this publisher key/.test(await page.getByRole("dialog").innerText()) && /private/.test(dtext), "the link downloads the package and shows publisher key and access level before anything opens");
+    await page.getByRole("dialog").getByRole("textbox", { name: "Access key" }).fill(ghKey);
+    await page.getByRole("dialog").getByRole("button", { name: "Open for viewing" }).click();
+    const lbar = page.locator(".viewing-bar");
+    await lbar.waitFor();
+    const lbarText = await lbar.innerText();
+    check(/E2E Tester/.test(lbarText) && /private/.test(lbarText) && /Check for updates/.test(lbarText), "the report opened from the link is in viewing mode with a Check for updates button");
+    await page.waitForSelector("[data-testid=card-value]");
+    check(true, "the report opened from GitHub renders its visuals from the downloaded data");
+    await lbar.getByRole("button", { name: "Check for updates" }).click();
+    await page.getByText(/is up to date \(version 1\)/).first().waitFor({ timeout: 60000 });
+    check(true, "Check for updates reaches GitHub and says the report is up to date");
+    await lbar.locator("button", { hasText: /^Close$/ }).click();
+    await page.waitForSelector("text=Recent");
+
+    // 5. stop sharing from the project (the target was stored with the project), then delete the test repository
+    await page.getByText("E2E Sample").first().click();
+    await page.getByRole("button", { name: /Publish & Share/ }).first().waitFor();
+    await page.getByRole("button", { name: /Publish & Share/ }).first().click();
+    const d2 = page.getByRole("dialog", { name: "Publish and Share" });
+    await d2.getByRole("tab", { name: "E2E site" }).click();
+    await d2.getByRole("button", { name: "Stop sharing" }).click();
+    let gone = false;
+    for (let i = 0; i < 24 && !gone; i++) { gone = (await ghApi(`/repos/${ghLogin}/${ghRepo}/contents/feed.json`)).status === 404; if (!gone) await sleep(2500); }
+    check(gone, "Stop sharing removed the feed from the repository");
+    await d2.getByRole("button", { name: "Close", exact: true }).click();
+  }
+
 } catch (e) {
   failures++;
   console.log("ERROR", e);
@@ -170,6 +250,10 @@ try {
 } finally {
   try { await browser?.close(); } catch {}
   try { process.kill(pid); } catch {}
+  if (ghToken && ghLogin) {
+    const del = await ghApi(`/repos/${ghLogin}/${ghRepo}`, { method: "DELETE" }).catch(() => null);
+    console.log(del?.status === 204 ? `deleted test repository ${ghLogin}/${ghRepo}` : `COULD NOT DELETE ${ghLogin}/${ghRepo} (HTTP ${del?.status}); delete it by hand`);
+  }
 }
 for (const f of ["app.out.log", "app.err.log"]) {
   try { const t = readFileSync(join(work, f), "utf8"); if (t.trim()) console.log(`--- ${f}\n${t.slice(-2000)}`); } catch {}

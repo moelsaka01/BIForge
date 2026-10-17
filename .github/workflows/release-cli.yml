@@ -1,0 +1,23 @@
+name: release-cli
+# Builds biforge-cli.exe (the headless refresh used by the generated GitHub Actions workflow of a published report)
+# and attaches it to a GitHub release. Start it by pushing a tag like cli-v0.1.0 (nothing runs on ordinary pushes).
+on:
+  push:
+    tags: ["cli-v*"]
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Build
+        run: cargo build --release -p biforge-cli
+      - name: Attach to the release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$env:GITHUB_REF_NAME" target/release/biforge-cli.exe --title "BIForge command line $env:GITHUB_REF_NAME" --notes "biforge-cli.exe: headless refresh for published reports."
