@@ -3,6 +3,7 @@
 import type { CommandRegistry } from "./registry";
 import { optionDef, optionValue } from "../options/schema";
 import { setModelCulture } from "../model/ops";
+import { canvasOptionsOf } from "../report/canvasOptions";
 import type { TmdlDocument } from "../model/types";
 import type { Session } from "../session/session";
 import { PANE_IDS, type PaneId, type ShellKind } from "../shell/settings";
@@ -66,6 +67,20 @@ export function registerShellCommands(r: CommandRegistry<Session>): void {
       const z = (args as { zoom?: Zoom } | undefined)?.zoom;
       if (z !== "fit" && !(typeof z === "number" && z >= 0.1 && z <= 4)) throw new Error("Zoom must be \"fit\" or a number between 10% and 400%.");
       s.shell.setZoom(z);
+    },
+  });
+  r.register({
+    id: "view.canvas",
+    label: "Toggle a canvas option (smart guides, gridlines, snap to grid, lock objects)",
+    category: "View",
+    isEnabled: (s) => hasProject(s) && s.shell.getSnapshot().view === "report",
+    run(s, args) {
+      const option = (args as { option?: string } | undefined)?.option;
+      const names = ["smartGuides", "gridlines", "snapToGrid", "lockObjects"];
+      if (!option || !names.includes(option)) throw new Error("Unknown canvas option.");
+      const id = `canvas.${option}`;
+      const cur = canvasOptionsOf(s.shell.settings.getSnapshot().options)[option as "smartGuides"];
+      s.shell.settings.setOption(id, !cur);
     },
   });
   r.register({

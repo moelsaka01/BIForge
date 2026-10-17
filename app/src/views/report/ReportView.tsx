@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, use
 import { Button } from "@fluentui/react-components";
 import type { DaxApi } from "../../core/dax/types";
 import type { Project } from "../../core/model/types";
+import { DEFAULT_CANVAS, type CanvasOptions } from "../../core/report/canvasOptions";
 import { ReportData, type ViewState } from "../../core/report/dataLoader";
 import type { SelectedPoint } from "../../core/report/interactions";
 import { modelInfo } from "../../core/report/modelInfo";
@@ -34,6 +35,8 @@ export interface ReportViewProps {
   onObject?: boolean;
   /** Viewing mode: the canvas cannot be edited. */
   readOnly?: boolean;
+  /** Canvas view options (smart guides, gridlines, snap to grid, lock objects); the defaults when absent. */
+  canvas?: CanvasOptions;
 }
 
 type Zoom = "fit" | number;
@@ -120,7 +123,7 @@ export function ReportView(p: ReportViewProps) {
 
   // keep the runtime in step with the document
   useEffect(() => {
-    p.runtime.reconcile(pages.map((pg) => ({ name: pg.name, visuals: pg.visuals.map((v) => v.name) })));
+    p.runtime.reconcile(pages.map((pg) => ({ name: pg.name, visuals: [...pg.visuals.map((v) => v.name), ...pg.groups.map((g) => g.name)] })));
     if (!p.runtime.getSnapshot().page) {
       const a = activePageName(p.project);
       if (a) p.runtime.goToPage(a);
@@ -130,7 +133,7 @@ export function ReportView(p: ReportViewProps) {
   const pageName = snap.page ?? activePageName(p.project);
   const page = pages.find((x) => x.name === pageName) ?? pages[0];
   useEffect(() => {
-    const keep = selection.filter((n) => page?.visuals.some((v) => v.name === n));
+    const keep = selection.filter((n) => page?.visuals.some((v) => v.name === n) || page?.groups.some((g) => g.name === n));
     if (keep.length !== selection.length) p.runtime.setCanvasSelection(keep);
   }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => p.onSelectVisual?.(page?.name ?? null, selected), [page?.name, selected]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -144,8 +147,8 @@ export function ReportView(p: ReportViewProps) {
   const onMenu = useCallback((items: CtxMenuItem[], x: number, y: number) => setMenu({ items, x, y }), []);
 
   const ctx: ReportCtx = useMemo(
-    () => ({ project: p.project, pages, theme, model, data, view, snap, onObject: p.onObject === true, readOnly: p.readOnly === true, focusFormat: (v: string, c: string) => p.runtime.focusFormat(v, c), dispatch: p.dispatch, onTooltip, onMenu }),
-    [p.project, pages, theme, model, data, view, snap, p.onObject, p.readOnly, p.runtime, p.dispatch, onTooltip, onMenu],
+    () => ({ project: p.project, pages, theme, model, data, view, snap, onObject: p.onObject === true, readOnly: p.readOnly === true, canvas: p.canvas ?? DEFAULT_CANVAS, focusFormat: (v: string, c: string) => p.runtime.focusFormat(v, c), dispatch: p.dispatch, onTooltip, onMenu }),
+    [p.project, pages, theme, model, data, view, snap, p.onObject, p.readOnly, p.canvas, p.runtime, p.dispatch, onTooltip, onMenu],
   );
 
   const fit = page ? Math.min(size.w / page.width, size.h / page.height) : 1;

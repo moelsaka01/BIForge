@@ -43,8 +43,8 @@ describe("Selection pane", () => {
     await t.run("report.visual.add", { type: "shape" });
     render(<t.Host />);
     const pane = await screen.findByLabelText("Selection pane");
-    const names = () => within(pane).getAllByRole("listitem").map((li) => li.textContent);
-    await waitFor(() => expect(within(pane).getAllByRole("listitem")).toHaveLength(2));
+    const names = () => within(pane).getAllByRole("treeitem").map((li) => li.textContent);
+    await waitFor(() => expect(within(pane).getAllByRole("treeitem")).toHaveLength(2));
     expect(names()[0]).toMatch(/Shape/);
     fireEvent.click(within(pane).getByRole("button", { name: "Select Text box" }));
     expect(t.session.report.getSnapshot().canvas).toEqual([t.vs().find((v) => v.visualType === "textbox")!.name]);

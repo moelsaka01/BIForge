@@ -114,5 +114,9 @@ describe("saved reports match the published PBIR schemas", () => {
     expect(visuals.some((v) => v.visual.objects?.referenceLine?.[0]?.selector?.id === "average")).toBe(true);
     expect(visuals.some((v) => v.visual.objects?.image?.[0]?.properties?.sourceUrl)).toBe(true);
     expect(visuals.every((v) => v.syncGroup === undefined)).toBe(true);
+    const group = visuals.find((v) => v.visualGroup);
+    expect(group?.visualGroup).toMatchObject({ displayName: "Header", groupMode: "ScaleMode" });
+    expect(group?.visualGroup.objects.background[0].properties.color.solid.color.expr.Literal.Value).toBe("'#eeeeee'");
+    expect(visuals.filter((v) => v.parentGroupName === group?.name)).toHaveLength(2);
   });
 });

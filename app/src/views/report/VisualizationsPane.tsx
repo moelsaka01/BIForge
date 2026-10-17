@@ -5,6 +5,7 @@ import { fieldForRole } from "../../core/report/fieldRouting";
 import type { PageModel, VisualModel } from "../../core/report/visualDoc";
 import { VISUAL_TYPES, visualType } from "../../core/report/visualTypes";
 import { analyticsCards } from "../../core/report/formatSchema";
+import { GroupPane } from "./GroupPane";
 import { FormatPane } from "./FormatPane";
 import { useReport } from "./reportContext";
 
@@ -37,6 +38,9 @@ export function VisualizationsPane(p: VisualizationsPaneProps) {
     if (focus && visual && focus.visual === visual.name) setTab("format");
   }, [focus?.tick]); // eslint-disable-line react-hooks/exhaustive-deps
   const type = visual ? visualType(visual.visualType) : undefined;
+  // one selected group: its own settings instead of those of a visual
+  const group = !visual && c.snap.canvas.length === 1 ? (page.groups.find((g) => g.name === c.snap.canvas[0]) ?? null) : null;
+  if (group) return <GroupPane page={page} group={group} />;
 
   const pick = (id: string) => {
     if (visual) c.dispatch("report.visual.setType", { page: page.name, visual: visual.name, type: id });

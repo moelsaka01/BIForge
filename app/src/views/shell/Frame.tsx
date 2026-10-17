@@ -3,7 +3,7 @@ import { Tab, TabList } from "@fluentui/react-components";
 import { listRelationships } from "../../core/model/relationships";
 import { listTables } from "../../core/model/ops";
 import { resolveTheme, themeToJson } from "../../core/report/theme";
-import { activePageName, listPageNames, parseVisual, visualKey } from "../../core/report/visualDoc";
+import { activePageName, listPageNames, parsePage, parseVisual, visualKey } from "../../core/report/visualDoc";
 import { visibleTabs, ribbonFor, type RibbonCtx, type RibbonTab } from "../../core/shell/ribbon";
 import type { PaneId } from "../../core/shell/settings";
 import type { ViewId } from "../../core/shell/shellStore";
@@ -11,6 +11,7 @@ import { DataView } from "../DataView";
 import { MeasureEditor } from "../MeasureEditor";
 import { ModelView } from "../ModelView";
 import { PowerQueryEditor } from "../pq/PowerQueryEditor";
+import { canvasOptionsOf } from "../../core/report/canvasOptions";
 import { ReportView } from "../report/ReportView";
 import { DataPaneHost } from "./DataPaneHost";
 import { DaxQueryView } from "./DaxQueryView";
@@ -128,6 +129,7 @@ function ViewBody({ spec, onScale }: { spec: ShellSpec; onScale(s: number): void
             docks={sess.viewing ? () => ({}) : spec.reportDocks}
             onObject={spec.kind === "modern" && settings.options["preview.onObject"] !== false && !sess.viewing}
             readOnly={sess.viewing !== null}
+            canvas={canvasOptionsOf(settings.options)}
           />
         </div>
       );
@@ -214,6 +216,8 @@ export function Frame({ spec }: { spec: ShellSpec }) {
       pageName,
       pageCount: project ? listPageNames(project).length : 0,
       selectedCount: report.canvas.length,
+      selectedGroups: project ? (parsePage(project, report.page ?? activePageName(project) ?? "")?.groups.filter((g) => report.canvas.includes(g.name)).length ?? 0) : 0,
+      selectedGroupNames: project ? (parsePage(project, report.page ?? activePageName(project) ?? "")?.groups.filter((g) => report.canvas.includes(g.name)).map((g) => g.name) ?? []) : [],
       visual: vm ? { page: vm.pageName, name: vm.name, type: vm.visualType, categories: (vm.roles.Category ?? []).length, drillLevel: report.drill[vm.name]?.level ?? 0, drillMode: report.drillMode === vm.name, editingInteractions: report.editInteractions === vm.name } : null,
       table: st.selectedTable ?? sess.dataTables[0] ?? null,
       daxTab: st.daxTab,
@@ -227,6 +231,7 @@ export function Frame({ spec }: { spec: ShellSpec }) {
         sync: modern ? open("visualizations") && side === "sync" : open("sync"),
       },
       themeName: project ? resolveTheme(project).name : "",
+      canvas: canvasOptionsOf(settings.options),
       paused: report.paused,
       zoom: st.zoom,
     };

@@ -16,13 +16,18 @@ export type IconName =
   | "home" | "import" | "shield";
 
 /** What a control may look at when deciding how to draw itself and which arguments to send. */
+import type { CanvasOptions } from "../report/canvasOptions";
+
 export interface RibbonCtx {
   view: ViewId;
   hasProject: boolean;
   pageName: string | null;
   pageCount: number;
-  /** Visuals selected on the canvas. */
+  /** Visuals and groups selected on the canvas. */
   selectedCount: number;
+  /** How many of them are groups, and which (for Ungroup). */
+  selectedGroups: number;
+  selectedGroupNames: string[];
   visual: {
     page: string;
     name: string;
@@ -39,6 +44,8 @@ export interface RibbonCtx {
   zoom: Zoom;
   /** Optimize > Pause visuals is on. */
   paused: boolean;
+  /** Canvas view options (View > Page options). */
+  canvas: CanvasOptions;
 }
 
 export type Args = Record<string, unknown> | ((c: RibbonCtx) => unknown);
@@ -285,9 +292,10 @@ const pageOptionsGroup = (): RibbonGroup => ({
   id: "pageOptions",
   label: "Page options",
   controls: [
-    todo("gridlines", "Gridlines", "gridlines", { size: "small" }),
-    todo("snap", "Snap to grid", "snap", { size: "small" }),
-    todo("lock", "Lock objects", "lock", { size: "small" }),
+    cmd("guides", "Smart guides", "align", "view.canvas", { size: "small", args: { option: "smartGuides" }, checked: (c) => c.canvas.smartGuides, when: (c) => c.view === "report" }),
+    cmd("gridlines", "Gridlines", "gridlines", "view.canvas", { size: "small", args: { option: "gridlines" }, checked: (c) => c.canvas.gridlines, when: (c) => c.view === "report" }),
+    cmd("snap", "Snap to grid", "snap", "view.canvas", { size: "small", args: { option: "snapToGrid" }, checked: (c) => c.canvas.snapToGrid, when: (c) => c.view === "report" }),
+    cmd("lock", "Lock objects", "lock", "view.canvas", { size: "small", args: { option: "lockObjects" }, checked: (c) => c.canvas.lockObjects, when: (c) => c.view === "report" }),
     todo("mobile", "Mobile layout", "mobile", { size: "small" }),
   ],
 });
@@ -326,7 +334,15 @@ const formatTab = (): RibbonTab => ({
             { label: "Distribute vertically", command: "report.visuals.distribute", args: { axis: "vertical" } },
           ],
         }),
-        todo("group", "Group", "group", { size: "large" }),
+        cmd("group", "Group", "group", "report.visuals.group", {
+          size: "large",
+          when: (c) => c.selectedCount >= 2 || c.selectedGroups > 0,
+          keytip: "GR",
+          menu: [
+            { label: "Group (Ctrl+G)", command: "report.visuals.group" },
+            { label: "Ungroup (Ctrl+Shift+G)", command: "report.group.ungroup", args: (c) => ({ visuals: c.selectedGroupNames }) },
+          ],
+        }),
       ],
     },
     {

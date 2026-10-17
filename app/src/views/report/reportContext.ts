@@ -20,6 +20,8 @@ export interface ReportCtx {
   onObject: boolean;
   /** A shared report opened for viewing: selecting and filtering work, moving, resizing, deleting and renaming do not. */
   readOnly: boolean;
+  /** Canvas view options: smart guides, gridlines, snap to grid, lock objects. */
+  canvas: import("../../core/report/canvasOptions").CanvasOptions;
   /** Opens a card of the Format pane for a visual (on-object formatting). */
   focusFormat(visual: string, card: string): void;
   dispatch: Dispatch;

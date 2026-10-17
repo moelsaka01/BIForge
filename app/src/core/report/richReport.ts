@@ -140,6 +140,14 @@ export async function buildRichReport(): Promise<RichReport> {
   await run("report.format.set", { page: "page1", visual: line.name, object: "referenceLine", prop: "show", value: lit.bool(true), selector: "id:average", fixed: { type: "Average" } });
   await f(line, "trend", "show", lit.bool(true));
   await run("report.slicer.setSync", { page: "page1", visual: slicer.name, group: "Country", pages: [{ page: dt, sync: true, visible: false }] });
+  // a group of two static objects, with its own formatting
+  const grouped = parsePage(session.store.project!, "page1")!.visuals.filter((v) => v.visualType === "shape" || v.visualType === "textbox").map((v) => v.name);
+  await run("report.visuals.group", { visuals: grouped });
+  const groupName = parsePage(session.store.project!, "page1")!.groups[0].name;
+  await run("report.group.rename", { page: "page1", group: groupName, name: "Header" });
+  await run("report.group.format", { page: "page1", group: groupName, object: "background", prop: "show", value: lit.bool(true) });
+  await run("report.group.format", { page: "page1", group: groupName, object: "background", prop: "color", value: lit.str("#eeeeee") });
+  await run("report.group.format", { page: "page1", group: groupName, object: "general", prop: "altText", value: lit.str("Header group") });
   await run("report.bookmark.add", { name: "B1" });
   await run("report.theme.apply", { builtin: "BIForge Dark" });
 

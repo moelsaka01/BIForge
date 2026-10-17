@@ -194,6 +194,34 @@ export function registerReportCommands(r: CommandRegistry<Session>): void {
     s.report.clearSelection();
     s.report.setCanvasSelection([]);
   });
+  reg("report.visuals.group", "Group visuals", (s, a) => {
+    const t = targets(s, a);
+    let group = "";
+    edit(s, "Group visuals", (p) => {
+      group = ops.groupVisuals(p, t.page, t.visuals);
+    });
+    s.report.setCanvasSelection([group]);
+  });
+  reg("report.group.ungroup", "Ungroup", (s, a) => {
+    const t = targets(s, a);
+    const members: string[] = [];
+    edit(s, "Ungroup", (p) => {
+      for (const g of t.visuals) members.push(...ops.ungroup(p, t.page, g));
+    });
+    s.report.setCanvasSelection(members);
+  });
+  reg("report.group.rename", "Rename group", (s, a) => {
+    const x = need<{ page: string; group: string; name: string }>(a, ["page", "group", "name"]);
+    edit(s, "Rename group", (p) => ops.renameGroup(p, x.page, x.group, x.name));
+  });
+  reg("report.group.format", "Format group", (s, a) => {
+    const x = need<{ page: string; group: string; object: string; prop: string }>(a, ["page", "group", "object", "prop"]);
+    edit(s, "Format group", (p) => ops.setGroupFormat(p, x.page, x.group, x.object, x.prop, (a as { value?: Lit | null }).value ?? null));
+  });
+  reg("report.group.setMode", "Group layout mode", (s, a) => {
+    const x = need<{ page: string; group: string; mode: "ScaleMode" | "ScrollMode" }>(a, ["page", "group", "mode"]);
+    edit(s, "Group layout mode", (p) => ops.setGroupMode(p, x.page, x.group, x.mode));
+  });
   reg("report.visuals.align", "Align visuals", (s, a) => {
     const t = targets(s, a);
     const { mode } = need<{ mode: "left" | "center" | "right" | "top" | "middle" | "bottom" }>(a, ["mode"]);

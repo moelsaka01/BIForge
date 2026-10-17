@@ -17,6 +17,7 @@ import {
   parseVisual,
   entryProps,
   setFormat,
+  setGroupFormat as setGroupFormatJson,
   setRawProp,
   setRole,
   visualKey,
@@ -248,7 +249,8 @@ export function setPositions(p: Project, page: string, items: { visual: string; 
 
 export function deleteVisuals(p: Project, page: string, names: string[]): void {
   for (const n of names) visualJson(p, page, n);
-  for (const n of names) deleteVisual(p, page, n);
+  // a group takes its members with it, so a member listed as well may already be gone
+  for (const n of names) if (files(p)[visualKey(page, n)]) deleteVisual(p, page, n);
 }
 
 export function alignVisuals(p: Project, page: string, names: string[], mode: AlignMode): void {
@@ -269,12 +271,12 @@ export interface VisualClipboard {
 
 export function copyVisuals(p: Project, page: string, names: string[]): VisualClipboard {
   if (names.length === 0) throw new ReportError("Select a visual to copy.");
-  return { kind: "biforge.visuals", version: 1, page, visuals: names.map((n) => structuredClone(visualJson(p, page, n))) };
+  return { kind: "biforge.visuals", version: 1, page, visuals: withDescendants(p, page, names).map((n) => structuredClone(visualJson(p, page, n))) };
 }
 
 export function isVisualClipboard(x: unknown): x is VisualClipboard {
   const c = x as VisualClipboard | null;
-  return !!c && c.kind === "biforge.visuals" && c.version === 1 && Array.isArray(c.visuals) && c.visuals.every((v) => v && typeof v === "object" && v.visual && typeof v.visual.visualType === "string");
+  return !!c && c.kind === "biforge.visuals" && c.version === 1 && Array.isArray(c.visuals) && c.visuals.every((v) => v && typeof v === "object" && ((v.visual && typeof v.visual.visualType === "string") || v.visualGroup));
 }
 
 /** Tables a copied visual refers to that this report's model does not have. */
@@ -293,26 +295,37 @@ function missingTables(p: Project, json: J): string[] {
   return [...found].filter((t) => !have.has(t.toLowerCase()));
 }
 
-/** Pastes copied visuals on a page: same position on another page, shifted when pasted over the original. */
+/** Pastes copied visuals on a page: same position on another page, shifted when pasted over the original. Groups keep their members. */
 export function pasteVisuals(p: Project, page: string, clip: VisualClipboard, newId: () => string = newName): { names: string[]; missing: string[] } {
   pageJson(p, page);
   const names: string[] = [];
   const missing = new Set<string>();
-  const existing = () => Object.keys(files(p)).filter((k) => k.startsWith(visualPrefix(page)) && k.endsWith("/visual.json")).map((k) => files(p)[k]);
-  for (const src of clip.visuals) {
+  const existing = () => itemsOf(p, page);
+  const renamed = new Map<string, string>(clip.visuals.map((v) => [v.name as string, newId()]));
+  const copies = clip.visuals.map((src) => {
     const copy = structuredClone(src);
-    copy.name = newId();
-    delete copy.parentGroupName;
-    const top = Math.max(0, ...existing().map((v) => v.position?.z ?? 0));
+    copy.name = renamed.get(src.name)!;
+    if (typeof copy.parentGroupName === "string" && renamed.has(copy.parentGroupName)) copy.parentGroupName = renamed.get(copy.parentGroupName);
+    else delete copy.parentGroupName;
+    return copy;
+  });
+  // one shift for the whole paste, chosen so that no top-level copy lands exactly on an existing item
+  const topLevel = copies.filter((c) => !c.parentGroupName);
+  let shift = 0;
+  const clash = (d: number) =>
+    topLevel.some((c) => existing().some((v) => v.position?.x === (c.position?.x ?? 0) + d && v.position?.y === (c.position?.y ?? 0) + d && v.position?.width === c.position?.width && v.position?.height === c.position?.height));
+  while (clash(shift)) shift += 24;
+  const top = Math.max(0, ...existing().map((v) => v.position?.z ?? 0));
+  let order = 0;
+  for (const copy of copies) {
     const pos = { ...(copy.position ?? { x: 0, y: 0, width: 200, height: 150 }) };
-    while (existing().some((v) => v.position?.x === pos.x && v.position?.y === pos.y && v.position?.width === pos.width && v.position?.height === pos.height)) {
-      pos.x = (pos.x ?? 0) + 24;
-      pos.y = (pos.y ?? 0) + 24;
-    }
-    copy.position = { ...pos, z: top + 1000, tabOrder: top + 1000 };
+    pos.x = (pos.x ?? 0) + shift;
+    pos.y = (pos.y ?? 0) + shift;
+    order++;
+    copy.position = { ...pos, z: top + 1000 * order, tabOrder: top + 1000 * order };
     files(p)[visualKey(page, copy.name)] = copy;
-    names.push(copy.name);
-    missingTables(p, copy).forEach((t) => missing.add(t));
+    if (!copy.parentGroupName) names.push(copy.name);
+    if (copy.visual) missingTables(p, copy).forEach((t) => missing.add(t));
   }
   return { names, missing: [...missing] };
 }
@@ -337,9 +350,11 @@ export function renameVisual(p: Project, page: string, visual: string, name: str
 /** Moves a visual one step up (towards the front) or down in the stacking order, by swapping with its neighbour. */
 export function moveInOrder(p: Project, page: string, visual: string, dir: "up" | "down"): void {
   const target = visualJson(p, page, visual);
+  // the stacking order is kept within one level: among the members of the same group, or the top level
   const all = Object.keys(files(p))
     .filter((k) => k.startsWith(visualPrefix(page)) && k.endsWith("/visual.json"))
     .map((k) => files(p)[k])
+    .filter((j) => (j.parentGroupName ?? "") === (target.parentGroupName ?? ""))
     .sort((a, b) => (a.position?.z ?? 0) - (b.position?.z ?? 0) || String(a.name).localeCompare(String(b.name)));
   const i = all.indexOf(target);
   const j = dir === "up" ? i + 1 : i - 1;
@@ -409,8 +424,15 @@ export function setSlicerSync(p: Project, page: string, visual: string, group: s
 }
 
 export function deleteVisual(p: Project, page: string, visual: string): void {
-  visualJson(p, page, visual);
+  const item = visualJson(p, page, visual);
+  if (isGroupJson(item)) for (const d of descendantsOf(p, page, visual)) deleteVisual(p, page, d.name);
   delete files(p)[visualKey(page, visual)];
+  const parentName = item.parentGroupName as string | undefined;
+  const parent = parentName ? files(p)[visualKey(page, parentName)] : undefined;
+  if (parent) {
+    if (membersOf(p, page, parentName!).length === 0) deleteVisual(p, page, parentName!);
+    else refitAncestors(p, page, membersOf(p, page, parentName!)[0]);
+  }
   for (const k of Object.keys(files(p))) if (k.startsWith(`pages/${page}/visuals/${visual}/`)) delete files(p)[k];
   const pj = pageJson(p, page);
   if (Array.isArray(pj.visualInteractions)) pj.visualInteractions = pj.visualInteractions.filter((i: J) => i.source !== visual && i.target !== visual);
@@ -428,9 +450,150 @@ export function duplicateVisual(p: Project, page: string, visual: string, newId:
 
 export function setPosition(p: Project, page: string, visual: string, pos: Partial<Position>): void {
   const j = visualJson(p, page, visual);
+  const old = { ...j.position };
   const next = { ...j.position, ...pos };
   if (!(next.width >= 20 && next.height >= 20)) throw new ReportError("A visual must be at least 20 by 20 pixels.");
   j.position = Object.fromEntries(Object.entries(next).map(([k, v]) => [k, typeof v === "number" ? Math.round(v * 100) / 100 : v]));
+  if (isGroupJson(j)) transformMembers(p, page, j, old);
+  else refitAncestors(p, page, j);
+}
+
+// ---- groups ------------------------------------------------------------------------------------
+// A group is a visual file with visualGroup instead of visual; its members name it in parentGroupName. Member
+// positions are page positions, so moving a group moves them, and a group always covers its members.
+
+const isGroupJson = (j: J): boolean => !!j?.visualGroup;
+
+const itemsOf = (p: Project, page: string): J[] =>
+  Object.keys(files(p))
+    .filter((k) => k.startsWith(visualPrefix(page)) && k.endsWith("/visual.json"))
+    .map((k) => files(p)[k]);
+
+const membersOf = (p: Project, page: string, group: string): J[] => itemsOf(p, page).filter((j) => j.parentGroupName === group);
+
+/** Every visual and group below a group, at any depth. */
+export function descendantsOf(p: Project, page: string, group: string): J[] {
+  const out: J[] = [];
+  for (const m of membersOf(p, page, group)) {
+    out.push(m);
+    if (isGroupJson(m)) out.push(...descendantsOf(p, page, m.name));
+  }
+  return out;
+}
+
+function boundsOfJson(js: J[]): { x: number; y: number; width: number; height: number } {
+  const x = Math.min(...js.map((j) => j.position?.x ?? 0));
+  const y = Math.min(...js.map((j) => j.position?.y ?? 0));
+  return { x, y, width: Math.max(...js.map((j) => (j.position?.x ?? 0) + (j.position?.width ?? 0))) - x, height: Math.max(...js.map((j) => (j.position?.y ?? 0) + (j.position?.height ?? 0))) - y };
+}
+
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
+/** A group moved or resized: the members follow (ScaleMode scales them with the box, ScrollMode only moves them). */
+function transformMembers(p: Project, page: string, group: J, old: { x?: number; y?: number; width?: number; height?: number }): void {
+  const n = group.position;
+  const ox = old.x ?? 0;
+  const oy = old.y ?? 0;
+  const scale = group.visualGroup.groupMode !== "ScrollMode";
+  const sx = scale && old.width ? n.width / old.width : 1;
+  const sy = scale && old.height ? n.height / old.height : 1;
+  for (const m of descendantsOf(p, page, group.name)) {
+    const mp = m.position ?? {};
+    m.position = {
+      ...mp,
+      x: round2(n.x + ((mp.x ?? 0) - ox) * sx),
+      y: round2(n.y + ((mp.y ?? 0) - oy) * sy),
+      width: round2((mp.width ?? 0) * sx),
+      height: round2((mp.height ?? 0) * sy),
+    };
+  }
+  refitAncestors(p, page, group);
+}
+
+/** After a member changed: every group above it covers its members again. */
+function refitAncestors(p: Project, page: string, item: J): void {
+  let parent = typeof item.parentGroupName === "string" ? files(p)[visualKey(page, item.parentGroupName)] : undefined;
+  const guard = new Set<string>();
+  while (parent && !guard.has(parent.name)) {
+    guard.add(parent.name);
+    const members = membersOf(p, page, parent.name);
+    if (members.length > 0) {
+      const b = boundsOfJson(members);
+      parent.position = { ...parent.position, x: round2(b.x), y: round2(b.y), width: round2(b.width), height: round2(b.height) };
+    }
+    parent = typeof parent.parentGroupName === "string" ? files(p)[visualKey(page, parent.parentGroupName)] : undefined;
+  }
+}
+
+const groupName = (p: Project, page: string): string => {
+  const used = new Set(itemsOf(p, page).filter(isGroupJson).map((j) => j.visualGroup.displayName));
+  for (let i = 1; ; i++) if (!used.has(`Group ${i}`)) return `Group ${i}`;
+};
+
+/** Groups two or more visuals or groups that are at the same level; returns the new group's name. */
+export function groupVisuals(p: Project, page: string, names: string[], newId: () => string = newName): string {
+  if (names.length < 2) throw new ReportError("Select at least two visuals to group them.");
+  const js = names.map((n) => visualJson(p, page, n));
+  if (new Set(js.map((j) => j.parentGroupName ?? "")).size > 1) throw new ReportError("Visuals in different groups cannot be grouped together; select them at the same level.");
+  const b = boundsOfJson(js);
+  const z = Math.max(...js.map((j) => j.position?.z ?? 0));
+  const parent = js[0].parentGroupName;
+  const g: J = {
+    $schema: VISUAL_SCHEMA,
+    name: newId(),
+    position: { x: round2(b.x), y: round2(b.y), z, width: round2(b.width), height: round2(b.height), tabOrder: z },
+    visualGroup: { displayName: groupName(p, page), groupMode: "ScaleMode" },
+    ...(parent ? { parentGroupName: parent } : {}),
+  };
+  files(p)[visualKey(page, g.name)] = g;
+  for (const j of js) j.parentGroupName = g.name;
+  return g.name;
+}
+
+/** Dissolves a group: its members take its place in the next group up, or on the page. */
+export function ungroup(p: Project, page: string, group: string): string[] {
+  const g = visualJson(p, page, group);
+  if (!isGroupJson(g)) throw new ReportError(`"${group}" is not a group.`);
+  const members = membersOf(p, page, group);
+  for (const m of members) {
+    if (g.parentGroupName) m.parentGroupName = g.parentGroupName;
+    else delete m.parentGroupName;
+  }
+  delete files(p)[visualKey(page, group)];
+  const parent = g.parentGroupName ? files(p)[visualKey(page, g.parentGroupName)] : undefined;
+  if (parent) refitAncestors(p, page, members[0] ?? g);
+  return members.map((m) => m.name as string);
+}
+
+export function renameGroup(p: Project, page: string, group: string, displayName: string): void {
+  const g = visualJson(p, page, group);
+  if (!isGroupJson(g)) throw new ReportError(`"${group}" is not a group.`);
+  const name = displayName.trim();
+  if (!name) throw new ReportError("A group needs a name.");
+  g.visualGroup.displayName = name;
+}
+
+export function setGroupFormat(p: Project, page: string, group: string, object: string, prop: string, value: Lit | null): void {
+  const g = visualJson(p, page, group);
+  if (!isGroupJson(g)) throw new ReportError(`"${group}" is not a group.`);
+  setGroupFormatJson(g, object, prop, value);
+}
+
+export function setGroupMode(p: Project, page: string, group: string, mode: "ScaleMode" | "ScrollMode"): void {
+  const g = visualJson(p, page, group);
+  if (!isGroupJson(g)) throw new ReportError(`"${group}" is not a group.`);
+  g.visualGroup.groupMode = mode;
+}
+
+/** The names of an item and everything below it (for copying and deleting a group with its members). */
+export function withDescendants(p: Project, page: string, names: string[]): string[] {
+  const all = new Set<string>();
+  for (const n of names) {
+    const j = visualJson(p, page, n);
+    all.add(n);
+    if (isGroupJson(j)) for (const d of descendantsOf(p, page, n)) all.add(d.name);
+  }
+  return [...all];
 }
 
 /** Moves a visual to the front (above all others) or the back of the stacking order. */

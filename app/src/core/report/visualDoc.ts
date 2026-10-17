@@ -42,6 +42,20 @@ export interface SortSpec {
   dir: "asc" | "desc";
 }
 
+/** A group of visuals (visualGroup in the report format). Positions of its members are page positions. */
+export interface GroupModel {
+  name: string;
+  pageName: string;
+  displayName: string;
+  /** ScaleMode: members scale when the group is resized; ScrollMode: they keep their size. */
+  mode: "ScaleMode" | "ScrollMode";
+  position: Position;
+  hidden: boolean;
+  /** The group this group is in. */
+  parent?: string;
+  json: J;
+}
+
 export interface VisualModel {
   name: string;
   pageName: string;
@@ -50,6 +64,8 @@ export interface VisualModel {
   roles: Record<string, Projection[]>;
   sort: SortSpec | null;
   hidden: boolean;
+  /** The group this visual is in. */
+  parent?: string;
   filters: ReadFilters;
   json: J;
 }
@@ -63,6 +79,7 @@ export interface PageModel {
   type?: "Drillthrough" | "Tooltip";
   hidden: boolean;
   visuals: VisualModel[];
+  groups: GroupModel[];
   filters: ReadFilters;
   interactions: { source: string; target: string; type: "Default" | "DataFilter" | "HighlightFilter" | "NoFilter" }[];
   json: J;
@@ -90,7 +107,27 @@ export function parseVisual(pageName: string, json: J): VisualModel | null {
     roles,
     sort: sf ? { field: sf, dir: s.direction === 2 || s.direction === "Descending" ? "desc" : "asc" } : null,
     hidden: json.isHidden === true,
+    ...(typeof json.parentGroupName === "string" ? { parent: json.parentGroupName } : {}),
     filters: readFilters(json),
+    json,
+  };
+}
+
+const readPosition = (json: J): Position => {
+  const pos = json.position ?? {};
+  return { x: pos.x ?? 0, y: pos.y ?? 0, z: pos.z ?? 0, width: pos.width ?? 200, height: pos.height ?? 150, ...(pos.tabOrder !== undefined ? { tabOrder: pos.tabOrder } : {}) };
+};
+
+export function parseGroup(pageName: string, json: J): GroupModel | null {
+  if (!json || typeof json.name !== "string" || !json.visualGroup) return null;
+  return {
+    name: json.name,
+    pageName,
+    displayName: typeof json.visualGroup.displayName === "string" ? json.visualGroup.displayName : "Group",
+    mode: json.visualGroup.groupMode === "ScrollMode" ? "ScrollMode" : "ScaleMode",
+    position: readPosition(json),
+    hidden: json.isHidden === true,
+    ...(typeof json.parentGroupName === "string" ? { parent: json.parentGroupName } : {}),
     json,
   };
 }
@@ -108,10 +145,14 @@ export function parsePage(p: Project, name: string): PageModel | null {
   const json = p.report.files[pageKey(name)] as J;
   if (!json) return null;
   const prefix = visualPrefix(name);
-  const visuals = Object.keys(p.report.files)
-    .filter((k) => k.startsWith(prefix) && k.endsWith("/visual.json"))
+  const keys = Object.keys(p.report.files).filter((k) => k.startsWith(prefix) && k.endsWith("/visual.json"));
+  const visuals = keys
     .map((k) => parseVisual(name, p.report.files[k]))
     .filter((v): v is VisualModel => v !== null)
+    .sort((a, b) => a.position.z - b.position.z || a.name.localeCompare(b.name));
+  const groups = keys
+    .map((k) => parseGroup(name, p.report.files[k]))
+    .filter((g): g is GroupModel => g !== null)
     .sort((a, b) => a.position.z - b.position.z || a.name.localeCompare(b.name));
   return {
     name,
@@ -121,6 +162,7 @@ export function parsePage(p: Project, name: string): PageModel | null {
     ...(json.type === "Drillthrough" || json.type === "Tooltip" ? { type: json.type } : {}),
     hidden: json.visibility === "HiddenInViewMode",
     visuals,
+    groups,
     filters: readFilters(json),
     interactions: json.visualInteractions ?? [],
     json,
@@ -197,6 +239,25 @@ function entryFor(list: J[] | undefined, selector?: string): J | undefined {
 export function getFormat(json: J, object: string, prop: string, selector?: string): Lit | null {
   const e = entryFor(json?.visual?.[bagKey(object, prop)]?.[object], selector);
   return e ? readLitProp(e.properties?.[prop]) : null;
+}
+
+/**
+ * A group keeps its formatting in visualGroup.objects (background, lock aspect, alt text) with the same entry shape as
+ * the container objects of a visual; these read and write through that shape.
+ */
+const groupBag = (group: J, create: boolean): J => {
+  if (create) group.visualGroup.objects ??= {};
+  return { visual: { visualContainerObjects: group.visualGroup?.objects ?? {} } };
+};
+
+export function getGroupFormat(group: J, object: string, prop: string): Lit | null {
+  return getFormat(groupBag(group, false), object, prop);
+}
+
+export function setGroupFormat(group: J, object: string, prop: string, value: Lit | null): void {
+  const wrapper = groupBag(group, true);
+  setFormat(wrapper, object, prop, value);
+  if (Object.keys(group.visualGroup.objects).length === 0) delete group.visualGroup.objects;
 }
 
 /** Names of the properties set on one entry of an object (the entry a property of the given name would be written to). */

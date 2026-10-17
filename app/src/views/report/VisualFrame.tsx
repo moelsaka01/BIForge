@@ -6,6 +6,7 @@ import { resolveInteraction, supportsHighlight } from "../../core/report/interac
 import type { PageModel, Position, VisualModel } from "../../core/report/visualDoc";
 import { visualType } from "../../core/report/visualTypes";
 import { rotationOf } from "../../core/report/staticVisuals";
+import { effectivelyHidden } from "../../core/report/groups";
 import { buildContainer } from "../../core/report/containerModel";
 import { drillPlan } from "../../core/report/queryBuilder";
 import { useReport, type MenuItem } from "./reportContext";
@@ -115,7 +116,7 @@ export function VisualFrame(p: FrameProps) {
     outlineOffset: -1,
     overflow: "hidden",
     color: c.theme.foreground,
-    opacity: visual.hidden ? 0.4 : 1,
+    opacity: visual.hidden || effectivelyHidden(page, visual.name) ? 0.4 : 1,
   };
 
   const iconBtn = (label: string, glyph: string, onClick: () => void, opts: { pressed?: boolean; disabled?: boolean } = {}) => (
