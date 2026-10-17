@@ -24,10 +24,14 @@ export interface ViewSnapshot {
   refreshTick: number;
   /** On-object formatting: the Format pane opens this card for this visual (tick makes the same request repeatable). */
   formatFocus: { visual: string; card: string; tick: number } | null;
+  /** Visuals selected on the canvas of the current page, in the order they were selected (the last one is the one the panes show). */
+  canvas: string[];
+  /** Visuals copied or cut in this window (a copy also goes to the system clipboard as JSON). */
+  clipboard: unknown | null;
 }
 
 export class ReportRuntime {
-  private snap: ViewSnapshot = { page: null, selection: null, drill: {}, drillthrough: null, collapsed: {}, epoch: 0, drillMode: null, editInteractions: null, paused: false, refreshTick: 0, formatFocus: null };
+  private snap: ViewSnapshot = { page: null, selection: null, drill: {}, drillthrough: null, collapsed: {}, epoch: 0, drillMode: null, editInteractions: null, paused: false, refreshTick: 0, formatFocus: null, canvas: [], clipboard: null };
   private listeners = new Set<() => void>();
 
   getSnapshot = (): ViewSnapshot => this.snap;
@@ -57,7 +61,7 @@ export class ReportRuntime {
   /** Switches page; selections and drillthrough belong to the page they were made on. */
   goToPage(page: string): void {
     if (page === this.snap.page) return;
-    this.set({ page, selection: null, drillthrough: null, editInteractions: null, drillMode: null });
+    this.set({ page, selection: null, drillthrough: null, editInteractions: null, drillMode: null, canvas: [] });
   }
 
   /** Called when the document's pages change: drops state that refers to pages or visuals that are gone. */
@@ -71,7 +75,19 @@ export class ReportRuntime {
     if (Object.keys(drill).length !== Object.keys(this.snap.drill).length) patch.drill = drill;
     if (this.snap.drillMode && !visuals.has(this.snap.drillMode)) patch.drillMode = null;
     if (this.snap.editInteractions && !visuals.has(this.snap.editInteractions)) patch.editInteractions = null;
+    const canvas = this.snap.canvas.filter((v) => visuals.has(v));
+    if (canvas.length !== this.snap.canvas.length) patch.canvas = canvas;
     if (Object.keys(patch).length) this.set(patch);
+  }
+
+  setCanvasSelection(names: string[]): void {
+    const a = this.snap.canvas;
+    if (a.length === names.length && a.every((n, i) => n === names[i])) return;
+    this.set({ canvas: names });
+  }
+
+  setClipboard(c: unknown | null): void {
+    this.set({ clipboard: c });
   }
 
   select(page: string, visual: string, point: SelectedPoint, additive: boolean): void {

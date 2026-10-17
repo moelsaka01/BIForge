@@ -39,7 +39,7 @@ export interface ShellState {
   /** Text of the DAX query view (kept while the user looks at other views). */
   daxQuery: string;
   /** Modern shell: which pane the right-hand sidebar shows. */
-  sideTab: "visualizations" | "filters" | "bookmarks";
+  sideTab: "visualizations" | "filters" | "bookmarks" | "selection" | "sync";
   systemDark: boolean;
   /** Bumped by the TMDL ribbon's Apply so the TMDL view applies its edits. */
   applyTmdlTick: number;

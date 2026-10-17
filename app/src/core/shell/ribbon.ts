@@ -21,6 +21,8 @@ export interface RibbonCtx {
   hasProject: boolean;
   pageName: string | null;
   pageCount: number;
+  /** Visuals selected on the canvas. */
+  selectedCount: number;
   visual: {
     page: string;
     name: string;
@@ -125,9 +127,9 @@ const clipboard = (): RibbonGroup => ({
   id: "clipboard",
   label: "Clipboard",
   controls: [
-    todo("paste", "Paste", "paste", { size: "large" }),
-    todo("cut", "Cut", "cut", { size: "small" }),
-    todo("copy", "Copy", "copy", { size: "small" }),
+    cmd("paste", "Paste", "paste", "report.visuals.paste", { size: "large", when: (c) => c.view === "report" }),
+    cmd("cut", "Cut", "cut", "report.visuals.cut", { size: "small", when: (c) => c.view === "report" && c.selectedCount > 0 }),
+    cmd("copy", "Copy", "copy", "report.visuals.copy", { size: "small", when: (c) => c.view === "report" && c.selectedCount > 0 }),
     todo("formatPainter", "Format painter", "formatPainter", { size: "small" }),
   ],
 });
@@ -271,10 +273,10 @@ const panesGroup = (): RibbonGroup => ({
       ["visualizations", "Visualizations", "visualizations"],
       ["data", "Data", "dataPane"],
       ["bookmarks", "Bookmarks", "bookmarks"],
+      ["selection", "Selection", "selectionPane"],
+      ["sync", "Sync slicers", "syncSlicers"],
     ] as const
   ).map(([pane, label, icon]) => cmd(`pane.${pane}`, label, icon, "pane.toggle", { size: "small", args: { pane }, checked: (c) => c.panes[pane] })).concat([
-    todo("pane.selection", "Selection", "selectionPane", { size: "small" }),
-    todo("pane.sync", "Sync slicers", "syncSlicers", { size: "small" }),
     todo("pane.performance", "Performance analyzer", "performance", { size: "small" }),
   ]),
 });
@@ -308,8 +310,22 @@ const formatTab = (): RibbonTab => ({
       controls: [
         cmd("bringForward", "Bring forward", "bringForward", "report.visual.arrange", { size: "large", args: (c) => ({ ...vArgs(c), where: "front" }), when: hasVisual }),
         cmd("sendBackward", "Send backward", "sendBackward", "report.visual.arrange", { size: "large", args: (c) => ({ ...vArgs(c), where: "back" }), when: hasVisual }),
-        todo("selection", "Selection", "selectionPane", { size: "large" }),
-        todo("align", "Align", "align", { size: "large" }),
+        cmd("selection", "Selection", "selectionPane", "pane.toggle", { size: "large", args: { pane: "selection" } }),
+        cmd("align", "Align", "align", "report.visuals.align", {
+          size: "large",
+          when: (c) => c.selectedCount >= 2,
+          args: { mode: "left" },
+          menu: [
+            { label: "Align left", command: "report.visuals.align", args: { mode: "left" } },
+            { label: "Align center", command: "report.visuals.align", args: { mode: "center" } },
+            { label: "Align right", command: "report.visuals.align", args: { mode: "right" } },
+            { label: "Align top", command: "report.visuals.align", args: { mode: "top" }, separatorBefore: true },
+            { label: "Align middle", command: "report.visuals.align", args: { mode: "middle" } },
+            { label: "Align bottom", command: "report.visuals.align", args: { mode: "bottom" } },
+            { label: "Distribute horizontally", command: "report.visuals.distribute", args: { axis: "horizontal" }, separatorBefore: true },
+            { label: "Distribute vertically", command: "report.visuals.distribute", args: { axis: "vertical" } },
+          ],
+        }),
         todo("group", "Group", "group", { size: "large" }),
       ],
     },

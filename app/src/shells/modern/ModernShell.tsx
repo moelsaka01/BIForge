@@ -2,6 +2,8 @@
 // sidebar on the right whose tabs switch between Visualizations, Filters and Bookmarks. Everything else is shared
 // with the Classic shell. (On-object formatting, which Desktop turns on with this layout, is not implemented.)
 import type { ReportDockApi } from "../../views/report/ReportView";
+import { SelectionPane } from "../../views/report/SelectionPane";
+import { SyncSlicersPane } from "../../views/report/SyncSlicersPane";
 import { BookmarksPane } from "../../views/report/BookmarksPane";
 import { FiltersPane } from "../../views/report/FiltersPane";
 import { VisualizationsPane } from "../../views/report/VisualizationsPane";
@@ -14,6 +16,8 @@ const SIDE_TABS = [
   { id: "visualizations", label: "Visualizations" },
   { id: "filters", label: "Filters" },
   { id: "bookmarks", label: "Bookmarks" },
+  { id: "selection", label: "Selection" },
+  { id: "sync", label: "Sync slicers" },
 ] as const;
 
 function ModernSidebar({ api }: { api: ReportDockApi }) {
@@ -42,6 +46,8 @@ function ModernSidebar({ api }: { api: ReportDockApi }) {
       {sideTab === "visualizations" && <VisualizationsPane page={api.page} visual={api.visual} onAdded={api.onAdded} />}
       {sideTab === "filters" && <FiltersPane page={api.page} visual={api.visual} />}
       {sideTab === "bookmarks" && <BookmarksPane />}
+      {sideTab === "selection" && <SelectionPane />}
+      {sideTab === "sync" && <SyncSlicersPane />}
     </PaneFrame>
   );
 }

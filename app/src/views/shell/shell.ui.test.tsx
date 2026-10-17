@@ -185,8 +185,10 @@ describe("ribbon", () => {
     const disabled = ["Get data", "Transform data", "Refresh", "New visual", "New measure", "Excel workbook"].filter((n) => (r.getByRole("button", { name: n }) as HTMLButtonElement).disabled);
     expect(disabled).toEqual([]);
     const textBox = r.getByRole("button", { name: /Text box/ }) as HTMLButtonElement;
-    expect(textBox.disabled).toBe(true);
-    expect(textBox.title).toMatch(/Not yet implemented/);
+    expect(textBox.disabled).toBe(false);
+    const quick = r.getByRole("button", { name: /Quick measure/ }) as HTMLButtonElement;
+    expect(quick.disabled).toBe(true);
+    expect(quick.title).toMatch(/Not yet implemented/);
     for (const cloud of [/OneLake/, /Publish to Power BI/, /Sensitivity/, /Shared with me/, /Sign in/]) expect(r.queryByRole("button", { name: cloud })).toBeNull();
   });
 
@@ -337,8 +339,8 @@ describe("title bar", () => {
     render(a.element);
     await openProject(a);
     const box = screen.getByLabelText("Search commands");
-    fireEvent.change(box, { target: { value: "text box" } });
-    const hit = within(await screen.findByRole("listbox", { name: "Matching commands" })).getByRole("option", { name: /Text box/ }) as HTMLButtonElement;
+    fireEvent.change(box, { target: { value: "quick measure" } });
+    const hit = within(await screen.findByRole("listbox", { name: "Matching commands" })).getByRole("option", { name: /Quick measure/ }) as HTMLButtonElement;
     expect(hit.disabled).toBe(true);
     expect(hit.textContent).toMatch(/Not yet implemented/);
     fireEvent.change(box, { target: { value: "relationships" } });

@@ -8,7 +8,7 @@ export type ResolvedTheme = "light" | "dark";
 export const resolveTheme = (mode: ThemeMode, systemDark: boolean): ResolvedTheme => (mode === "system" ? (systemDark ? "dark" : "light") : mode);
 export type OptionValue = boolean | number | string;
 export type RibbonMode = "multiline" | "singleline";
-export const PANE_IDS = ["filters", "visualizations", "data", "properties", "bookmarks"] as const;
+export const PANE_IDS = ["filters", "visualizations", "data", "properties", "bookmarks", "selection", "sync"] as const;
 export type PaneId = (typeof PANE_IDS)[number];
 
 export interface PaneLayout {
@@ -55,12 +55,12 @@ export function defaultLayout(shell: ShellKind): ShellLayout {
     ? {
         ribbonCollapsed: false,
         ribbonMode: "multiline",
-        panes: { filters: base(true, 220), visualizations: base(true, 260), data: base(true, 230), properties: base(true, 260), bookmarks: base(false, 240) },
+        panes: { filters: base(true, 220), visualizations: base(true, 260), data: base(true, 230), properties: base(true, 260), bookmarks: base(false, 240), selection: base(false, 240), sync: base(false, 260) },
       }
     : {
         ribbonCollapsed: false,
         ribbonMode: "singleline",
-        panes: { filters: base(true, 280), visualizations: base(true, 300), data: base(true, 240), properties: base(true, 260), bookmarks: base(false, 260) },
+        panes: { filters: base(true, 280), visualizations: base(true, 300), data: base(true, 240), properties: base(true, 260), bookmarks: base(false, 260), selection: base(false, 260), sync: base(false, 280) },
       };
 }
 

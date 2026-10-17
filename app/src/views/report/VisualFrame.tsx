@@ -49,6 +49,10 @@ export interface FrameProps {
   visual: VisualModel;
   position: Position;
   selected: boolean;
+  /** The visual the panes show when several are selected. */
+  primary?: boolean;
+  /** More than one visual is selected: no resize handles and no on-visual toolbar. */
+  multi?: boolean;
   /** The canvas is in editing mode: the frame can be dragged and resized. */
   editing: boolean;
   onPointerDownFrame?(e: React.PointerEvent, mode: "move" | Handle): void;
@@ -180,7 +184,8 @@ export function VisualFrame(p: FrameProps) {
       onPointerDown={(e) => {
         if (e.button !== 0) return;
         if (editingSource) return;
-        p.onSelect?.(e.ctrlKey || e.metaKey || e.shiftKey);
+        // Ctrl+click on a button follows it instead of changing the selection
+        p.onSelect?.(e.shiftKey || ((e.ctrlKey || e.metaKey) && visual.visualType !== "actionButton"));
       }}
       onContextMenu={menu}
     >
@@ -227,7 +232,7 @@ export function VisualFrame(p: FrameProps) {
         </div>
       )}
       {interactionControls()}
-      {c.onObject && p.editing && !c.readOnly && p.selected && !editingSource && (
+      {c.onObject && p.editing && !c.readOnly && p.selected && !p.multi && !editingSource && (
         <div
           role="toolbar"
           aria-label="Format on the visual"
@@ -265,7 +270,7 @@ export function VisualFrame(p: FrameProps) {
           </button>
         </div>
       )}
-      {p.editing && !c.readOnly && p.selected && !editingSource &&
+      {p.editing && !c.readOnly && p.selected && !p.multi && !editingSource &&
         HANDLES.map((h) => (
           <div
             key={h}

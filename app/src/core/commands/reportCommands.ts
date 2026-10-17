@@ -163,6 +163,83 @@ export function registerReportCommands(r: CommandRegistry<Session>): void {
       }
     },
   );
+  // ---- several visuals: the canvas selection, align, distribute, clipboard, selection pane ----
+  /** Visuals an arrange command acts on: the ones named in the arguments, else the canvas selection. */
+  const targets = (s: Session, a: unknown): { page: string; visuals: string[] } => {
+    const x = (a ?? {}) as { page?: string; visuals?: string[] };
+    const page = x.page ?? currentPage(s);
+    const visuals = x.visuals ?? s.report.getSnapshot().canvas;
+    if (visuals.length === 0) throw new Error("Select a visual first.");
+    return { page, visuals };
+  };
+  reg("report.canvas.select", "Select visuals", (s, a) => {
+    const names = ((a ?? {}) as { names?: string[] }).names ?? [];
+    s.report.setCanvasSelection(names);
+  });
+  reg("report.visuals.setPositions", "Move visuals", (s, a) => {
+    const x = need<{ page: string; items: { visual: string; position: Partial<Position> }[] }>(a, ["page", "items"]);
+    edit(s, "Move or resize visuals", (p) => ops.setPositions(p, x.page, x.items));
+  });
+  reg("report.visuals.delete", "Delete visuals", (s, a) => {
+    const t = targets(s, a);
+    edit(s, t.visuals.length > 1 ? "Delete visuals" : "Delete visual", (p) => ops.deleteVisuals(p, t.page, t.visuals));
+    s.report.clearSelection();
+    s.report.setCanvasSelection([]);
+  });
+  reg("report.visuals.align", "Align visuals", (s, a) => {
+    const t = targets(s, a);
+    const { mode } = need<{ mode: "left" | "center" | "right" | "top" | "middle" | "bottom" }>(a, ["mode"]);
+    edit(s, "Align visuals", (p) => ops.alignVisuals(p, t.page, t.visuals, mode));
+  });
+  reg("report.visuals.distribute", "Distribute visuals", (s, a) => {
+    const t = targets(s, a);
+    const { axis } = need<{ axis: "horizontal" | "vertical" }>(a, ["axis"]);
+    edit(s, "Distribute visuals", (p) => ops.distributeVisuals(p, t.page, t.visuals, axis));
+  });
+  const copyToClipboard = async (s: Session, a: unknown) => {
+    const t = targets(s, a);
+    const clip = ops.copyVisuals(s.store.project!, t.page, t.visuals);
+    s.report.setClipboard(clip);
+    try {
+      await navigator.clipboard?.writeText(JSON.stringify(clip));
+    } catch {
+      // the system clipboard may be unavailable; the copy stays in this window
+    }
+    return t;
+  };
+  reg("report.visuals.copy", "Copy visuals", async (s, a) => void (await copyToClipboard(s, a)));
+  reg("report.visuals.cut", "Cut visuals", async (s, a) => {
+    const t = await copyToClipboard(s, a);
+    edit(s, "Cut visuals", (p) => ops.deleteVisuals(p, t.page, t.visuals));
+    s.report.clearSelection();
+    s.report.setCanvasSelection([]);
+  });
+  reg("report.visuals.paste", "Paste visuals", async (s, a) => {
+    let clip: unknown = s.report.getSnapshot().clipboard;
+    try {
+      const text = await navigator.clipboard?.readText();
+      const parsed = text ? JSON.parse(text) : null;
+      if (ops.isVisualClipboard(parsed)) clip = parsed; // a copy made in another window or report
+    } catch {
+      // not JSON or no access: the copy made in this window is used
+    }
+    if (!ops.isVisualClipboard(clip)) throw new Error("There are no copied visuals to paste.");
+    const page = ((a ?? {}) as { page?: string }).page ?? currentPage(s);
+    let result: { names: string[]; missing: string[] } = { names: [], missing: [] };
+    edit(s, "Paste visuals", (p) => {
+      result = ops.pasteVisuals(p, page, clip as ops.VisualClipboard);
+    });
+    s.report.setCanvasSelection(result.names);
+    if (result.missing.length) s.setMessage(`Pasted. These tables are not in this report's model, so the fields that use them are empty: ${result.missing.join(", ")}.`);
+  });
+  reg("report.visual.rename", "Rename visual", (s, a) => {
+    const x = need<{ page: string; visual: string; name: string }>(a, ["page", "visual", "name"]);
+    edit(s, "Rename visual", (p) => ops.renameVisual(p, x.page, x.visual, x.name));
+  });
+  reg("report.visual.moveInOrder", "Bring forward / send backward", (s, a) => {
+    const x = need<{ page: string; visual: string; dir: "up" | "down" }>(a, ["page", "visual", "dir"]);
+    edit(s, "Change stacking order", (p) => ops.moveInOrder(p, x.page, x.visual, x.dir));
+  });
   reg("report.visual.delete", "Delete visual", (s, a) => {
     const x = need<{ page: string; visual: string }>(a, ["page", "visual"]);
     edit(s, "Delete visual", (p) => ops.deleteVisual(p, x.page, x.visual));
@@ -250,7 +327,18 @@ export function registerReportCommands(r: CommandRegistry<Session>): void {
       const scope = { level: "visual", page: x.page, visual: x.visual } as const;
       if (!cond) ops.removeFilter(p, scope, "slicer");
       else ops.upsertFilter(p, scope, { name: "slicer", field: x.field, cond });
+      // slicers in the same sync group follow
+      for (const o of ops.syncedSlicers(p, x.page, x.visual)) {
+        const os = { level: "visual", page: o.page, visual: o.visual } as const;
+        if (!cond) ops.removeFilter(p, os, "slicer");
+        else ops.upsertFilter(p, os, { name: "slicer", field: x.field, cond });
+      }
     });
+  });
+  reg("report.slicer.setSync", "Sync slicers", (s, a) => {
+    const x = need<{ page: string; visual: string; pages: { page: string; sync: boolean; visible: boolean }[] }>(a, ["page", "visual", "pages"]);
+    const group = ((a as { group?: string | null }).group ?? null) || null;
+    edit(s, "Sync slicers", (p) => ops.setSlicerSync(p, x.page, x.visual, group, x.pages));
   });
   reg("report.interaction.set", "Edit interactions", (s, a) => {
     const x = need<{ page: string; source: string; target: string; type: ops.InteractionType }>(a, ["page", "source", "target", "type"]);

@@ -78,7 +78,7 @@ export function registerShellCommands(r: CommandRegistry<Session>): void {
       const kind = s.shell.settings.getSnapshot().shell;
       const panes = s.shell.settings.getSnapshot().layouts[kind].panes;
       // the Modern sidebar shows one of Visualizations, Filters and Bookmarks at a time
-      if (kind === "modern" && (pane === "filters" || pane === "visualizations" || pane === "bookmarks")) {
+      if (kind === "modern" && (pane === "filters" || pane === "visualizations" || pane === "bookmarks" || pane === "selection" || pane === "sync")) {
         if (panes.visualizations.open && s.shell.getSnapshot().sideTab === pane) s.shell.settings.setPane(kind, "visualizations", { open: false });
         else {
           s.shell.setSideTab(pane);

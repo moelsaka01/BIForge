@@ -94,7 +94,7 @@ function TooltipOverlay({ page, point, x, y }: { page: PageModel; point: Selecte
   return (
     <div role="tooltip" style={{ position: "fixed", left, top, width: page.width, height: page.height, zIndex: 3000, boxShadow: "0 4px 16px rgba(0,0,0,.35)", pointerEvents: "none", background: "#fff" }} data-testid="tooltip-page">
       <ReportContext.Provider value={ctx}>
-        <PageCanvas page={page} scale={1} editing={false} selected={null} onSelect={() => undefined} />
+        <PageCanvas page={page} scale={1} editing={false} selection={[]} onSelection={() => undefined} />
       </ReportContext.Provider>
     </div>
   );
@@ -107,7 +107,11 @@ export function ReportView(p: ReportViewProps) {
   const theme = useMemo(() => resolveTheme(p.project), [p.project]);
   const model = useMemo(() => modelInfo(p.project), [p.project]);
   const data = useMemo(() => new ReportData(p.dax), [p.dax]);
-  const [selected, setSelected] = useState<string | null>(null);
+  // the canvas selection lives in the runtime, so that ribbon commands (align, copy, delete) can act on it
+  const selection = snap.canvas;
+  const selected = selection.at(-1) ?? null;
+  const setSelected = useCallback((name: string | null) => p.runtime.setCanvasSelection(name ? [name] : []), [p.runtime]);
+  const setSelection = useCallback((names: string[]) => p.runtime.setCanvasSelection(names), [p.runtime]);
   const zoom = p.zoom ?? "fit";
   const [menu, setMenu] = useState<{ items: CtxMenuItem[]; x: number; y: number } | null>(null);
   const [tip, setTip] = useState<{ page: PageModel; point: SelectedPoint; x: number; y: number } | null>(null);
@@ -125,7 +129,10 @@ export function ReportView(p: ReportViewProps) {
 
   const pageName = snap.page ?? activePageName(p.project);
   const page = pages.find((x) => x.name === pageName) ?? pages[0];
-  useEffect(() => setSelected((s) => (s && page?.visuals.some((v) => v.name === s) ? s : null)), [page]);
+  useEffect(() => {
+    const keep = selection.filter((n) => page?.visuals.some((v) => v.name === n));
+    if (keep.length !== selection.length) p.runtime.setCanvasSelection(keep);
+  }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => p.onSelectVisual?.(page?.name ?? null, selected), [page?.name, selected]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const liveView: ViewState = useMemo(() => ({ selection: snap.selection, drill: snap.drill, drillthrough: snap.drillthrough?.filters ?? [], epoch: snap.epoch + p.dataEpoch }), [snap.selection, snap.drill, snap.drillthrough, snap.epoch, p.dataEpoch]);
@@ -173,7 +180,7 @@ export function ReportView(p: ReportViewProps) {
             </div>
           )}
           <div ref={area} className="report-canvas">
-            <PageCanvas page={page} scale={scale} editing selected={selected} onSelect={setSelected} />
+            <PageCanvas page={page} scale={scale} editing selection={selection} onSelection={setSelection} />
           </div>
           <PageTabs pages={pages} active={page.name} />
         </div>

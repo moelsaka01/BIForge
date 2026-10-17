@@ -28,6 +28,8 @@ import {
 } from "./visualDoc";
 import { defaultRole, roleDef, visualType } from "./visualTypes";
 import { writeTextbox } from "./staticVisuals";
+import { alignBoxes, distributeBoxes, type AlignMode, type Box, type DistributeAxis, type Moves } from "./arrange";
+import { modelInfo } from "./modelInfo";
 
 export class ReportError extends Error {
   constructor(message: string) {
@@ -224,6 +226,184 @@ export function editStatic(p: Project, page: string, visual: string, typeId: str
   const j = visualJson(p, page, visual);
   if (j.visual?.visualType !== typeId) throw new ReportError(`Visual "${visual}" is not a ${typeId}.`);
   fn(j);
+}
+
+// ---- several visuals at once -----------------------------------------------------------------
+
+function boxesOf(p: Project, page: string, names: string[]): Box[] {
+  return names.map((n) => {
+    const pos = visualJson(p, page, n).position ?? {};
+    return { name: n, x: pos.x ?? 0, y: pos.y ?? 0, width: pos.width ?? 0, height: pos.height ?? 0 };
+  });
+}
+
+const applyMoves = (p: Project, page: string, moves: Moves) => {
+  for (const [name, m] of Object.entries(moves)) setPosition(p, page, name, m);
+};
+
+export function setPositions(p: Project, page: string, items: { visual: string; position: Partial<Position> }[]): void {
+  for (const it of items) setPosition(p, page, it.visual, it.position);
+}
+
+export function deleteVisuals(p: Project, page: string, names: string[]): void {
+  for (const n of names) visualJson(p, page, n);
+  for (const n of names) deleteVisual(p, page, n);
+}
+
+export function alignVisuals(p: Project, page: string, names: string[], mode: AlignMode): void {
+  applyMoves(p, page, alignBoxes(boxesOf(p, page, names), mode));
+}
+
+export function distributeVisuals(p: Project, page: string, names: string[], axis: DistributeAxis): void {
+  applyMoves(p, page, distributeBoxes(boxesOf(p, page, names), axis));
+}
+
+/** What Copy puts on the clipboard: the visual documents with the page they came from. */
+export interface VisualClipboard {
+  kind: "biforge.visuals";
+  version: 1;
+  page: string;
+  visuals: J[];
+}
+
+export function copyVisuals(p: Project, page: string, names: string[]): VisualClipboard {
+  if (names.length === 0) throw new ReportError("Select a visual to copy.");
+  return { kind: "biforge.visuals", version: 1, page, visuals: names.map((n) => structuredClone(visualJson(p, page, n))) };
+}
+
+export function isVisualClipboard(x: unknown): x is VisualClipboard {
+  const c = x as VisualClipboard | null;
+  return !!c && c.kind === "biforge.visuals" && c.version === 1 && Array.isArray(c.visuals) && c.visuals.every((v) => v && typeof v === "object" && v.visual && typeof v.visual.visualType === "string");
+}
+
+/** Tables a copied visual refers to that this report's model does not have. */
+function missingTables(p: Project, json: J): string[] {
+  const have = new Set(modelInfo(p).tables().map((t) => t.toLowerCase()));
+  const found = new Set<string>();
+  const walk = (x: unknown) => {
+    if (Array.isArray(x)) x.forEach(walk);
+    else if (x && typeof x === "object") {
+      const o = x as J;
+      if (typeof o.Entity === "string") found.add(o.Entity);
+      Object.values(o).forEach(walk);
+    }
+  };
+  walk(json);
+  return [...found].filter((t) => !have.has(t.toLowerCase()));
+}
+
+/** Pastes copied visuals on a page: same position on another page, shifted when pasted over the original. */
+export function pasteVisuals(p: Project, page: string, clip: VisualClipboard, newId: () => string = newName): { names: string[]; missing: string[] } {
+  pageJson(p, page);
+  const names: string[] = [];
+  const missing = new Set<string>();
+  const existing = () => Object.keys(files(p)).filter((k) => k.startsWith(visualPrefix(page)) && k.endsWith("/visual.json")).map((k) => files(p)[k]);
+  for (const src of clip.visuals) {
+    const copy = structuredClone(src);
+    copy.name = newId();
+    delete copy.parentGroupName;
+    const top = Math.max(0, ...existing().map((v) => v.position?.z ?? 0));
+    const pos = { ...(copy.position ?? { x: 0, y: 0, width: 200, height: 150 }) };
+    while (existing().some((v) => v.position?.x === pos.x && v.position?.y === pos.y && v.position?.width === pos.width && v.position?.height === pos.height)) {
+      pos.x = (pos.x ?? 0) + 24;
+      pos.y = (pos.y ?? 0) + 24;
+    }
+    copy.position = { ...pos, z: top + 1000, tabOrder: top + 1000 };
+    files(p)[visualKey(page, copy.name)] = copy;
+    names.push(copy.name);
+    missingTables(p, copy).forEach((t) => missing.add(t));
+  }
+  return { names, missing: [...missing] };
+}
+
+const NAME_ANNOTATION = "biforge.displayName";
+
+/** The name shown in the Selection pane: a user-given name, else the visual type. */
+export function visualDisplayName(json: J): string | null {
+  const a = (json.annotations ?? []).find((x: J) => x.name === NAME_ANNOTATION);
+  return typeof a?.value === "string" && a.value !== "" ? a.value : null;
+}
+
+export function renameVisual(p: Project, page: string, visual: string, name: string): void {
+  const j = visualJson(p, page, visual);
+  const rest = (j.annotations ?? []).filter((x: J) => x.name !== NAME_ANNOTATION);
+  const trimmed = name.trim();
+  if (trimmed) rest.push({ name: NAME_ANNOTATION, value: trimmed });
+  if (rest.length) j.annotations = rest;
+  else delete j.annotations;
+}
+
+/** Moves a visual one step up (towards the front) or down in the stacking order, by swapping with its neighbour. */
+export function moveInOrder(p: Project, page: string, visual: string, dir: "up" | "down"): void {
+  const target = visualJson(p, page, visual);
+  const all = Object.keys(files(p))
+    .filter((k) => k.startsWith(visualPrefix(page)) && k.endsWith("/visual.json"))
+    .map((k) => files(p)[k])
+    .sort((a, b) => (a.position?.z ?? 0) - (b.position?.z ?? 0) || String(a.name).localeCompare(String(b.name)));
+  const i = all.indexOf(target);
+  const j = dir === "up" ? i + 1 : i - 1;
+  if (j < 0 || j >= all.length) return;
+  const za = all[i].position.z ?? 0;
+  const zb = all[j].position.z ?? 0;
+  if (za === zb) {
+    all[i].position.z = dir === "up" ? zb + 1 : zb - 1;
+    return;
+  }
+  all[i].position.z = zb;
+  all[j].position.z = za;
+}
+
+// ---- sync slicers ------------------------------------------------------------------------------
+
+export const syncGroupOf = (json: J): string | null => (typeof json?.syncGroup?.groupName === "string" ? json.syncGroup.groupName : null);
+
+const slicersOf = (p: Project, page: string): J[] =>
+  Object.keys(files(p))
+    .filter((k) => k.startsWith(visualPrefix(page)) && k.endsWith("/visual.json"))
+    .map((k) => files(p)[k])
+    .filter((j) => j.visual?.visualType === "slicer");
+
+/** Every other slicer of the report that is in the same sync group, with its page. */
+export function syncedSlicers(p: Project, page: string, visual: string): { page: string; visual: string }[] {
+  const group = syncGroupOf(visualJson(p, page, visual));
+  if (!group) return [];
+  return listPageNames(p).flatMap((pg) => slicersOf(p, pg).filter((j) => syncGroupOf(j) === group && !(pg === page && j.name === visual)).map((j) => ({ page: pg, visual: j.name as string })));
+}
+
+/**
+ * Sync slicers pane: puts the slicer in a group and, per page, adds it (a copy with the same field and selection, hidden when
+ * `visible` is false) or takes it out. A synced slicer that is hidden and taken out is deleted.
+ */
+export function setSlicerSync(p: Project, page: string, visual: string, group: string | null, pages: { page: string; sync: boolean; visible: boolean }[], newId: () => string = newName): void {
+  const src = visualJson(p, page, visual);
+  if (src.visual?.visualType !== "slicer") throw new ReportError("Only a slicer can be synced.");
+  const old = syncGroupOf(src);
+  if (!group) {
+    for (const pg of listPageNames(p)) for (const j of slicersOf(p, pg)) if (old && syncGroupOf(j) === old && j !== src) (j.isHidden ? deleteVisual(p, pg, j.name) : delete j.syncGroup);
+    delete src.syncGroup;
+    return;
+  }
+  src.syncGroup = { groupName: group, fieldChanges: true, filterChanges: true };
+  for (const e of pages) {
+    if (e.page === page) continue;
+    pageJson(p, e.page);
+    const existing = slicersOf(p, e.page).find((j) => syncGroupOf(j) === group);
+    if (e.sync) {
+      if (existing) {
+        if (e.visible) delete existing.isHidden;
+        else existing.isHidden = true;
+      } else {
+        const copy = structuredClone(src);
+        copy.name = newId();
+        if (e.visible) delete copy.isHidden;
+        else copy.isHidden = true;
+        files(p)[visualKey(e.page, copy.name)] = copy;
+      }
+    } else if (existing) {
+      if (existing.isHidden) deleteVisual(p, e.page, existing.name);
+      else delete existing.syncGroup;
+    }
+  }
 }
 
 export function deleteVisual(p: Project, page: string, visual: string): void {
