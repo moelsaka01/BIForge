@@ -216,6 +216,10 @@ impl Engine {
                 let raw = sources::sqlserver_src::read(spec, creds)?;
                 sources::load(&self.conn, STAGE, &raw)
             }
+            SourceSpec::MySql { .. } | SourceSpec::Odbc { .. } | SourceSpec::Xml { .. } | SourceSpec::Web { .. } | SourceSpec::OData { .. } | SourceSpec::Pdf { .. } | SourceSpec::FixedWidth { .. } => {
+                let raw = sources::read_other(spec, creds)?;
+                sources::load(&self.conn, STAGE, &raw)
+            }
         }
     }
 
@@ -320,6 +324,21 @@ pub fn postgres_tables(spec: &SourceSpec, creds: &dyn CredentialStore) -> Result
 /// Lists tables of a SQL Server schema (for the import dialog).
 pub fn sqlserver_tables(spec: &SourceSpec, creds: &dyn CredentialStore) -> Result<Vec<String>> {
     sources::sqlserver_src::list_tables(spec, creds)
+}
+
+/// Names of the ODBC drivers installed on this computer.
+pub fn odbc_drivers() -> Result<Vec<String>> {
+    sources::odbc_src::drivers()
+}
+
+/// Lists the tables, sheets or entities a source offers (for the navigator of the import dialog).
+pub fn source_choices(spec: &SourceSpec, creds: &dyn CredentialStore) -> Result<Vec<String>> {
+    sources::choices(spec, creds)
+}
+
+/// The first rows of a source, as text, without importing it.
+pub fn source_preview(spec: &SourceSpec, creds: &dyn CredentialStore, limit: usize) -> Result<RowPage> {
+    sources::preview_page(spec, creds, limit)
 }
 
 impl Engine {

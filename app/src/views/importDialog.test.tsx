@@ -1,0 +1,151 @@
+// @vitest-environment jsdom
+// The Get data dialog: connector list, forms per connector, the navigator (list, preview, multi-select), custom SQL, secrets.
+import { afterEach, describe, expect, it } from "vitest";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { installDomStubs } from "../core/testing/domStubs";
+import { FakeEngine, col } from "../core/testing/fakeEngine";
+import type { SourceSpec } from "../core/data/types";
+import { ImportDialog } from "./ImportDialog";
+import type { ConnectorId } from "./importForm";
+
+installDomStubs();
+afterEach(cleanup);
+
+function setup(kind: ConnectorId, engine = new FakeEngine()) {
+  const submitted: { name: string; spec: SourceSpec; password: string }[] = [];
+  let closed = false;
+  render(
+    <ImportDialog
+      open
+      initialKind={kind}
+      engine={engine}
+      dialogs={{ pickPbip: async () => null, pickFolder: async () => null, pickFile: async () => "C:\\data\\shop.xml" }}
+      onSubmit={async (name, spec, password) => {
+        submitted.push({ name, spec, password });
+        return null;
+      }}
+      onClose={() => (closed = true)}
+    />,
+  );
+  return { engine, submitted, closed: () => closed, dlg: () => screen.getByRole("dialog", { name: "Import data" }) };
+}
+const type = (dlg: HTMLElement, label: string, value: string) => fireEvent.change(within(dlg).getByLabelText(label), { target: { value } });
+
+describe("Get data dialog", () => {
+  it("offers the connectors in File, Database and Online groups and no cloud ones", () => {
+    const { dlg } = setup("csv");
+    const select = within(dlg()).getByLabelText("Source type") as HTMLSelectElement;
+    const groups = [...select.querySelectorAll("optgroup")].map((g) => [g.label, [...g.querySelectorAll("option")].map((o) => o.textContent)] as const);
+    expect(groups.map((g) => g[0])).toEqual(["File", "Database", "Online and other"]);
+    const all = groups.flatMap((g) => g[1]).join("|");
+    for (const t of ["MySQL database", "SQL Server database", "Oracle database", "ODBC (any other database)", "Access database", "XML", "PDF", "Web", "OData feed"]) expect(all).toContain(t);
+    expect(all).not.toMatch(/dataverse|sharepoint online|fabric|onelake|salesforce/i);
+  });
+
+  it("MySQL: lists tables, previews the clicked one, imports every ticked table under its own name; the password goes to the credential store only", async () => {
+    const e = new FakeEngine();
+    e.choices.set("mysql", ["customers", "orders", "products"]);
+    e.previews.set("orders", { columns: [col("id", "int64"), col("total", "double")], rows: [["1", "9.5"], ["2", null]], total: 2 });
+    const { dlg, submitted, closed } = setup("mysql", e);
+    type(dlg(), "Database", "shop");
+    type(dlg(), "User", "root");
+    type(dlg(), "Password", "pw1");
+    expect((within(dlg()).getByLabelText("Port") as HTMLInputElement).value).toBe("3306");
+    fireEvent.click(within(dlg()).getByRole("button", { name: "List tables" }));
+    const nav = await within(dlg()).findByRole("group", { name: "Navigator" });
+    expect(within(nav).getAllByRole("listitem").map((l) => l.textContent)).toEqual(["customers", "orders", "products"]);
+    expect(e.calls).toContain("cred:mysql:3"); // the secret reached the credential store before listing
+    fireEvent.click(within(nav).getByRole("button", { name: "orders" }));
+    await waitFor(() => expect(within(nav).getByLabelText("Preview").textContent).toContain("9.5"));
+    expect(e.calls).toContain("preview:mysql:20");
+
+    fireEvent.click(within(nav).getByRole("checkbox", { name: "Select orders" }));
+    fireEvent.click(within(nav).getByRole("checkbox", { name: "Select products" }));
+    expect((within(dlg()).getByLabelText("Table name") as HTMLInputElement).disabled).toBe(true);
+    fireEvent.click(within(dlg()).getByRole("button", { name: "Import 2 tables" }));
+    await waitFor(() => expect(closed()).toBe(true));
+    expect(submitted.map((s) => s.name)).toEqual(["orders", "products"]);
+    expect(submitted[0].spec).toEqual({ kind: "mysql", host: "localhost", port: 3306, database: "shop", user: "root", table: "orders" });
+    expect(JSON.stringify(submitted.map((s) => s.spec))).not.toContain("pw1");
+  });
+
+  it("asks for at least one ticked table, and a custom SQL statement replaces the table", async () => {
+    const e = new FakeEngine();
+    e.choices.set("postgres", ["a", "b"]);
+    const { dlg, submitted } = setup("postgres", e);
+    type(dlg(), "Database", "d");
+    type(dlg(), "User", "u");
+    fireEvent.click(within(dlg()).getByRole("button", { name: "List tables" }));
+    await within(dlg()).findByRole("group", { name: "Navigator" });
+    fireEvent.click(within(dlg()).getByRole("button", { name: "Import" }));
+    expect((await within(dlg()).findByRole("alert")).textContent).toBe("Tick at least one table.");
+    fireEvent.click(within(dlg()).getByText("Advanced options: SQL statement"));
+    type(dlg(), "SQL statement", "SELECT id FROM t");
+    type(dlg(), "Table name", "Ids");
+    fireEvent.click(within(dlg()).getByRole("button", { name: "Import" }));
+    await waitFor(() => expect(submitted).toHaveLength(1));
+    expect(submitted[0]).toMatchObject({ name: "Ids", spec: { kind: "postgres", query: "SELECT id FROM t" } });
+  });
+
+  it("an ODBC flavor offers only matching installed drivers and says so when there is none", async () => {
+    const e = new FakeEngine();
+    e.drivers = ["SQL Server", "Oracle in OraClient19Home1", "Microsoft Access Driver (*.mdb, *.accdb)"];
+    const { dlg } = setup("oracle", e);
+    const select = (await within(dlg()).findByLabelText("ODBC driver")) as HTMLSelectElement;
+    await waitFor(() => expect([...select.options].map((o) => o.value)).toEqual(["Oracle in OraClient19Home1"]));
+    cleanup();
+    const none = setup("teradata", new FakeEngine());
+    expect((await within(none.dlg()).findByRole("note")).textContent).toMatch(/No matching ODBC driver/);
+  });
+
+  it("generic ODBC takes a connection string without a password and uses the stored password", async () => {
+    const e = new FakeEngine();
+    e.choices.set("odbc", ["dbo.Sales"]);
+    const { dlg, submitted } = setup("odbc", e);
+    type(dlg(), "Connection string", "DSN=warehouse");
+    type(dlg(), "User", "bi");
+    type(dlg(), "Password", "pw");
+    fireEvent.click(within(dlg()).getByRole("button", { name: "List tables" }));
+    const nav = await within(dlg()).findByRole("group", { name: "Navigator" });
+    expect((within(nav).getByRole("checkbox", { name: "Select dbo.Sales" }) as HTMLInputElement).checked).toBe(true); // a single table is ticked for you
+    fireEvent.click(within(dlg()).getByRole("button", { name: "Import" }));
+    await waitFor(() => expect(submitted, within(dlg()).queryByRole("alert")?.textContent ?? "no alert").toHaveLength(1));
+    expect(submitted[0].name).toBe("Sales");
+    expect(submitted[0].spec).toMatchObject({ kind: "odbc", connection: "DSN=warehouse", user: "bi", table: "dbo.Sales" });
+    expect(e.calls).toContain("cred:odbc:2");
+    type(dlg(), "Connection string", "DSN=w;PWD=x");
+  });
+
+  it("Web: a page address lists its tables; XML and PDF list the tables of the picked file", async () => {
+    const e = new FakeEngine();
+    e.choices.set("web", ["Sales", "Table 2"]);
+    e.choices.set("xml", ["item", "person"]);
+    const w = setup("web", e);
+    type(w.dlg(), "Web address", "https://example.com/p");
+    fireEvent.click(within(w.dlg()).getByRole("button", { name: "Show tables" }));
+    await within(w.dlg()).findByRole("group", { name: "Navigator" });
+    fireEvent.click(within(w.dlg()).getByRole("checkbox", { name: "Select Sales" }));
+    fireEvent.click(within(w.dlg()).getByRole("button", { name: "Import" }));
+    await waitFor(() => expect(w.submitted).toHaveLength(1));
+    expect(w.submitted[0].spec).toEqual({ kind: "web", url: "https://example.com/p", format: null, table: "Sales", user: null });
+    cleanup();
+
+    const x = setup("xml", e);
+    fireEvent.click(within(x.dlg()).getByRole("button", { name: "Browse…" }));
+    const nav = await within(x.dlg()).findByRole("group", { name: "Navigator" }); // listed right after the file is picked
+    expect(within(nav).getAllByRole("listitem")).toHaveLength(2);
+    cleanup();
+
+    const bad = setup("web", e);
+    type(bad.dlg(), "Web address", "ftp://x");
+    fireEvent.click(within(bad.dlg()).getByRole("button", { name: "Show tables" }));
+    expect((await within(bad.dlg()).findByRole("alert")).textContent).toMatch(/http:\/\/ or https:\/\//);
+  });
+
+  it("Basic authentication for a web address shows the password field only when a user is entered", () => {
+    const { dlg } = setup("odata");
+    expect(within(dlg()).queryByLabelText("Password")).toBeNull();
+    type(dlg(), "User", "ann");
+    expect(within(dlg()).getByLabelText("Password")).toBeTruthy();
+  });
+});

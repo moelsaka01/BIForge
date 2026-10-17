@@ -37,6 +37,9 @@ pub enum SourceSpec {
         #[serde(default = "pg_schema")]
         schema: String,
         table: String,
+        /// Custom SQL (a SELECT) used instead of the table.
+        #[serde(default)]
+        query: Option<String>,
     },
     /// SQL Server (tiberius). Without `user` Windows integrated authentication is used.
     SqlServer {
@@ -49,7 +52,81 @@ pub enum SourceSpec {
         #[serde(default = "mssql_schema")]
         schema: String,
         table: String,
+        /// Custom SQL (a SELECT) used instead of the table.
+        #[serde(default)]
+        query: Option<String>,
+        /// Accept a server certificate that does not validate (a self-signed one). The connection stays encrypted.
+        #[serde(default)]
+        trust_certificate: bool,
     },
+    /// MySQL and MariaDB.
+    MySql {
+        host: String,
+        #[serde(default = "mysql_port")]
+        port: u16,
+        database: String,
+        user: String,
+        #[serde(default)]
+        table: String,
+        #[serde(default)]
+        query: Option<String>,
+    },
+    /// Any database with an ODBC driver on this machine. `flavor` (odbc, access, oracle, db2, ...) only changes how names are quoted
+    /// and which M connector the partition uses. The connection string never holds the password.
+    Odbc {
+        #[serde(default = "odbc_flavor")]
+        flavor: String,
+        connection: String,
+        #[serde(default)]
+        user: Option<String>,
+        #[serde(default)]
+        table: Option<String>,
+        #[serde(default)]
+        query: Option<String>,
+    },
+    /// XML file; `table` names one of the tables found in it (blank = the first).
+    Xml {
+        path: String,
+        #[serde(default)]
+        table: Option<String>,
+    },
+    /// A web address: an HTML page (tables), JSON, CSV or XML. `format` is auto, html, json, csv or xml. With `user` the request uses Basic authentication.
+    Web {
+        url: String,
+        #[serde(default)]
+        format: Option<String>,
+        #[serde(default)]
+        table: Option<String>,
+        #[serde(default)]
+        user: Option<String>,
+    },
+    /// OData v4 feed: `entity` is an entity set of the service.
+    OData {
+        url: String,
+        entity: String,
+        #[serde(default)]
+        user: Option<String>,
+    },
+    /// A table found in a PDF file (best effort: text laid out in rows and columns).
+    Pdf {
+        path: String,
+        #[serde(default)]
+        table: Option<String>,
+    },
+    /// Text file with columns at fixed character positions: `widths` are the column widths.
+    FixedWidth {
+        path: String,
+        widths: Vec<usize>,
+        #[serde(default = "yes")]
+        header: bool,
+    },
+}
+
+fn mysql_port() -> u16 {
+    3306
+}
+fn odbc_flavor() -> String {
+    "odbc".into()
 }
 
 fn mssql_schema() -> String {
@@ -75,6 +152,9 @@ impl SourceSpec {
             SourceSpec::SqlServer { server, port, database, user: Some(user), .. } => {
                 Some(format!("sqlserver:{user}@{server}:{}/{database}", port.unwrap_or(1433)))
             }
+            SourceSpec::MySql { host, port, database, user, .. } => Some(format!("mysql:{user}@{host}:{port}/{database}")),
+            SourceSpec::Odbc { connection, user: Some(user), .. } if !user.trim().is_empty() => Some(format!("odbc:{user}@{connection}")),
+            SourceSpec::Web { url, user: Some(user), .. } | SourceSpec::OData { url, user: Some(user), .. } if !user.trim().is_empty() => Some(format!("web:{user}@{url}")),
             _ => None,
         }
     }

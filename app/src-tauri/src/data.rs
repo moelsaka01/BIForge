@@ -165,6 +165,18 @@ pub fn engine_sqlserver_tables(state: tauri::State<DataService>, spec: SourceSpe
     state.sqlserver_tables(&spec)
 }
 #[tauri::command]
+pub fn engine_source_choices(state: tauri::State<DataService>, spec: SourceSpec) -> Result<Vec<String>, String> {
+    biforge_engine::source_choices(&spec, state.creds.as_ref()).map_err(msg)
+}
+#[tauri::command]
+pub fn engine_source_preview(state: tauri::State<DataService>, spec: SourceSpec, limit: usize) -> Result<RowPage, String> {
+    biforge_engine::source_preview(&spec, state.creds.as_ref(), limit.clamp(1, 1000)).map_err(msg)
+}
+#[tauri::command]
+pub fn engine_odbc_drivers() -> Result<Vec<String>, String> {
+    biforge_engine::odbc_drivers().map_err(msg)
+}
+#[tauri::command]
 pub fn engine_set_credential(state: tauri::State<DataService>, spec: SourceSpec, secret: String) -> Result<(), String> {
     state.set_credential(&spec, &secret)
 }

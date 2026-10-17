@@ -20,6 +20,7 @@ pub enum Cell {
     Timestamp(i64),
 }
 
+#[derive(Debug)]
 pub struct RawTable {
     pub columns: Vec<String>,
     pub rows: Vec<Vec<Cell>>,
@@ -44,7 +45,7 @@ pub fn clean_names(names: Vec<String>) -> Vec<String> {
         .collect()
 }
 
-fn column_type(rows: &[Vec<Cell>], i: usize) -> &'static str {
+pub(crate) fn column_type(rows: &[Vec<Cell>], i: usize) -> &'static str {
     let (mut int, mut float, mut boolean, mut ts, mut other) = (false, false, false, false, false);
     for r in rows {
         match &r[i] {
@@ -72,7 +73,7 @@ fn column_type(rows: &[Vec<Cell>], i: usize) -> &'static str {
     }
 }
 
-fn to_text(c: &Cell) -> Option<String> {
+pub(crate) fn to_text(c: &Cell) -> Option<String> {
     Some(match c {
         Cell::Null => return None,
         Cell::Int(i) => i.to_string(),
@@ -128,3 +129,12 @@ pub fn load_as(conn: &Connection, table: &str, raw: &RawTable, temp: bool) -> Re
     app.flush()?;
     Ok(())
 }
+
+pub mod dispatch;
+pub mod mysql_src;
+pub mod odbc_src;
+pub mod pdf_src;
+pub mod textinfer;
+pub mod web_src;
+pub mod xml_src;
+pub use dispatch::{choices, parse_csv, parse_fixed, preview_page, read_other};

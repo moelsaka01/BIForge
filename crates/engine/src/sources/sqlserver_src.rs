@@ -54,6 +54,16 @@ pub fn kind_of(data_type: &str) -> Kind {
 
 /// The SELECT that reads `schema.table` with the columns normalized as described above.
 pub fn select_sql(schema: &str, table: &str, columns: &[(String, String)]) -> String {
+    select_from(&format!("{}.{}", qi(schema), qi(table)), columns, None)
+}
+
+/// A custom query is wrapped as a derived table (so it must be valid there: no ORDER BY without TOP); a trailing semicolon is dropped.
+pub fn query_from(query: &str) -> Option<String> {
+    let q = query.trim().trim_end_matches(';').trim();
+    (!q.is_empty()).then(|| format!("({q}) AS biforge_query"))
+}
+
+pub fn select_from(from: &str, columns: &[(String, String)], limit: Option<usize>) -> String {
     let list: Vec<String> = columns
         .iter()
         .map(|(name, ty)| {
@@ -66,12 +76,13 @@ pub fn select_sql(schema: &str, table: &str, columns: &[(String, String)]) -> St
             }
         })
         .collect();
-    format!("SELECT {} FROM {}.{}", list.join(", "), qi(schema), qi(table))
+    let top = limit.map(|n| format!("TOP {n} ")).unwrap_or_default();
+    format!("SELECT {top}{} FROM {from}", list.join(", "))
 }
 
 fn parts(spec: &SourceSpec) -> Result<(&str, Option<u16>, &str, Option<&str>, &str, &str)> {
     match spec {
-        SourceSpec::SqlServer { server, port, database, user, schema, table } => Ok((server, *port, database, user.as_deref(), schema, table)),
+        SourceSpec::SqlServer { server, port, database, user, schema, table, .. } => Ok((server, *port, database, user.as_deref(), schema, table)),
         _ => Err(EngineError::Source("not a SQL Server source".into())),
     }
 }
@@ -87,6 +98,9 @@ pub fn config(spec: &SourceSpec, creds: &dyn CredentialStore) -> Result<Config> 
     }
     cfg.database(database);
     cfg.encryption(EncryptionLevel::Required);
+    if matches!(spec, SourceSpec::SqlServer { trust_certificate: true, .. }) {
+        cfg.trust_cert();
+    }
     match user {
         Some(u) => {
             let pw = match spec.credential_key() {
@@ -129,6 +143,11 @@ pub fn list_tables(spec: &SourceSpec, creds: &dyn CredentialStore) -> Result<Vec
     })
 }
 
+struct Row2 {
+    name: String,
+    ty: String,
+}
+
 fn cell(r: &Row, i: usize, k: Kind) -> Cell {
     match k {
         Kind::Bool => r.get::<bool, _>(i).map_or(Cell::Null, Cell::Bool),
@@ -144,11 +163,34 @@ fn cell(r: &Row, i: usize, k: Kind) -> Cell {
 }
 
 pub fn read(spec: &SourceSpec, creds: &dyn CredentialStore) -> Result<RawTable> {
+    read_n(spec, creds, None)
+}
+
+pub fn read_n(spec: &SourceSpec, creds: &dyn CredentialStore, limit: Option<usize>) -> Result<RawTable> {
     let (_, _, _, _, schema, table) = parts(spec)?;
+    let custom = match spec {
+        SourceSpec::SqlServer { query: Some(q), .. } => query_from(q).map(|f| (f, q.trim().trim_end_matches(';').trim().to_string())),
+        _ => None,
+    };
     runtime()?.block_on(async {
         let mut c = connect(spec, creds).await?;
-        let cols = c
-            .query(
+        let cols = if let Some((_, q)) = &custom {
+            // column names and types of the query, as the server sees them
+            c.query("EXEC sp_describe_first_result_set @tsql = @P1", &[q])
+                .await
+                .map_err(err)?
+                .into_first_result()
+                .await
+                .map_err(err)?
+                .iter()
+                .map(|r| {
+                    let ty = r.get::<&str, _>("system_type_name").unwrap_or_default();
+                    (r.get::<&str, _>("name").unwrap_or_default().to_string(), ty.split('(').next().unwrap_or_default().trim().to_string())
+                })
+                .map(|(n, t)| Row2 { name: n, ty: t })
+                .collect::<Vec<_>>()
+        } else {
+            c.query(
                 "SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = @P1 AND TABLE_NAME = @P2 ORDER BY ORDINAL_POSITION",
                 &[&schema, &table],
             )
@@ -156,15 +198,17 @@ pub fn read(spec: &SourceSpec, creds: &dyn CredentialStore) -> Result<RawTable> 
             .map_err(err)?
             .into_first_result()
             .await
-            .map_err(err)?;
-        let columns: Vec<(String, String)> = cols
+            .map_err(err)?
             .iter()
-            .map(|r| (r.get::<&str, _>(0).unwrap_or_default().to_string(), r.get::<&str, _>(1).unwrap_or_default().to_string()))
-            .collect();
+            .map(|r| Row2 { name: r.get::<&str, _>(0).unwrap_or_default().to_string(), ty: r.get::<&str, _>(1).unwrap_or_default().to_string() })
+            .collect::<Vec<_>>()
+        };
+        let columns: Vec<(String, String)> = cols.into_iter().map(|r| (r.name, r.ty)).collect();
         if columns.is_empty() {
             return Err(EngineError::Source(format!("SQL Server error: table \"{schema}.{table}\" does not exist or has no readable columns")));
         }
-        let rows = c.query(select_sql(schema, table, &columns), &[]).await.map_err(err)?.into_first_result().await.map_err(err)?;
+        let from = custom.as_ref().map(|(f, _)| f.clone()).unwrap_or_else(|| format!("{}.{}", qi(schema), qi(table)));
+        let rows = c.query(select_from(&from, &columns, limit), &[]).await.map_err(err)?.into_first_result().await.map_err(err)?;
         let kinds: Vec<Kind> = columns.iter().map(|(_, t)| kind_of(t)).collect();
         let names = clean_names(columns.iter().map(|(n, _)| n.clone()).collect());
         let out = rows.iter().map(|r| kinds.iter().enumerate().map(|(i, k)| cell(r, i, *k)).collect()).collect();
@@ -178,7 +222,7 @@ mod tests {
     use crate::creds::MemoryCredentialStore;
 
     fn spec(user: Option<&str>) -> SourceSpec {
-        SourceSpec::SqlServer { server: "127.0.0.1".into(), port: Some(1), database: "db".into(), user: user.map(String::from), schema: "dbo".into(), table: "t".into() }
+        SourceSpec::SqlServer { server: "127.0.0.1".into(), port: Some(1), database: "db".into(), user: user.map(String::from), schema: "dbo".into(), table: "t".into(), query: None, trust_certificate: false }
     }
 
     #[test]

@@ -14,5 +14,8 @@ export const tauriEngine: EngineApi = {
   sqliteTables: (path) => invoke<string[]>("engine_sqlite_tables", { path }),
   postgresTables: (spec: SourceSpec) => invoke<string[]>("engine_postgres_tables", { spec }),
   sqlserverTables: (spec: SourceSpec) => invoke<string[]>("engine_sqlserver_tables", { spec }),
+  sourceChoices: (spec: SourceSpec) => invoke<string[]>("engine_source_choices", { spec }),
+  sourcePreview: (spec: SourceSpec, limit: number) => invoke<RowPage>("engine_source_preview", { spec, limit }),
+  odbcDrivers: () => invoke<string[]>("engine_odbc_drivers"),
   setCredential: (spec, secret) => invoke<void>("engine_set_credential", { spec, secret }),
 };

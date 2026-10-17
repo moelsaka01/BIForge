@@ -36,3 +36,21 @@ fn generated_partition_m_reproduces_the_csv_import() {
         }
     }
 }
+
+/// The M written for the connectors (tests/m/connectors/*.m, from partitionM.ts) must at least be valid M syntax:
+/// these functions (Sql.Database, MySQL.Database, ...) are only run by Power BI Desktop, but BIForge's parser reads them.
+#[test]
+fn connector_partitions_are_valid_m() {
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/m/connectors");
+    let mut n = 0;
+    for entry in std::fs::read_dir(&dir).unwrap() {
+        let p = entry.unwrap().path();
+        if p.extension().and_then(|e| e.to_str()) != Some("m") {
+            continue;
+        }
+        let text = std::fs::read_to_string(&p).unwrap();
+        biforge_m::parse(&text).unwrap_or_else(|e| panic!("{}: {e:?}\n{text}", p.display()));
+        n += 1;
+    }
+    assert!(n >= 20, "only {n} connector partitions found");
+}

@@ -42,6 +42,25 @@ jobs:
           & "$pg\bin\psql.exe" -h localhost -p 5433 -U postgres -v ON_ERROR_STOP=1 -f $sql
           "BIFORGE_TEST_PG=localhost:5433:postgres:postgres:ci-test-password:public.people" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
           "BIFORGE_REQUIRE_PG=1" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+      - name: Start MySQL (connector tests)
+        shell: pwsh
+        run: |
+          $my = "C:\Program Files\MySQL\MySQL Server 8.0"
+          $data = Join-Path $env:RUNNER_TEMP "mysqldata"
+          $sql = Join-Path $env:RUNNER_TEMP "mysql-seed.sql"
+          & "$my\bin\mysqld.exe" --initialize-insecure "--datadir=$data" --console
+          $p = Start-Process -FilePath "$my\bin\mysqld.exe" -ArgumentList "--datadir=$data","--port=3307","--bind-address=127.0.0.1","--console" -PassThru -RedirectStandardError (Join-Path $env:RUNNER_TEMP "mysqld.err.log") -RedirectStandardOutput (Join-Path $env:RUNNER_TEMP "mysqld.out.log")
+          for ($i = 0; $i -lt 60; $i++) { & "$my\bin\mysqladmin.exe" --protocol=tcp -h 127.0.0.1 -P 3307 -u root ping 2>$null | Out-Null; if ($LASTEXITCODE -eq 0) { break }; Start-Sleep -Seconds 1 }
+          Set-Content -Path $sql -Value @(
+            "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'ci-test-password';",
+            "CREATE DATABASE shop;",
+            "CREATE TABLE shop.people(id int, name varchar(50), score decimal(9,2), born date, price double);",
+            "INSERT INTO shop.people VALUES (1, 'Ann', 1.5, '2024-01-02', 2.25), (2, 'Bob', NULL, NULL, NULL);"
+          )
+          Get-Content $sql | & "$my\bin\mysql.exe" --protocol=tcp -h 127.0.0.1 -P 3307 -u root
+          if ($LASTEXITCODE -ne 0) { throw "MySQL seed failed" }
+          "BIFORGE_TEST_MYSQL=127.0.0.1:3307:shop:root:ci-test-password:people" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+          "BIFORGE_REQUIRE_MYSQL=1" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
       - name: Rust tests
         run: cargo test --workspace
       - name: Build the app (debug, frontend embedded)
@@ -50,3 +69,42 @@ jobs:
       - name: Real-window test (WebView2 over DevTools protocol)
         working-directory: app
         run: npm run e2e
+  sqlserver:
+    # SQL Server in a container on the runner (Linux runners can run Linux containers; the Windows runner cannot).
+    runs-on: ubuntu-latest
+    services:
+      mssql:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_SA_PASSWORD: "Ci-Test-Passw0rd!"
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P Ci-Test-Passw0rd! -Q 'SELECT 1'"
+          --health-interval 10s --health-timeout 5s --health-retries 20 --health-start-period 20s
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: System libraries
+        run: sudo apt-get update && sudo apt-get install -y unixodbc-dev libssl-dev pkg-config
+      - name: Seed SQL Server
+        run: |
+          cat > seed.sql <<'SQL'
+          CREATE DATABASE shop;
+          GO
+          USE shop;
+          CREATE TABLE dbo.people(id int, name nvarchar(50), score decimal(9,2), born date, ok bit, big bigint);
+          INSERT INTO dbo.people VALUES (1, N'Ann', 1.5, '2024-01-02', 1, 9000000000), (2, N'Bob', NULL, NULL, 0, NULL);
+          GO
+          SQL
+          id=$(docker ps --filter ancestor=mcr.microsoft.com/mssql/server:2022-latest --format '{{.ID}}' | head -n1)
+          docker cp seed.sql "$id":/tmp/seed.sql
+          docker exec "$id" /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P 'Ci-Test-Passw0rd!' -b -i /tmp/seed.sql
+      - name: SQL Server connector tests
+        env:
+          BIFORGE_TEST_MSSQL: "127.0.0.1:1433:shop:sa:Ci-Test-Passw0rd!:dbo.people"
+          BIFORGE_TEST_MSSQL_TRUST: "1"
+          BIFORGE_REQUIRE_MSSQL: "1"
+        run: cargo test -p biforge-engine --test import sqlserver

@@ -41,11 +41,23 @@ pub fn list_tables(spec: &SourceSpec, creds: &dyn CredentialStore) -> Result<Vec
 }
 
 pub fn read(spec: &SourceSpec, creds: &dyn CredentialStore) -> Result<RawTable> {
-    let SourceSpec::Postgres { schema, table, .. } = spec else {
+    read_n(spec, creds, None)
+}
+
+/// A custom query is wrapped as a sub-select so the same type handling applies; a trailing semicolon is dropped.
+pub fn from_clause(schema: &str, table: &str, query: Option<&str>) -> String {
+    match query.map(|q| q.trim().trim_end_matches(';').trim()).filter(|q| !q.is_empty()) {
+        Some(q) => format!("({q}) AS biforge_query"),
+        None => format!("{}.{}", qi(schema), qi(table)),
+    }
+}
+
+pub fn read_n(spec: &SourceSpec, creds: &dyn CredentialStore, limit: Option<usize>) -> Result<RawTable> {
+    let SourceSpec::Postgres { schema, table, query, .. } = spec else {
         return Err(EngineError::Source("not a PostgreSQL source".into()));
     };
     let mut c = connect(spec, creds)?;
-    let from = format!("{}.{}", qi(schema), qi(table));
+    let from = from_clause(schema, table, query.as_deref());
     let probe = c.prepare(&format!("SELECT * FROM {from}")).map_err(err)?;
     // Numeric and exotic types are cast server-side so every column maps to a supported cell kind.
     let select: Vec<String> = probe
@@ -79,7 +91,8 @@ pub fn read(spec: &SourceSpec, creds: &dyn CredentialStore) -> Result<RawTable> 
         })
         .collect();
     let names = clean_names(probe.columns().iter().map(|c| c.name().to_string()).collect());
-    let rows = c.query(&format!("SELECT {} FROM {from}", select.join(", ")), &[]).map_err(err)?;
+    let cap = limit.map(|n| format!(" LIMIT {n}")).unwrap_or_default();
+    let rows = c.query(&format!("SELECT {} FROM {from}{cap}", select.join(", ")), &[]).map_err(err)?;
     let mut out = Vec::with_capacity(rows.len());
     for r in &rows {
         let mut row = Vec::with_capacity(names.len());

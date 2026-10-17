@@ -24,7 +24,7 @@ export class FakeEngine implements EngineApi {
   async importSource(table: string, spec: SourceSpec): Promise<TableInfo> {
     this.calls.push(`import:${table}`);
     if (this.fail) throw new Error(this.fail);
-    const key = "path" in spec ? spec.path : spec.table;
+    const key = "path" in spec ? spec.path : "url" in spec ? spec.url : "table" in spec && spec.table ? spec.table : "connection" in spec ? spec.connection : "";
     const src = this.sources.get(key);
     if (!src) throw new Error(`File not found: ${key}`);
     this.tables.set(table, structuredClone(src));
@@ -80,6 +80,22 @@ export class FakeEngine implements EngineApi {
   }
   async sqlserverTables(): Promise<string[]> {
     return [];
+  }
+  choices = new Map<string, string[]>();
+  previews = new Map<string, RowPage>();
+  drivers: string[] = [];
+  async sourceChoices(spec: SourceSpec): Promise<string[]> {
+    this.calls.push(`choices:${spec.kind}`);
+    if (this.fail) throw new Error(this.fail);
+    return this.choices.get(spec.kind) ?? [];
+  }
+  async sourcePreview(spec: SourceSpec, limit: number): Promise<RowPage> {
+    this.calls.push(`preview:${spec.kind}:${limit}`);
+    const key = "table" in spec && spec.table ? spec.table : "path" in spec ? spec.path : "";
+    return this.previews.get(key) ?? { columns: [], rows: [], total: 0 };
+  }
+  async odbcDrivers(): Promise<string[]> {
+    return this.drivers;
   }
   async setCredential(spec: SourceSpec, secret: string): Promise<void> {
     this.calls.push(`cred:${spec.kind}:${secret.length}`);

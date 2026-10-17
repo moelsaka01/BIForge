@@ -34,6 +34,9 @@ const httpEngine: EngineApi = {
   sqliteTables: unsupported,
   postgresTables: unsupported,
   sqlserverTables: unsupported,
+  sourceChoices: unsupported,
+  sourcePreview: unsupported,
+  odbcDrivers: () => Promise.resolve([]),
   setCredential: unsupported,
 };
 

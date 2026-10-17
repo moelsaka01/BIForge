@@ -6,9 +6,20 @@ export type SourceSpec =
   | { kind: "json"; path: string }
   | { kind: "parquet"; path: string }
   | { kind: "sqlite"; path: string; table: string }
-  | { kind: "postgres"; host: string; port?: number; database: string; user: string; schema?: string; table: string }
+  | { kind: "postgres"; host: string; port?: number; database: string; user: string; schema?: string; table: string; query?: string | null }
   /** SQL Server; without `user` Windows integrated authentication. */
-  | { kind: "sqlserver"; server: string; port?: number | null; database: string; user?: string | null; schema?: string; table: string };
+  | { kind: "sqlserver"; server: string; port?: number | null; database: string; user?: string | null; schema?: string; table: string; query?: string | null; trustCertificate?: boolean }
+  | { kind: "mysql"; host: string; port?: number; database: string; user: string; table: string; query?: string | null }
+  /** Any database with an ODBC driver. `connection` never holds the password. `flavor` picks the M connector written for Power BI Desktop. */
+  | { kind: "odbc"; flavor: OdbcFlavor; connection: string; user?: string | null; table?: string | null; query?: string | null; server?: string | null; database?: string | null }
+  | { kind: "xml"; path: string; table?: string | null }
+  /** `format`: auto, html, json, csv or xml. With `user` the request uses Basic authentication (secret in Windows Credential Manager). */
+  | { kind: "web"; url: string; format?: string | null; table?: string | null; user?: string | null }
+  | { kind: "odata"; url: string; entity: string; user?: string | null }
+  | { kind: "pdf"; path: string; table?: string | null }
+  | { kind: "fixedWidth"; path: string; widths: number[]; header?: boolean };
+
+export type OdbcFlavor = "odbc" | "access" | "oracle" | "db2" | "teradata" | "saphana" | "redshift" | "snowflake";
 
 export type BiType = "int64" | "double" | "decimal" | "boolean" | "dateTime" | "string" | "binary";
 
@@ -58,5 +69,11 @@ export interface EngineApi {
   sqliteTables(path: string): Promise<string[]>;
   postgresTables(spec: SourceSpec): Promise<string[]>;
   sqlserverTables(spec: SourceSpec): Promise<string[]>;
+  /** Tables, sheets or entities a source offers (the navigator list). */
+  sourceChoices(spec: SourceSpec): Promise<string[]>;
+  /** The first rows of a source, as text, without importing it. */
+  sourcePreview(spec: SourceSpec, limit: number): Promise<RowPage>;
+  /** Names of the ODBC drivers installed on this computer. */
+  odbcDrivers(): Promise<string[]>;
   setCredential(spec: SourceSpec, secret: string): Promise<void>;
 }

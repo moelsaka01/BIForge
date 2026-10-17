@@ -22,6 +22,12 @@ biforge-m = { path = "../m" }
 tiberius = { version = "0.12", default-features = false, features = ["tds73", "native-tls", "chrono", "winauth"] }
 tokio = { version = "1", features = ["rt", "net", "time"] }
 tokio-util = { version = "0.7", features = ["compat"] }
+odbc-api = "29.2.0"
+quick-xml = "0.42.0"
+scraper = "0.27.0"
+lopdf = "0.45.0"
+mysql = "28.0.4"
+reqwest = { version = "0.13", default-features = false, features = ["blocking", "native-tls"] }
 
 [dev-dependencies]
 tempfile = "3"

@@ -227,6 +227,7 @@ fn source_spec_json_round_trips_and_has_no_secret() {
         user: "u".into(),
         schema: "public".into(),
         table: "t".into(),
+        query: None,
     };
     let j = serde_json::to_string(&s).unwrap();
     assert!(!j.to_lowercase().contains("password"));
@@ -264,6 +265,7 @@ fn postgres_import_against_a_real_server() {
         user: parts[3].into(),
         schema: schema.into(),
         table: table.into(),
+        query: None,
     };
     let c = MemoryCredentialStore::default();
     c.set(&spec.credential_key().unwrap(), parts[4]).unwrap();
@@ -301,6 +303,8 @@ fn sqlserver_import_against_a_real_server() {
         user: if parts[3].is_empty() { None } else { Some(parts[3].into()) },
         schema: schema.into(),
         table: table.into(),
+        query: None,
+        trust_certificate: std::env::var("BIFORGE_TEST_MSSQL_TRUST").is_ok(),
     };
     let c = MemoryCredentialStore::default();
     if let Some(k) = spec.credential_key() {
@@ -311,6 +315,24 @@ fn sqlserver_import_against_a_real_server() {
     let t = e.import("MsT", &spec, &c).unwrap();
     assert!(t.row_count > 0);
     assert!(t.columns.iter().any(|c| c.bi_type == BiType::Int64));
+    // the CI seed (dbo.people): every SQL Server type family maps to the expected model type
+    if std::env::var("BIFORGE_REQUIRE_MSSQL").is_ok() {
+        let ty = |n: &str| t.columns.iter().find(|x| x.name == n).unwrap().bi_type;
+        assert_eq!((ty("id"), ty("name"), ty("score"), ty("born"), ty("ok"), ty("big")), (BiType::Int64, BiType::String, BiType::Double, BiType::DateTime, BiType::Boolean, BiType::Int64));
+        let page = e.fetch_page("MsT", 0, 10, None).unwrap();
+        assert_eq!(page.rows[0][..3], [Some("1".into()), Some("Ann".into()), Some("1.5".into())]);
+        assert_eq!(page.rows[1][2], None);
+        // custom SQL replaces the table
+        let mut q = spec.clone();
+        if let SourceSpec::SqlServer { query, .. } = &mut q {
+            *query = Some("SELECT id, UPPER(name) AS n FROM dbo.people WHERE id = 1;".into());
+        }
+        let t2 = e.import("MsQ", &q, &c).unwrap();
+        assert_eq!((t2.row_count, t2.columns[1].name.as_str()), (1, "n"));
+        assert_eq!(e.fetch_page("MsQ", 0, 5, None).unwrap().rows[0][1].as_deref(), Some("ANN"));
+        assert_eq!(biforge_engine::source_preview(&spec, &c, 1).unwrap().rows.len(), 1);
+        assert_eq!(biforge_engine::source_choices(&spec, &c).unwrap(), sqlserver_tables(&spec, &c).unwrap());
+    }
 }
 
 #[test]

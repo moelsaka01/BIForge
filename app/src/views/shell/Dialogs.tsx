@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Button, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, Input } from "@fluentui/react-components";
-import type { SourceKind } from "../importForm";
+import type { ConnectorId } from "../importForm";
 import { ImportDialog } from "../ImportDialog";
 import { APP_NAME, APP_VERSION, NOT_YET_IMPLEMENTED, WORKING_FEATURES } from "../../core/info";
 import { dirname, joinPath } from "../../core/session/session";
@@ -225,7 +225,7 @@ function ImportHost({ request }: { request: Extract<DialogRequest, { kind: "impo
   return (
     <ImportDialog
       open
-      initialKind={request.source as SourceKind | undefined}
+      initialKind={request.source as ConnectorId | undefined}
       engine={engine}
       dialogs={env.session.dialogs}
       onClose={close}
