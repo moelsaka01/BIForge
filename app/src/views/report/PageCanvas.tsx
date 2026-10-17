@@ -84,6 +84,8 @@ export interface PageCanvasProps {
   /** Selected visuals in the order they were selected; the last one is the primary selection. */
   selection: string[];
   onSelection(names: string[]): void;
+  /** "mobile": the phone layout (positions are those of mobile.json; Delete removes a visual from the layout instead of the report). */
+  layout?: "desktop" | "mobile";
 }
 
 const HANDLES: Handle[] = ["nw", "n", "ne", "e", "se", "s", "sw", "w"];
@@ -227,7 +229,8 @@ export function PageCanvas(p: PageCanvasProps) {
     if (!drag.moved && drag.mode === "move" && drag.clickTarget !== drag.name) p.onSelection([drag.clickTarget]);
     if (drag.moved) {
       const items = Object.entries(drag.cur).map(([visual, pos]) => ({ visual, position: { x: pos.x, y: pos.y, width: pos.width, height: pos.height } }));
-      if (items.length === 1) c.dispatch("report.visual.setPosition", { page: page.name, visual: items[0].visual, position: items[0].position });
+      if (p.layout === "mobile") c.dispatch("report.mobile.setPositions", { page: page.name, items });
+      else if (items.length === 1) c.dispatch("report.visual.setPosition", { page: page.name, visual: items[0].visual, position: items[0].position });
       else c.dispatch("report.visuals.setPositions", { page: page.name, items });
     }
     setDrag(null);
@@ -269,7 +272,7 @@ export function PageCanvas(p: PageCanvasProps) {
     }
     if (e.key === "Delete" || e.key === "Backspace") {
       e.preventDefault();
-      c.dispatch("report.visuals.delete", { page: page.name, visuals: selection });
+      c.dispatch(p.layout === "mobile" ? "report.mobile.remove" : "report.visuals.delete", { page: page.name, visuals: selection });
       p.onSelection([]);
       return;
     }
@@ -281,7 +284,8 @@ export function PageCanvas(p: PageCanvasProps) {
       const origs = Object.fromEntries(movable.map((n) => [n, itemOf(n)!.position]));
       const moved = dragGroup(origs, d[0], d[1], page.width, page.height);
       const items = Object.entries(moved).map(([visual, pos]) => ({ visual, position: { x: pos.x, y: pos.y } }));
-      if (items.length === 1) c.dispatch("report.visual.setPosition", { page: page.name, visual: items[0].visual, position: items[0].position });
+      if (p.layout === "mobile") c.dispatch("report.mobile.setPositions", { page: page.name, items });
+      else if (items.length === 1) c.dispatch("report.visual.setPosition", { page: page.name, visual: items[0].visual, position: items[0].position });
       else c.dispatch("report.visuals.setPositions", { page: page.name, items });
     }
   };

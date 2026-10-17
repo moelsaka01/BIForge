@@ -16,6 +16,8 @@ import {
   parsePage,
   parseVisual,
   entryProps,
+  mobileKey,
+  MOBILE_SCHEMA,
   setFormat,
   setGroupFormat as setGroupFormatJson,
   setRawProp,
@@ -457,6 +459,60 @@ export function setPosition(p: Project, page: string, visual: string, pos: Parti
   if (isGroupJson(j)) transformMembers(p, page, j, old);
   else refitAncestors(p, page, j);
 }
+
+// ---- phone layout ------------------------------------------------------------------------------
+// A visual is part of the phone layout when it has a mobile.json with its own position; the canvas of the phone layout
+// is MOBILE_WIDTH wide and grows downward.
+
+export const MOBILE_WIDTH = 320;
+export const MOBILE_MIN_HEIGHT = 568;
+
+function mobileOf(p: Project, page: string, visual: string): J | undefined {
+  return files(p)[mobileKey(page, visual)];
+}
+
+/** The bottom of the lowest visual of the phone layout. */
+function mobileBottom(p: Project, page: string): number {
+  return Math.max(0, ...Object.keys(files(p)).filter((k) => k.startsWith(visualPrefix(page)) && k.endsWith("/mobile.json")).map((k) => (files(p)[k].position?.y ?? 0) + (files(p)[k].position?.height ?? 0)));
+}
+
+/** Adds a visual to the phone layout below the others, as wide as the phone canvas (or at the given position). */
+export function placeMobile(p: Project, page: string, visual: string, pos?: Partial<Position>): void {
+  const j = visualJson(p, page, visual);
+  if (isGroupJson(j)) throw new ReportError("Groups are not part of the phone layout; place their visuals.");
+  if (mobileOf(p, page, visual)) return;
+  const d = j.position ?? {};
+  const width = MOBILE_WIDTH - 16;
+  const ratio = (d.height ?? 150) / Math.max(1, d.width ?? 200);
+  const height = Math.round(Math.max(60, Math.min(MOBILE_MIN_HEIGHT - 16, width * ratio)));
+  const y = mobileBottom(p, page);
+  const z = Math.max(0, ...Object.keys(files(p)).filter((k) => k.startsWith(visualPrefix(page)) && k.endsWith("/mobile.json")).map((k) => files(p)[k].position?.z ?? 0)) + 1000;
+  files(p)[mobileKey(page, visual)] = { $schema: MOBILE_SCHEMA, position: { x: 8, y: y + 8, z, width, height, tabOrder: z, ...pos } };
+}
+
+export function removeMobile(p: Project, page: string, visual: string): void {
+  visualJson(p, page, visual);
+  delete files(p)[mobileKey(page, visual)];
+}
+
+export function setMobilePosition(p: Project, page: string, visual: string, pos: Partial<Position>): void {
+  const m = mobileOf(p, page, visual);
+  if (!m) throw new ReportError("This visual is not on the phone layout.");
+  const next = { ...m.position, ...pos };
+  if (!(next.width >= 20 && next.height >= 20)) throw new ReportError("A visual must be at least 20 by 20 pixels.");
+  m.position = Object.fromEntries(Object.entries(next).map(([k, v]) => [k, typeof v === "number" ? Math.round(v * 100) / 100 : v]));
+}
+
+/** Builds the phone layout from the desktop one: visible visuals in reading order, one under the other. */
+export function autoCreateMobile(p: Project, page: string): number {
+  const vs = parsePage(p, page)?.visuals.filter((v) => !v.hidden && !v.parent && !isStaticDecoration(v.visualType)) ?? [];
+  for (const v of vs) removeMobile(p, page, v.name);
+  const ordered = [...vs].sort((a, b) => a.position.y - b.position.y || a.position.x - b.position.x);
+  for (const v of ordered) placeMobile(p, page, v.name);
+  return ordered.length;
+}
+
+const isStaticDecoration = (type: string): boolean => type === "pageNavigator";
 
 // ---- groups ------------------------------------------------------------------------------------
 // A group is a visual file with visualGroup instead of visual; its members name it in parentGroupName. Member

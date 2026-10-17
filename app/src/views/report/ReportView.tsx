@@ -11,6 +11,8 @@ import { resolveTheme } from "../../core/report/theme";
 import { activePageName, listPages, type PageModel, type VisualModel } from "../../core/report/visualDoc";
 import { ContextMenu } from "./ContextMenu";
 import { FiltersPane } from "./FiltersPane";
+import { MobileLayoutPane, mobilePageOf } from "./MobileLayoutPane";
+import { MOBILE_MIN_HEIGHT } from "../../core/report/reportOps";
 import { PageCanvas } from "./PageCanvas";
 import { PageTabs } from "./PageTabs";
 import { ReportContext, useReport, type Dispatch, type MenuItem as CtxMenuItem, type ReportCtx } from "./reportContext";
@@ -154,6 +156,8 @@ export function ReportView(p: ReportViewProps) {
   const fit = page ? Math.min(size.w / page.width, size.h / page.height) : 1;
   const scale = zoom === "fit" ? Math.max(0.2, Math.min(1.5, fit)) : zoom;
   const onScale = p.onScale;
+  // the phone layout is drawn at a fixed readable scale (it is narrow and scrolls)
+  const mobileScale = Math.max(0.5, Math.min(1.2, (size.h - 24) / MOBILE_MIN_HEIGHT));
   useEffect(() => onScale?.(scale), [scale, onScale]);
 
   if (!page) return <div style={{ padding: 16 }}>This report has no pages.</div>;
@@ -182,8 +186,17 @@ export function ReportView(p: ReportViewProps) {
               )}
             </div>
           )}
-          <div ref={area} className="report-canvas">
-            <PageCanvas page={page} scale={scale} editing selection={selection} onSelection={setSelection} />
+          <div ref={area} className="report-canvas" style={snap.mobile ? { display: "flex" } : undefined}>
+            {snap.mobile ? (
+              <>
+                <MobileLayoutPane page={page} />
+                <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "flex-start", overflow: "auto", paddingTop: 8 }} data-testid="mobile-canvas">
+                  <PageCanvas page={mobilePageOf(page)} scale={mobileScale} editing selection={selection} onSelection={setSelection} layout="mobile" />
+                </div>
+              </>
+            ) : (
+              <PageCanvas page={page} scale={scale} editing selection={selection} onSelection={setSelection} />
+            )}
           </div>
           <PageTabs pages={pages} active={page.name} />
         </div>

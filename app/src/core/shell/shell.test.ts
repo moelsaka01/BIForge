@@ -103,6 +103,7 @@ function ctx(over: Partial<RibbonCtx> = {}): RibbonCtx {
     themeName: "BIForge Default",
     paused: false,
     canvas: { smartGuides: true, gridlines: false, snapToGrid: false, lockObjects: false, gridSize: 10 },
+    mobileLayout: false,
     zoom: "fit",
     ...over,
   };

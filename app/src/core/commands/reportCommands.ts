@@ -181,6 +181,25 @@ export function registerReportCommands(r: CommandRegistry<Session>): void {
       }
     },
   );
+  // ---- phone layout ----
+  reg("view.mobileLayout", "Mobile layout", (s) => s.report.setMobile(!s.report.getSnapshot().mobile));
+  reg("report.mobile.place", "Add to the phone layout", (s, a) => {
+    const x = need<{ page: string; visual: string }>(a, ["page", "visual"]);
+    edit(s, "Add to the phone layout", (p) => ops.placeMobile(p, x.page, x.visual, (a as { position?: Partial<Position> }).position));
+  });
+  reg("report.mobile.remove", "Remove from the phone layout", (s, a) => {
+    const t = targets(s, a);
+    edit(s, "Remove from the phone layout", (p) => t.visuals.forEach((v) => ops.removeMobile(p, t.page, v)));
+    s.report.setCanvasSelection([]);
+  });
+  reg("report.mobile.setPositions", "Move or resize on the phone layout", (s, a) => {
+    const x = need<{ page: string; items: { visual: string; position: Partial<Position> }[] }>(a, ["page", "items"]);
+    edit(s, "Move or resize on the phone layout", (p) => x.items.forEach((i) => ops.setMobilePosition(p, x.page, i.visual, i.position)));
+  });
+  reg("report.mobile.auto", "Create the phone layout", (s, a) => {
+    const page = ((a ?? {}) as { page?: string }).page ?? currentPage(s);
+    edit(s, "Create the phone layout", (p) => void ops.autoCreateMobile(p, page));
+  });
   // ---- several visuals: the canvas selection, align, distribute, clipboard, selection pane ----
   /** Visuals an arrange command acts on: the ones named in the arguments, else the canvas selection. */
   const targets = (s: Session, a: unknown): { page: string; visuals: string[] } => {

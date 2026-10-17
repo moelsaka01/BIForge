@@ -46,6 +46,8 @@ export interface RibbonCtx {
   paused: boolean;
   /** Canvas view options (View > Page options). */
   canvas: CanvasOptions;
+  /** The canvas shows the phone layout. */
+  mobileLayout: boolean;
 }
 
 export type Args = Record<string, unknown> | ((c: RibbonCtx) => unknown);
@@ -296,7 +298,7 @@ const pageOptionsGroup = (): RibbonGroup => ({
     cmd("gridlines", "Gridlines", "gridlines", "view.canvas", { size: "small", args: { option: "gridlines" }, checked: (c) => c.canvas.gridlines, when: (c) => c.view === "report" }),
     cmd("snap", "Snap to grid", "snap", "view.canvas", { size: "small", args: { option: "snapToGrid" }, checked: (c) => c.canvas.snapToGrid, when: (c) => c.view === "report" }),
     cmd("lock", "Lock objects", "lock", "view.canvas", { size: "small", args: { option: "lockObjects" }, checked: (c) => c.canvas.lockObjects, when: (c) => c.view === "report" }),
-    todo("mobile", "Mobile layout", "mobile", { size: "small" }),
+    cmd("mobile", "Mobile layout", "mobile", "view.mobileLayout", { size: "small", checked: (c) => c.mobileLayout, when: (c) => c.view === "report" }),
   ],
 });
 

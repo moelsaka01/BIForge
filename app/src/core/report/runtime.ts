@@ -28,10 +28,12 @@ export interface ViewSnapshot {
   canvas: string[];
   /** Visuals copied or cut in this window (a copy also goes to the system clipboard as JSON). */
   clipboard: unknown | null;
+  /** The canvas shows the phone layout instead of the desktop page. */
+  mobile: boolean;
 }
 
 export class ReportRuntime {
-  private snap: ViewSnapshot = { page: null, selection: null, drill: {}, drillthrough: null, collapsed: {}, epoch: 0, drillMode: null, editInteractions: null, paused: false, refreshTick: 0, formatFocus: null, canvas: [], clipboard: null };
+  private snap: ViewSnapshot = { page: null, selection: null, drill: {}, drillthrough: null, collapsed: {}, epoch: 0, drillMode: null, editInteractions: null, paused: false, refreshTick: 0, formatFocus: null, canvas: [], clipboard: null, mobile: false };
   private listeners = new Set<() => void>();
 
   getSnapshot = (): ViewSnapshot => this.snap;
@@ -78,6 +80,11 @@ export class ReportRuntime {
     const canvas = this.snap.canvas.filter((v) => visuals.has(v));
     if (canvas.length !== this.snap.canvas.length) patch.canvas = canvas;
     if (Object.keys(patch).length) this.set(patch);
+  }
+
+  setMobile(on: boolean): void {
+    if (this.snap.mobile === on) return;
+    this.set({ mobile: on, canvas: [], selection: null });
   }
 
   setCanvasSelection(names: string[]): void {

@@ -232,6 +232,7 @@ export function Frame({ spec }: { spec: ShellSpec }) {
       },
       themeName: project ? resolveTheme(project).name : "",
       canvas: canvasOptionsOf(settings.options),
+      mobileLayout: report.mobile,
       paused: report.paused,
       zoom: st.zoom,
     };

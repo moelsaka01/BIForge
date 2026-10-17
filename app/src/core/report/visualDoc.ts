@@ -66,6 +66,8 @@ export interface VisualModel {
   hidden: boolean;
   /** The group this visual is in. */
   parent?: string;
+  /** Where it is on the phone layout (mobile.json), when it is part of it. */
+  mobile?: Position;
   filters: ReadFilters;
   json: J;
 }
@@ -84,6 +86,9 @@ export interface PageModel {
   interactions: { source: string; target: string; type: "Default" | "DataFilter" | "HighlightFilter" | "NoFilter" }[];
   json: J;
 }
+
+export const MOBILE_SCHEMA = "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainerMobileState/2.8.0/schema.json";
+export const mobileKey = (page: string, visual: string) => `pages/${page}/visuals/${visual}/mobile.json`;
 
 export function parseVisual(pageName: string, json: J): VisualModel | null {
   if (!json || typeof json.name !== "string" || !json.visual || typeof json.visual.visualType !== "string") return null;
@@ -149,6 +154,10 @@ export function parsePage(p: Project, name: string): PageModel | null {
   const visuals = keys
     .map((k) => parseVisual(name, p.report.files[k]))
     .filter((v): v is VisualModel => v !== null)
+    .map((v) => {
+      const m = p.report.files[mobileKey(name, v.name)] as J | undefined;
+      return m?.position ? { ...v, mobile: readPosition(m) } : v;
+    })
     .sort((a, b) => a.position.z - b.position.z || a.name.localeCompare(b.name));
   const groups = keys
     .map((k) => parseGroup(name, p.report.files[k]))

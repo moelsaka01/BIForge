@@ -114,6 +114,9 @@ describe("saved reports match the published PBIR schemas", () => {
     expect(visuals.some((v) => v.visual.objects?.referenceLine?.[0]?.selector?.id === "average")).toBe(true);
     expect(visuals.some((v) => v.visual.objects?.image?.[0]?.properties?.sourceUrl)).toBe(true);
     expect(visuals.every((v) => v.syncGroup === undefined)).toBe(true);
+    const mobile = Object.entries(report.files).filter(([k]) => /mobile.json$/.test(k));
+    expect(mobile).toHaveLength(1);
+    expect((mobile[0][1] as J).position).toMatchObject({ x: 10, y: 20, width: 300, height: 200 });
     const group = visuals.find((v) => v.visualGroup);
     expect(group?.visualGroup).toMatchObject({ displayName: "Header", groupMode: "ScaleMode" });
     expect(group?.visualGroup.objects.background[0].properties.color.solid.color.expr.Literal.Value).toBe("'#eeeeee'");
