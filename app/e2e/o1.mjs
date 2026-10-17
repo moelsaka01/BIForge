@@ -1,6 +1,6 @@
 // Real-window test of the O1 flow: drives the built Tauri app (WebView2) over the DevTools protocol.
 // Run: npm run e2e   (needs `npx tauri build --debug --no-bundle` first; see docs/PROGRESS.md)
-import { spawn } from "node:child_process";
+import { execSync, spawn } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, openSync, readdirSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -34,6 +34,12 @@ let browser;
 try {
   for (let i = 0; i < 60 && !browser; i++) {
     try { browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`); } catch { await new Promise((r) => setTimeout(r, 1000)); }
+  }
+  if (!browser) {
+    const sh = (cmd) => { try { return execSync(cmd, { encoding: "utf8", timeout: 20000 }).slice(0, 3000); } catch (e) { return `(failed: ${e.message.slice(0, 200)})`; } };
+    console.log("--- WebView2 runtime\n" + sh('reg query "HKLM\\SOFTWARE\\WOW6432Node\\Microsoft\\EdgeUpdate\\Clients\\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}" /v pv'));
+    console.log("--- processes\n" + sh('powershell -NoProfile -Command "Get-Process | Where-Object { $_.Name -match \'biforge|webview|msedge\' } | Select-Object Id,Name,MainWindowTitle | Format-Table | Out-String"'));
+    console.log("--- listening\n" + sh('powershell -NoProfile -Command "Get-NetTCPConnection -State Listen | Where-Object { $_.LocalPort -ge 9000 -and $_.LocalPort -le 9999 } | Format-Table | Out-String"'));
   }
   if (!browser) throw new Error(`could not attach to the app window (exe ${exe} exists: ${existsSync(exe)}; ${exited ?? "process still running"})`);
   const page = browser.contexts()[0].pages()[0];
