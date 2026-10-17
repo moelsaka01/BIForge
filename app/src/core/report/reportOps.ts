@@ -15,6 +15,7 @@ import {
   pagesKey,
   parsePage,
   parseVisual,
+  entryProps,
   setFormat,
   setRawProp,
   setRole,
@@ -535,8 +536,21 @@ export function setSort(p: Project, page: string, visual: string, sort: SortSpec
   j.visual.query.sortDefinition = { sort: [{ field: fieldToPbir(sort.field), direction: sort.dir === "asc" ? "Ascending" : "Descending" }] };
 }
 
-export function setVisualFormat(p: Project, page: string, visual: string, object: string, prop: string, value: Lit | null, selector?: string): void {
-  setFormat(visualJson(p, page, visual), object, prop, value, selector);
+/**
+ * Sets (or with null removes) one formatting property. `fixed` properties identify what an entry is (the statistic of a
+ * reference line): they are written with any value and removed with the entry's last other property.
+ */
+export function setVisualFormat(p: Project, page: string, visual: string, object: string, prop: string, value: Lit | null, selector?: string, fixed?: Record<string, string | number | boolean>): void {
+  const json = visualJson(p, page, visual);
+  setFormat(json, object, prop, value, selector);
+  if (!fixed) return;
+  const keys = Object.keys(fixed);
+  const asLit = (v: string | number | boolean): Lit => (typeof v === "string" ? { t: "string", v } : typeof v === "number" ? { t: "number", v } : { t: "bool", v });
+  if (value !== null) {
+    for (const k of keys) setFormat(json, object, k, asLit(fixed[k]), selector);
+  } else if (entryProps(json, object, keys[0], selector).every((k) => keys.includes(k))) {
+    for (const k of keys) setFormat(json, object, k, null, selector);
+  }
 }
 
 export function setVisualRaw(p: Project, page: string, visual: string, object: string, prop: string, node: J | null, selector?: string): void {

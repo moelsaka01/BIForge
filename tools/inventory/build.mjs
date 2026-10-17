@@ -22,12 +22,25 @@ if (fs.existsSync(rawCards)) {
 }
 const visualCards = JSON.parse(rd("visual-cards.json"));
 
-// ---- status of formatting cards: a card is Partial when the visual exists and the card is in formatSchema.ts ----
-const fmt = fs.readFileSync(path.join(root, "app/src/core/report/formatSchema.ts"), "utf8");
-const implCards = new Set([...fmt.matchAll(/object: "([A-Za-z0-9]+)"/g)].map((m) => m[1]));
+// ---- status of formatting cards, measured: capabilities.json lists the properties of every card, rendered.json (written by
+// app/src/core/format/coverage.test.ts) the ones a renderer really draws. A card is Done-tested when all its editable
+// properties are drawn, Partial when some are, Not started when none is (or the visual type is not implemented).
+const caps = JSON.parse(fs.readFileSync(path.join(root, "app/src/core/format/capabilities.json"), "utf8"));
+const drawnMap = JSON.parse(fs.readFileSync(path.join(root, "app/src/core/format/rendered.json"), "utf8"));
+const CONTAINER = new Set(["title", "subTitle", "divider", "spacing", "background", "padding", "lockAspect", "border", "dropShadow", "visualLink", "visualTooltip", "stylePreset", "visualHeader", "visualHeaderTooltip"]);
+function cardStatus(vis, card) {
+  const id = caps.visuals[vis]?.[card];
+  if (!id) return { s: "N", drawn: 0, total: 0 };
+  const props = Object.entries(caps.cards[id]).filter(([, k]) => k[0] !== "x").map(([p]) => p);
+  if (card === "general") props.push(...(props.includes("altText") ? [] : ["altText"]));
+  const d = new Set([...(drawnMap["*"]?.[card] ?? []), ...(drawnMap[vis]?.[card] ?? [])]);
+  const drawn = props.filter((p) => d.has(p)).length;
+  const s = props.length > 0 && drawn === props.length ? "D" : drawn > 0 ? "P" : "N";
+  return { s, drawn, total: props.length };
+}
 const vt = fs.readFileSync(path.join(root, "app/src/core/report/visualTypes.ts"), "utf8");
 const implVisuals = new Set([...vt.matchAll(/cartesian\("([A-Za-z]+)"/g), ...vt.matchAll(/\bid: "([A-Za-z]+)"/g)].map((m) => m[1]));
-const alias = { cardVisual: "card" };
+const alias = {};
 const friendly = {
   report: "Report (filter pane)", page: "Page", filter: "Filter card", group: "Visual group", actionButton: "Button", bookmarkNavigator: "Bookmark navigator", textbox: "Text box", pageNavigator: "Page navigator", shape: "Shape",
   barChart: "Stacked bar chart", columnChart: "Stacked column chart", clusteredBarChart: "Clustered bar chart", clusteredColumnChart: "Clustered column chart", hundredPercentStackedBarChart: "100% stacked bar chart", hundredPercentStackedColumnChart: "100% stacked column chart",
@@ -56,11 +69,14 @@ for (const file of ["manual-1.txt", "manual-2.txt"]) {
 // ---- generated areas ----
 const num = areas.length;
 {
-  const a = { name: `${num + 1}. Format pane cards per visual (generated from the visual styles of Desktop 2.158; status: Partial = card exists in formatSchema.ts, not every property)`, groups: [] };
+  const a = { name: `${num + 1}. Format pane cards per visual (generated from the visual styles of Desktop 2.158; status measured by the rendered-coverage test: Done-tested = every editable property is drawn, Partial = some are)`, groups: [] };
   for (const [vis, cards] of Object.entries(visualCards)) {
     if (EXCLUDED_VISUALS.has(vis)) continue;
     const exists = implVisuals.has(alias[vis] ?? vis);
-    const items = Object.entries(cards).filter(([c]) => c !== "*").map(([c, props]) => ({ s: exists && implCards.has(c) ? "P" : "N", t: `${c} (${props.length} properties)` }));
+    const items = Object.entries(cards).filter(([c]) => c !== "*").map(([c, props]) => {
+      const st = exists ? cardStatus(alias[vis] ?? vis, c) : { s: "N", drawn: 0, total: props.length };
+      return { s: st.s, t: exists && st.total ? `${c} (${st.drawn} of ${st.total} properties drawn)` : `${c} (${props.length} properties)` };
+    });
     if (cards["*"]) items.unshift({ s: "N", t: `Theme default style "*" (${cards["*"].length} properties)` });
     a.groups.push({ name: friendly[vis] ?? vis, items });
   }

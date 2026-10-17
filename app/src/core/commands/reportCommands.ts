@@ -310,8 +310,8 @@ export function registerReportCommands(r: CommandRegistry<Session>): void {
   // ---- formatting ----
   reg("report.format.set", "Format visual", (s, a) => {
     const x = need<{ page: string; visual: string; object: string; prop: string }>(a, ["page", "visual", "object", "prop"]);
-    const args = a as { value?: Lit | null; selector?: string };
-    edit(s, "Format visual", (p) => ops.setVisualFormat(p, x.page, x.visual, x.object, x.prop, args.value ?? null, args.selector));
+    const args = a as { value?: Lit | null; selector?: string; fixed?: Record<string, string | number | boolean> };
+    edit(s, "Format visual", (p) => ops.setVisualFormat(p, x.page, x.visual, x.object, x.prop, args.value ?? null, args.selector, args.fixed));
   });
   reg("report.format.setRaw", "Conditional formatting", (s, a) => {
     const x = need<{ page: string; visual: string; object: string; prop: string }>(a, ["page", "visual", "object", "prop"]);

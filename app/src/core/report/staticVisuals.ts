@@ -48,14 +48,72 @@ export function writeTextbox(json: J, patch: Partial<TextboxModel>): void {
   setRawProp(json, "general", "paragraphs", paragraphs as unknown as J);
 }
 
-export type TileShape = "rectangle" | "rectangleRounded" | "oval" | "triangleIsoc" | "line";
+/** The tile shapes of the report format. */
+export type TileShape =
+  | "rectangle"
+  | "rectangleRounded"
+  | "rectangleRoundedByPixel"
+  | "oval"
+  | "pill"
+  | "line"
+  | "triangleIsoc"
+  | "triangleRight"
+  | "pentagon"
+  | "hexagon"
+  | "octagon"
+  | "parallelogram"
+  | "trapezoid"
+  | "arrow"
+  | "arrowChevron"
+  | "arrowPentagon"
+  | "heart"
+  | "tabCutCorner"
+  | "tabCutTopCorners"
+  | "tabCutTopCornersByPixel"
+  | "tabRoundCorner"
+  | "tabRoundTopCorners"
+  | "speechbubbleRectangle";
+
 export const TILE_SHAPES: { value: TileShape; label: string }[] = [
   { value: "rectangle", label: "Rectangle" },
   { value: "rectangleRounded", label: "Rounded rectangle" },
   { value: "oval", label: "Oval" },
+  { value: "pill", label: "Pill" },
   { value: "triangleIsoc", label: "Triangle" },
+  { value: "triangleRight", label: "Right triangle" },
+  { value: "pentagon", label: "Pentagon" },
+  { value: "hexagon", label: "Hexagon" },
+  { value: "octagon", label: "Octagon" },
+  { value: "parallelogram", label: "Parallelogram" },
+  { value: "trapezoid", label: "Trapezoid" },
+  { value: "arrow", label: "Arrow" },
+  { value: "arrowChevron", label: "Chevron" },
+  { value: "arrowPentagon", label: "Pentagon arrow" },
+  { value: "heart", label: "Heart" },
+  { value: "tabCutCorner", label: "Tab with cut corner" },
+  { value: "tabCutTopCorners", label: "Tab with cut corners" },
+  { value: "speechbubbleRectangle", label: "Speech bubble" },
   { value: "line", label: "Line" },
 ];
+
+/** Outlines of the shapes that are polygons, as percentages of the box. */
+export const POLYGONS: Partial<Record<string, [number, number][]>> = {
+  triangleIsoc: [[50, 0], [100, 100], [0, 100]],
+  triangleRight: [[0, 0], [100, 100], [0, 100]],
+  pentagon: [[50, 0], [100, 38], [82, 100], [18, 100], [0, 38]],
+  hexagon: [[25, 0], [75, 0], [100, 50], [75, 100], [25, 100], [0, 50]],
+  octagon: [[30, 0], [70, 0], [100, 30], [100, 70], [70, 100], [30, 100], [0, 70], [0, 30]],
+  parallelogram: [[25, 0], [100, 0], [75, 100], [0, 100]],
+  trapezoid: [[20, 0], [80, 0], [100, 100], [0, 100]],
+  arrow: [[0, 30], [60, 30], [60, 0], [100, 50], [60, 100], [60, 70], [0, 70]],
+  arrowChevron: [[0, 0], [70, 0], [100, 50], [70, 100], [0, 100], [30, 50]],
+  arrowPentagon: [[0, 0], [75, 0], [100, 50], [75, 100], [0, 100]],
+  tabCutCorner: [[0, 0], [85, 0], [100, 15], [100, 100], [0, 100]],
+  tabCutTopCorners: [[15, 0], [85, 0], [100, 15], [100, 100], [0, 100], [0, 15]],
+  tabCutTopCornersByPixel: [[15, 0], [85, 0], [100, 15], [100, 100], [0, 100], [0, 15]],
+  speechbubbleRectangle: [[0, 0], [100, 0], [100, 75], [40, 75], [20, 100], [20, 75], [0, 75]],
+  heart: [[50, 100], [8, 55], [0, 30], [12, 8], [32, 0], [50, 18], [68, 0], [88, 8], [100, 30], [92, 55]],
+};
 
 export interface ShapeModel {
   shape: TileShape;
@@ -66,7 +124,7 @@ export interface ShapeModel {
 export function readShape(f: FormatReader, defaults: { shape: TileShape; fill: string; outline: string } = { shape: "rectangle", fill: "#c8d6e5", outline: "#555555" }): ShapeModel {
   const shape = f.str("shape", "tileShape", defaults.shape) as TileShape;
   return {
-    shape: TILE_SHAPES.some((s) => s.value === shape) ? shape : "rectangle",
+    shape: TILE_SHAPES.some((s) => s.value === shape) || shape === "rectangleRoundedByPixel" || shape === "tabRoundCorner" || shape === "tabRoundTopCorners" ? shape : "rectangle",
     fill: { show: f.bool("fill", "show", true), color: f.color("fill", "fillColor") ?? defaults.fill, transparency: f.num("fill", "transparency", 0) },
     outline: { show: f.bool("outline", "show", true), color: f.color("outline", "lineColor") ?? defaults.outline, weight: f.num("outline", "weight", 1) },
   };
@@ -85,14 +143,18 @@ export function shapeSvg(m: ShapeModel, w: number, h: number): { tag: "rect" | "
   switch (m.shape) {
     case "oval":
       return { tag: "ellipse", attrs: { cx: w / 2, cy: h / 2, rx: Math.max(0, w / 2 - half), ry: Math.max(0, h / 2 - half), ...common } };
-    case "triangleIsoc":
-      return { tag: "polygon", attrs: { points: `${w / 2},${half} ${w - half},${h - half} ${half},${h - half}`, ...common } };
+    case "pill":
+      return { tag: "rect", attrs: { x: half, y: half, width: Math.max(0, w - sw), height: Math.max(0, h - sw), rx: Math.min(w, h) / 2, ...common } };
     case "line":
       return { tag: "line", attrs: { x1: 0, y1: h / 2, x2: w, y2: h / 2, ...common, fill: "none", stroke: m.outline.color, "stroke-width": Math.max(1, m.outline.weight) } };
     case "rectangleRounded":
+    case "rectangleRoundedByPixel":
       return { tag: "rect", attrs: { x: half, y: half, width: Math.max(0, w - sw), height: Math.max(0, h - sw), rx: Math.min(w, h) / 6, ...common } };
-    default:
+    default: {
+      const poly = POLYGONS[m.shape];
+      if (poly) return { tag: "polygon", attrs: { points: poly.map(([px, py]) => `${half + (px / 100) * (w - sw)},${half + (py / 100) * (h - sw)}`).join(" "), ...common } };
       return { tag: "rect", attrs: { x: half, y: half, width: Math.max(0, w - sw), height: Math.max(0, h - sw), ...common } };
+    }
   }
 }
 
@@ -133,7 +195,7 @@ export function actionProblem(a: ButtonAction, pageNames: string[], bookmarkIds:
 }
 
 /** Pages a navigator lists: visible, normal pages in report order. */
-export const navigatorPages = (pages: PageModel[]): PageModel[] => pages.filter((p) => !p.hidden && !p.type);
+export const navigatorPages = (pages: PageModel[], showHidden = false): PageModel[] => pages.filter((p) => (showHidden || !p.hidden) && !p.type);
 
 export const rotationOf = (v: VisualModel): number => {
   const l = getFormat(v.json, "rotation", "angle");

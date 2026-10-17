@@ -78,6 +78,10 @@ const STYLE_KEY: Record<string, string> = {};
 
 export const styleKey = (visualType: string): string => STYLE_KEY[visualType] ?? visualType;
 
+/** Axis bounds and constant-line values are listed as structured values in the theme schema (a number or a measure); BIForge edits them as numbers. */
+const NUMERIC_WHEN_X = new Set(["start", "end", "value"]);
+const norm = (prop: string, kind: Kind | undefined): Kind | null => (kind === undefined ? null : kind[0] === "x" && NUMERIC_WHEN_X.has(prop) ? ["n"] : kind);
+
 /** All objects of a visual type and their properties, or null when the schema has no entry for the type. */
 export function visualObjects(visualType: string): Record<string, CardProps> | null {
   const v = data.visuals[styleKey(visualType)];
@@ -85,7 +89,9 @@ export function visualObjects(visualType: string): Record<string, CardProps> | n
   const out: Record<string, CardProps> = {};
   for (const [object, id] of Object.entries(v)) {
     if (object === "*") continue;
-    out[object] = { ...data.cards[id], ...EXTRAS[object] };
+    const merged: Record<string, Kind> = { ...data.cards[id], ...EXTRAS[object] };
+    for (const p of Object.keys(merged)) merged[p] = norm(p, merged[p])!;
+    out[object] = merged;
   }
   return out;
 }
@@ -94,7 +100,7 @@ export function visualObjects(visualType: string): Record<string, CardProps> | n
 export function propKind(visualType: string, object: string, prop: string): Kind | null {
   const id = data.visuals[styleKey(visualType)]?.[object];
   if (id === undefined) return null;
-  return data.cards[id]?.[prop] ?? EXTRAS[object]?.[prop] ?? null;
+  return norm(prop, data.cards[id]?.[prop] ?? EXTRAS[object]?.[prop]);
 }
 
 export function hasObject(visualType: string, object: string): boolean {

@@ -1,8 +1,8 @@
 import type { CSSProperties } from "react";
 import { FormatReader } from "../../core/report/formatReader";
 import { navigatorPages, readAction, readShape, readTextbox, shapeSvg, type ShapeModel } from "../../core/report/staticVisuals";
+import { buttonModel, imageModel, navigatorModel } from "../../core/report/staticModels";
 import type { PageModel, VisualModel } from "../../core/report/visualDoc";
-import { opacityOf } from "../../core/format/styles";
 import { useReport } from "./reportContext";
 
 interface Props {
@@ -59,70 +59,40 @@ export function ShapeView({ visual, width, height }: Props) {
 export function ImageView({ visual, width, height }: Props) {
   const c = useReport();
   const f = new FormatReader(visual.json, c.theme, "image");
-  const src = f.str("image", "sourceUrl", "");
-  const fitSetting = f.str("image", "fit", "Normal");
-  if (!src) {
+  const m = imageModel(f, width, height);
+  if (!m.src) {
     return (
       <div role="status" style={{ width, height, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: c.theme.muted, textAlign: "center" }}>
         No image yet. Choose one in the Format pane.
       </div>
     );
   }
-  const fit = fitSetting === "Stretch" ? "fill" : fitSetting === "Fit" ? "contain" : fitSetting === "Fill" ? "cover" : "none";
-  const radius = f.num("image", "cornerRadius", 0);
-  const stroke = f.bool("image", "strokeShow", false);
-  const bgOn = f.bool("image", "backgroundEnabled", false);
-  return (
-    <img
-      data-testid="image"
-      src={src}
-      alt={f.str("image", "altText", "") || f.str("general", "altText", "")}
-      style={{
-        width,
-        height,
-        objectFit: fit,
-        display: "block",
-        boxSizing: "border-box",
-        borderRadius: radius,
-        opacity: opacityOf(f.num("image", "transparency", 0)),
-        background: bgOn ? `color-mix(in srgb, ${f.color("image", "backgroundColor") ?? "#ffffff"} ${Math.round(opacityOf(f.num("image", "backgroundTransparency", 0)) * 100)}%, transparent)` : undefined,
-        border: stroke ? `${f.num("image", "strokeWidth", 1)}px ${f.str("image", "strokePattern", "solid")} ${f.color("image", "strokeColor") ?? "#888888"}` : undefined,
-      }}
-    />
-  );
+  return <img data-testid="image" src={m.src} alt={m.alt} style={m.style} />;
 }
 
 export function ButtonView({ page, visual, width, height, runOnClick }: Props) {
   const c = useReport();
   const f = new FormatReader(visual.json, c.theme, "actionButton");
-  const shape = readShape(f, { shape: "rectangle", fill: "#e6e6e6", outline: "#8a8a8a" });
   const action = readAction(visual.json);
+  const m = buttonModel(f, c.theme, width, height, action.type === "Back", action.type !== "None");
   const text = f.bool("text", "show", true) ? f.str("text", "text", "Button") : "";
-  const label = text || (action.type === "Back" ? "Back" : "Button");
   return (
     <button
       type="button"
-      aria-label={label}
+      aria-label={m.label}
       data-testid="action-button"
       data-action={action.type}
+      data-shape={m.shape}
       onClick={(e) => {
         if (runOnClick(e)) c.dispatch("report.button.run", { page: page.name, visual: visual.name });
       }}
-      style={{
-        width,
-        height,
-        boxSizing: "border-box",
-        cursor: action.type === "None" ? "default" : "pointer",
-        background: shape.fill.show ? `color-mix(in srgb, ${shape.fill.color} ${100 - shape.fill.transparency}%, transparent)` : "transparent",
-        border: shape.outline.show ? `${shape.outline.weight}px solid ${shape.outline.color}` : "none",
-        borderRadius: shape.shape === "oval" ? "50%" : shape.shape === "rectangleRounded" ? Math.min(width, height) / 4 : 0,
-        color: f.color("text", "fontColor") ?? c.theme.foreground,
-        fontSize: f.num("text", "fontSize", 12),
-        fontFamily: c.theme.textClasses.label.fontFace,
-        textAlign: f.str("text", "horizontalAlignment", "center") as CSSProperties["textAlign"],
-        overflow: "hidden",
-      }}
+      style={m.style}
     >
+      {m.icon && (
+        <span aria-hidden data-testid="button-icon" style={{ fontSize: m.icon.size, color: m.icon.color, order: m.icon.placement === "right" || m.icon.placement === "below" ? 2 : 0 }}>
+          {m.icon.glyph}
+        </span>
+      )}
       {text}
     </button>
   );
@@ -131,32 +101,14 @@ export function ButtonView({ page, visual, width, height, runOnClick }: Props) {
 export function PageNavigatorView({ page, visual, width, height }: Props) {
   const c = useReport();
   const f = new FormatReader(visual.json, c.theme, "pageNavigator");
-  const pages = navigatorPages(c.pages);
-  const active = f.color("fill", "fillColor") ?? "#cfe3f8";
+  const nav = navigatorModel(f, c.theme, width, height);
+  const pages = navigatorPages(c.pages, nav.showHidden);
   return (
-    <div role="navigation" aria-label="Page navigator" style={{ width, height, display: "flex", gap: 4, alignItems: "stretch", overflow: "hidden" }}>
+    <div role="navigation" aria-label="Page navigator" style={nav.container}>
       {pages.map((p) => {
         const current = p.name === page.name;
         return (
-          <button
-            key={p.name}
-            type="button"
-            aria-current={current ? "page" : undefined}
-            onClick={() => c.dispatch("report.page.go", { page: p.name })}
-            style={{
-              flex: "1 1 0",
-              minWidth: 0,
-              border: f.bool("outline", "show", true) ? `${f.num("outline", "weight", 1)}px solid ${f.color("outline", "lineColor") ?? "#8a8a8a"}` : "none",
-              background: current ? active : "transparent",
-              color: f.color("text", "fontColor") ?? c.theme.foreground,
-              fontSize: f.num("text", "fontSize", 12),
-              fontFamily: c.theme.textClasses.label.fontFace,
-              cursor: "pointer",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
+          <button key={p.name} type="button" aria-current={current ? "page" : undefined} onClick={() => c.dispatch("report.page.go", { page: p.name })} style={nav.entry(current)}>
             {p.displayName}
           </button>
         );

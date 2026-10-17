@@ -7,7 +7,9 @@ import { litEqual, type Lit } from "../../core/report/fields";
 import type { Cond, RelUnit } from "../../core/report/filters";
 import type { Theme } from "../../core/report/theme";
 
-export type SlicerMode = "Basic" | "Dropdown" | "Tile" | "Between" | "Before" | "After" | "Relative";
+import { cssFont } from "../../core/format/styles";
+import type { SlicerMode, SlicerSettings } from "../../core/report/slicerSettings";
+export type { SlicerMode };
 
 export interface SlicerViewProps {
   loaded: Extract<Loaded, { kind: "slicer" }>;
@@ -17,6 +19,10 @@ export interface SlicerViewProps {
   selectAll: boolean;
   search: boolean;
   isDate: boolean;
+  /** Look of the header and the values; absent: the defaults. */
+  look?: SlicerSettings;
+  /** Field name, the header text when none is set. */
+  fieldName?: string;
   theme: Theme;
   width: number;
   height: number;
@@ -62,10 +68,16 @@ export function SlicerView(p: SlicerViewProps) {
   const [q, setQ] = useState("");
   const shown = q ? items.filter((i) => i.label.toLowerCase().includes(q.toLowerCase())) : items;
   const all = items.map((i) => i.lit);
-  const box = { width: p.width, height: p.height, boxSizing: "border-box" as const, padding: 6, color: theme.foreground, fontSize: theme.textClasses.label.fontSize + 2, display: "flex", flexDirection: "column" as const, gap: 4, overflow: "hidden" };
+  const fontOf = p.look ? cssFont(p.look.items.font, { family: theme.textClasses.label.fontFace, size: theme.textClasses.label.fontSize + 2, color: theme.foreground }) : { color: theme.foreground, fontSize: theme.textClasses.label.fontSize + 2 };
+  const box = { width: p.width, height: p.height, boxSizing: "border-box" as const, padding: 6 + (p.look?.items.padding ?? 0), ...fontOf, background: p.look?.items.background, display: "flex", flexDirection: "column" as const, gap: 4, overflow: "hidden" };
+  const header = p.look?.header.show ? (
+    <div data-testid="slicer-header" style={{ ...cssFont(p.look.header.font, { family: theme.textClasses.label.fontFace, size: theme.textClasses.label.fontSize + 2, color: theme.foreground }), background: p.look.header.background, fontWeight: 600 }}>
+      {p.look.header.text || p.fieldName || ""}
+    </div>
+  ) : null;
 
-  if (p.mode === "Between" || p.mode === "Before" || p.mode === "After") return <RangeSlicer {...p} box={box} />;
-  if (p.mode === "Relative") return <RelativeSlicer {...p} box={box} />;
+  if (p.mode === "Between" || p.mode === "Before" || p.mode === "After") return <RangeSlicer {...p} box={box} header={header} />;
+  if (p.mode === "Relative") return <RelativeSlicer {...p} box={box} header={header} />;
 
   const list = (
     <div role="listbox" aria-label="Values" aria-multiselectable={!p.singleSelect} style={{ overflow: "auto", flex: 1, minHeight: 0 }}>
@@ -95,6 +107,7 @@ export function SlicerView(p: SlicerViewProps) {
   if (p.mode === "Dropdown") {
     return (
       <div style={box}>
+        {header}
         <Popover positioning="below-start" trapFocus>
           <PopoverTrigger disableButtonEnhancement>
             <Button size="small" appearance="outline" style={{ justifyContent: "space-between" }} aria-label="Open the list of values">
@@ -112,6 +125,7 @@ export function SlicerView(p: SlicerViewProps) {
   if (p.mode === "Tile") {
     return (
       <div style={{ ...box, flexDirection: "row", flexWrap: "wrap", alignContent: "flex-start", overflow: "auto" }} role="listbox" aria-label="Values">
+        {header}
         {shown.map((it) => {
           const on = isSelected(p.cond, it.lit);
           return (
@@ -125,6 +139,7 @@ export function SlicerView(p: SlicerViewProps) {
   }
   return (
     <div style={box}>
+      {header}
       {searchBox}
       {list}
       {p.cond && (
@@ -138,7 +153,7 @@ export function SlicerView(p: SlicerViewProps) {
 
 // ---- ranges --------------------------------------------------------------------------------------------
 
-function RangeSlicer(p: SlicerViewProps & { box: React.CSSProperties }) {
+function RangeSlicer(p: SlicerViewProps & { box: React.CSSProperties; header: React.ReactNode }) {
   const r = p.loaded.range;
   const min = r?.min.num ?? 0;
   const max = r?.max.num ?? 0;
@@ -160,12 +175,13 @@ function RangeSlicer(p: SlicerViewProps & { box: React.CSSProperties }) {
     if (p.mode === "After") return p.onChange(a <= min ? null : { kind: "cmp", op: "ge", value: toLit(a) });
     p.onChange(a <= min && b >= max ? null : { kind: "between", lo: toLit(Math.min(a, b)), hi: toLit(Math.max(a, b)) });
   };
-  if (!r) return <div style={p.box}>No values</div>;
+  if (!r) return <div style={p.box}>{p.header}No values</div>;
   const inputType = date ? "date" : "number";
   const showLo = p.mode !== "Before";
   const showHi = p.mode !== "After";
   return (
     <div style={p.box} data-testid="range-slicer">
+      {p.header}
       <div style={{ display: "flex", gap: 6 }}>
         {showLo && <input aria-label={p.mode === "After" ? "After" : "From"} type={inputType} value={text(lo)} min={text(min)} max={text(max)} step={date ? 1 : step} onChange={(e) => commit(parse(e.target.value, lo), hi)} style={{ flex: 1, minWidth: 0 }} />}
         {showHi && <input aria-label={p.mode === "Before" ? "Before" : "To"} type={inputType} value={text(hi)} min={text(min)} max={text(max)} step={date ? 1 : step} onChange={(e) => commit(lo, parse(e.target.value, hi))} style={{ flex: 1, minWidth: 0 }} />}
@@ -181,7 +197,7 @@ function RangeSlicer(p: SlicerViewProps & { box: React.CSSProperties }) {
   );
 }
 
-function RelativeSlicer(p: SlicerViewProps & { box: React.CSSProperties }) {
+function RelativeSlicer(p: SlicerViewProps & { box: React.CSSProperties; header: React.ReactNode }) {
   const c = p.cond?.kind === "relativeDate" ? p.cond : null;
   const [op, setOp] = useState<"last" | "this" | "next">(c?.op ?? "last");
   const [n, setN] = useState(c?.n ?? 7);
@@ -190,6 +206,7 @@ function RelativeSlicer(p: SlicerViewProps & { box: React.CSSProperties }) {
   const apply = (o = op, k = n, u = unit, t = today) => p.onChange({ kind: "relativeDate", op: o, n: k, unit: u, includeToday: t });
   return (
     <div style={p.box} data-testid="relative-slicer">
+      {p.header}
       <select aria-label="Period" value={op} onChange={(e) => (setOp(e.target.value as typeof op), apply(e.target.value as typeof op))}>
         <option value="last">Last</option>
         <option value="this">This</option>

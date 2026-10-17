@@ -149,10 +149,10 @@ Last updated: 2026-10-17, after the scope-change session was completed (see PROG
 | Keyboard shortcuts | 37 | 6 | 0 | 31 |
 | Export, print and file formats | 15 | 2 | 0 | 13 |
 | Accessibility and platform | 12 | 1 | 1 | 10 |
-| Format pane cards per visual | 1264 | 0 | 274 | 990 |
+| Format pane cards per visual | 1264 | 189 | 266 | 809 |
 | DAX functions | 317 | 268 | 0 | 49 |
 | M standard library | 652 | 120 | 0 | 532 |
-| **Total** | **3008** | **604** | **287** | **2117** |
+| **Total** | **3008** | **793** | **279** | **1936** |
 <!-- inventory-status:end -->
 
 ## Online track (Publish & Share; plan in docs/ONLINE_PLAN.md)

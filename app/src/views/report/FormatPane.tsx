@@ -36,24 +36,24 @@ function NotDrawn({ def }: { def: PropDef }) {
 function PropControl({ def, value, onChange }: { def: PropDef; value: Lit | null; onChange(v: Lit | null): void }) {
   const label = def.label;
   const id = `fmt-${def.key}`;
+  // the name of a setting is a real <label> for its control; the note that it is not drawn yet sits beside it
   const name = (
     <span>
-      {label}
+      <label htmlFor={id}>{label}</label>
       <NotDrawn def={def} />
     </span>
   );
   switch (def.type) {
     case "bool": {
       const on = value?.t === "bool" ? value.v : (def.default as boolean | undefined) ?? false;
-      return <Switch checked={on} label={{ children: name }} aria-label={label} onChange={(_, d) => onChange(lit.bool(d.checked))} />;
+      return <Switch checked={on} label={{ children: name }} aria-label={label} id={id} onChange={(_, d) => onChange(lit.bool(d.checked))} />;
     }
     case "number":
       return (
-        <label htmlFor={id} style={rowStyle}>
+        <div style={rowStyle}>
           {name}
           <Input
             id={id}
-            aria-label={label}
             size="small"
             type="number"
             style={{ width: 90 }}
@@ -69,22 +69,13 @@ function PropControl({ def, value, onChange }: { def: PropDef; value: Lit | null
               onChange(lit.num(Math.min(def.max ?? Infinity, Math.max(def.min ?? -Infinity, n))));
             }}
           />
-        </label>
+        </div>
       );
     case "text":
       return (
-        <label htmlFor={id} style={rowStyle}>
+        <div style={rowStyle}>
           {name}
-          <Input
-            id={id}
-            aria-label={label}
-            size="small"
-            style={{ width: 140 }}
-            placeholder={def.auto}
-            list={def.suggest ? `${id}-list` : undefined}
-            value={value?.t === "string" ? value.v : ""}
-            onChange={(_, d) => onChange(d.value === "" ? null : lit.str(d.value))}
-          />
+          <Input id={id} size="small" style={{ width: 140 }} placeholder={def.auto} list={def.suggest ? `${id}-list` : undefined} value={value?.t === "string" ? value.v : ""} onChange={(_, d) => onChange(d.value === "" ? null : lit.str(d.value))} />
           {def.suggest && (
             <datalist id={`${id}-list`}>
               {def.suggest.map((x) => (
@@ -92,12 +83,12 @@ function PropControl({ def, value, onChange }: { def: PropDef; value: Lit | null
               ))}
             </datalist>
           )}
-        </label>
+        </div>
       );
     case "color": {
       const v = value?.t === "string" ? value.v : "";
       return (
-        <label htmlFor={id} style={rowStyle}>
+        <div style={rowStyle}>
           {name}
           <span style={{ display: "flex", gap: 4, alignItems: "center" }}>
             <input id={id} type="color" value={/^#[0-9a-f]{6}$/i.test(v) ? v : "#888888"} onChange={(e) => onChange(lit.str(e.target.value))} aria-label={label} />
@@ -105,22 +96,15 @@ function PropControl({ def, value, onChange }: { def: PropDef; value: Lit | null
               Reset
             </Button>
           </span>
-        </label>
+        </div>
       );
     }
     case "enum": {
       const cur = value ? String(value.t === "string" || value.t === "number" ? value.v : "") : "";
       return (
-        <label htmlFor={id} style={rowStyle}>
+        <div style={rowStyle}>
           {name}
-          <Select
-            id={id}
-            aria-label={label}
-            size="small"
-            style={{ width: 150 }}
-            value={cur || (def.default !== undefined ? String(def.default) : "")}
-            onChange={(_, d) => onChange(d.value === "" ? null : def.numeric ? lit.num(Number(d.value)) : lit.str(d.value))}
-          >
+          <Select id={id} aria-label={label} size="small" style={{ width: 150 }} value={cur || (def.default !== undefined ? String(def.default) : "")} onChange={(_, d) => onChange(d.value === "" ? null : def.numeric ? lit.num(Number(d.value)) : lit.str(d.value))}>
             {def.default === undefined && <option value="">{def.auto ?? "Automatic"}</option>}
             {def.options?.map((o) => (
               <option key={o.value} value={o.value}>
@@ -128,7 +112,7 @@ function PropControl({ def, value, onChange }: { def: PropDef; value: Lit | null
               </option>
             ))}
           </Select>
-        </label>
+        </div>
       );
     }
   }
