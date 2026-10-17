@@ -206,6 +206,13 @@ try {
   await bubble.press("Tab");
   await page.waitForTimeout(500);
   check((await bubble.inputValue()) === "40", "a typed Format pane control keeps its value");
+  // heat map: switch it on in the Format pane; the density layer is an image inside the chart and the outlines stay
+  const pageErrors = [];
+  page.on("pageerror", (e) => pageErrors.push(String(e)));
+  await page.getByRole("button", { name: /Heat map/ }).first().click();
+  await page.getByRole("switch").last().click();
+  await page.waitForFunction(() => document.querySelectorAll("[role=img][aria-label=Map] image").length > 0);
+  check(pageErrors.length === 0 && (await page.locator("[role=img][aria-label=Map] path").count()) > 100, "Heat map: the density layer is drawn over the outlines without errors");
   // group the two cards: select both in the Selection pane (Ctrl+click), then Group in the Format tab
   const cardButtons = page.getByRole("button", { name: "Select Card", exact: true });
   await cardButtons.nth(0).click();
