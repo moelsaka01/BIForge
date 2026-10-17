@@ -8,11 +8,12 @@ import {
   buildMatrixQuery,
   buildRangeQuery,
   buildTotalsQuery,
-  buildSlicerQuery,
+  buildHierarchyQuery, buildSlicerQuery,
   buildVisualQuery,
   NO_DRILL,
   type BuiltMatrixQuery,
   type BuiltQuery,
+  type HierarchyQuery,
   type DrillState,
   type QueryOptions,
   type SlicerQuery,
@@ -37,6 +38,7 @@ export type Loaded =
   | { kind: "error"; message: string }
   | { kind: "grouped"; query: BuiltQuery; rows: Value[][]; highlightRows: Value[][] | null; totals: Value[] | null; truncated: boolean; ms: number }
   | { kind: "matrix"; query: BuiltMatrixQuery; parts: Value[][][]; truncated: boolean; ms: number }
+  | { kind: "hierarchy"; query: HierarchyQuery; rows: Value[][]; ms: number }
   | { kind: "slicer"; query: SlicerQuery; values: Value[]; range: { min: Value; max: Value } | null; ms: number };
 
 const stampCache = new WeakMap<object, string>();
@@ -112,6 +114,14 @@ export class ReportData {
     const rt: RuntimeFilters = { drillthrough: view.drillthrough };
     const filters = filtersFor(project, page, visual, rt);
 
+    if (type.family === "slicer" && (visual.roles.Values?.length ?? 0) > 1) {
+      const fields = visual.roles.Values.map((v) => v.field);
+      if (fields.some((f) => f.kind !== "column")) return { kind: "error", message: "A hierarchy slicer takes columns only." };
+      if (new Set(fields.map((f) => f.table)).size > 1) return { kind: "error", message: "All fields of a hierarchy slicer must come from one table." };
+      const q = buildHierarchyQuery(fields, filters);
+      const [res] = await this.run(project, view.epoch, q.dax);
+      return { kind: "hierarchy", query: q, rows: res.rows.map((r) => r.map(decodeCell)), ms: performance.now() - started };
+    }
     if (type.family === "slicer") {
       const field = visual.roles.Values?.[0]?.field;
       if (!field) return { kind: "empty" };

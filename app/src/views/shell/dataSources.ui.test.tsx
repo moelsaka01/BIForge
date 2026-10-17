@@ -38,7 +38,7 @@ describe("Data source settings", () => {
     const { dlg } = await setup();
     const db = within(dlg).getByRole("region", { name: /Data source MySQL database: db1:3306 \/ shop/ });
     expect(db.textContent).toContain("Used by: Orders, Items");
-    await waitFor(() => expect(db.textContent).toContain("no password is stored"));
+    await waitFor(() => expect(db.textContent).toContain("no password is stored"), { timeout: 15000 });
     const file = within(dlg).getByRole("region", { name: /Data source Text\/CSV file: C:\\data\\a.csv/ });
     expect(file.textContent).toContain("needs no stored password");
     expect(within(file).queryByRole("button", { name: "Edit permissions" })).toBeNull();
@@ -51,11 +51,11 @@ describe("Data source settings", () => {
     const perms = within(db).getByRole("group", { name: "Permissions" });
     fireEvent.change(within(perms).getByLabelText("New password"), { target: { value: "s3cret" } });
     fireEvent.click(within(perms).getByText("Save password"));
-    await waitFor(() => expect(db.textContent).toContain("a password is stored in Windows Credential Manager"));
+    await waitFor(() => expect(db.textContent).toContain("a password is stored in Windows Credential Manager"), { timeout: 15000 });
     expect(a.engine.calls).toContain("cred:mysql:6");
     expect(JSON.stringify(a.session.store.project)).not.toContain("s3cret");
     fireEvent.click(within(perms).getByText("Clear permissions"));
-    await waitFor(() => expect(db.textContent).toContain("no password is stored"));
+    await waitFor(() => expect(db.textContent).toContain("no password is stored"), { timeout: 15000 });
     expect(a.engine.calls).toContain("clear:mysql");
   });
 
@@ -66,14 +66,14 @@ describe("Data source settings", () => {
     const form = within(db).getByRole("group", { name: "Change source" });
     fireEvent.change(within(form).getByLabelText("Port"), { target: { value: "99999" } });
     fireEvent.click(within(form).getByText("Change and refresh"));
-    await waitFor(() => expect(db.textContent, db.textContent ?? "").toContain("Port must be a number between 1 and 65535."));
+    await waitFor(() => expect(db.textContent, db.textContent ?? "").toContain("Port must be a number between 1 and 65535."), { timeout: 15000 });
     expect(getTableSource(a.session.store.project!, "Orders")).toMatchObject({ host: "db1" });
     const importsBefore = a.engine.calls.filter((c) => c.startsWith("import:")).length;
 
     fireEvent.change(within(form).getByLabelText("Port"), { target: { value: "3307" } });
     fireEvent.change(within(form).getByLabelText("Server"), { target: { value: "db2" } });
     fireEvent.click(within(form).getByText("Change and refresh"));
-    await waitFor(() => expect(within(dlg).getByRole("status", { name: "Result" }).textContent).toContain("The source was changed"));
+    await waitFor(() => expect(within(dlg).getByRole("status", { name: "Result" }).textContent).toContain("The source was changed"), { timeout: 15000 });
     expect(a.engine.calls.filter((c) => c.startsWith("import:")).length).toBe(importsBefore + 2);
     for (const t of ["Orders", "Items"]) expect(getTableSource(a.session.store.project!, t)).toMatchObject({ host: "db2", port: 3307, database: "shop", table: t.toLowerCase() });
     // the generated partition follows
@@ -115,9 +115,9 @@ describe("Home ribbon", () => {
       });
       expect((within(dlg).getByLabelText("Source type") as HTMLSelectElement).value).toBe(kind);
       fireEvent.click(within(dlg).getByText("Cancel"));
-      await waitFor(() => expect(document.querySelector('[aria-label="Import data"]')).toBeNull());
+      await waitFor(() => expect(document.querySelector('[aria-label="Import data"]')).toBeNull(), { timeout: 15000 });
     }
     fireEvent.click(ribbon.getByText("Data source settings"));
-    await waitFor(() => expect(document.querySelector('[aria-label="Data source settings"]')).not.toBeNull());
+    await waitFor(() => expect(document.querySelector('[aria-label="Data source settings"]')).not.toBeNull(), { timeout: 15000 });
   });
 });

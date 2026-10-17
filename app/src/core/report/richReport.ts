@@ -156,6 +156,13 @@ export async function buildRichReport(): Promise<RichReport> {
   // the chart is also on the phone layout
   await run("report.mobile.place", { page: "page1", visual: chart.name });
   await run("report.mobile.setPositions", { page: "page1", items: [{ visual: chart.name, position: { x: 10, y: 20, width: 300, height: 200 } }] });
+  // a hierarchy slicer with a branch and a leaf selected (written as an Or of In clauses over the levels)
+  {
+    const Sub = column("Product", "Subcategory");
+    await run("report.visual.add", { page: "page1", type: "slicer", fields: [{ role: "Values", field: Cat }, { role: "Values", field: Sub }] });
+    const hs = parsePage(session.store.project!, "page1")!.visuals.at(-1)!;
+    await run("report.slicer.select", { page: "page1", visual: hs.name, field: Cat, cond: { kind: "tuples", fields: [Cat, Sub], rows: [[lit.str("Bikes")], [lit.str("Clothing"), lit.str("Shirts")]] } });
+  }
   await run("report.bookmark.add", { name: "B1" });
   await run("report.bookmark.add", { name: "B2" });
   await run("report.bookmark.add", { name: "B3" });

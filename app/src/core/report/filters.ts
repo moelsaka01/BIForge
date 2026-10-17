@@ -15,8 +15,19 @@ export type SimpleCond =
   | { kind: "blank" }
   | { kind: "notBlank" };
 
+/**
+ * The selection of a hierarchy slicer: a list of prefixes of the levels' values. A row of length k means "everything whose
+ * first k fields have these values" (a whole branch of the tree); the fields are the levels in order.
+ */
+export interface TuplesCond {
+  kind: "tuples";
+  fields: FieldRef[];
+  rows: Lit[][];
+}
+
 export type Cond =
   | SimpleCond
+  | TuplesCond
   | { kind: "compound"; op: "and" | "or"; a: SimpleCond; b: SimpleCond }
   | { kind: "topN"; n: number; dir: "top" | "bottom"; by: FieldRef }
   /** BIForge extension (stored as an annotation, not in the PBIR filter list). Dates only. */
@@ -107,20 +118,29 @@ export function condDax(x: string, c: Cond): string {
       const [lo, hi] = relativeBounds(c);
       return `(${x} >= ${lo} && ${x} <= ${hi})`;
     }
+    case "tuples":
+      throw new Error("A hierarchy selection filters several columns at once.");
     case "topN":
       throw new Error("A Top N filter is not a predicate.");
   }
 }
 
+/** FILTER over the levels' columns: an OR of ANDs, one AND per selected branch (shorter rows leave the deeper levels free). */
+export function tuplesDax(c: TuplesCond): string {
+  const cols = c.fields.map(columnDax);
+  const preds = c.rows.map((r) => `(${r.slice(0, cols.length).map((v, i) => (v.t === "null" ? `ISBLANK(${cols[i]})` : `${cols[i]} = ${litDax(v)}`)).join(" && ")})`);
+  return `FILTER(ALL(${cols.join(", ")}), ${preds.length ? preds.join(" || ") : "FALSE()"})`;
+}
+
 /** True when the filter has no effect (an empty selection). */
 export function isNeutral(c: Cond): boolean {
-  return (c.kind === "in" || c.kind === "notIn") && c.values.length === 0;
+  return ((c.kind === "in" || c.kind === "notIn") && c.values.length === 0) || (c.kind === "tuples" && c.rows.length === 0);
 }
 
 export interface PostFilter {
   /** Value expression whose result is tested (a measure or aggregate). */
   expr: string;
-  cond: Exclude<Cond, { kind: "topN" } | { kind: "relativeDate" }>;
+  cond: Exclude<Cond, { kind: "topN" } | { kind: "relativeDate" } | { kind: "tuples" }>;
 }
 
 export interface FilterArgs {
@@ -135,10 +155,15 @@ export function filtersToDax(defs: FilterDef[]): FilterArgs {
   const byColumn = new Map<string, { field: FieldRef; preds: string[] }>();
   const topNs: { field: FieldRef; cond: Extract<Cond, { kind: "topN" }> }[] = [];
   const post: PostFilter[] = [];
+  const tupleArgs: string[] = [];
   for (const d of defs) {
     if (isNeutral(d.cond)) continue;
     if (d.cond.kind === "topN") {
       topNs.push({ field: d.field, cond: d.cond });
+      continue;
+    }
+    if (d.cond.kind === "tuples") {
+      tupleArgs.push(tuplesDax(d.cond));
       continue;
     }
     if (d.field.kind !== "column") {
@@ -152,6 +177,7 @@ export function filtersToDax(defs: FilterDef[]): FilterArgs {
     byColumn.set(k, g);
   }
   const args = [...byColumn.values()].map((g) => `FILTER(ALL(${columnDax(g.field)}), ${g.preds.join(" && ")})`);
+  args.push(...tupleArgs);
   for (const t of topNs) {
     const col = columnDax(t.field);
     const others = args.length ? `, ${args.join(", ")}` : "";
@@ -273,10 +299,51 @@ function condFromPbir(j: J, field: FieldRef, aliases: Record<string, string>): C
   return null;
 }
 
-const FILTER_TYPE: Record<string, string> = { in: "Categorical", notIn: "Categorical", between: "Range", topN: "TopN" };
+const FILTER_TYPE: Record<string, string> = { in: "Categorical", notIn: "Categorical", between: "Range", topN: "TopN", tuples: "Categorical" };
+
+/** A hierarchy selection: one In over the levels' columns per row length, joined with Or. */
+function tuplesToPbir(c: TuplesCond, style: { alias: Record<string, string> }): J {
+  const cols = c.fields.map((f) => fieldToPbir(f.kind === "agg" ? { kind: "column", table: f.table, name: f.name } : f, style));
+  const byLen = new Map<number, Lit[][]>();
+  for (const r of c.rows) byLen.set(Math.min(r.length, cols.length), [...(byLen.get(Math.min(r.length, cols.length)) ?? []), r]);
+  const parts: J[] = [...byLen.entries()].sort((a, b) => a[0] - b[0]).map(([k, rows]) => ({ In: { Expressions: cols.slice(0, k), Values: rows.map((r) => r.slice(0, k).map(litC)) } }));
+  return parts.reduce((a, b) => ({ Or: { Left: a, Right: b } }));
+}
+
+/** The reverse: the In clauses of an Or tree become rows; the levels are the expressions of the longest In. */
+function tuplesFromPbir(j: J, aliases: Record<string, string>): TuplesCond | null {
+  const ins: J[] = [];
+  const walk = (x: J): boolean => {
+    if (x?.In && !x.In.Table && Array.isArray(x.In.Expressions) && x.In.Expressions.length >= 1) return ins.push(x.In), true;
+    if (x?.Or) return walk(x.Or.Left) && walk(x.Or.Right);
+    return false;
+  };
+  // a plain one-column list is an ordinary "in" filter; a hierarchy selection has at least one In over several levels
+  if (!walk(j) || ins.length === 0 || !ins.some((i) => i.Expressions.length >= 2)) return null;
+  const longest = ins.reduce((a, b) => (b.Expressions.length > a.Expressions.length ? b : a));
+  const fields: FieldRef[] = [];
+  for (const e of longest.Expressions) {
+    const f = fieldFromPbir(e, aliases);
+    if (!f || f.kind === "agg" || f.kind === "measure") return null;
+    fields.push(f);
+  }
+  const rows: Lit[][] = [];
+  for (const i of ins) {
+    for (const row of i.Values ?? []) {
+      const lits: Lit[] = [];
+      for (const cell of row) {
+        const l = typeof cell?.Literal?.Value === "string" ? decodeLit(cell.Literal.Value) : null;
+        if (!l) return null;
+        lits.push(l);
+      }
+      rows.push(lits);
+    }
+  }
+  return { kind: "tuples", fields, rows };
+}
 
 export function filterToPbir(d: FilterDef): J {
-  const aliases = aliasesFor([d.field.table, ...(d.cond.kind === "topN" ? [d.cond.by.table] : [])]);
+  const aliases = aliasesFor([d.field.table, ...(d.cond.kind === "topN" ? [d.cond.by.table] : []), ...(d.cond.kind === "tuples" ? d.cond.fields.map((f) => f.table) : [])]);
   const style = { alias: aliases };
   const col = fieldToPbir(d.field.kind === "agg" ? { kind: "column", table: d.field.table, name: d.field.name } : d.field, style);
   const field = fieldToPbir(d.field);
@@ -299,7 +366,7 @@ export function filterToPbir(d: FilterDef): J {
   } else if (d.cond.kind === "relativeDate") {
     return container;
   } else {
-    container.filter = { Version: 2, From: from, Where: [{ Condition: condToPbir(col, d.cond) }] };
+    container.filter = { Version: 2, From: from, Where: [{ Condition: d.cond.kind === "tuples" ? tuplesToPbir(d.cond, style) : condToPbir(col, d.cond) }] };
   }
   if (d.hidden) container.isHiddenInViewMode = true;
   if (d.locked) container.isLockedInViewMode = true;
@@ -323,7 +390,8 @@ export function filterFromPbir(c: J): FilterDef | null {
     const by = order ? fieldFromPbir(order.Expression, subAliases) : null;
     if (sub && by && Number.isInteger(sub.Top) && (order.Direction === 1 || order.Direction === 2)) parsed = { kind: "topN", n: sub.Top, dir: order.Direction === 2 ? "top" : "bottom", by };
   } else if (cond) {
-    parsed = condFromPbir(cond, field.kind === "agg" ? { kind: "column", table: field.table, name: field.name } : field, aliases);
+    parsed = tuplesFromPbir(cond, aliases);
+    if (!parsed) parsed = condFromPbir(cond, field.kind === "agg" ? { kind: "column", table: field.table, name: field.name } : field, aliases);
   }
   if (!parsed) return null;
   return { name: c.name, field, cond: parsed, ...(c.isHiddenInViewMode ? { hidden: true } : {}), ...(c.isLockedInViewMode ? { locked: true } : {}) };

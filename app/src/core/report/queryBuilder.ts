@@ -272,6 +272,20 @@ export function buildSlicerQuery(field: FieldRef, model: ModelInfo, filters: Fil
   return { dax: `EVALUATE ${body}\nORDER BY ${sb ? `${columnDax(sb)}, ` : ""}${col}`, field, sortHelper: !!sb };
 }
 
+export interface HierarchyQuery {
+  dax: string;
+  fields: FieldRef[];
+}
+
+/** The existing combinations of the levels of a hierarchy slicer, in level order, under the filters of the other slicers. */
+export function buildHierarchyQuery(fields: FieldRef[], filters: FilterDef[]): HierarchyQuery {
+  const fa = filtersToDax(filters.filter((f) => f.cond.kind !== "topN"));
+  const cols = fields.map(columnDax);
+  const body = `SUMMARIZECOLUMNS(${[...cols, ...fa.args].join(", ")})`;
+  return { dax: `EVALUATE ${body}
+ORDER BY ${cols.join(", ")}`, fields };
+}
+
 /** Smallest and largest value of a column under the filters (range slicers). */
 export function buildRangeQuery(field: FieldRef, filters: FilterDef[]): string {
   const fa = filtersToDax(filters.filter((f) => f.cond.kind !== "topN"));

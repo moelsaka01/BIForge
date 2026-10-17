@@ -280,3 +280,30 @@ fn json_files_with_nested_records_import_as_dotted_columns_including_json_lines(
     std::fs::write(&bad, "{not json").unwrap();
     assert!(e.import("Bad", &SourceSpec::Json { path: bad.to_string_lossy().into() }, &c).unwrap_err().to_string().contains("Could not read JSON"));
 }
+
+/// The app sends the `kind` names of app/src/core/data/types.ts: every one must deserialize to the matching source.
+#[test]
+fn the_kind_names_of_the_app_are_the_ones_the_engine_reads() {
+    let cases = [
+        r#"{"kind":"csv","path":"a"}"#,
+        r#"{"kind":"excel","path":"a"}"#,
+        r#"{"kind":"json","path":"a"}"#,
+        r#"{"kind":"parquet","path":"a"}"#,
+        r#"{"kind":"sqlite","path":"a","table":"t"}"#,
+        r#"{"kind":"postgres","host":"h","database":"d","user":"u","table":"t"}"#,
+        r#"{"kind":"sqlserver","server":"s","database":"d","table":"t"}"#,
+        r#"{"kind":"mysql","host":"h","database":"d","user":"u","table":"t"}"#,
+        r#"{"kind":"odbc","connection":"DSN=x"}"#,
+        r#"{"kind":"xml","path":"a"}"#,
+        r#"{"kind":"web","url":"http://x"}"#,
+        r#"{"kind":"odata","url":"http://x","entity":"E"}"#,
+        r#"{"kind":"pdf","path":"a"}"#,
+        r#"{"kind":"fixedWidth","path":"a","widths":[1,2]}"#,
+        r#"{"kind":"inline","columns":[{"name":"A","type":"whole"}],"rows":[["1"]]}"#,
+    ];
+    for c in cases {
+        let s: SourceSpec = serde_json::from_str(c).unwrap_or_else(|e| panic!("{c}: {e}"));
+        let back = serde_json::to_value(&s).unwrap();
+        assert_eq!(back["kind"], serde_json::from_str::<serde_json::Value>(c).unwrap()["kind"], "{c}");
+    }
+}

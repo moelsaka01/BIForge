@@ -165,3 +165,17 @@ fn pass_through_functions() {
     assert_eq!(r, vec![vec![s("Bikes"), i(2)]]);
     let _: Value = B;
 }
+
+#[test]
+fn a_hierarchy_slicer_selection_filters_on_several_columns_with_branches_and_leaves() {
+    let e = engine();
+    // the predicate text that the report writes (tuplesDax in app/src/core/report/filters.ts) for the selection
+    // "all of Bikes" plus "Accessories / Blue": a branch is a shorter AND, a leaf is a longer one
+    let filter = "FILTER(ALL(Product[Category], Product[Color]), (Product[Category] = \"Bikes\") || (Product[Category] = \"Accessories\" && Product[Color] = \"Blue\"))";
+    assert_eq!(ev(&e, &format!("CALCULATE(SUM(Sales[Qty]), {filter})")), i(7)); // Bikes 1 + 1, Accessories/Blue 3 + 2
+    let r = sorted(rows(&e, &format!("EVALUATE SUMMARIZECOLUMNS(Product[Category], Product[Color], {filter}, \"qty\", SUM(Sales[Qty]))")));
+    assert_eq!(r, vec![vec![s("Accessories"), s("Blue"), i(5)], vec![s("Bikes"), s("Red"), i(2)]]);
+    // a blank level value is tested with ISBLANK
+    let blank = "FILTER(ALL(Product[Category], Product[Color]), (Product[Category] = \"Clothing\" && ISBLANK(Product[Color])))";
+    assert_eq!(ev(&e, &format!("COUNTROWS({blank})")), i(1));
+}

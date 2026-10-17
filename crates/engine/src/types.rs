@@ -42,6 +42,7 @@ pub enum SourceSpec {
         query: Option<String>,
     },
     /// SQL Server (tiberius). Without `user` Windows integrated authentication is used.
+    #[serde(rename = "sqlserver")]
     SqlServer {
         server: String,
         #[serde(default)]
@@ -60,6 +61,7 @@ pub enum SourceSpec {
         trust_certificate: bool,
     },
     /// MySQL and MariaDB.
+    #[serde(rename = "mysql")]
     MySql {
         host: String,
         #[serde(default = "mysql_port")]
@@ -101,6 +103,7 @@ pub enum SourceSpec {
         user: Option<String>,
     },
     /// OData v4 feed: `entity` is an entity set of the service.
+    #[serde(rename = "odata")]
     OData {
         url: String,
         entity: String,

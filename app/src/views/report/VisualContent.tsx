@@ -17,6 +17,7 @@ import { KeyInfluencersView } from "./KeyInfluencersView";
 import { CardView, KpiView, MatrixView, MultiRowCardView, TableView } from "./DomVisuals";
 import { useReport } from "./reportContext";
 import { readSlicer } from "../../core/report/slicerSettings";
+import { HierarchySlicerView } from "./HierarchySlicerView";
 import { SlicerView } from "./SlicerView";
 import { ButtonView, ImageView, PageNavigatorView, ShapeView, TextboxView } from "./StaticVisuals";
 
@@ -124,6 +125,26 @@ export function VisualContent({ page, visual, width, height, runOnClick }: { pag
   if (!loaded) return <Notice muted>Loading…</Notice>;
   if (loaded.kind === "error") return <Notice error>Cannot load this visual: {loaded.message}</Notice>;
   if (loaded.kind === "empty") return <Notice>Add fields to this visual from the Data pane.</Notice>;
+
+  if (loaded.kind === "hierarchy") {
+    const fields = visual.roles.Values.map((v) => v.field);
+    const look = readSlicer(new FormatReader(visual.json, c.theme, "slicer"), false);
+    const own = visual.filters.defs.find((d) => d.name === "slicer");
+    return (
+      <HierarchySlicerView
+        fields={fields}
+        rows={loaded.rows}
+        cond={own?.cond ?? null}
+        look={look}
+        fieldName={fields.map((f) => f.name).join(" > ")}
+        search={look.search}
+        theme={c.theme}
+        width={width}
+        height={height}
+        onChange={(cond) => c.dispatch("report.slicer.select", { page: page.name, visual: visual.name, field: fields[0], cond })}
+      />
+    );
+  }
 
   if (loaded.kind === "slicer") {
     const field = visual.roles.Values[0].field;

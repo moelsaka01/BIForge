@@ -189,7 +189,7 @@ export const VISUAL_TYPES: VisualTypeDef[] = [
     size: { width: 480, height: 360 },
     glyph: "⚑",
   },
-  { id: "slicer", label: "Slicer", family: "slicer", roles: [{ name: "Values", label: "Field", accepts: "column", max: 1 }], size: { width: 200, height: 240 }, glyph: "▽" },
+  { id: "slicer", label: "Slicer", family: "slicer", roles: [{ name: "Values", label: "Field (several make a hierarchy slicer)", accepts: "column", max: 5 }], size: { width: 200, height: 240 }, glyph: "▽" },
   {
     id: "map",
     label: "Map",
