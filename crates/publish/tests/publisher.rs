@@ -142,7 +142,7 @@ fn publishing_needs_the_exact_confirmation() {
 #[test]
 fn planned_adapters_refuse_everything() {
     let e = env();
-    for info in e.registry.infos().into_iter().filter(|i| i.id != local::ID) {
+    for info in e.registry.infos().into_iter().filter(|i| i.id != local::ID && i.id != "github-pages" && i.id != "cloudflare-pages") {
         assert!(!info.capabilities.implemented, "{} must be marked not implemented", info.id);
         assert_eq!(info.capabilities, Capabilities::default());
         let mut t = Target::new("p", &info.id, "x", AccessLevel::Public);

@@ -138,7 +138,7 @@ impl<'a> Publisher<'a> {
             },
             &signer,
         )?;
-        let meta = PackageMeta { package_id: package_id.clone(), version, access: target.access, sha256: sha256_hex(&bytes), time: now.clone() };
+        let meta = PackageMeta { package_id: package_id.clone(), report_name: req.report_name.clone(), version, access: target.access, sha256: sha256_hex(&bytes), time: now.clone() };
         let result = if have_version.is_some() { adapter.update(&target, &bytes, &meta) } else { adapter.publish(&target, &bytes, &meta) };
         match result {
             Ok(state) => {

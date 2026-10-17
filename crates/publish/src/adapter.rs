@@ -3,6 +3,12 @@
 
 use serde::{Deserialize, Serialize};
 
+use std::sync::Arc;
+
+use crate::cloudflare::CloudflareAdapter;
+use crate::github::GitHubAdapter;
+use crate::http::{Http, Request, Response};
+use crate::keys::{KeyStore, MemoryKeyStore};
 use crate::local::LocalFolderAdapter;
 use crate::manifest::AccessLevel;
 use crate::targets::Target;
@@ -94,6 +100,7 @@ pub struct RemoteState {
 #[derive(Debug, Clone)]
 pub struct PackageMeta {
     pub package_id: String,
+    pub report_name: String,
     pub version: u64,
     pub access: AccessLevel,
     pub sha256: String,
@@ -168,6 +175,26 @@ impl Adapter for NotImplemented {
     }
 }
 
+/// What network adapters need: where secrets live and how to talk HTTP. Adapters never see the publisher keys.
+#[derive(Clone)]
+pub struct Context {
+    pub keys: Arc<dyn KeyStore>,
+    pub http: Arc<dyn Http>,
+}
+
+struct NoNetwork;
+impl Http for NoNetwork {
+    fn send(&self, _r: &Request) -> crate::Result<Response> {
+        Err(Error::Adapter("network access is not available here".into()))
+    }
+}
+
+impl Context {
+    pub fn offline() -> Self {
+        Self { keys: Arc::new(MemoryKeyStore::default()), http: Arc::new(NoNetwork) }
+    }
+}
+
 pub struct Registry {
     adapters: Vec<Box<dyn Adapter>>,
 }
@@ -178,25 +205,16 @@ impl Registry {
     }
 
     /// Every destination BIForge knows about: the real ones and the planned ones (marked not implemented).
+    /// Every destination without network access or stored accounts (tests, and callers that only list adapters).
     pub fn standard() -> Self {
+        Self::standard_with(Context::offline())
+    }
+
+    pub fn standard_with(ctx: Context) -> Self {
         Self::new(vec![
             Box::new(LocalFolderAdapter),
-            NotImplemented::new(
-                "github-pages",
-                "GitHub Pages",
-                Method::StaticHosting,
-                "O2",
-                &["The Free plan serves Pages only from public repositories: a private package is encrypted, but it is still downloadable by anyone", "Updates reach viewers when they sync, not instantly"],
-                &["Free GitHub account, no payment card", "Site up to 1 GB, soft limit of 100 GB bandwidth per month"],
-            ),
-            NotImplemented::new(
-                "cloudflare-pages",
-                "Cloudflare Pages",
-                Method::StaticHosting,
-                "O2",
-                &["Anyone with the address can download the package; private packages are encrypted", "Free plan: up to 20,000 files per site, 25 MiB per file"],
-                &["Free Cloudflare account (the sign-up page will tell if a card is asked; if so this destination is dropped)", "500 builds per month (direct uploads do not use builds)"],
-            ),
+            Box::new(GitHubAdapter::new(ctx.clone())),
+            Box::new(CloudflareAdapter::new(ctx)),
             NotImplemented::new(
                 "google-drive",
                 "Google Drive",

@@ -3,7 +3,8 @@
 //! ```text
 //! biforge://open?src=file&path=<percent-encoded path of a .biforge package>
 //! ```
-//! Other sources (`url`, `p2p`, `server`) are reserved for later phases and parse as [`Link::Unsupported`].
+//! `src=url&url=<feed address>` points at the feed of a static host (O2).
+//! Other sources (`p2p`, `server`) are reserved for later phases and parse as [`Link::Unsupported`].
 //! A link never carries an access key. Opening one always shows a confirmation first (decided in the app).
 
 use crate::{Error, Result};
@@ -12,12 +13,18 @@ use crate::{Error, Result};
 pub enum Link {
     /// Open a package file.
     File { path: String },
+    /// A feed on a static host: `biforge://open?src=url&url=<feed address>`.
+    Url { url: String },
     /// A source this BIForge version does not know yet.
     Unsupported { src: String },
 }
 
 pub fn build_file(path: &str) -> String {
     format!("biforge://open?src=file&path={}", encode(path))
+}
+
+pub fn build_url(feed_url: &str) -> String {
+    format!("biforge://open?src=url&url={}", encode(feed_url))
 }
 
 pub fn parse(link: &str) -> Result<Link> {
@@ -28,11 +35,13 @@ pub fn parse(link: &str) -> Result<Link> {
     }
     let mut src = None;
     let mut path = None;
+    let mut url = None;
     for pair in query.split('&').filter(|p| !p.is_empty()) {
         let (k, v) = pair.split_once('=').unwrap_or((pair, ""));
         match k {
             "src" => src = Some(decode(v)?),
             "path" => path = Some(decode(v)?),
+            "url" => url = Some(decode(v)?),
             _ => {}
         }
     }
@@ -43,6 +52,11 @@ pub fn parse(link: &str) -> Result<Link> {
                 return Err(Error::Invalid("the link does not point to a .biforge package".into()));
             }
             Ok(Link::File { path })
+        }
+        Some("url") => {
+            let url = url.filter(|u| !u.is_empty()).ok_or_else(|| Error::Invalid("the link has no address".into()))?;
+            crate::feed::check_feed_url(&url).map_err(|e| Error::Invalid(e.to_string()))?;
+            Ok(Link::Url { url })
         }
         Some(other) => Ok(Link::Unsupported { src: other.to_string() }),
         None => Err(Error::Invalid("the link has no source".into())),
@@ -97,6 +111,15 @@ mod tests {
         assert!(parse("biforge://open?src=file&path=C%3A%5Cx.exe").is_err());
         assert!(parse("biforge://open?src=file&path=%ZZ").is_err());
         assert!(parse("biforge://open").is_err());
+    }
+
+    #[test]
+    fn feed_links_round_trip_and_need_https() {
+        let u = "https://ann.github.io/my-report/feed.json";
+        assert_eq!(parse(&build_url(u)).unwrap(), Link::Url { url: u.into() });
+        assert!(parse("biforge://open?src=url&url=http%3A%2F%2Fexample.com%2Ffeed.json").is_err());
+        assert!(parse("biforge://open?src=url&url=file%3A%2F%2F%2Fc%2Fx").is_err());
+        assert!(parse("biforge://open?src=url").is_err());
     }
 
     #[test]
