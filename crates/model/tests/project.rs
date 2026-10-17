@@ -398,3 +398,36 @@ fn a_new_project_has_a_schema_valid_theme_collection() {
         assert!(t["reportVersionAtImport"][k].is_string(), "reportVersionAtImport.{k}");
     }
 }
+
+#[test]
+fn uploaded_pictures_are_registered_resources_files_and_are_deleted_when_removed() {
+    let (d, pbip) = sample_copy();
+    let mut p = Project::open(&pbip).unwrap();
+    assert!(p.report.images.is_empty());
+    // 1x1 png
+    let png = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+    p.report.images.insert("logo1.png".into(), png.into());
+    p.report.images.insert("vector.svg".into(), "PHN2Zy8+".into());
+    p.save(d.path()).unwrap();
+    let dir = d.path().join("Retail.Report/StaticResources/RegisteredResources");
+    assert_eq!(&std::fs::read(dir.join("logo1.png")).unwrap()[1..4], b"PNG");
+    assert_eq!(std::fs::read(dir.join("vector.svg")).unwrap(), b"<svg/>");
+    assert_eq!(Project::open(&pbip).unwrap(), p);
+    // saving again changes nothing
+    assert!(p.save(d.path()).unwrap().written.is_empty());
+    p.report.images.remove("logo1.png");
+    let r = p.save(d.path()).unwrap();
+    assert_eq!(r.deleted.len(), 1);
+    assert!(!dir.join("logo1.png").exists() && dir.join("vector.svg").exists());
+    // not a picture name, an escape, or bad base64 are refused
+    for (k, v) in [("a.exe", "AAAA"), ("../x.png", "AAAA"), ("ok.png", "not base64!!")] {
+        let mut q = p.clone();
+        q.report.images.insert(k.into(), v.into());
+        assert!(q.save(d.path()).is_err(), "{k}");
+    }
+    // a snapshot written before pictures existed still loads
+    let mut v = serde_json::to_value(&p).unwrap();
+    v["report"].as_object_mut().unwrap().remove("images");
+    let back: Project = serde_json::from_value(v).unwrap();
+    assert!(back.report.images.is_empty());
+}

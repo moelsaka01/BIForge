@@ -223,6 +223,74 @@ describe("a private publish shows the access key once and never puts it in the l
   });
 });
 
+describe("the Add a destination form", () => {
+  it("shows 'Add a destination' once (no toggle button while there is no destination yet)", async () => {
+    const a = makeApp();
+    withData(a);
+    render(a.element);
+    await openProject(a);
+    const dlg = await openPublish(a);
+    expect(within(dlg).getAllByText("Add a destination").length).toBe(1);
+    expect(within(dlg).queryByRole("button", { name: "Add a destination" })).toBeNull();
+    a.shell.settings.setOption("publish.guide.local-folder.hidden", true);
+    fireEvent.change(within(dlg).getByLabelText("Destination name"), { target: { value: "Share" } });
+    fireEvent.change(within(dlg).getByLabelText("Folder"), { target: { value: "C:\\Shared" } });
+    fireEvent.click(within(dlg).getByRole("button", { name: "Add destination" }));
+    // with a destination present the heading is the button; opening the form turns it into Cancel, so the text is still shown once
+    fireEvent.click(await within(dlg).findByRole("button", { name: "Add a destination" }));
+    expect(within(dlg).getAllByText("Add a destination").length).toBe(1);
+    expect(within(dlg).getByRole("button", { name: "Cancel" })).toBeTruthy();
+  });
+
+  it("every destination type shows its account status; Cloudflare has a token entry that goes only to the credential store, with Connected / Not connected and Disconnect", async () => {
+    const a = makeApp();
+    withData(a);
+    render(a.element);
+    await openProject(a);
+    const dlg = await openPublish(a);
+    // a folder needs no account
+    expect(within(dlg).getByRole("status", { name: "Account" }).textContent).toMatch(/none needed/);
+
+    fireEvent.click(within(dlg).getByRole("combobox", { name: "Destination type" }));
+    fireEvent.click(await screen.findByRole("option", { name: /Cloudflare/ }));
+    const acct = within(dlg).getByRole("group", { name: "Cloudflare account" });
+    expect(acct.textContent).toMatch(/Cloudflare account: Not connected/);
+    expect(within(acct).queryByLabelText("Cloudflare token")).toBeNull();
+    // the account ID is asked once, in the form
+    expect(within(dlg).getAllByLabelText("Cloudflare account ID").length).toBe(1);
+    fireEvent.click(within(acct).getByRole("button", { name: "Connect Cloudflare account" }));
+    expect(within(acct).getByRole("list", { name: "How to get a Cloudflare token" })).toBeTruthy();
+    const connectBtn = within(acct).getByRole("button", { name: "Connect Cloudflare" }) as HTMLButtonElement;
+    fireEvent.change(within(acct).getByLabelText("Cloudflare token"), { target: { value: "cf-token" } });
+    expect(connectBtn.disabled).toBe(true); // needs the account ID from the form
+    fireEvent.change(within(dlg).getByLabelText("Cloudflare account ID"), { target: { value: "a".repeat(32) } });
+    expect((within(acct).getByRole("button", { name: "Connect Cloudflare" }) as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(within(acct).getByRole("button", { name: "Connect Cloudflare" }));
+    await waitFor(() => expect(within(dlg).getByRole("group", { name: "Cloudflare account" }).textContent).toMatch(/Cloudflare account: Connected as ann-subdomain/));
+    expect(a.publish.calls).toContain("connect:cloudflare:" + "a".repeat(32));
+    expect((within(dlg).queryByLabelText("Cloudflare token") as HTMLInputElement | null)).toBeNull(); // the token is not kept in the form
+    fireEvent.click(within(dlg).getByRole("button", { name: "Disconnect Cloudflare" }));
+    await waitFor(() => expect(a.publish.connected.has("cloudflare")).toBe(false));
+    await waitFor(() => expect(within(dlg).getByRole("group", { name: "Cloudflare account" }).textContent).toMatch(/Not connected/));
+  });
+
+  it("GitHub Pages shows the same account block", async () => {
+    const a = makeApp();
+    withData(a);
+    render(a.element);
+    await openProject(a);
+    const dlg = await openPublish(a);
+    fireEvent.click(within(dlg).getByRole("combobox", { name: "Destination type" }));
+    fireEvent.click(await screen.findByRole("option", { name: /GitHub Pages/ }));
+    const acct = within(dlg).getByRole("group", { name: "GitHub account" });
+    expect(acct.textContent).toMatch(/GitHub account: Not connected/);
+    fireEvent.click(within(acct).getByRole("button", { name: "Connect GitHub account" }));
+    fireEvent.change(within(acct).getByLabelText("GitHub token"), { target: { value: "ghp_good" } });
+    fireEvent.click(within(acct).getByRole("button", { name: "Connect GitHub" }));
+    await waitFor(() => expect(within(dlg).getByRole("group", { name: "GitHub account" }).textContent).toMatch(/Connected as ann/));
+  });
+});
+
 describe("setup pop-ups", () => {
   it("the first use of a method shows the guide with the data list and free limits; Don't show again is remembered", async () => {
     const a = makeApp();
@@ -466,7 +534,7 @@ describe("static hosting: connect an account, publish, open by link, check for u
     expect(a.publish.connected.has("github")).toBe(false);
     fireEvent.change(within(connect).getByLabelText("GitHub token"), { target: { value: "ghp_good" } });
     fireEvent.click(within(connect).getByRole("button", { name: "Connect GitHub" }));
-    await waitFor(() => expect(within(dlg).getByText(/GitHub is connected as ann/)).toBeTruthy());
+    await waitFor(() => expect(within(dlg).getByText(/GitHub account: Connected as ann/)).toBeTruthy());
     expect(a.publish.calls).toContain("connect:github:");
 
     // the confirmation names the public web address

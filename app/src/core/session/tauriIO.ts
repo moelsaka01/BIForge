@@ -1,9 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import type { Dialogs, ProjectIO } from "./session";
+import { storedIO } from "../report/storage";
 import type { Project, SaveReport } from "../model/types";
 
-export const tauriIO: ProjectIO = {
+export const tauriIO: ProjectIO = storedIO({
   newProject: (root, name) => invoke<Project>("new_project", { root, name }),
   openProject: (pbipPath) => invoke<Project>("open_project", { pbipPath }),
   saveProject: (root, project) => invoke<SaveReport>("save_project", { root, project }),
@@ -13,7 +14,7 @@ export const tauriIO: ProjectIO = {
   writeSampleData: (root) => invoke<string[]>("write_sample_data", { root }),
   readImage: (path) => invoke<string>("read_image_data_uri", { path }),
   openUrl: (url) => invoke<void>("open_url", { url }),
-};
+});
 
 // real-window UI test seam (see test_pick in commands.rs): answers from BIFORGE_TEST_PICKS when it is set
 const testPick = async (): Promise<string | null> => {

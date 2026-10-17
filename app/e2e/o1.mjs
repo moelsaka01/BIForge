@@ -122,6 +122,18 @@ try {
   await page.getByRole("button", { name: /Publish & Share/ }).first().click();
   const dlg = page.getByRole("dialog", { name: "Publish and Share" });
   await dlg.waitFor();
+  check((await dlg.getByText("Add a destination", { exact: true }).count()) === 1, "'Add a destination' appears once in the empty Publish & Share form");
+  await dlg.getByRole("combobox", { name: "Destination type" }).click();
+  await page.getByRole("option", { name: /Cloudflare/ }).click();
+  const cf = dlg.getByRole("group", { name: "Cloudflare account" });
+  check(/Not connected/.test(await cf.innerText()), "the Cloudflare form shows 'Not connected'");
+  await cf.getByRole("button", { name: "Connect Cloudflare account" }).click();
+  check((await cf.getByRole("textbox", { name: "Cloudflare token" }).getAttribute("type")) === "password", "the Cloudflare token entry is a password field next to the status");
+  check((await dlg.getByLabel("Cloudflare account ID").count()) === 1, "the Cloudflare account ID is asked once");
+  check(/Credential Manager/.test(await cf.innerText()), "the form says the token goes to Windows Credential Manager");
+  await dlg.getByRole("combobox", { name: "Destination type" }).click();
+  await page.getByRole("option", { name: /Folder on this PC/ }).click();
+  check(/none needed/.test(await dlg.getByRole("status", { name: "Account" }).innerText()), "the folder form says no account is needed");
   await dlg.getByLabel("Destination name").fill("E2E share");
   await dlg.getByLabel("Folder").fill(`${share}`);
   await dlg.getByRole("button", { name: "Add destination" }).click();
@@ -150,7 +162,7 @@ try {
     await page.getByRole("button", { name: "Continue", exact: true }).click(); // the GitHub setup guide
     const sec = dlg.getByRole("region", { name: "Destination E2E site" });
     await sec.waitFor();
-    check(/GitHub is connected as/.test(await sec.innerText()) || (await sec.innerText()).includes(ghLogin), "the GitHub destination shows the connected account");
+    check(/GitHub account: Connected as/.test(await sec.innerText()) || (await sec.innerText()).includes(ghLogin), "the GitHub destination shows the connected account");
     await sec.getByRole("checkbox", { name: /public web address/ }).check();
     await sec.getByLabel("Publisher name").fill("E2E Tester");
     await sec.getByRole("button", { name: "Publish", exact: true }).click();

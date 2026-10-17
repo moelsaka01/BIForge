@@ -1,6 +1,7 @@
 // Brings report files written by earlier BIForge versions to the names Power BI Desktop uses (the published PBIR
 // schemas and the report theme schema). Runs when a project is loaded; files that are already current are not touched.
 import type { Project } from "../model/types";
+import { fromStored } from "./storage";
 import { lit } from "./fields";
 import { litExpr, readLitProp, type J } from "./pbir";
 
@@ -204,6 +205,10 @@ export function migrateVisual(json: J): boolean {
 
 /** Returns the project with every report file migrated; the same object when nothing needed to change. */
 export function migrateProject(p: Project): Project {
+  return migrateVisuals(fromStored(p)); // group members: relative positions on disk become page positions in memory
+}
+
+function migrateVisuals(p: Project): Project {
   const files = p.report?.files as Record<string, J> | undefined;
   if (!files) return p;
   const keys = Object.keys(files).filter(isVisualFile);

@@ -6,6 +6,8 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { CONTAINER_OBJECTS, hasObject, isContainerProp, propKind } from "../format/capabilities";
 import { buildRichReport, type RichReport } from "./richReport";
 import type { J } from "./pbir";
+import { COORDINATES_ANNOTATION, toStored } from "./storage";
+import type { Project } from "../model/types";
 
 const ROOT = "../tests/pbir-schemas"; // tests run from the app folder
 const BASE = "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/";
@@ -75,6 +77,29 @@ describe("saved reports match the published PBIR schemas", () => {
     }
     expect(problems).toEqual([]);
     expect(checked).toBeGreaterThan(60);
+  });
+
+  it("the files as written to disk (group members relative, pictures as registered resources) are valid too", () => {
+    const stored = toStored({ report: { files: report.files } } as unknown as Project);
+    const files = stored.report.files as Record<string, J>;
+    const problems: string[] = [];
+    for (const [key, doc] of Object.entries(files)) {
+      const rule = RULES.find(([re]) => re.test(key));
+      const validate = rule && ajv.getSchema(`${BASE}${rule[1]}`);
+      if (!validate) problems.push(`no schema for ${key}`);
+      else if (!validate(doc)) problems.push(`${key}: ${validate.errors!.slice(0, 5).map((e) => `${e.instancePath} ${e.message}`).join(" | ")}`);
+    }
+    expect(problems).toEqual([]);
+    const visuals = Object.entries(files).filter(([k]) => /visual.json$/.test(k)).map(([, v]) => v as J);
+    const img = visuals.find((v) => v.visual?.objects?.image?.[0]?.properties?.sourceFile);
+    expect(img?.visual.objects.image[0].properties.sourceFile.expr.ResourcePackageItem).toMatchObject({ PackageName: "RegisteredResources", PackageType: 1 });
+    expect(Object.keys(stored.report.images ?? {})).toHaveLength(1);
+    expect(files["report.json"].resourcePackages[0].items.some((i: J) => i.type === "Image")).toBe(true);
+    const group = visuals.find((v) => v.visualGroup)!;
+    const inMemory = (report.files[Object.keys(files).find((k) => files[k] === group)!] as J).position;
+    const child = visuals.find((v) => v.parentGroupName === group.name)!;
+    const childMemory = report.files[Object.keys(files).find((k) => files[k] === child)!] as J;
+    expect(child.position.x).toBe(childMemory.position.x - inMemory.x);
   });
 
   it("formatting objects and properties are the ones the schemas list for the visual type", () => {

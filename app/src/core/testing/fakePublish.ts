@@ -26,6 +26,14 @@ export const fakeGithubAdapter: AdapterInfo = {
   freeTier: ["Free GitHub account, no payment card"],
 };
 
+export const fakeCloudflareAdapter: AdapterInfo = {
+  ...fakeGithubAdapter,
+  id: "cloudflare-pages",
+  name: "Cloudflare (workers.dev)",
+  capabilities: { ...fakeGithubAdapter.capabilities, scheduledRefresh: false },
+  freeTier: ["Free Cloudflare account, no payment card"],
+};
+
 export function planned(id: string, name: string, method: AdapterInfo["method"], phase: string, free: string[]): AdapterInfo {
   return { id, name, method, phase, capabilities: { ...NONE }, limitations: ["Planned."], freeTier: free };
 }
@@ -33,6 +41,7 @@ export function planned(id: string, name: string, method: AdapterInfo["method"],
 export const defaultAdapters = (): AdapterInfo[] => [
   fakeFolderAdapter,
   fakeGithubAdapter,
+  fakeCloudflareAdapter,
   planned("google-drive", "Google Drive", "personalStorage", "O3", ["Free Google account, 15 GB shared with Gmail and Photos"]),
   planned("p2p", "Direct connection (peer to peer)", "peerToPeer", "O4", ["Free; may use free public relay servers"]),
   planned("host-from-pc", "Host from this PC", "backend", "O5", ["Free; uses your PC"]),

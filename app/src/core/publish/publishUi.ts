@@ -1,6 +1,7 @@
 // State and logic of the Publish & Share dialog. Components only render this and dispatch commands; the commands
 // (core/commands/publishCommands.ts) call these methods.
 import type { Session } from "../session/session";
+import { toStored } from "../report/storage";
 import { getTableSource } from "../model/tables";
 import { pruneForPublishing, sameSelection } from "./prune";
 import type { AccessLevel, AdapterInfo, AuditEvent, IncludedTable, Issue, Outcome, Provider, PublishApi, RefreshSchedule, Target } from "./types";
@@ -198,7 +199,7 @@ export class PublishUi {
     this.set({ busy: true, error: null, outcome: null });
     try {
       const pruned = pruneForPublishing(project, included);
-      const outcome = await this.api.run(this.root, pruned.project, { targetId: id, reportName: project.name, publisherName: publisherName.trim(), included, confirmed, rotate });
+      const outcome = await this.api.run(this.root, toStored(pruned.project), { targetId: id, reportName: project.name, publisherName: publisherName.trim(), included, confirmed, rotate });
       const root = this.root;
       this.set({ outcome: { ...outcome, targetId: id, rotated: rotate }, targets: await this.api.targets(root), audit: await this.api.audit(root), busy: false });
       this.session.setMessage(`Published "${project.name}" to ${target.label} (version ${outcome.state.version}).`);
@@ -245,7 +246,7 @@ export class PublishUi {
     const sources = cands.map((c) => ({ table: c.table, spec: getTableSource(project, c.table) }));
     this.set({ busy: true, error: null });
     try {
-      await this.api.enableRefresh(this.root, this.session.store.project, { targetId: id, reportName: project.name, publisherName: publisherName.trim(), included: this.selection(), schedule, sources, confirmedSources: confirmed });
+      await this.api.enableRefresh(this.root, toStored(this.session.store.project), { targetId: id, reportName: project.name, publisherName: publisherName.trim(), included: this.selection(), schedule, sources, confirmedSources: confirmed });
       this.set({ busy: false, targets: await this.api.targets(this.root), audit: await this.api.audit(this.root) });
       this.session.setMessage(`Scheduled refresh is on (${schedule}).`);
     } catch (e) {

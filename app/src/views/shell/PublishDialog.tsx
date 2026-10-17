@@ -42,18 +42,19 @@ const PROVIDER_NAME: Record<Provider, string> = { github: "GitHub", cloudflare: 
 const GUIDE_OF: Record<Provider, string> = { github: "static-github-pages", cloudflare: "static-cloudflare-pages" };
 
 /** The click-by-click steps and the field where the token is pasted. The token goes straight to the Windows Credential Manager. */
-export function ConnectPanel({ provider }: { provider: Provider }) {
+export function ConnectPanel({ provider, accountId: givenAccountId }: { provider: Provider; /** when the surrounding form already asks for the account ID, it is passed in and not asked twice */ accountId?: string }) {
   const env = useEnv();
   const { state } = usePublishUi();
   const [token, setToken] = useState("");
-  const [accountId, setAccountId] = useState("");
+  const [ownAccountId, setAccountId] = useState("");
+  const accountId = givenAccountId ?? ownAccountId;
   const name = PROVIDER_NAME[provider];
   const account = state.connected[provider];
   const steps = getGuide(GUIDE_OF[provider])?.steps ?? [];
   if (account !== undefined)
     return (
       <div role="status" style={{ display: "flex", gap: 8, alignItems: "center" }}>
-        <span>{account ? `${name} is connected as ${account}.` : `${name} is connected.`}</span>
+        <span>{account ? `${name} account: Connected as ${account}` : `${name} account: Connected`}</span>
         <Button size="small" onClick={() => void env.run("account.disconnect", { provider })}>
           Disconnect {name}
         </Button>
@@ -66,7 +67,7 @@ export function ConnectPanel({ provider }: { provider: Provider }) {
           <li key={st}>{st}</li>
         ))}
       </ol>
-      {provider === "cloudflare" && <Input aria-label="Cloudflare account ID" placeholder="Account ID (32 letters and digits)" value={accountId} onChange={(_, d) => setAccountId(d.value)} />}
+      {provider === "cloudflare" && givenAccountId === undefined && <Input aria-label="Cloudflare account ID" placeholder="Account ID (32 letters and digits)" value={accountId} onChange={(_, d) => setAccountId(d.value)} />}
       <Input aria-label={`${name} token`} type="password" placeholder={provider === "github" ? "Token (ghp_…)" : "API token"} value={token} onChange={(_, d) => setToken(d.value)} />
       <div style={{ fontSize: 12, opacity: 0.8 }}>The token is kept in Windows Credential Manager. It is never written into the project, a package or a log.</div>
       <div>
@@ -82,6 +83,39 @@ export function ConnectPanel({ provider }: { provider: Provider }) {
         </Button>
       </div>
       {state.error && <div role="alert" style={{ color: "var(--colorPaletteRedForeground1)" }}>{state.error}</div>}
+    </div>
+  );
+}
+
+/** Connection status of the account a destination type needs, with the way to connect (token entry) and to disconnect. Shown in the "Add a destination" form for every type. */
+export function AccountStatus({ adapterId, needsAccount, accountId }: { adapterId: string; needsAccount: boolean; accountId?: string }) {
+  const env = useEnv();
+  const { state } = usePublishUi();
+  const [open, setOpen] = useState(false);
+  const provider = PROVIDER_OF[adapterId];
+  if (!provider)
+    return (
+      <div role="status" aria-label="Account">
+        {needsAccount ? "Account: connecting an account for this destination type is not available yet." : "Account: none needed for this destination type."}
+      </div>
+    );
+  const name = PROVIDER_NAME[provider];
+  const account = state.connected[provider];
+  return (
+    <div role="group" aria-label={`${name} account`} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      {account !== undefined ? (
+        <ConnectPanel provider={provider} accountId={accountId} />
+      ) : (
+        <>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <span role="status">{`${name} account: Not connected`}</span>
+            <Button size="small" onClick={() => setOpen((v) => !v)}>
+              {open ? "Hide account setup" : `Connect ${name} account`}
+            </Button>
+          </div>
+          {open && <ConnectPanel provider={provider} accountId={accountId} />}
+        </>
+      )}
     </div>
   );
 }
@@ -283,6 +317,7 @@ function AddDestination({ onAdded }: { onAdded(): void }) {
           <Input aria-label="Site name" placeholder={`Site name (default biforge-${projectSlug})`} value={siteName} onChange={(_, d) => setSiteName(d.value)} />
         </>
       )}
+      {info && <AccountStatus adapterId={adapterId} needsAccount={info.capabilities.needsAccount} accountId={adapterId === "cloudflare-pages" ? accountId : undefined} />}
       {info && info.limitations.length > 0 && (
         <ul aria-label="Limitations" style={{ margin: "0 0 0 18px", fontSize: 12 }}>
           {info.limitations.map((l) => (
@@ -524,9 +559,11 @@ export function PublishDialog() {
             {t.label}
           </Button>
         ))}
-        <Button appearance="subtle" onClick={() => setAdding((v) => !v)}>
-          {adding ? "Cancel" : "Add a destination"}
-        </Button>
+        {state.targets.length > 0 && (
+          <Button appearance="subtle" onClick={() => setAdding((v) => !v)}>
+            {adding ? "Cancel" : "Add a destination"}
+          </Button>
+        )}
       </div>
       {(adding || state.targets.length === 0) && <AddDestination onAdded={() => setAdding(false)} />}
       {target && info && !adding && <TargetDetails target={target} info={info} />}

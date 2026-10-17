@@ -41,6 +41,8 @@ export interface Project {
     files: Record<string, unknown>;
     /** Custom themes (StaticResources/RegisteredResources), keyed by file name. */
     static_resources?: Record<string, unknown>;
+    /** Uploaded pictures (StaticResources/RegisteredResources), file name to base64 content. Only on disk and in the Rust model: in memory a picture is a data: address in the visual. */
+    images?: Record<string, string>;
   };
 }
 

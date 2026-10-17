@@ -6,6 +6,7 @@
 //! Files outside that set (caches, DAX queries, resources, diagram layouts, ...) are never read,
 //! rewritten or deleted by this module.
 
+use base64::Engine;
 use crate::tmdl::{self, Document, ParseError};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -83,7 +84,13 @@ pub struct ReportFolder {
     /// JSON files under `StaticResources/RegisteredResources/` (custom themes), keyed relative to that folder.
     #[serde(default)]
     pub static_resources: BTreeMap<String, Value>,
+    /// Uploaded pictures under `StaticResources/RegisteredResources/` (png, jpg, jpeg, gif, svg, webp), keyed by file name, as base64.
+    #[serde(default)]
+    pub images: BTreeMap<String, String>,
 }
+
+/// File extensions of the pictures kept as registered resources.
+pub const IMAGE_EXTENSIONS: [&str; 6] = ["png", "jpg", "jpeg", "gif", "svg", "webp"];
 
 const RESOURCES_REL: &str = "StaticResources/RegisteredResources";
 
@@ -271,6 +278,7 @@ impl Project {
                 platform: None,
                 files,
                 static_resources: BTreeMap::new(),
+                images: BTreeMap::new(),
             },
         }
     }
@@ -369,6 +377,15 @@ impl Project {
             static_resources.insert(rel, read_json(&path)?);
         }
 
+        let mut images = BTreeMap::new();
+        for ext in IMAGE_EXTENSIONS {
+            for rel in list_files(&res_root, ext)? {
+                let path = res_root.join(rel.replace('/', std::path::MAIN_SEPARATOR_STR));
+                let bytes = fs::read(&path).map_err(|e| io_err(&path, e))?;
+                images.insert(rel, base64::engine::general_purpose::STANDARD.encode(bytes));
+            }
+        }
+
         Ok(Project {
             name,
             pbip,
@@ -384,6 +401,7 @@ impl Project {
                 platform: read_optional_json(&report_root.join(".platform"))?,
                 files,
                 static_resources,
+                images,
             },
         })
     }
@@ -430,7 +448,19 @@ impl Project {
             validate_key(key, "json")?;
             planned.push((res.join(key), to_pretty_json(v)));
         }
-        let stale: Vec<PathBuf> = [
+        for (key, b64) in &self.report.images {
+            let ext = key.rsplit('.').next().unwrap_or("").to_ascii_lowercase();
+            if !IMAGE_EXTENSIONS.contains(&ext.as_str()) {
+                return Err(ProjectError::InvalidPath(format!("{key} is not a picture file name")));
+            }
+            validate_key(key, &ext)?;
+            let bytes = base64::engine::general_purpose::STANDARD
+                .decode(b64)
+                .map_err(|e| ProjectError::Invalid(format!("picture {key} is not valid base64: {e}")))?;
+            planned.push((res.join(key), bytes));
+        }
+        let image_keys: Vec<&String> = self.report.images.keys().collect();
+        let mut stale: Vec<PathBuf> = [
             (&def, "tmdl", self.model.tmdl.keys().collect::<Vec<_>>()),
             (&rdef, "json", self.report.files.keys().collect::<Vec<_>>()),
             (&res, "json", self.report.static_resources.keys().collect::<Vec<_>>()),
@@ -447,6 +477,13 @@ impl Project {
         .into_iter()
         .flatten()
         .collect();
+        for ext in IMAGE_EXTENSIONS {
+            for r in list_files(&res, ext)? {
+                if !image_keys.contains(&&r) {
+                    stale.push(res.join(r));
+                }
+            }
+        }
 
         // Skip unchanged files; refuse to run if a target is a directory.
         let mut changed: Vec<(PathBuf, Vec<u8>)> = Vec::new();
