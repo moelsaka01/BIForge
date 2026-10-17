@@ -109,12 +109,14 @@ const ENABLE: Record<string, Record<string, Lit>> = {
   trend: { show: lit.bool(true) },
   card: { barShow: lit.bool(true) },
   subTotals: { rowSubtotals: lit.bool(true), columnSubtotals: lit.bool(true) },
+  heatMap: { show: lit.bool(true) },
 };
 
 /** Properties that only matter together with another one. */
 const WITH: Record<string, Record<string, Record<string, Lit>>> = {
   valueAxis: { labelDisplayUnits: { labelPrecision: lit.num(2) } },
   labels: { labelDisplayUnits: { labelPrecision: lit.num(2) } },
+  mapControls: { zoomLevel: { autoZoom: lit.bool(false) } },
 };
 
 // ---- what to render, per visual type -------------------------------------------------------------------------

@@ -1,12 +1,12 @@
 // Apache ECharts with only the chart types BIForge uses, rendered as SVG (crisp at any zoom, testable without a canvas).
 import * as echarts from "echarts/core";
-import { BarChart, FunnelChart, GaugeChart, LineChart, MapChart, PieChart, ScatterChart, TreemapChart } from "echarts/charts";
-import { GeoComponent, GridComponent, LegendComponent, TitleComponent, TooltipComponent } from "echarts/components";
+import { BarChart, FunnelChart, GaugeChart, HeatmapChart, LineChart, MapChart, PieChart, ScatterChart, TreemapChart } from "echarts/charts";
+import { GeoComponent, GridComponent, LegendComponent, TitleComponent, TooltipComponent, VisualMapComponent } from "echarts/components";
 import { LegacyGridContainLabel } from "echarts/features";
 import { SVGRenderer } from "echarts/renderers";
 import type { WorldData } from "../../core/report/geo";
 
-echarts.use([BarChart, LineChart, PieChart, ScatterChart, TreemapChart, FunnelChart, GaugeChart, MapChart, GeoComponent, LegacyGridContainLabel, GridComponent, LegendComponent, TitleComponent, TooltipComponent, SVGRenderer]);
+echarts.use([BarChart, LineChart, PieChart, ScatterChart, TreemapChart, FunnelChart, GaugeChart, HeatmapChart, MapChart, GeoComponent, VisualMapComponent, LegacyGridContainLabel, GridComponent, LegendComponent, TitleComponent, TooltipComponent, SVGRenderer]);
 
 let registered = false;
 /** Registers the outlines of the countries (map "world") and of the US states (map "states") once. */

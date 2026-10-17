@@ -70,9 +70,22 @@
    "transparency"
   ],
   "visualTooltip": [
+   "background",
+   "bold",
+   "fontFamily",
+   "fontSize",
+   "italic",
    "section",
    "show",
-   "type"
+   "showValuesInBold",
+   "themedBackground",
+   "themedTitleFontColor",
+   "themedValueFontColor",
+   "titleFontColor",
+   "transparency",
+   "type",
+   "underline",
+   "valueFontColor"
   ],
   "visualHeader": [
    "background",
@@ -1798,6 +1811,15 @@
    "fill",
    "transparency"
   ],
+  "heatMap": [
+   "color0",
+   "color100",
+   "color50",
+   "filterRadius",
+   "show",
+   "transparency",
+   "unit"
+  ],
   "legend": [
    "bold",
    "fontFamily",
@@ -1812,7 +1834,10 @@
    "centerLatitude",
    "centerLongitude",
    "maxZoom",
-   "minZoom"
+   "minZoom",
+   "showLassoButton",
+   "showZoomButtons",
+   "zoomLevel"
   ],
   "mapStyles": [
    "mapTheme",
@@ -1839,7 +1864,8 @@
    "centerLatitude",
    "centerLongitude",
    "maxZoom",
-   "minZoom"
+   "minZoom",
+   "zoomLevel"
   ],
   "mapStyles": [
    "mapTheme"

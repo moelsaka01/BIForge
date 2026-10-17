@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ChartBuild } from "../../core/report/chartOptions";
 import type { SelectedPoint } from "../../core/report/interactions";
 import { echarts, type EChartsInstance } from "./echartsSetup";
@@ -10,8 +10,12 @@ export interface ChartViewProps {
   onPoint(point: SelectedPoint, additive: boolean): void;
   onContext(point: SelectedPoint, x: number, y: number): void;
   onHover?(point: SelectedPoint | null, x: number, y: number): void;
+  /** The points inside a lasso (maps). */
+  onLasso?(points: SelectedPoint[], additive: boolean): void;
   label: string;
 }
+
+const toolButton = { width: 26, height: 26, border: "1px solid #888", background: "rgba(255,255,255,0.92)", color: "#222", cursor: "pointer", fontSize: 15, lineHeight: "20px", padding: 0, borderRadius: 3 } as const;
 
 /** One ECharts instance for one visual. The chart is drawn from `build.option`; events map back to data points. */
 export function ChartView(p: ChartViewProps) {
@@ -57,5 +61,75 @@ export function ChartView(p: ChartViewProps) {
     chart.current?.resize({ width: Math.max(10, p.width), height: Math.max(10, p.height) });
   }, [p.width, p.height]);
 
-  return <div ref={host} role="img" aria-label={p.label} style={{ width: p.width, height: p.height }} data-testid="chart" />;
+  const tools = p.build.mapTools;
+  const [lasso, setLasso] = useState(false);
+  const [drag, setDrag] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
+  const zoomBy = (factor: number) => chart.current?.dispatchAction({ type: "geoRoam", componentType: "geo", zoom: factor });
+  const finishLasso = (box: { x0: number; y0: number; x1: number; y1: number }, additive: boolean) => {
+    const c = chart.current;
+    if (!c || !tools) return;
+    const [xa, xb] = [Math.min(box.x0, box.x1), Math.max(box.x0, box.x1)];
+    const [ya, yb] = [Math.min(box.y0, box.y1), Math.max(box.y0, box.y1)];
+    const picked: SelectedPoint[] = [];
+    for (const pt of tools.points) {
+      const px = c.convertToPixel({ geoIndex: 0 }, [pt.lon, pt.lat]) as number[] | null;
+      if (px && px[0] >= xa && px[0] <= xb && px[1] >= ya && px[1] <= yb) {
+        const sp = p.build.pointAt(pt.series, pt.index);
+        if (sp) picked.push(sp);
+      }
+    }
+    p.onLasso?.(picked, additive);
+  };
+
+  return (
+    <div style={{ position: "relative", width: p.width, height: p.height }}>
+      <div ref={host} role="img" aria-label={p.label} style={{ width: p.width, height: p.height }} data-testid="chart" />
+      {tools && (
+        <div role="toolbar" aria-label="Map tools" style={{ position: "absolute", top: 6, right: 6, display: "flex", flexDirection: "column", gap: 4 }} onPointerDown={(e) => e.stopPropagation()}>
+          {tools.zoom && (
+            <>
+              <button type="button" aria-label="Zoom in" style={toolButton} onClick={() => zoomBy(1.5)}>
+                +
+              </button>
+              <button type="button" aria-label="Zoom out" style={toolButton} onClick={() => zoomBy(1 / 1.5)}>
+                −
+              </button>
+            </>
+          )}
+          {tools.lasso && (
+            <button type="button" aria-label="Lasso select" aria-pressed={lasso} style={{ ...toolButton, background: lasso ? "#cfe3f7" : toolButton.background }} onClick={() => setLasso(!lasso)}>
+              ▢
+            </button>
+          )}
+        </div>
+      )}
+      {tools?.lasso && lasso && (
+        <div
+          data-testid="lasso-layer"
+          style={{ position: "absolute", inset: 0, cursor: "crosshair", touchAction: "none" }}
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            const r = e.currentTarget.getBoundingClientRect();
+            const x = e.clientX - r.left;
+            const y = e.clientY - r.top;
+            e.currentTarget.setPointerCapture?.(e.pointerId);
+            setDrag({ x0: x, y0: y, x1: x, y1: y });
+          }}
+          onPointerMove={(e) => {
+            if (!drag) return;
+            const r = e.currentTarget.getBoundingClientRect();
+            setDrag({ ...drag, x1: e.clientX - r.left, y1: e.clientY - r.top });
+          }}
+          onPointerUp={(e) => {
+            if (!drag) return;
+            finishLasso(drag, e.ctrlKey || e.metaKey || e.shiftKey);
+            setDrag(null);
+            setLasso(false);
+          }}
+        >
+          {drag && <div style={{ position: "absolute", left: Math.min(drag.x0, drag.x1), top: Math.min(drag.y0, drag.y1), width: Math.abs(drag.x1 - drag.x0), height: Math.abs(drag.y1 - drag.y0), border: "1px dashed #0f6cbd", background: "rgba(15,108,189,0.12)" }} />}
+        </div>
+      )}
+    </div>
+  );
 }

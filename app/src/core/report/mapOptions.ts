@@ -108,6 +108,30 @@ function locate(inp: ChartInput, gaz: Gazetteer, regions: ("country" | "state" |
   return { rows, missing: [...missing], q };
 }
 
+/** The zoom and lasso buttons the Format pane asks for (off by default, like Desktop's). */
+function mapTools(f: FormatReader, points: NonNullable<ChartBuild["mapTools"]>["points"]): ChartBuild["mapTools"] {
+  const zoom = f.bool("mapControls", "showZoomButtons", false);
+  const lasso = f.bool("mapControls", "showLassoButton", false);
+  return zoom || lasso ? { zoom, lasso, points } : undefined;
+}
+
+/** Meters on the ground per screen pixel of the world map drawn about 800 pixels wide at zoom 1. */
+const METERS_PER_PIXEL = 40075016 / 800;
+
+function heatLayer(f: FormatReader, data: number[][], vmin: number, vmax: number, hasSize: boolean): { series: O; visualMap: O } {
+  const unit = f.str("heatMap", "unit", "pixels");
+  const radius = Math.max(2, f.num("heatMap", "filterRadius", 20));
+  const zoom = Math.max(1, f.num("mapControls", "zoomLevel", 1));
+  const px = unit === "meters" ? Math.max(2, radius / (METERS_PER_PIXEL / zoom)) : radius;
+  const c0 = f.color("heatMap", "color0") ?? "#2b83ba";
+  const c50 = f.color("heatMap", "color50") ?? "#ffffbf";
+  const c100 = f.color("heatMap", "color100") ?? "#d7191c";
+  return {
+    series: { type: "heatmap", coordinateSystem: "geo", data, pointSize: px, blurSize: px, itemStyle: { opacity: opacityOf(f.num("heatMap", "transparency", 0)) } },
+    visualMap: { show: false, min: hasSize ? vmin : 0, max: hasSize ? Math.max(vmax, vmin + 1e-9) : 1, calculable: false, inRange: { color: [c0, c50, c100] } },
+  };
+}
+
 // ---- bubble map ----------------------------------------------------------------------------------------------
 
 export function bubbleMap(inp: ChartInput, gaz: Gazetteer): ChartBuild {
@@ -151,18 +175,25 @@ export function bubbleMap(inp: ChartInput, gaz: Gazetteer): ChartBuild {
     };
   });
   const hasSeries = !!ser;
+  // the heat map layer replaces the bubbles: the density of the size values (or of the places when there is no size)
+  const heatOn = f.bool("heatMap", "show", false);
+  const heat = heatOn ? heatLayer(f, rows.map((r, i) => [r.lon, r.lat, sizes[i] || (sc ? 0 : 1)]), smin, smax, !!sc) : null;
   const option: O = {
     animation: false,
-    legend: legendBlock(f, theme, hasSeries),
+    legend: heat ? { show: false } : legendBlock(f, theme, hasSeries),
     tooltip: { trigger: "item", confine: true, formatter: (pa: O) => `${pa.marker}${pa.data[3] || pa.seriesName}${sc ? `<br/>${sc.label}: <b>${valueText(pa.data[2], sc.format ?? null, f, "labels")}</b>` : ""}` },
     geo: mapGeo(f, themeKey, rows, f.bool("mapStyles", "showLabels", false), "world"),
     backgroundColor: (MAP_THEMES[themeKey] ?? MAP_THEMES.canvasLight).sea,
-    series,
+    series: heat ? [heat.series] : series,
+    ...(heat ? { visualMap: heat.visualMap } : {}),
   };
+  const points: NonNullable<ChartBuild["mapTools"]>["points"] = [];
+  list.forEach((s, si) => s.items.forEach(({ r }, di) => points.push({ series: si, index: di, lon: r.lon, lat: r.lat })));
   return {
     option,
     count: rows.length,
     notice: summary(missing),
+    mapTools: mapTools(f, heat ? [] : points),
     pointAt: (si, di) => {
       const it = list[si]?.items[di]?.r;
       if (!it || !cat) return null;

@@ -1,7 +1,7 @@
 // View state of the open report that is not part of the document: the selected data points, drill positions,
 // an active drillthrough, collapsed matrix rows, the page being viewed. Observable with useSyncExternalStore.
 import type { FilterDef } from "./filters";
-import { toggleSelection, type SelectedPoint, type Selection } from "./interactions";
+import { samePoint, toggleSelection, type SelectedPoint, type Selection } from "./interactions";
 import type { DrillState } from "./queryBuilder";
 import { NO_DRILL } from "./queryBuilder";
 
@@ -99,6 +99,15 @@ export class ReportRuntime {
 
   select(page: string, visual: string, point: SelectedPoint, additive: boolean): void {
     this.set({ selection: toggleSelection(this.snap.selection, page, visual, point, additive) });
+  }
+
+  /** Sets the selection to these points (a lasso); with `additive` they are added to the points already selected in this visual. */
+  selectMany(page: string, visual: string, points: SelectedPoint[], additive: boolean): void {
+    const cur = this.snap.selection;
+    const keep = additive && cur && cur.page === page && cur.visual === visual ? cur.points : [];
+    const merged = [...keep];
+    for (const p of points) if (!merged.some((m) => samePoint(m, p))) merged.push(p);
+    this.set({ selection: merged.length ? { page, visual, points: merged } : null });
   }
 
   clearSelection(): void {

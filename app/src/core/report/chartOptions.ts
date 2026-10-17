@@ -15,6 +15,7 @@ import { seriesColor, type Theme } from "./theme";
 import type { VisualModel } from "./visualDoc";
 import { visualType } from "./visualTypes";
 import { gazetteer } from "./geo";
+import { tooltipLook } from "./tooltipLook";
 import { bubbleMap, filledMap } from "./mapOptions";
 
 import type { O } from "./chartFormat";
@@ -37,6 +38,8 @@ export interface ChartBuild {
   count: number;
   /** Something the person should know about the drawing, shown under the chart (for example locations a map could not place). */
   notice?: string;
+  /** Buttons drawn on a map (zoom, lasso) and where its points are, so that a lasso can pick the points inside a rectangle. */
+  mapTools?: { zoom: boolean; lasso: boolean; points: { series: number; index: number; lon: number; lat: number }[] };
 }
 
 const DIM = 0.35;
@@ -836,6 +839,46 @@ function gauge(inp: ChartInput): ChartBuild {
 
 /** Builds the chart for the visual, or null when the visual is not an ECharts visual. */
 export function buildChart(inp: ChartInput): ChartBuild | null {
+  const b = buildChartRaw(inp);
+  if (b) styleTooltip(b.option, new FormatReader(inp.visual.json, inp.theme, inp.visual.visualType));
+  return b;
+}
+
+/** The look of the hover tooltip from the Tooltips card: colors, font, bold values, transparency, and the switch. */
+function styleTooltip(option: O, f: FormatReader): void {
+  const t = option.tooltip;
+  if (!t) return;
+  const k = tooltipLook(f);
+  if (!k.show) {
+    option.tooltip = { show: false };
+    return;
+  }
+  const wrap = (fn: unknown) => {
+    if (typeof fn !== "function") return fn;
+    return (...args: unknown[]) => {
+      let html = String((fn as (...a: unknown[]) => unknown)(...args));
+      if (!k.valuesBold) html = html.replace(/<\/?b>/g, "");
+      else if (k.valueColor) html = html.replace(/<b>/g, `<b style="color:${k.valueColor}">`);
+      return html;
+    };
+  };
+  const text = {
+    ...(k.titleColor ? { color: k.titleColor } : {}),
+    ...(k.fontFamily ? { fontFamily: k.fontFamily } : {}),
+    ...(k.fontSize !== null ? { fontSize: k.fontSize } : {}),
+    ...(k.bold ? { fontWeight: "bold" } : {}),
+    ...(k.italic ? { fontStyle: "italic" } : {}),
+  };
+  option.tooltip = {
+    ...t,
+    ...(typeof t.formatter === "function" && (!k.valuesBold || k.valueColor) ? { formatter: wrap(t.formatter) } : {}),
+    ...(k.background || k.opacity < 1 ? { backgroundColor: `color-mix(in srgb, ${k.background ?? "#ffffff"} ${Math.round(k.opacity * 100)}%, transparent)` } : {}),
+    ...(Object.keys(text).length ? { textStyle: text } : {}),
+    ...(k.underline ? { extraCssText: "text-decoration: underline;" } : {}),
+  };
+}
+
+function buildChartRaw(inp: ChartInput): ChartBuild | null {
   const fam = visualType(inp.visual.visualType)?.family;
   switch (fam) {
     case "cartesian":

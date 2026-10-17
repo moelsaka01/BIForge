@@ -99,3 +99,25 @@ describe("data source model", () => {
     expect(listDataSources({ model: { tmdl: {} } } as never)).toEqual([]);
   });
 });
+
+describe("Home ribbon", () => {
+  it("SQL Server and Enter data open Get data on that source, and Data source settings opens the settings", async () => {
+    const a = makeApp();
+    render(a.element);
+    await act(async () => void (await a.registry.execute("file.open", { path: PBIP })));
+    const ribbon = within(await waitFor(() => document.querySelector('[data-testid="ribbon"]') as HTMLElement));
+    for (const [button, kind] of [["SQL Server", "sqlserver"], ["Enter data", "inline"]] as const) {
+      fireEvent.click(ribbon.getByText(button));
+      const dlg = await waitFor(() => {
+        const e = document.querySelector('[aria-label="Import data"]') as HTMLElement | null;
+        if (!e) throw new Error("no dialog");
+        return e;
+      });
+      expect((within(dlg).getByLabelText("Source type") as HTMLSelectElement).value).toBe(kind);
+      fireEvent.click(within(dlg).getByText("Cancel"));
+      await waitFor(() => expect(document.querySelector('[aria-label="Import data"]')).toBeNull());
+    }
+    fireEvent.click(ribbon.getByText("Data source settings"));
+    await waitFor(() => expect(document.querySelector('[aria-label="Data source settings"]')).not.toBeNull());
+  });
+});

@@ -6,7 +6,7 @@ D | Open (file dialog for a project)
 D | Options and settings entry
 D | About entry
 P | Data-source cards: Blank report, Excel workbook, Get data from other sources
-N | Card: SQL Server
+D | Card: SQL Server
 N | Card: Learn with sample data (own sample project)
 D | Collapsible Recommended section with tip carousel (original tips)
 D | Recent list: keyword filter, date filter, remove entry
@@ -61,11 +61,11 @@ N | Format painter
 D | Get data menu
 N | Excel workbook
 N | Text/CSV
-N | SQL Server
-N | Enter data
+D | SQL Server
+D | Enter data
 N | Recent sources
 D | Transform data (opens Power Query editor)
-N | Transform data menu: Data source settings
+P | Transform data menu: Data source settings
 N | Transform data menu: Edit parameters
 D | Refresh
 ### Insert

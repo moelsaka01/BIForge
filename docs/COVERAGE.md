@@ -9,17 +9,22 @@ Last updated: 2026-10-17, after the scope-change session was completed (see PROG
 | Platform | CI build + tests on Windows | Done-tested (workflow green on windows-latest) |
 | Connectivity | CSV import (auto types, delimiter, header option) | Done-tested (crates/engine/tests/import.rs). Empty text fields load as "" (numbers, dates, booleans stay blank), like Power Query |
 | Connectivity | Excel import (sheet pick, header row, dates, duplicate headers) | Done-tested for .xlsx (calamine also reads .xls/.xlsb/.ods through the same code, untested) |
-| Connectivity | JSON / Parquet import | Done-tested (JSON array of objects; Parquet written by DuckDB itself) |
+| Connectivity | JSON / Parquet import | Done-tested. JSON: an array of records, one record, an object holding arrays, or JSON lines; nested records become dotted columns (`address.city`, four levels) and the partition M expands them with Table.ExpandRecordColumn; lists stay JSON text (the M type step then needs a change by hand in Desktop). Files over 100 MB go through DuckDB without expansion |
 | Connectivity | SQLite connector (pick table, import) | Done-tested |
-| Connectivity | PostgreSQL connector (list tables, import, password in Windows Credential Manager) | Done-tested in CI against a real PostgreSQL (run 38754396338); the test is skipped locally unless BIFORGE_TEST_PG is set (no server on the dev machine). No TLS yet. Whole tables only (no custom SQL). |
+| Connectivity | PostgreSQL connector (list tables, import, custom SQL, password in Windows Credential Manager) | Done-tested in CI against a real PostgreSQL (the test is skipped locally unless BIFORGE_TEST_PG is set). No TLS yet |
 | Connectivity | Credentials in Windows Credential Manager, never in project files | Done-tested (round trip with the real store; source specs contain no secret) |
 | Connectivity | Refresh (one table, all tables; a failed refresh keeps the old data) | Done-tested (engine staging swap + session tests) |
 | Connectivity | Row transfer to the UI as Arrow | Deferred: grid pages travel as JSON text (every cell a string); Arrow IPC when visuals need bulk data |
 | Connectivity | Large imports | Partial: Excel/SQLite/PostgreSQL read the whole source into memory before loading; CSV/JSON/Parquet stream inside DuckDB |
-| Connectivity | ODBC / other database sources | Not started |
+| Connectivity | SQL Server (tiberius): tables, views, custom SQL (sp_describe_first_result_set), SQL login or Windows authentication (Windows only), TLS with an optional "trust the server certificate" | Done-tested in CI against SQL Server 2022 in a container (job `sqlserver`; types int, bigint, decimal, date, bit, nvarchar; custom SQL; preview). Not run against Azure SQL, Express with Windows authentication or a named instance over the browser service |
+| Connectivity | MySQL / MariaDB (mysql crate): tables, custom SQL, password in Credential Manager, partition M `MySQL.Database` | Done-tested in CI against MySQL 8 (Windows runner) and in the real window. No TLS yet. MariaDB is expected to work (same protocol) but was not run |
+| Connectivity | ODBC (odbc-api): any driver on the machine; flavors Access, Oracle, Db2, Teradata, SAP HANA, Redshift, Snowflake and a plain connection string; tables from SQLTables, custom SQL, driver list, password never in the connection string | Done-tested with the real Access driver on this machine (types, custom SQL, table list, refused password in string, e2e). **Oracle, Db2, Teradata, HANA, Redshift, Snowflake, BigQuery, Databricks, Sybase were not run against their drivers**: their connection-string templates and Desktop M (`Oracle.Database`, `DB2.Database`, `Teradata.Database`, `AmazonRedshift.Database`; the others `Odbc.Query`) are written but untested against a server. The driver must be installed (64-bit) |
+| Connectivity | Web (reqwest): HTML tables (scraper), JSON (arrays, nested records), CSV, XML; Basic authentication; OData v4 JSON feeds with paging and entity-set listing | Done-tested against a local HTTP server (crates/engine/tests/connectors.rs) and in the real window. Not supported: custom request headers, OAuth, POST, pages that draw their tables with scripts, OData v2/XML |
+| Connectivity | XML (quick-xml) and PDF (lopdf) tables, fixed-width text, Enter data (typed grid) | XML, fixed-width and Enter data Done-tested (engine tests, M parse/evaluation, dialog tests, e2e for XML). PDF Partial: text laid out in a grid is found (tested on generated PDFs); scanned pages and PDFs with custom font encodings give nothing |
+| Connectivity | Not built | Generic OLE DB, Analysis Services, Active Directory, Exchange, SharePoint (list/folder, on-premises servers), Python/R script source, Blank query source, DirectQuery, Excel through the ACE provider (`.xls` through calamine is untested), privacy levels (not stored in PBIP; BIForge never sends data from one source to another) |
 | Power Query | M parser (license check first) | Done-tested (crates/m/tests/parse.rs). License check recorded in research/m-parser-license.md: Microsoft's powerquery-parser is MIT but TypeScript, so BIForge has its own Rust parser; it is not embedded. Not covered: `section` documents, function types, implicit projection `[[a],[b]]`. Not compared with Microsoft's parser on a corpus |
 | Power Query | M evaluator folding to DuckDB SQL (symbolic scalars, CTE chains with a row-order column) | Partial, tested: 40 `Table.*` functions plus `#table` and 90 scalar, list and source functions (research/m-semantics.md), crates/engine/tests/m_queries.rs (23 tests, hand-computed rows), m_transforms.rs (7), m_partitions.rs (the M the app writes for Sales, Customer and Date gives exactly the CSV import). **Several semantics are readings, not checked against Desktop** (null comparison, rounding, pivot/unpivot nulls, ...): the cases to check are in tests/m/README.md. Not supported: Transpose, Merge Columns, error handling (no cell errors), GroupKind.Local, nested tables, custom functions over tables |
-| Power Query | M sources | Partial: Csv.Document, Excel.Workbook (sheets), Parquet.Document, Json.Document (array of objects), Folder.Files / Folder.Contents, SQLite through Odbc.Query. **Not supported:** Web, PostgreSQL, OData and other connectors (clear error; tables imported from PostgreSQL keep refreshing through their import source) |
+| Power Query | M sources | Partial: Csv.Document, Excel.Workbook (sheets), Parquet.Document, Json.Document (array of objects), Folder.Files / Folder.Contents, SQLite through Odbc.Query, `#table`. **Not evaluated by BIForge's own M engine:** Sql.Database, PostgreSQL.Database, MySQL.Database, Oracle.Database, OData.Feed, Web.* and the other connectors (clear error); tables imported from them keep refreshing through their import source, and the partition M (written for every connector, parsed by BIForge's M parser in `m_partitions.rs`) is what Power BI Desktop runs |
 | Power Query | Applied Steps model (parse the `let` into steps; insert in the middle, delete, rename, move, delete until end, edit a step; references rewired) | Done-tested (crates/m/tests/steps.rs, queries.test.ts, pq.test.tsx). Rebuilding the text drops comments between steps |
 | Power Query | Transforms from the ribbon: change type, filter rows (12 operators), sort, keep/remove top/bottom/range rows, remove duplicates and blank rows, choose/remove/keep/reorder/rename/duplicate columns, replace values, split column (delimiter, positions, lengths, repeated length), group by (8 aggregations), merge (6 join kinds, 5 offered), append, pivot, unpivot (3 forms), fill down/up, custom/conditional/index columns, text format, round, use headers | Done-tested (crates/engine/tests/m_transforms.rs runs the M each one writes; dialogs.test.ts checks the forms). Date/time and number-statistics transforms, extract, parse, merge columns, column from examples and detect data type are shown disabled with "Not implemented" |
 | Power Query | Query editor UI: queries pane (new, duplicate, rename, delete, enable load), Applied Steps pane, formula bar, preview grid with column menus, ribbon (Home, Transform, Add Column, View) built from the command inventory, dialogs for every transform, Close & Apply / Apply / discard | Partial, tested with jsdom (app/src/views/pq/pq.test.tsx, 14 tests) and looked at in a browser against the real engine (`pq_harness`: filter, merge + expand, Advanced Editor with real Monaco, Apply loads 99 rows). **Not run inside the Tauri window by hand.** Limits: preview is the first 1000 rows, no column quality/distribution/profile, no drag to reorder columns, a loaded query cannot be renamed (renaming a table is not implemented), no parameters, no query groups, no data source settings |
@@ -94,7 +99,7 @@ Last updated: 2026-10-17, after the scope-change session was completed (see PROG
 | Core | Open / save commands wired to disk through Tauri | Partial: Rust command wrappers tested; TS `tauriIO.ts` and dialogs not tested |
 | UI | Host screen (temporary: toolbar, view tabs, recovery banner) | Removed in Phase 6: the app opens on the start screen. The status banner is gone from the main UI; the About dialog lists what works and what does not (core/info.ts) |
 | UI | Data pane (tables, columns, measures, search, refresh buttons) | Done-tested (jsdom) |
-| UI | Import dialog (all six sources) | Partial: form logic tested (importForm); opening it from the ribbon, the start screen and Get data with the chosen source is tested (shell.ui.test.tsx); the dialog's own fields and a real import through it have no automated test and were not exercised in the real app |
+| UI | Get data dialog: 21 connectors in File / Database / Online groups, per-connector fields, Navigator (list, click for a preview of 20 rows, tick several tables, each imported under its name), SQL statement option, ODBC driver list filtered per flavor, Enter data grid, passwords to Credential Manager | Done-tested (importDialog.test.tsx, connectors.test.ts) and in the real window for Web, XML, Access, MySQL (e2e). Ribbon: Get data menu, SQL Server, Enter data |
 | UI | Data view: virtualized grid, column types, sort | Done-tested (jsdom, 100,000-row fake engine). Single-column sort, read-only; no column resize. Decimal numbers use the default General format (format.test.ts); dates still show DuckDB text, not the Power BI locale format |
 | UI | Model view: table cards, drag-to-create relationship, edit panel | Done-tested (jsdom drag events). Cards sit in an automatic grid: no moving, zoom or hiding columns |
 | UI | Report view (canvas, page tabs, Filters, Visualizations, Data panes) laid out like the Desktop reference | Done-tested (jsdom: shell.ui.test.tsx, reportView*.test.tsx) and looked at in a browser against the real engine. Panes collapse to a rail with the » and « arrows, resize from their edge (pointer or arrow keys) and are remembered per shell. Docking is fixed per shell (Classic: three panes on the right; Modern: Data left, one switcher sidebar right); dragging a pane to another side is not implemented |
@@ -116,16 +121,16 @@ Last updated: 2026-10-17, after the scope-change session was completed (see PROG
 | UI | Options dialog (every Global and Current File page listed) and "Use system setting" theme following Windows | Partial, tested (scope.ui.test.tsx): only settings with an effect are enabled; the rest are listed and marked Not implemented |
 | UI | System keys (Print Screen, Win+key, Alt+Tab) are never intercepted; an Alt tap no longer enters Windows menu mode and swallows the next key | Done-tested for key tips (scope.ui.test.tsx) and the Rust filter predicate (syskeys.rs). The real-window fix was checked by hand: 5 of 5 failures before, 0 of 5 after |
 | UI | Editable TMDL view (undoable) and on-object formatting handles (Modern) | Done-tested in jsdom (scope.ui.test.tsx) |
-| Connectivity | SQL Server connector (tiberius) | Partial: code and UI exist; **never run against a real SQL Server** (crates/engine/tests/import.rs is gated by BIFORGE_TEST_MSSQL and skips otherwise), so it is not Done-tested |
+| UI | Data source settings (Home > Queries): one row per place with its tables, stored-password state, Edit permissions (save / clear), Change source (every table of the source is refreshed from the new location) | Done-tested (dataSources.ui.test.tsx). Not in the File > Options menu yet; no privacy-level settings (see above) |
 
 ## Inventory status (generated by `node tools/inventory/build.mjs` from docs/INVENTORY.md's sources; every item's status is in docs/INVENTORY.md)
 <!-- inventory-status:begin -->
 | Inventory area | Items | Done-tested | Partial | Not started |
 | --- | ---: | ---: | ---: | ---: |
-| Start screen | 12 | 7 | 1 | 4 |
+| Start screen | 12 | 8 | 1 | 3 |
 | Title bar and window | 13 | 9 | 0 | 4 |
 | File menu and backstage | 20 | 10 | 1 | 9 |
-| Report view ribbon: Home tab | 19 | 9 | 0 | 10 |
+| Report view ribbon: Home tab | 19 | 11 | 1 | 7 |
 | Report view ribbon: Insert tab | 19 | 5 | 2 | 12 |
 | Report view ribbon: Modeling tab | 22 | 3 | 0 | 19 |
 | Report view ribbon: View tab | 19 | 9 | 1 | 9 |
@@ -141,19 +146,19 @@ Last updated: 2026-10-17, after the scope-change session was completed (see PROG
 | TMDL view | 8 | 1 | 0 | 7 |
 | Modeling features | 48 | 6 | 0 | 42 |
 | DAX language | 15 | 8 | 0 | 7 |
-| Power Query editor: window and ribbon | 94 | 32 | 1 | 61 |
+| Power Query editor: window and ribbon | 94 | 33 | 1 | 60 |
 | M language | 12 | 2 | 0 | 10 |
-| Get data: connectors | 47 | 7 | 0 | 40 |
+| Get data: connectors | 47 | 21 | 15 | 11 |
 | Options dialog: Global | 61 | 4 | 0 | 57 |
 | Options dialog: Current File | 23 | 0 | 0 | 23 |
 | Dialogs | 48 | 12 | 0 | 36 |
 | Keyboard shortcuts | 37 | 6 | 0 | 31 |
 | Export, print and file formats | 15 | 2 | 0 | 13 |
 | Accessibility and platform | 12 | 1 | 1 | 10 |
-| Format pane cards per visual | 1264 | 219 | 311 | 734 |
+| Format pane cards per visual | 1264 | 220 | 311 | 733 |
 | DAX functions | 317 | 268 | 0 | 49 |
 | M standard library | 652 | 120 | 0 | 532 |
-| **Total** | **3008** | **823** | **324** | **1861** |
+| **Total** | **3008** | **842** | **340** | **1826** |
 <!-- inventory-status:end -->
 
 ## Online track (Publish & Share; plan in docs/ONLINE_PLAN.md)

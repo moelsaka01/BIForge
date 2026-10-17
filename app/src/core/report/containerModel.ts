@@ -5,6 +5,7 @@ import type { CSSProperties } from "react";
 import { cssFont, opacityOf, readFont } from "../format/styles";
 import type { FormatReader } from "./formatReader";
 import type { Theme } from "./theme";
+import { tooltipLook, type TooltipLook } from "./tooltipLook";
 
 export interface TextBlock {
   text: string;
@@ -30,7 +31,7 @@ export interface ContainerModel {
   /** Which buttons of the hover toolbar are on. */
   headerButtons: { drillUp: boolean; drillToggle: boolean; nextLevel: boolean; expandAll: boolean; options: boolean; personalize: boolean };
   /** type: "Default" or "Canvas" (a report page is the tooltip). */
-  tooltip: { show: boolean; type: string; section: string };
+  tooltip: { show: boolean; type: string; section: string; look: TooltipLook };
   lockAspect: boolean;
 }
 
@@ -137,7 +138,7 @@ export function buildContainer(inp: ContainerInput): ContainerModel {
       options: f.bool("visualHeader", "showOptionsMenu", true),
       personalize: f.bool("visualHeader", "showPersonalizeVisualButton", true),
     },
-    tooltip: { show: f.bool("visualTooltip", "show", true), type: f.str("visualTooltip", "type", "Default"), section: f.str("visualTooltip", "section", "") },
+    tooltip: { show: f.bool("visualTooltip", "show", true), type: f.str("visualTooltip", "type", "Default"), section: f.str("visualTooltip", "section", ""), look: tooltipLook(f) },
     lockAspect: f.bool("lockAspect", "show", false),
   };
 }

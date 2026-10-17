@@ -279,6 +279,17 @@ fn postgres_import_against_a_real_server() {
             assert_eq!(c.bi_type, ty, "{name}");
         }
     }
+    // custom SQL replaces the table, a trailing semicolon is fine, and the preview is limited
+    let mut q = spec.clone();
+    if let SourceSpec::Postgres { query, .. } = &mut q {
+        *query = Some(format!("SELECT id, upper(name) AS n FROM {schema}.{table} WHERE id = 1;"));
+    }
+    if std::env::var("BIFORGE_REQUIRE_PG").is_ok() {
+        let tq = e.import("PgQ", &q, &c).unwrap();
+        assert_eq!((tq.row_count, tq.columns[1].name.as_str()), (1, "n"));
+        assert_eq!(e.fetch_page("PgQ", 0, 5, None).unwrap().rows[0][1].as_deref(), Some("ANN"));
+        assert_eq!(biforge_engine::source_preview(&spec, &c, 1).unwrap().rows.len(), 1);
+    }
     let bad = MemoryCredentialStore::default();
     bad.set(&spec.credential_key().unwrap(), "wrong-password").unwrap();
     assert!(e.import("PgT2", &spec, &bad).is_err());

@@ -35,6 +35,43 @@ beforeAll(async () => {
   await loadGazetteer();
 });
 
+describe("heat map and map tools", () => {
+  const rows = [[c("Seattle"), c(30)], [c("Lyon"), c(50)], [c("Paris"), c(70)]];
+  const v = () => visualOf("map", { Category: [City], Size: [Qty] });
+
+  it("the heat map replaces the bubbles with one density series colored by the three heat colors, sized in pixels or meters", () => {
+    const off = build(v(), rows);
+    expect(off.option.series[0].type).toBe("scatter");
+    let m = setFormat(v(), "heatMap", "show", lit.bool(true));
+    m = setFormat(m, "heatMap", "filterRadius", lit.num(33));
+    m = setFormat(m, "heatMap", "color0", lit.str("#000001"));
+    m = setFormat(m, "heatMap", "color50", lit.str("#000002"));
+    m = setFormat(m, "heatMap", "color100", lit.str("#000003"));
+    const on = build(m, rows);
+    expect(on.option.series.map((s: { type: string }) => s.type)).toEqual(["heatmap"]);
+    expect(on.option.series[0].coordinateSystem).toBe("geo");
+    expect(on.option.series[0].pointSize).toBe(33);
+    expect(on.option.series[0].data).toHaveLength(3);
+    expect(on.option.visualMap.inRange.color).toEqual(["#000001", "#000002", "#000003"]);
+    expect(on.option.visualMap.min).toBe(30);
+    expect(on.option.visualMap.max).toBe(70);
+    expect(on.option.legend.show).toBe(false);
+    const meters = build(setFormat(m, "heatMap", "unit", lit.str("meters")), rows);
+    expect(meters.option.series[0].pointSize).toBeLessThan(33); // 33 m on the ground is a fraction of a pixel on a world map
+    expect(build(setFormat(m, "heatMap", "transparency", lit.num(50)), rows).option.series[0].itemStyle.opacity).toBeCloseTo(0.5, 2);
+  });
+
+  it("the map tools exist only when asked for and list where the points are", () => {
+    expect(build(v(), rows).mapTools).toBeUndefined();
+    const t = build(setFormat(setFormat(v(), "mapControls", "showZoomButtons", lit.bool(true)), "mapControls", "showLassoButton", lit.bool(true)), rows).mapTools!;
+    expect(t.zoom && t.lasso).toBe(true);
+    expect(t.points).toHaveLength(3);
+    expect(t.points[0]).toMatchObject({ series: 0, index: 0 });
+    expect(t.points[0].lon).toBeCloseTo(-122.34, 1);
+    expect(build(setFormat(v(), "mapControls", "showZoomButtons", lit.bool(true)), rows).mapTools).toMatchObject({ zoom: true, lasso: false });
+  });
+});
+
 describe("bubble map", () => {
   const rows = [[c("Seattle"), c(30)], [c("Lyon"), c(50)], [c("Atlantis"), c(99)], [c("Paris"), c(70)]];
 
@@ -133,5 +170,30 @@ describe("filled map", () => {
     expect(mixColor("#000000", "#ffffff", 0.5)).toBe("#808080");
     expect(mixColor("#000", "#ff0000", 1)).toBe("#ff0000");
     expect(mixColor("red", "#ff0000", 0.5)).toBe("#ff0000");
+  });
+});
+
+describe("tooltip look (Format > General > Tooltips)", () => {
+  const v = () => visualOf("map", { Category: [City], Size: [Qty] });
+  const rows = [[c("Seattle"), c(30)]];
+  const apply = (props: [string, Parameters<typeof set>[3]][]) => props.reduce((m, [p, val]) => setFormat(m, "visualTooltip", p, val), v());
+
+  it("background, transparency, fonts and colors reach the chart tooltip; the switch hides it", () => {
+    const plain = build(v(), rows).option.tooltip;
+    expect(plain.backgroundColor).toBeUndefined();
+    const t = build(apply([["background", lit.str("#102030")], ["transparency", lit.num(50)], ["fontSize", lit.num(18)], ["fontFamily", lit.str("Courier New")], ["bold", lit.bool(true)], ["italic", lit.bool(true)], ["titleFontColor", lit.str("#ff0000")], ["underline", lit.bool(true)]]), rows).option.tooltip;
+    expect(t.backgroundColor).toBe("color-mix(in srgb, #102030 50%, transparent)");
+    expect(t.textStyle).toEqual({ color: "#ff0000", fontFamily: "Courier New", fontSize: 18, fontWeight: "bold", fontStyle: "italic" });
+    expect(t.extraCssText).toContain("underline");
+    expect(build(apply([["show", lit.bool(false)]]), rows).option.tooltip).toEqual({ show: false });
+  });
+
+  it("values can be un-bolded or colored", () => {
+    const sample = { marker: "", data: ["", "", 30, "Seattle"], seriesName: "S" };
+    expect(build(v(), rows).option.tooltip.formatter(sample)).toContain("<b>");
+    const plain = build(apply([["showValuesInBold", lit.bool(false)]]), rows).option.tooltip.formatter(sample);
+    expect(plain).not.toContain("<b>");
+    expect(plain).toContain("30");
+    expect(build(apply([["valueFontColor", lit.str("#00ff00")]]), rows).option.tooltip.formatter(sample)).toContain('<b style="color:#00ff00">');
   });
 });

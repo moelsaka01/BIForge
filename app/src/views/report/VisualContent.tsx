@@ -188,7 +188,7 @@ export function VisualContent({ page, visual, width, height, runOnClick }: { pag
       if (!build || build.count === 0) return <Notice muted>{build?.notice ?? "No data"}</Notice>;
       return (
         <div style={{ position: "relative", width, height }}>
-          <ChartView build={build} width={width} height={height} onPoint={onPoint} onContext={onContext} onHover={onHover} label={`${type.label}`} />
+          <ChartView build={build} width={width} height={height} onPoint={onPoint} onContext={onContext} onHover={onHover} onLasso={(points, additive) => c.dispatch("report.view.selectMany", { page: page.name, visual: visual.name, points, additive })} label={`${type.label}`} />
           {build.notice && (
             <div role="status" data-testid="chart-notice" style={{ position: "absolute", left: 4, right: 4, bottom: 2, fontSize: 11, padding: "1px 4px", background: "rgba(255,255,255,0.8)", color: "#a4262c" }}>
               {build.notice}

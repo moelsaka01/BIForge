@@ -507,6 +507,10 @@ export function registerReportCommands(r: CommandRegistry<Session>): void {
     const x = need<{ page: string; visual: string; point: SelectedPoint }>(a, ["page", "visual", "point"]);
     s.report.select(x.page, x.visual, x.point, a.additive === true);
   });
+  view("report.view.selectMany", "Select data points", (s, a) => {
+    const x = need<{ page: string; visual: string; points: SelectedPoint[] }>(a, ["page", "visual", "points"]);
+    s.report.selectMany(x.page, x.visual, x.points, a.additive === true);
+  });
   view("report.view.clearSelection", "Clear selection", (s) => s.report.clearSelection());
   view("report.view.drillDown", "Drill down", (s, a) => {
     const x = need<{ visual: string; levels: number; value: Lit }>(a, ["visual", "levels", "value"]);

@@ -251,7 +251,7 @@ N | New Power Query experience (Modern)
 D | Close & Apply, Apply, Discard
 D | New source (opens the import dialog)
 N | Recent sources
-N | Enter data
+D | Enter data
 N | Data source settings
 N | Manage parameters
 D | Refresh preview
@@ -340,51 +340,51 @@ N | Parameters as M values
 D | Text/CSV
 D | Excel workbook (.xlsx; .xls/.xlsb/.ods untested)
 D | JSON (array of objects)
-N | JSON (nested records, lists)
+D | JSON (nested records, lists)
 D | Parquet
-N | XML
-N | PDF
+D | XML
+P | PDF
 D | Folder (files, combine)
-N | Access database
+D | Access database
 N | Excel via ACE (legacy)
-N | Fixed-width text
+D | Fixed-width text
 ### Database
-N | SQL Server database (tiberius; M Sql.Database)
-N | Azure SQL Database via SQL Server connector
+D | SQL Server database (tiberius; M Sql.Database)
+P | Azure SQL Database via SQL Server connector
 D | SQLite (through ODBC)
 D | PostgreSQL database
-N | MySQL database
-N | Oracle database
-N | IBM Db2
-N | Teradata
-N | SAP HANA
-N | Sybase
-N | Amazon Redshift (ODBC)
-N | Snowflake (ODBC)
-N | Google BigQuery (ODBC)
-N | Databricks (ODBC)
-N | Generic ODBC
+D | MySQL database
+P | Oracle database
+P | IBM Db2
+P | Teradata
+P | SAP HANA
+P | Sybase
+P | Amazon Redshift (ODBC)
+P | Snowflake (ODBC)
+P | Google BigQuery (ODBC)
+P | Databricks (ODBC)
+D | Generic ODBC
 N | Generic OLE DB
 N | Analysis Services (local multidimensional/tabular)
-N | Custom SQL query text for any database connector
-N | Native query toggle
+D | Custom SQL query text for any database connector
+P | Native query toggle
 ### Other
-N | Web (HTML tables from a URL)
-N | Web API (reqwest, headers, JSON/CSV/XML body)
-N | OData feed
-N | REST via Web.Contents
+D | Web (HTML tables from a URL)
+P | Web API (reqwest, headers, JSON/CSV/XML body)
+D | OData feed
+P | REST via Web.Contents
 N | Active Directory (local)
 N | Exchange (on-premises)
 N | SharePoint list (on-premises)
 N | SharePoint folder (on-premises)
 N | Blank query
-N | Enter data
-N | Sample data (own)
+D | Enter data
+D | Sample data (own)
 N | Python/R script as source
-N | Connector credentials dialog (Windows, Basic, Database, Anonymous)
+P | Connector credentials dialog (Windows, Basic, Database, Anonymous)
 N | Privacy levels dialog
-N | Navigator (preview, multi-select)
-N | Data source settings (change source, edit permissions, clear)
+D | Navigator (preview, multi-select)
+D | Data source settings (change source, edit permissions, clear)
 N | DirectQuery mode for supported databases
 ## 23. Options dialog: Global
 ### Data Load
