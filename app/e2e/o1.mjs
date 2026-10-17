@@ -161,6 +161,9 @@ try {
     await importDlg.getByLabel("Password").fill(mpw);
     await importDlg.getByRole("button", { name: "List tables" }).click();
     const mnav = importDlg.getByRole("group", { name: "Navigator" });
+    const alertBox = importDlg.getByRole("alert");
+    await Promise.race([mnav.waitFor(), alertBox.waitFor()]);
+    if (await alertBox.count()) console.log("MySQL dialog says:", await alertBox.innerText());
     await mnav.waitFor();
     await mnav.getByRole("checkbox", { name: `Select ${mt}` }).check();
     await importDlg.getByRole("button", { name: "Import", exact: true }).click();
