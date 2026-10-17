@@ -6,7 +6,8 @@
 // dedicated repository, opens it again from the share link, and stops sharing. Without the token those steps are
 // skipped and reported as skipped.
 import { execSync, spawn } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, openSync, readdirSync, readFileSync } from "node:fs";
+import http from "node:http";
+import { existsSync, mkdirSync, mkdtempSync, openSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { chromium } from "playwright-core";
@@ -73,6 +74,102 @@ try {
   await newDlg.getByRole("button", { name: "Create" }).click();
   await page.getByRole("button", { name: /Publish & Share/ }).first().waitFor();
   check(true, "sample project opened; Publish & Share is in the ribbon");
+
+  // 1a. Get data connectors in the real window: Web (local HTTP server), XML file, Access through ODBC (when the driver exists),
+  // MySQL (when BIFORGE_TEST_MYSQL names a server). Every import goes through the Import data dialog and the Rust engine.
+  const importDlg = page.getByRole("dialog", { name: "Import data" });
+  const openImport = async (sourceLabel) => {
+    await page.getByRole("button", { name: "Excel workbook", exact: true }).first().click();
+    await importDlg.waitFor();
+    await importDlg.getByLabel("Source type").selectOption({ label: sourceLabel });
+  };
+  const hasTable = async (name) => { try { await page.getByRole("treeitem", { name: new RegExp(`^${name}`) }).first().waitFor({ timeout: 15000 }); return true; } catch { return false; } };
+  const pageServer = http.createServer((req, res) => {
+    if (req.url.startsWith("/t.html")) {
+      res.writeHead(200, { "Content-Type": "text/html" });
+      res.end("<html><table><caption>E2E Web</caption><tr><th>Region</th><th>Units</th></tr><tr><td>North</td><td>10</td></tr><tr><td>South</td><td>12</td></tr></table></html>");
+    } else { res.writeHead(404); res.end("no"); }
+  });
+  await new Promise((r) => pageServer.listen(0, "127.0.0.1", r));
+  try {
+    await openImport("Web");
+    await importDlg.getByLabel("Web address").fill(`http://127.0.0.1:${pageServer.address().port}/t.html`);
+    await importDlg.getByRole("button", { name: "Show tables" }).click();
+    const nav = importDlg.getByRole("group", { name: "Navigator" });
+    await nav.waitFor();
+    await nav.getByRole("button", { name: "E2E Web", exact: true }).click();
+    await nav.getByLabel("Preview").getByText("North").waitFor();
+    check(true, "Web: the navigator lists the page's table and previews its rows");
+    await nav.getByRole("checkbox", { name: "Select E2E Web" }).check();
+    await importDlg.getByRole("button", { name: "Import", exact: true }).click();
+    await importDlg.waitFor({ state: "detached" });
+    await page.waitForFunction(() => [...document.querySelectorAll("[role=treeitem]")].some((e) => /^E2E Web/.test(e.textContent ?? "")));
+    check(await hasTable("E2E Web"), "Web: the table is in the Data pane");
+  } finally {
+    pageServer.close();
+  }
+
+  const xmlFile = join(work, "e2e-shop.xml");
+  writeFileSync(xmlFile, `<shop><item id="1"><title>Pen</title><price>1.5</price></item><item id="2"><title>Ink</title><price>2</price></item></shop>`);
+  await openImport("XML");
+  await importDlg.getByLabel("File path").fill(xmlFile);
+  await importDlg.getByLabel("File path").blur();
+  const xnav = importDlg.getByRole("group", { name: "Navigator" });
+  await xnav.waitFor();
+  await xnav.getByRole("checkbox", { name: "Select item" }).check();
+  await importDlg.getByRole("button", { name: "Import", exact: true }).click();
+  await importDlg.waitFor({ state: "detached" });
+  await page.waitForFunction(() => [...document.querySelectorAll("[role=treeitem]")].some((e) => /^item/.test(e.textContent ?? "")));
+  check(await hasTable("item"), "XML: the repeating element became a table");
+
+  // Access database through the machine's ODBC driver
+  const accdb = join(work, "e2e-shop.accdb");
+  let accessReady = false;
+  try {
+    execSync(`powershell -NoProfile -Command "$c = New-Object -ComObject ADOX.Catalog; $null = $c.Create('Provider=Microsoft.ACE.OLEDB.12.0;Data Source=${accdb};')"`, { timeout: 60000 });
+    const sql = "$c = New-Object -ComObject ADODB.Connection; $c.Open('Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" + accdb + ";'); $null = $c.Execute('CREATE TABLE Parts (Id LONG, PartName TEXT(40))'); $null = $c.Execute(\\\"INSERT INTO Parts VALUES (1, 'Bolt')\\\"); $null = $c.Execute(\\\"INSERT INTO Parts VALUES (2, 'Nut')\\\"); $c.Close()";
+    execSync(`powershell -NoProfile -Command "${sql}"`, { timeout: 60000 });
+    accessReady = existsSync(accdb);
+  } catch { /* no ACE provider on this machine */ }
+  if (accessReady) {
+    await openImport("Access database");
+    await importDlg.getByLabel("File path").fill(accdb);
+    await importDlg.getByLabel("File path").blur();
+    const anav = importDlg.getByRole("group", { name: "Navigator" });
+    await anav.waitFor();
+    await anav.getByRole("button", { name: "Parts", exact: true }).click();
+    await anav.getByLabel("Preview").getByText("Bolt").waitFor();
+    await anav.getByRole("checkbox", { name: "Select Parts" }).check();
+    await importDlg.getByRole("button", { name: "Import", exact: true }).click();
+    await importDlg.waitFor({ state: "detached" });
+    await page.waitForFunction(() => [...document.querySelectorAll("[role=treeitem]")].some((e) => /^Parts/.test(e.textContent ?? "")));
+    const okA = await hasTable("Parts");
+    if (!okA) console.log("treeitems:", await page.getByRole("treeitem").allInnerTexts());
+    check(okA, "Access: the table was read through the ODBC driver");
+  } else {
+    console.log("SKIPPED: Access (no Access ODBC driver / ACE provider on this machine)");
+  }
+
+  // MySQL (CI starts a server and sets BIFORGE_TEST_MYSQL=host:port:database:user:password:table)
+  if (process.env.BIFORGE_TEST_MYSQL) {
+    const [mh, mp, md, mu, mpw, mt] = process.env.BIFORGE_TEST_MYSQL.split(":");
+    await openImport("MySQL database");
+    await importDlg.getByLabel("Server").fill(mh);
+    await importDlg.getByLabel("Port").fill(mp);
+    await importDlg.getByLabel("Database").fill(md);
+    await importDlg.getByLabel("User", { exact: true }).fill(mu);
+    await importDlg.getByLabel("Password").fill(mpw);
+    await importDlg.getByRole("button", { name: "List tables" }).click();
+    const mnav = importDlg.getByRole("group", { name: "Navigator" });
+    await mnav.waitFor();
+    await mnav.getByRole("checkbox", { name: `Select ${mt}` }).check();
+    await importDlg.getByRole("button", { name: "Import", exact: true }).click();
+    await importDlg.waitFor({ state: "detached" });
+    await page.waitForFunction((t) => [...document.querySelectorAll("[role=treeitem]")].some((e) => (e.textContent ?? "").startsWith(t)), mt);
+    check(await hasTable(mt), "MySQL: the table was imported in the real window");
+  } else {
+    console.log("SKIPPED: MySQL (set BIFORGE_TEST_MYSQL to run it)");
+  }
 
   // 1b. the Phase 7 objects and panes in the real window: text box, map from the bundled outlines, Format pane, group, Selection pane.
   // Everything is selected through the Selection pane, not by canvas coordinates, so that the test does not depend on the window size.
