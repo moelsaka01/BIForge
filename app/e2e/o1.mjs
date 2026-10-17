@@ -1,7 +1,7 @@
 // Real-window test of the O1 flow: drives the built Tauri app (WebView2) over the DevTools protocol.
 // Run: npm run e2e   (needs `npx tauri build --debug --no-bundle` first; see docs/PROGRESS.md)
 import { spawn } from "node:child_process";
-import { mkdirSync, mkdtempSync, readdirSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, openSync, readdirSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { chromium } from "playwright-core";
@@ -24,15 +24,18 @@ const child = spawn(exe, [], {
     WEBVIEW2_USER_DATA_FOLDER: join(work, "webview"),
     BIFORGE_TEST_PICKS: [parent].join("|"),
   },
-  stdio: "ignore",
+  stdio: ["ignore", openSync(join(work, "app.out.log"), "w"), openSync(join(work, "app.err.log"), "w")],
 });
+let exited = null;
+child.on("exit", (code, sig) => { exited = `exit code ${code} signal ${sig}`; });
+child.on("error", (e) => { exited = `spawn error ${e}`; });
 const pid = child.pid; // the only process this script ever stops
 let browser;
 try {
   for (let i = 0; i < 60 && !browser; i++) {
     try { browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`); } catch { await new Promise((r) => setTimeout(r, 1000)); }
   }
-  if (!browser) throw new Error("could not attach to the app window");
+  if (!browser) throw new Error(`could not attach to the app window (exe ${exe} exists: ${existsSync(exe)}; ${exited ?? "process still running"})`);
   const page = browser.contexts()[0].pages()[0];
   page.setDefaultTimeout(30000);
   await page.waitForSelector("text=Recent");
@@ -105,6 +108,9 @@ try {
 } finally {
   try { await browser?.close(); } catch {}
   try { process.kill(pid); } catch {}
+}
+for (const f of ["app.out.log", "app.err.log"]) {
+  try { const t = readFileSync(join(work, f), "utf8"); if (t.trim()) console.log(`--- ${f}\n${t.slice(-2000)}`); } catch {}
 }
 console.log("work dir", work);
 process.exit(failures ? 1 : 0);
