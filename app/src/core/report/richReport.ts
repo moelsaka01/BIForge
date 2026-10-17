@@ -44,7 +44,8 @@ const FIELDS: Record<string, { role: string; field: unknown }[]> = {
   decompositionTreeVisual: [{ role: "Analyze", field: Qty }, { role: "ExplainBy", field: Cat }, { role: "ExplainBy", field: column("Customer", "Country") }],
   keyDriversVisual: [{ role: "Target", field: column("Sales", "Channel") }, { role: "ExplainBy", field: Cat }],
   slicer: [{ role: "Values", field: column("Customer", "Country") }],
-  map: [{ role: "Category", field: column("Customer", "City") }],
+  map: [{ role: "Category", field: column("Customer", "City") }, { role: "Size", field: Qty }],
+  filledMap: [{ role: "Category", field: column("Customer", "Country") }, { role: "Y", field: Qty }],
 };
 
 /** A value of the right shape for a property of the given kind, different from any default. */

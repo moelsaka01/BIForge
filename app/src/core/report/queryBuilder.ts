@@ -90,6 +90,7 @@ function slotsFor(v: VisualModel, family: VisualFamily, drill?: DrillState): { g
       return { groups: roleSlots("Category"), values: roleSlots("Y"), extra: [] };
     case "treemap":
       return { groups: roleSlots("Group"), values: roleSlots("Values"), extra: [] };
+    case "map":
     case "scatter":
       return { groups: dedupe([...roleSlots("Category"), ...roleSlots("Series")]), values: [...roleSlots("X"), ...roleSlots("Y"), ...roleSlots("Size")], extra: [] };
     case "waterfall":

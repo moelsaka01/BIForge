@@ -24,11 +24,14 @@ import { fixtureModel, visualOf } from "../report/testFixture";
 import { DEFAULT_THEME } from "../report/theme";
 import { setFormat, setRawProp, type VisualModel } from "../report/visualDoc";
 import { VISUAL_TYPES } from "../report/visualTypes";
+import { loadGazetteer } from "../report/geo";
 import { CONTAINER_OBJECTS, visualObjects, type Kind } from "./capabilities";
 import { analyticsCards } from "./engine";
 
 const model = fixtureModel({ formats: { "Sales.Quantity": "#,0" } });
+await loadGazetteer();
 const Cat = column("Product", "Category");
+const City = column("Customer", "City");
 const Sub = column("Product", "Subcategory");
 const Country = column("Customer", "Country");
 const Prod = column("Product", "Product");
@@ -161,6 +164,8 @@ const SCENARIOS: Record<string, Scenario> = {
   funnel: chart("funnel", { Category: [Cat], Y: [Qty] }, [[t("Accessories"), n(30)], [t("Bikes"), n(50)], [t("Shoes"), n(20)]]),
   treemap: chart("treemap", { Group: [Cat, Sub], Values: [Qty] }, [[t("Bikes"), t("Road"), n(30)], [t("Bikes"), t("Mountain"), n(50)], [t("Shoes"), t("Run"), n(20)]]),
   scatterChart: chart("scatterChart", { Category: [Prod], Series: [Country], X: [Cost], Y: [Price], Size: [Qty] }, [[t("A"), t("France"), d(3), d(4), n(5)], [t("B"), t("Canada"), d(6), d(1), n(9)], [t("C"), t("France"), d(8), d(7), n(2)]]),
+  map: chart("map", { Category: [City], Series: [Country], Size: [Qty] }, [[t("Seattle"), t("United States"), n(30)], [t("Lyon"), t("France"), n(50)], [t("Paris"), t("France"), n(70)], [t("Toronto"), t("Canada"), n(10)]]),
+  filledMap: chart("filledMap", { Category: [Country], Y: [Qty] }, [[t("France"), n(30)], [t("Canada"), n(50)], [t("Germany"), n(20)]]),
   waterfallChart: chart("waterfallChart", { Category: [Cat], Y: [Qty] }, [[t("Accessories"), n(30)], [t("Bikes"), n(-50)], [t("Shoes"), n(20)]]),
   gauge: chart("gauge", { Y: [Qty], TargetValue: [Price] }, [[n(60), d(80)]]),
   tableEx: {
@@ -223,6 +228,7 @@ const SAMPLE_ARGS: unknown[] = [
   1234567.891,
   { value: 1234567.891, name: "N", data: { raw: 1234567.891, value: 1234567.891 }, seriesName: "S", marker: "", dataIndex: 1 },
   [{ value: 5, name: "N", data: { raw: 5, value: 5 }, seriesName: "S", seriesIndex: 0, marker: "" }],
+  [10, 20, 50, "L"], // a point of a scatter or bubble series: x, y, size, label
 ];
 
 /** A comparable text of a result: functions are replaced by what they return for sample arguments. */
@@ -326,7 +332,7 @@ describe("rendered coverage", () => {
 
   it("every authored visual type is measured", () => {
     const measured = new Set(Object.keys(SCENARIOS));
-    const missing = VISUAL_TYPES.map((t) => t.id).filter((id) => !measured.has(id) && id !== "textbox" && id !== "map");
+    const missing = VISUAL_TYPES.map((t) => t.id).filter((id) => !measured.has(id) && id !== "textbox");
     expect(missing).toEqual([]);
   });
 

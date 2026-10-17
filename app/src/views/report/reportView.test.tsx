@@ -78,13 +78,12 @@ describe("ReportView: drawing", () => {
     expect((await screen.findByRole("alert")).textContent).toContain("XIRR is not implemented");
   });
 
-  it("a visual without fields explains what to do; the map is marked as not implemented", async () => {
+  it("a visual without fields explains what to do", async () => {
     const t = setup();
     await t.run("report.visual.add", { page: "page1", type: "clusteredColumnChart" });
     await t.run("report.visual.add", { page: "page1", type: "map" });
     render(<t.Host />);
     expect((await screen.findAllByText(/Add fields to this visual/)).length).toBeGreaterThan(0);
-    expect(await screen.findByText(/Not yet implemented: map visuals are deferred/)).toBeTruthy();
   });
 
   it("table and card render values; the table shows a totals row", async () => {

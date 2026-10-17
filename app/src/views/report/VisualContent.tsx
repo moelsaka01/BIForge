@@ -9,7 +9,9 @@ import { buildCard, buildKpi, buildMatrix, buildMultiRowCard, buildTable } from 
 import type { PageModel, VisualModel } from "../../core/report/visualDoc";
 import { listPageNames } from "../../core/report/visualDoc";
 import { isStatic, visualType } from "../../core/report/visualTypes";
+import { loadGazetteer } from "../../core/report/geo";
 import { ChartView } from "./ChartView";
+import { registerWorld } from "./echartsSetup";
 import { DecompositionTreeView } from "./DecompositionTreeView";
 import { KeyInfluencersView } from "./KeyInfluencersView";
 import { CardView, KpiView, MatrixView, MultiRowCardView, TableView } from "./DomVisuals";
@@ -22,6 +24,19 @@ import { ButtonView, ImageView, PageNavigatorView, ShapeView, TextboxView } from
 export function VisualContent({ page, visual, width, height, runOnClick }: { page: PageModel; visual: VisualModel; width: number; height: number; runOnClick?: (e: React.MouseEvent) => boolean }) {
   const c = useReport();
   const [loaded, setLoaded] = useState<Loaded | null>(null);
+  const isMap = visualType(visual.visualType)?.family === "map";
+  const [geoReady, setGeoReady] = useState(false);
+  useEffect(() => {
+    if (!isMap) return;
+    let off = false;
+    void loadGazetteer().then((g) => {
+      registerWorld(g.world);
+      if (!off) setGeoReady(true);
+    });
+    return () => {
+      off = true;
+    };
+  }, [isMap]);
   useEffect(() => {
     if (isStatic(visual.visualType)) return;
     let off = false;
@@ -41,9 +56,10 @@ export function VisualContent({ page, visual, width, height, runOnClick }: { pag
     if (!loaded || loaded.kind !== "grouped") return null;
     const fam = visualType(visual.visualType)?.family;
     if (fam === "table" || fam === "card" || fam === "kpi") return null;
+    if (fam === "map" && !geoReady) return null;
     return buildChart({ visual, loaded, theme: c.theme, selected });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loaded, visual, c.theme, selectedKey]);
+  }, [loaded, visual, c.theme, selectedKey, geoReady]);
   const cats = (visual.roles.Category ?? []).map((p) => p.field);
   const drill = c.snap.drill[visual.name];
 
@@ -101,14 +117,6 @@ export function VisualContent({ page, visual, width, height, runOnClick }: { pag
     }
   }
   if (!type) return <Notice>Unknown visual type "{visual.visualType}".</Notice>;
-  if (type.deferred) {
-    return (
-      <Notice>
-        <strong>{type.label.replace(" (deferred)", "")}</strong>
-        <div>Not yet implemented: map visuals are deferred (they need online map tiles).</div>
-      </Notice>
-    );
-  }
   if (type.family === "decomposition") return <DecompositionTreeView page={page} visual={visual} width={width} height={height} />;
   if (type.family === "keyDrivers") return <KeyInfluencersView page={page} visual={visual} width={width} height={height} />;
   const bound = Object.values(visual.roles).some((l) => l.length > 0);
@@ -176,8 +184,18 @@ export function VisualContent({ page, visual, width, height, runOnClick }: { pag
       return <KpiView model={buildKpi(visual, loaded, c.theme)} theme={c.theme} width={width} height={height} />;
     default: {
       const build = chartBuild;
-      if (!build || build.count === 0) return <Notice muted>No data</Notice>;
-      return <ChartView build={build} width={width} height={height} onPoint={onPoint} onContext={onContext} onHover={onHover} label={`${type.label}`} />;
+      if (type.family === "map" && !geoReady) return <Notice muted>Loading map…</Notice>;
+      if (!build || build.count === 0) return <Notice muted>{build?.notice ?? "No data"}</Notice>;
+      return (
+        <div style={{ position: "relative", width, height }}>
+          <ChartView build={build} width={width} height={height} onPoint={onPoint} onContext={onContext} onHover={onHover} label={`${type.label}`} />
+          {build.notice && (
+            <div role="status" data-testid="chart-notice" style={{ position: "absolute", left: 4, right: 4, bottom: 2, fontSize: 11, padding: "1px 4px", background: "rgba(255,255,255,0.8)", color: "#a4262c" }}>
+              {build.notice}
+            </div>
+          )}
+        </div>
+      );
     }
   }
 }

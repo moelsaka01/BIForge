@@ -21,8 +21,6 @@ export interface VisualTypeDef {
   size: { width: number; height: number };
   /** Short text shown on the gallery button. */
   glyph: string;
-  /** Marked as not implemented in the UI; the visual shows a placeholder. */
-  deferred?: boolean;
   /** An object that shows no data (text box, shape, image, button, page navigator): inserted from the Insert tab, not the gallery. */
   static?: boolean;
 }
@@ -194,12 +192,25 @@ export const VISUAL_TYPES: VisualTypeDef[] = [
   { id: "slicer", label: "Slicer", family: "slicer", roles: [{ name: "Values", label: "Field", accepts: "column", max: 1 }], size: { width: 200, height: 240 }, glyph: "▽" },
   {
     id: "map",
-    label: "Map (deferred)",
+    label: "Map",
     family: "map",
-    roles: [{ name: "Category", label: "Location", accepts: "column", max: 1 }, { name: "Size", label: "Bubble size", accepts: "value", max: 1 }],
-    size: { width: 400, height: 300 },
+    roles: [
+      { name: "Category", label: "Location", accepts: "column", max: 1 },
+      series,
+      { name: "Size", label: "Bubble size", accepts: "value", max: 1 },
+      { name: "X", label: "Longitude", accepts: "value", max: 1 },
+      { name: "Y", label: "Latitude", accepts: "value", max: 1 },
+    ],
+    size: { width: 420, height: 300 },
     glyph: "🌐",
-    deferred: true,
+  },
+  {
+    id: "filledMap",
+    label: "Filled map",
+    family: "map",
+    roles: [{ name: "Category", label: "Location", accepts: "column", max: 1 }, { name: "Y", label: "Color saturation", accepts: "value", max: 1 }],
+    size: { width: 420, height: 300 },
+    glyph: "▦",
   },
 ];
 
@@ -235,4 +246,4 @@ export function defaultRole(typeId: string, kind: "column" | "value", current: R
   return candidates.find((r) => r.max === 1)?.name ?? null;
 }
 
-export const isChartFamily = (f: VisualFamily) => ["cartesian", "pie", "scatter", "treemap", "funnel", "waterfall", "gauge"].includes(f);
+export const isChartFamily = (f: VisualFamily) => ["cartesian", "pie", "scatter", "map", "treemap", "funnel", "waterfall", "gauge"].includes(f);

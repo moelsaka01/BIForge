@@ -61,7 +61,7 @@ describe("loading visuals", () => {
     expect((await s.data.load(s.p, s.page(), vis, EMPTY_VIEW)).kind).toBe("grouped");
   });
 
-  it("an unbound visual and the map placeholder load as empty", async () => {
+  it("an unbound visual loads as empty", async () => {
     const s = setup();
     const a = s.add("clusteredColumnChart", []);
     const m = s.add("map", []);

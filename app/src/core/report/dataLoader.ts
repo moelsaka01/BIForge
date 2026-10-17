@@ -107,7 +107,7 @@ export class ReportData {
 
   private async loadInner(project: Project, page: PageModel, visual: VisualModel, view: ViewState, model: ModelInfo): Promise<Loaded> {
     const type = visualType(visual.visualType);
-    if (!type || type.deferred) return { kind: "empty" };
+    if (!type) return { kind: "empty" };
     const started = performance.now();
     const rt: RuntimeFilters = { drillthrough: view.drillthrough };
     const filters = filtersFor(project, page, visual, rt);

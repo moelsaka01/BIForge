@@ -14,6 +14,8 @@ import { echartsText, opacityOf, readFont } from "../format/styles";
 import { seriesColor, type Theme } from "./theme";
 import type { VisualModel } from "./visualDoc";
 import { visualType } from "./visualTypes";
+import { gazetteer } from "./geo";
+import { bubbleMap, filledMap } from "./mapOptions";
 
 import type { O } from "./chartFormat";
 
@@ -33,6 +35,8 @@ export interface ChartBuild {
   pointAt(seriesIndex: number, dataIndex: number): SelectedPoint | null;
   /** Number of data points drawn (0: nothing to show). */
   count: number;
+  /** Something the person should know about the drawing, shown under the chart (for example locations a map could not place). */
+  notice?: string;
 }
 
 const DIM = 0.35;
@@ -848,6 +852,11 @@ export function buildChart(inp: ChartInput): ChartBuild | null {
       return waterfall(inp);
     case "gauge":
       return gauge(inp);
+    case "map": {
+      const gaz = gazetteer();
+      if (!gaz) return null;
+      return inp.visual.visualType === "filledMap" ? filledMap(inp, gaz) : bubbleMap(inp, gaz);
+    }
     default:
       return null;
   }

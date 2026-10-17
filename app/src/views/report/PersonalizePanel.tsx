@@ -23,7 +23,7 @@ export function PersonalizePanel({ page, visual, onClose }: { page: PageModel; v
       <label style={{ display: "flex", flexDirection: "column", gap: 2 }}>
         Visual type
         <Select size="small" aria-label="Visual type" value={visual.visualType} onChange={(_, d) => c.dispatch("report.visual.setType", { page: page.name, visual: visual.name, type: d.value })}>
-          {VISUAL_TYPES.filter((t) => !t.static && !t.deferred).map((t) => (
+          {VISUAL_TYPES.filter((t) => !t.static).map((t) => (
             <option key={t.id} value={t.id}>
               {t.label}
             </option>

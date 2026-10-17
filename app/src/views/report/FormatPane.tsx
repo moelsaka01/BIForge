@@ -334,7 +334,7 @@ export function FormatPane(p: FormatPaneProps) {
           </AccordionItem>
         )}
       </Accordion>
-      {shown.length === 0 && <div style={{ fontSize: 12, opacity: 0.7 }}>{type?.deferred ? "Not yet implemented: this visual has no format settings." : "No matching settings."}</div>}
+      {shown.length === 0 && <div style={{ fontSize: 12, opacity: 0.7 }}>No matching settings.</div>}
       {cond && (
         <CondFormatDialog
           open

@@ -101,9 +101,9 @@ export function VisualizationsPane(p: VisualizationsPaneProps) {
                 appearance={visual?.visualType === t.id ? "primary" : "outline"}
                 aria-label={t.label}
                 aria-pressed={visual?.visualType === t.id}
-                title={t.label + (t.deferred ? " - not yet implemented" : "")}
+                title={t.label}
                 onClick={() => pick(t.id)}
-                style={{ minWidth: 0, padding: "2px 0", fontSize: 13, opacity: t.deferred ? 0.55 : 1 }}
+                style={{ minWidth: 0, padding: "2px 0", fontSize: 13 }}
               >
                 {t.glyph}
               </Button>
@@ -113,7 +113,6 @@ export function VisualizationsPane(p: VisualizationsPaneProps) {
           {visual && type && (
             <>
               <div style={{ fontSize: 12, fontWeight: 600 }}>{type.label}</div>
-              {type.deferred && <div role="note" style={{ fontSize: 12, color: "#a4262c" }}>Not yet implemented: map visuals are deferred.</div>}
               {type.roles.map((r) => {
                 const list = visual.roles[r.name] ?? [];
                 return (

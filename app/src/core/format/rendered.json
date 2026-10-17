@@ -1692,6 +1692,7 @@
  },
  "scatterChart": {
   "bubbles": [
+   "bubbleSize",
    "markerShape"
   ],
   "categoryAxis": [
@@ -1777,6 +1778,76 @@
    "titleFontSize",
    "titleItalic",
    "titleText"
+  ]
+ },
+ "map": {
+  "bubbles": [
+   "bubbleSize",
+   "markerRangeType"
+  ],
+  "categoryLabels": [
+   "bold",
+   "color",
+   "fontFamily",
+   "fontSize",
+   "italic",
+   "show"
+  ],
+  "dataPoint": [
+   "defaultColor",
+   "fill",
+   "transparency"
+  ],
+  "legend": [
+   "bold",
+   "fontFamily",
+   "fontSize",
+   "italic",
+   "labelColor",
+   "position",
+   "show"
+  ],
+  "mapControls": [
+   "autoZoom",
+   "centerLatitude",
+   "centerLongitude",
+   "maxZoom",
+   "minZoom"
+  ],
+  "mapStyles": [
+   "mapTheme",
+   "showLabels"
+  ]
+ },
+ "filledMap": {
+  "categoryLabels": [
+   "show"
+  ],
+  "dataPoint": [
+   "defaultColor",
+   "fill",
+   "transparency"
+  ],
+  "labels": [
+   "color",
+   "labelDisplayUnits",
+   "labelPrecision",
+   "show"
+  ],
+  "mapControls": [
+   "autoZoom",
+   "centerLatitude",
+   "centerLongitude",
+   "maxZoom",
+   "minZoom"
+  ],
+  "mapStyles": [
+   "mapTheme"
+  ],
+  "stroke": [
+   "show",
+   "strokeColor",
+   "strokeWidth"
   ]
  },
  "waterfallChart": {
