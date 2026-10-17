@@ -191,3 +191,17 @@ describe("setup guides", () => {
     expect(freeTierLines(getGuide("backend-host")!, defaultAdapters())).toEqual(["Free; uses your PC"]);
   });
 });
+
+describe("static hosting guides", () => {
+  it("give click-by-click steps and a Connect button that is not a placeholder", () => {
+    for (const [id, words] of [["static-github-pages", ["Developer settings", "Tokens (classic)", "repo"]], ["static-cloudflare-pages", ["API Tokens", "Workers Scripts", "Account ID"]]] as const) {
+      const g = getGuide(id)!;
+      expect(g.steps!.length).toBeGreaterThanOrEqual(5);
+      for (const w of words) expect(g.steps!.join(" ")).toContain(w);
+      const connect = g.buttons.find((b) => b.id === "connect")!;
+      expect(connect.action.kind).toBe("connect");
+    }
+    expect(guideForAdapter("github-pages")!.id).toBe("static-github-pages");
+    expect(getGuide("scheduled-refresh")!.buttons[0].action.kind).toBe("continue");
+  });
+});

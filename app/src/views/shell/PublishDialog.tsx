@@ -2,7 +2,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { Button, Checkbox, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, Dropdown, Input, Option, Radio, RadioGroup } from "@fluentui/react-components";
 import { freeTierLines, getGuide, guideForAdapter, guideHiddenKey, type Guide } from "../../core/publish/guides";
 import { PROVIDER_OF } from "../../core/publish/publishUi";
-import type { AccessLevel, AdapterInfo, Envelope, IncludedTable, Provider, Target } from "../../core/publish/types";
+import type { AccessLevel, AdapterInfo, Envelope, IncludedTable, Provider, RefreshSchedule, Target } from "../../core/publish/types";
 import { useEnv, useSettings } from "./ShellContext";
 
 const STATUS_TEXT: Record<Target["status"], string> = {
@@ -304,6 +304,82 @@ function AddDestination({ onAdded }: { onAdded(): void }) {
   );
 }
 
+function RefreshSection({ target, publisherName }: { target: Target; publisherName: string }) {
+  const env = useEnv();
+  const { ui, state } = usePublishUi();
+  const on = target.settings.refresh;
+  const [schedule, setSchedule] = useState<RefreshSchedule>("daily");
+  const [picked, setPicked] = useState<string[] | null>(null);
+  const [sure, setSure] = useState(false);
+  const { files, blocked } = ui.refreshCandidates();
+  const tables = picked ?? files.map((f) => f.table);
+  const chosen = files.filter((f) => tables.includes(f.table));
+  const names = chosen.map((f) => f.path);
+  return (
+    <fieldset style={{ border: "1px solid var(--colorNeutralStroke2)", padding: 8, display: "flex", flexDirection: "column", gap: 6 }}>
+      <legend>Scheduled refresh</legend>
+      <div>
+        Where it runs: on GitHub's servers (GitHub Actions), in the public repository of this site. Nothing on this PC has to stay on. It reloads whole source files that BIForge copies into the repository, so only file sources work (CSV, Excel, JSON, Parquet, SQLite).
+      </div>
+      <div style={{ fontSize: 12, opacity: 0.8 }}>
+        Free for public repositories. GitHub may switch off scheduled workflows in a repository with no activity for 60 days. The runner downloads the BIForge command line from BIForge's releases page (or from the address in the repository variable BIFORGE_CLI_URL); until BIForge has published a release there, a run fails with a download error.
+      </div>
+      {on ? (
+        <>
+          <div role="status">Scheduled refresh is on ({on}).</div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <Button onClick={() => void env.run("publish.refresh.now")}>Refresh now</Button>
+            <Button onClick={() => void env.run("publish.refresh.disable")}>Turn off scheduled refresh</Button>
+          </div>
+        </>
+      ) : (
+        <>
+          {blocked.map((b) => (
+            <div key={b.table} role="note">{`${b.table}: cannot be refreshed there. ${b.reason}`}</div>
+          ))}
+          {files.length === 0 ? (
+            <div role="note">None of the published tables has a source file the runner could reload.</div>
+          ) : (
+            <>
+              <div>Source files to copy into the repository (whole files, including columns that are not published):</div>
+              {files.map((f) => (
+                <Checkbox
+                  key={f.table}
+                  label={`${f.table}: ${f.path}`}
+                  checked={tables.includes(f.table)}
+                  onChange={(_, d) => {
+                    setPicked(d.checked === true ? [...tables, f.table] : tables.filter((t) => t !== f.table));
+                    setSure(false);
+                  }}
+                />
+              ))}
+              <RadioGroup layout="horizontal" value={schedule} onChange={(_, d) => setSchedule(d.value as RefreshSchedule)} aria-label="Refresh schedule">
+                <Radio value="daily" label="Every day" />
+                <Radio value="weekly" label="Every week" />
+                <Radio value="manual" label="Only when I start it" />
+              </RadioGroup>
+              <Checkbox
+                label={target.access === "private" ? "I understand these whole files go to the repository, encrypted with the access key, and that my signing key and access key are stored as secrets of the repository." : "I understand these whole files go to a PUBLIC repository, readable by anyone, including columns that are not published, and that my signing key is stored as a secret of the repository."}
+                checked={sure}
+                onChange={(_, d) => setSure(d.checked === true)}
+              />
+              <div>
+                <Button
+                  appearance="primary"
+                  disabled={!sure || chosen.length === 0 || state.busy || publisherName.trim() === ""}
+                  onClick={() => void env.run("publish.refresh.enable", { publisherName, schedule, tables, confirmed: names })}
+                >
+                  Turn on scheduled refresh
+                </Button>
+              </div>
+            </>
+          )}
+        </>
+      )}
+    </fieldset>
+  );
+}
+
 function TargetDetails({ target, info }: { target: Target; info: AdapterInfo }) {
   const env = useEnv();
   const { ui, state } = usePublishUi();
@@ -396,6 +472,7 @@ function TargetDetails({ target, info }: { target: Target; info: AdapterInfo }) 
           </div>
         </>
       )}
+      {c.scheduledRefresh && published && <RefreshSection target={target} publisherName={name} />}
       {state.outcome && state.outcome.targetId === target.id && (
         <div role="status" style={{ border: "1px solid var(--colorNeutralStroke2)", padding: 8 }}>
           {state.outcome.rotated ? "Access revoked: version " : "Published version "}

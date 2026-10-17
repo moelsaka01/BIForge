@@ -16,7 +16,8 @@ use biforge_publish::deeplink::{self, Link};
 use biforge_publish::keys::KeyStore;
 use biforge_publish::manifest::{Envelope, IncludedTable, Manifest, Permission};
 use biforge_publish::package::{self, OpenOptions, PackageFile};
-use biforge_publish::publisher::{PublishRequest, Publisher};
+use biforge_publish::publisher::{PublishRequest, Publisher, RefreshRequest};
+use biforge_publish::refresh::{RefreshSource, Schedule};
 use biforge_publish::targets::{Target, TargetStore};
 use serde::{Deserialize, Serialize};
 
@@ -64,6 +65,27 @@ pub struct RunArgs {
     pub rotate: bool,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RefreshArgs {
+    pub target_id: String,
+    pub report_name: String,
+    pub publisher_name: String,
+    pub included: Vec<IncludedTable>,
+    /// daily, weekly or manual
+    pub schedule: String,
+    /// Tables whose source file the runner reloads, with the engine's source description (paths on this PC).
+    pub sources: Vec<RefreshSourceArg>,
+    pub confirmed_sources: Vec<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RefreshSourceArg {
+    pub table: String,
+    pub spec: serde_json::Value,
+}
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Outcome {
@@ -97,6 +119,7 @@ impl PublishService {
         Self { keys: Arc::new(CredKeys(creds)), http, cache_base }
     }
 
+    #[cfg_attr(not(test), allow(dead_code))]
     pub fn with_http(mut self, http: Arc<dyn Http>) -> Self {
         self.http = http;
         self
@@ -226,6 +249,63 @@ impl PublishService {
         };
         let out = if args.rotate { p.rotate_key(&req) } else { p.publish(&req) }.map_err(msg)?;
         Ok(Outcome { state: out.state, new_access_key: out.new_access_key })
+    }
+
+    /// Turns on scheduled refresh. The whole source files named in `args.sources` are put into the refresh bundle
+    /// (file sources only: a runner on the internet cannot reach anything else).
+    pub fn enable_refresh(&self, root: &str, project: &Project, args: RefreshArgs, data: &DataService) -> Result<(), String> {
+        let schedule = Schedule::parse(&args.schedule).ok_or("Choose daily, weekly or manual.")?;
+        let mut included = args.included.clone();
+        // the project exactly as it would be published
+        let project_files: Vec<PackageFile> = data.with_store(|e| self.collect_files(project, &mut included, e))?.into_iter().filter(|f| f.path.starts_with("project/")).collect();
+        let mut sources = Vec::new();
+        let mut source_files = Vec::new();
+        let mut used = std::collections::BTreeSet::new();
+        for a in &args.sources {
+            let path = a.spec.get("path").and_then(|p| p.as_str()).ok_or_else(|| format!("The source of table \"{}\" is not a file. Only file sources (CSV, Excel, JSON, Parquet, SQLite) can be reloaded by a GitHub runner.", a.table))?;
+            let kind = a.spec.get("kind").and_then(|k| k.as_str()).unwrap_or("");
+            if !["csv", "excel", "json", "parquet", "sqlite"].contains(&kind) {
+                return Err(format!("The source of table \"{}\" ({kind}) cannot be reloaded by a GitHub runner.", a.table));
+            }
+            let bytes = fs::read(path).map_err(|e| format!("Cannot read the source file {path}: {e}"))?;
+            let file_name = Path::new(path).file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "source".into());
+            let mut base = sanitize_file_name(&file_name);
+            while !used.insert(base.to_lowercase()) {
+                base.insert(0, '_');
+            }
+            let rel = format!("data/src/{base}");
+            let mut spec = a.spec.clone();
+            spec["path"] = serde_json::Value::String(rel.clone());
+            sources.push(RefreshSource { table: a.table.clone(), spec, original: path.to_string() });
+            source_files.push(PackageFile { path: rel, bytes });
+        }
+        let store = TargetStore::for_project(Path::new(root));
+        let reg = self.reg();
+        let p = Publisher { registry: &reg, keys: self.keys.as_ref(), store: &store };
+        p.enable_refresh(&RefreshRequest {
+            target_id: args.target_id,
+            report_name: args.report_name,
+            publisher_name: args.publisher_name,
+            included,
+            schedule,
+            sources,
+            confirmed_sources: args.confirmed_sources,
+            project_files,
+            source_files,
+        })
+        .map_err(msg)
+    }
+
+    pub fn disable_refresh(&self, root: &str, id: &str) -> Result<(), String> {
+        let store = TargetStore::for_project(Path::new(root));
+        let reg = self.reg();
+        Publisher { registry: &reg, keys: self.keys.as_ref(), store: &store }.disable_refresh(id).map_err(msg)
+    }
+
+    pub fn refresh_now(&self, root: &str, id: &str) -> Result<String, String> {
+        let store = TargetStore::for_project(Path::new(root));
+        let reg = self.reg();
+        Publisher { registry: &reg, keys: self.keys.as_ref(), store: &store }.refresh_now(id).map_err(msg)
     }
 
     pub fn peek(&self, path: &str) -> Result<Envelope, String> {
@@ -499,6 +579,18 @@ pub fn publish_validate(s: tauri::State<PublishService>, root: String, target_id
 #[tauri::command]
 pub fn publish_run(s: tauri::State<PublishService>, data: tauri::State<DataService>, root: String, project: Project, args: RunArgs) -> Result<Outcome, String> {
     s.run(&root, &project, args, &data)
+}
+#[tauri::command]
+pub fn publish_enable_refresh(s: tauri::State<PublishService>, data: tauri::State<DataService>, root: String, project: Project, args: RefreshArgs) -> Result<(), String> {
+    s.enable_refresh(&root, &project, args, &data)
+}
+#[tauri::command]
+pub fn publish_disable_refresh(s: tauri::State<PublishService>, root: String, target_id: String) -> Result<(), String> {
+    s.disable_refresh(&root, &target_id)
+}
+#[tauri::command]
+pub fn publish_refresh_now(s: tauri::State<PublishService>, root: String, target_id: String) -> Result<String, String> {
+    s.refresh_now(&root, &target_id)
 }
 #[tauri::command]
 pub fn publish_unpublish(s: tauri::State<PublishService>, root: String, target_id: String) -> Result<(), String> {

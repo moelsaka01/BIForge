@@ -1,7 +1,7 @@
 // Publish & Share and viewing mode. The dialog only dispatches these ids.
 import type { CommandRegistry } from "./registry";
 import type { Session } from "../session/session";
-import type { AccessLevel, Provider } from "../publish/types";
+import type { AccessLevel, Provider, RefreshSchedule } from "../publish/types";
 
 const hasProject = (s: Session) => s.store.project !== null && s.getSnapshot().viewing === null;
 const hasApi = (s: Session) => s.publish !== null;
@@ -109,6 +109,30 @@ export function registerPublishCommands(r: CommandRegistry<Session>): void {
       const a = (args ?? {}) as { publisherName?: string; rotate?: boolean };
       await s.publishUi.publish(a.publisherName ?? "", a.rotate === true);
     },
+  });
+  r.register({
+    id: "publish.refresh.enable",
+    label: "Turn on scheduled refresh",
+    category: "Share",
+    isEnabled: (s) => hasProject(s) && hasApi(s),
+    async run(s, args) {
+      const a = (args ?? {}) as { publisherName?: string; schedule?: RefreshSchedule; tables?: string[]; confirmed?: string[] };
+      await s.publishUi.enableRefresh(a.publisherName ?? "", a.schedule ?? "daily", a.tables ?? [], a.confirmed ?? []);
+    },
+  });
+  r.register({
+    id: "publish.refresh.disable",
+    label: "Turn off scheduled refresh",
+    category: "Share",
+    isEnabled: (s) => hasProject(s) && hasApi(s),
+    run: (s) => s.publishUi.disableRefresh(),
+  });
+  r.register({
+    id: "publish.refresh.now",
+    label: "Refresh now (on the runner)",
+    category: "Share",
+    isEnabled: (s) => hasProject(s) && hasApi(s),
+    run: (s) => s.publishUi.refreshNow(),
   });
   r.register({
     id: "publish.unpublish",

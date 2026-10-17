@@ -1,8 +1,9 @@
 // State and logic of the Publish & Share dialog. Components only render this and dispatch commands; the commands
 // (core/commands/publishCommands.ts) call these methods.
 import type { Session } from "../session/session";
+import { getTableSource } from "../model/tables";
 import { pruneForPublishing, sameSelection } from "./prune";
-import type { AccessLevel, AdapterInfo, AuditEvent, IncludedTable, Issue, Outcome, Provider, PublishApi, Target } from "./types";
+import type { AccessLevel, AdapterInfo, AuditEvent, IncludedTable, Issue, Outcome, Provider, PublishApi, RefreshSchedule, Target } from "./types";
 
 /** The account behind a destination, for destinations that need one. */
 export const PROVIDER_OF: Record<string, Provider> = { "github-pages": "github", "cloudflare-pages": "cloudflare" };
@@ -216,6 +217,57 @@ export class PublishUi {
   }
   get confirmed(): boolean {
     return this.shownToUser.length > 0 && sameSelection(this.shownToUser, this.selection());
+  }
+
+  /** Published tables whose source is a file a GitHub runner could reload, and the ones it cannot reload (with the reason). */
+  refreshCandidates(): { files: { table: string; path: string; kind: string }[]; blocked: { table: string; reason: string }[] } {
+    const project = this.session.store.project;
+    const files: { table: string; path: string; kind: string }[] = [];
+    const blocked: { table: string; reason: string }[] = [];
+    if (!project) return { files, blocked };
+    for (const t of this.selection()) {
+      const spec = getTableSource(project, t.table) as ({ kind: string; path?: string } & Record<string, unknown>) | null;
+      if (!spec) blocked.push({ table: t.table, reason: "BIForge does not know where this table's data came from (it was typed in or made by a query)." });
+      else if (spec.path && ["csv", "excel", "json", "parquet", "sqlite"].includes(spec.kind)) files.push({ table: t.table, path: spec.path, kind: spec.kind });
+      else blocked.push({ table: t.table, reason: "The data comes from a database server, which a GitHub runner cannot reach with your credentials." });
+    }
+    return { files, blocked };
+  }
+
+  /** Turns on scheduled refresh for the selected destination. `confirmed` is the list of whole files the user agreed to put into the repository. */
+  async enableRefresh(publisherName: string, schedule: RefreshSchedule, tables: string[], confirmed: string[]): Promise<void> {
+    const id = this.snap.selected;
+    const project = this.session.store.project;
+    if (!id || !project) throw new Error("Choose a destination first.");
+    if (!publisherName.trim()) throw new Error("Enter the name viewers will see as the publisher.");
+    const cands = this.refreshCandidates().files.filter((f) => tables.includes(f.table));
+    if (cands.length === 0) throw new Error("Choose at least one table with a source file.");
+    const sources = cands.map((c) => ({ table: c.table, spec: getTableSource(project, c.table) }));
+    this.set({ busy: true, error: null });
+    try {
+      await this.api.enableRefresh(this.root, this.session.store.project, { targetId: id, reportName: project.name, publisherName: publisherName.trim(), included: this.selection(), schedule, sources, confirmedSources: confirmed });
+      this.set({ busy: false, targets: await this.api.targets(this.root), audit: await this.api.audit(this.root) });
+      this.session.setMessage(`Scheduled refresh is on (${schedule}).`);
+    } catch (e) {
+      this.set({ busy: false, error: errText(e) });
+      throw e;
+    }
+  }
+
+  async disableRefresh(): Promise<void> {
+    const id = this.snap.selected;
+    if (!id) return;
+    await this.api.disableRefresh(this.root, id);
+    this.set({ targets: await this.api.targets(this.root), audit: await this.api.audit(this.root) });
+    this.session.setMessage("Scheduled refresh is off.");
+  }
+
+  async refreshNow(): Promise<void> {
+    const id = this.snap.selected;
+    if (!id) return;
+    const url = await this.api.refreshNow(this.root, id);
+    this.set({ audit: await this.api.audit(this.root) });
+    this.session.setMessage(`Refresh started. Watch it at ${url}`);
   }
 
   async unpublish(): Promise<void> {

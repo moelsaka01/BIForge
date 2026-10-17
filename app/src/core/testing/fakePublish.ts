@@ -1,5 +1,5 @@
 // Test double for PublishApi: adapters are programmable, nothing touches a disk or the network.
-import type { AdapterInfo, AuditEvent, Capabilities, DeepLink, Envelope, Issue, Linked, OpenedPackage, Outcome, Provider, PublishApi, RemoteState, RunArgs, Subscription, Target } from "../publish/types";
+import type { AdapterInfo, AuditEvent, Capabilities, DeepLink, Envelope, Issue, Linked, OpenedPackage, Outcome, Provider, PublishApi, RefreshArgs, RemoteState, RunArgs, Subscription, Target } from "../publish/types";
 
 const NONE: Capabilities = {
   implemented: false, publicAccess: false, privateAccess: false, update: false, sync: false, shareLink: false, unpublish: false, keyRotation: false,
@@ -87,6 +87,23 @@ export class FakePublish implements PublishApi {
     this.calls.push(`unpublish:${id}`);
     const t = (this.targetsByRoot.get(root) ?? []).find((x) => x.id === id);
     if (t) t.status = "unpublished";
+  }
+  refreshArgs: RefreshArgs[] = [];
+  async enableRefresh(root: string, _project: unknown, args: RefreshArgs) {
+    this.calls.push(`refresh-on:${args.targetId}:${args.schedule}`);
+    this.refreshArgs.push(args);
+    if (this.fail) throw new Error(this.fail);
+    const t = (this.targetsByRoot.get(root) ?? []).find((x) => x.id === args.targetId)!;
+    t.settings.refresh = args.schedule;
+  }
+  async disableRefresh(root: string, id: string) {
+    this.calls.push(`refresh-off:${id}`);
+    const t = (this.targetsByRoot.get(root) ?? []).find((x) => x.id === id)!;
+    delete t.settings.refresh;
+  }
+  async refreshNow(_root: string, id: string) {
+    this.calls.push(`refresh-now:${id}`);
+    return "https://github.com/ann/site/actions";
   }
   async shareLink(_root: string, id: string) {
     this.calls.push(`link:${id}`);

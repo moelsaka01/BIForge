@@ -78,6 +78,20 @@ export interface RunArgs {
   rotate?: boolean;
 }
 
+export type RefreshSchedule = "daily" | "weekly" | "manual";
+
+export interface RefreshArgs {
+  targetId: string;
+  reportName: string;
+  publisherName: string;
+  included: IncludedTable[];
+  schedule: RefreshSchedule;
+  /** The tables whose source file the runner reloads, with the engine's description of the source (paths on this PC). */
+  sources: { table: string; spec: unknown }[];
+  /** The file names the user confirmed on screen; must equal the names of the sources. */
+  confirmedSources: string[];
+}
+
 export interface Outcome {
   state: RemoteState;
   newAccessKey: string | null;
@@ -158,6 +172,10 @@ export interface PublishApi {
   validate(root: string, targetId: string): Promise<Issue[]>;
   run(root: string, project: unknown, args: RunArgs): Promise<Outcome>;
   unpublish(root: string, targetId: string): Promise<void>;
+  enableRefresh(root: string, project: unknown, args: RefreshArgs): Promise<void>;
+  disableRefresh(root: string, targetId: string): Promise<void>;
+  /** Starts one refresh on the runner; returns the address where it can be watched. */
+  refreshNow(root: string, targetId: string): Promise<string>;
   shareLink(root: string, targetId: string): Promise<string>;
   accessKey(root: string, targetId: string): Promise<string | null>;
   status(root: string, targetId: string): Promise<RemoteState | null>;

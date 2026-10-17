@@ -7,6 +7,7 @@ import { TABLE_COLUMNS, fixtureProject } from "../../core/report/testFixture";
 import type { BiType } from "../../core/data/types";
 import type { OpenedPackage } from "../../core/publish/types";
 import { fakeFolderAdapter } from "../../core/testing/fakePublish";
+import { applyImport } from "../../core/model/tables";
 import { PBIP, ROOT, makeApp } from "./testApp";
 
 installDomStubs();
@@ -529,5 +530,71 @@ describe("static hosting: connect an account, publish, open by link, check for u
     expect(within(bar).queryByRole("button", { name: "Check for updates" })).toBeNull();
     const r = await a.registry.execute("subscription.check", {});
     expect(r.ok).toBe(false);
+  });
+});
+
+describe("scheduled refresh on GitHub", () => {
+  async function published(a: App) {
+    withData(a);
+    render(a.element);
+    await openProject(a);
+    // Sales came from a CSV file; Customer from a database server
+    a.session.store.transact("sources", (p) => {
+      const cols = (t: string) => Object.entries(TABLE_COLUMNS[t]).map(([name, ty]) => ({ name, duckdbType: ty, biType: ty as BiType }));
+      applyImport(p, { name: "Sales", columns: cols("Sales"), rowCount: 3 }, { kind: "csv", path: "C:\data\sales.csv" });
+      applyImport(p, { name: "Customer", columns: cols("Customer"), rowCount: 3 }, { kind: "postgres", host: "h", port: 5432, database: "d", user: "u", schema: "public", table: "customer" });
+    });
+    a.shell.settings.setOption("publish.guide.static-github-pages.hidden", true);
+    a.publish.connected.add("github");
+    const dlg = await openPublish(a);
+    fireEvent.click(within(dlg).getByRole("combobox", { name: "Destination type" }));
+    fireEvent.click(await screen.findByRole("option", { name: /GitHub Pages/ }));
+    fireEvent.change(within(dlg).getByLabelText("Destination name"), { target: { value: "My site" } });
+    fireEvent.click(within(dlg).getByRole("button", { name: "Add destination" }));
+    fireEvent.click(await within(dlg).findByRole("checkbox", { name: /public web address/ }));
+    fireEvent.change(within(dlg).getByLabelText("Publisher name"), { target: { value: "Ann" } });
+    fireEvent.click(within(dlg).getByRole("button", { name: "Publish" }));
+    await within(dlg).findByRole("button", { name: "Publish update" });
+    return dlg;
+  }
+
+  it("says where it runs, lists the whole files that go to the repository, and needs the confirmation", async () => {
+    const a = makeApp();
+    const dlg = await published(a);
+    const sec = within(dlg).getByRole("group", { name: "Scheduled refresh" });
+    expect(sec.textContent).toMatch(/on GitHub's servers/);
+    expect(sec.textContent).toMatch(/Nothing on this PC has to stay on/);
+    expect(sec.textContent).toMatch(/Customer: cannot be refreshed there.*database server/);
+    expect(within(sec).getByRole("checkbox", { name: "Sales: C:\data\sales.csv" })).toBeTruthy();
+    const turnOn = within(sec).getByRole("button", { name: "Turn on scheduled refresh" }) as HTMLButtonElement;
+    expect(turnOn.disabled).toBe(true);
+    fireEvent.click(within(sec).getByRole("checkbox", { name: /these whole files go to/ }));
+    fireEvent.click(within(sec).getByRole("radio", { name: "Every week" }));
+    await waitFor(() => expect((within(sec).getByRole("button", { name: "Turn on scheduled refresh" }) as HTMLButtonElement).disabled).toBe(false));
+    fireEvent.click(within(sec).getByRole("button", { name: "Turn on scheduled refresh" }));
+    await within(sec).findByText(/Scheduled refresh is on \(weekly\)/);
+    const args = a.publish.refreshArgs[0];
+    expect(args.schedule).toBe("weekly");
+    expect(args.confirmedSources).toEqual(["C:\data\sales.csv"]);
+    expect(args.sources.map((s) => s.table)).toEqual(["Sales"]);
+    fireEvent.click(within(sec).getByRole("button", { name: "Refresh now" }));
+    await waitFor(() => expect(a.publish.calls.some((c) => c.startsWith("refresh-now:"))).toBe(true));
+    fireEvent.click(within(sec).getByRole("button", { name: "Turn off scheduled refresh" }));
+    await within(sec).findByRole("button", { name: "Turn on scheduled refresh" });
+    expect(a.publish.calls.some((c) => c.startsWith("refresh-off:"))).toBe(true);
+  });
+
+  it("is offered only by destinations that can run it", async () => {
+    const a = makeApp();
+    withData(a);
+    render(a.element);
+    await openProject(a);
+    const dlg = await openPublish(a);
+    await addFolderTarget(a, dlg);
+    fireEvent.click(await within(dlg).findByRole("checkbox", { name: /I have checked this list/ }));
+    fireEvent.change(within(dlg).getByLabelText("Publisher name"), { target: { value: "Ann" } });
+    fireEvent.click(within(dlg).getByRole("button", { name: "Publish" }));
+    await within(dlg).findByRole("button", { name: "Publish update" });
+    expect(within(dlg).queryByRole("group", { name: "Scheduled refresh" })).toBeNull();
   });
 });
