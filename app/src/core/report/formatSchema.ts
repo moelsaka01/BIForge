@@ -77,7 +77,44 @@ const scatterAxis = (id: string, label: string, object: string): CardDef => ({
   props: [{ key: "showAxisTitle", label: "Show title", type: "bool", default: true }, { key: "axisTitle", label: "Title text", type: "text" }, { key: "gridlineShow", label: "Gridlines", type: "bool", default: true }, UNITS, DECIMALS],
 });
 
+const shapeCard: CardDef = {
+  id: "shape",
+  label: "Shape",
+  object: "shape",
+  props: [{ key: "tileShape", label: "Shape", type: "enum", default: "rectangle", options: [{ value: "rectangle", label: "Rectangle" }, { value: "roundedRectangle", label: "Rounded rectangle" }, { value: "oval", label: "Oval" }, { value: "triangle", label: "Triangle" }, { value: "line", label: "Line" }] }],
+};
+const fillCard: CardDef = {
+  id: "fill",
+  label: "Fill",
+  object: "fill",
+  props: [{ key: "show", label: "Show", type: "bool", default: true }, { key: "fillColor", label: "Color", type: "color" }, { key: "transparency", label: "Transparency (%)", type: "number", min: 0, max: 100, default: 0 }],
+};
+const outlineCard: CardDef = {
+  id: "outline",
+  label: "Outline",
+  object: "outline",
+  props: [{ key: "show", label: "Show", type: "bool", default: true }, { key: "lineColor", label: "Color", type: "color" }, { key: "weight", label: "Weight", type: "number", min: 0, max: 20, default: 1 }],
+};
+const rotationCard: CardDef = { id: "rotation", label: "Rotation", object: "rotation", props: [{ key: "angle", label: "Angle (degrees)", type: "number", min: -360, max: 360, default: 0 }] };
+const textCard = (withText: boolean): CardDef => ({
+  id: "text",
+  label: "Text",
+  object: "text",
+  props: [
+    { key: "show", label: "Show", type: "bool", default: true },
+    ...(withText ? ([{ key: "text", label: "Text", type: "text", auto: "Button" }] as PropDef[]) : []),
+    { key: "fontColor", label: "Font color", type: "color" },
+    { key: "fontSize", label: "Text size", type: "number", min: 6, max: 60, default: 12 },
+    { key: "horizontalAlignment", label: "Alignment", type: "enum", default: "center", options: opt("left", "center", "right") },
+  ],
+});
+
 const BY_FAMILY: Partial<Record<VisualFamily, CardDef[]>> = {
+  textbox: [rotationCard],
+  shape: [shapeCard, fillCard, outlineCard, rotationCard],
+  image: [{ id: "image", label: "Image", object: "image", props: [{ key: "scaling", label: "Scaling", type: "enum", default: "Normal", options: opt("Normal", "Fit", "Fill") }] }, rotationCard],
+  button: [shapeCard, fillCard, outlineCard, textCard(true)],
+  pageNavigator: [{ ...textCard(false), props: textCard(false).props.filter((p) => p.key !== "horizontalAlignment") }, { ...fillCard, label: "Selected page fill", props: fillCard.props.filter((p) => p.key === "fillColor") }, outlineCard],
   cartesian: [
     legend,
     categoryAxis,
@@ -164,12 +201,61 @@ const BY_FAMILY: Partial<Record<VisualFamily, CardDef[]>> = {
   ],
 };
 
+const lineProps = (extra: PropDef[] = []): PropDef[] => [
+  { key: "show", label: "Show", type: "bool", default: false },
+  ...extra,
+  { key: "displayName", label: "Name", type: "text", auto: "Automatic" },
+  { key: "lineColor", label: "Color", type: "color" },
+  { key: "strokeWidth", label: "Width", type: "number", min: 1, max: 10, default: 1 },
+  { key: "style", label: "Style", type: "enum", default: "dashed", options: opt("solid", "dashed", "dotted") },
+  { key: "transparency", label: "Transparency (%)", type: "number", min: 0, max: 100, default: 0 },
+  { key: "dataLabelShow", label: "Data label", type: "bool", default: false },
+];
+
+/** Cards of the Analytics pane: reference lines and the trend line, for the charts that draw them. */
+export function analyticsCards(typeId: string): CardDef[] {
+  const t = visualType(typeId);
+  if (!t || t.family !== "cartesian" || typeId.startsWith("hundredPercent") || typeId === "ribbonChart") return [];
+  const stacked = typeId.startsWith("stacked");
+  return [
+    { id: "constantLine", label: "Constant line", object: "constantLine", props: lineProps([{ key: "value", label: "Value", type: "number", auto: "Enter a value" }]) },
+    { id: "minLine", label: "Min line", object: "minLine", props: lineProps() },
+    { id: "maxLine", label: "Max line", object: "maxLine", props: lineProps() },
+    { id: "averageLine", label: "Average line", object: "averageLine", props: lineProps() },
+    { id: "medianLine", label: "Median line", object: "medianLine", props: lineProps() },
+    { id: "percentileLine", label: "Percentile line", object: "percentileLine", props: lineProps([{ key: "percentile", label: "Percentile (%)", type: "number", min: 0, max: 100, default: 50 }]) },
+    ...(stacked ? [] : [{ id: "trendLine", label: "Trend line", object: "trendLine", props: [{ key: "show", label: "Show", type: "bool", default: false } as PropDef, { key: "lineColor", label: "Color", type: "color" } as PropDef, { key: "strokeWidth", label: "Width", type: "number", min: 1, max: 10, default: 2 } as PropDef, { key: "style", label: "Style", type: "enum", default: "dashed", options: opt("solid", "dashed", "dotted") } as PropDef] }]),
+  ];
+}
+
 /** Cards of the Visual tab for a visual type. Combo charts also offer the secondary axis; maps have none. */
-export function visualCards(typeId: string): CardDef[] {
+export interface CardContext {
+  pages: { name: string; displayName: string }[];
+  bookmarks: { id: string; name: string }[];
+}
+
+const NONE = [{ value: "", label: "(none)" }];
+
+/** The Action card of a button: what a click does. The page and bookmark lists come from the report. */
+export function actionCard(ctx?: CardContext): CardDef {
+  return {
+    id: "visualLink",
+    label: "Action",
+    object: "visualLink",
+    props: [
+      { key: "type", label: "Type", type: "enum", default: "None", options: opt("None", "Back", "Bookmark", "PageNavigation", "WebUrl") },
+      { key: "navigationSection", label: "Page", type: "enum", options: ctx?.pages.length ? ctx.pages.map((p) => ({ value: p.name, label: p.displayName })) : NONE, auto: "Choose a page" },
+      { key: "bookmark", label: "Bookmark", type: "enum", options: ctx?.bookmarks.length ? ctx.bookmarks.map((b) => ({ value: b.id, label: b.name })) : NONE, auto: "Choose a bookmark" },
+      { key: "webUrl", label: "Web address", type: "text", auto: "https://" },
+    ],
+  };
+}
+
+export function visualCards(typeId: string, ctx?: CardContext): CardDef[] {
   const fam = visualType(typeId)?.family;
-  const cards = (fam && BY_FAMILY[fam]) || [];
+  const cards = [...(fam === "button" ? [actionCard(ctx)] : []), ...((fam && BY_FAMILY[fam]) || [])];
   if (typeId === "lineClusteredColumnComboChart") return [...cards, { ...valueAxis, id: "secondaryValueAxis", label: "Secondary Y-axis", object: "secondaryValueAxis" }];
-  if (typeId === "lineChart" || typeId === "areaChart" || typeId === "stackedAreaChart" || typeId === "lineClusteredColumnComboChart") return cards;
+  if (typeId === "lineChart" || typeId === "areaChart" || typeId === "stackedAreaChart" || typeId === "hundredPercentStackedAreaChart" || typeId === "lineClusteredColumnComboChart") return cards;
   return cards.filter((c) => c.id !== "lineStyles");
 }
 
@@ -202,6 +288,7 @@ export function generalCards(pages: { name: string; displayName: string }[]): Ca
       object: "border",
       props: [{ key: "show", label: "Show", type: "bool", default: false }, { key: "color", label: "Color", type: "color" }, { key: "radius", label: "Radius", type: "number", min: 0, max: 60, default: 0 }, { key: "width", label: "Width", type: "number", min: 1, max: 10, default: 1 }],
     },
+    { id: "altText", label: "Alt text", object: "altText", props: [{ key: "text", label: "Alt text", type: "text", auto: "None" }] },
     { id: "dropShadow", label: "Shadow", object: "dropShadow", props: [{ key: "show", label: "Show", type: "bool", default: false }] },
     {
       id: "visualTooltip",

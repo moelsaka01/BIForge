@@ -32,6 +32,8 @@ const HIGHLIGHT_TARGETS = new Set([
   "lineChart",
   "areaChart",
   "stackedAreaChart",
+  "hundredPercentStackedAreaChart",
+  "ribbonChart",
   "lineClusteredColumnComboChart",
   "pieChart",
   "donutChart",

@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
 import chartOptions from "./chartOptions.ts?raw";
 import tableModels from "./tableModels.ts?raw";
+import staticVisuals from "./staticVisuals.ts?raw";
+import analyticsSrc from "./analytics.ts?raw";
+import staticViews from "../../views/report/StaticVisuals.tsx?raw";
 import visualFrame from "../../views/report/VisualFrame.tsx?raw";
 import visualContent from "../../views/report/VisualContent.tsx?raw";
-import { generalCards, visualCards, type CardDef } from "./formatSchema";
+import { analyticsCards, generalCards, visualCards, type CardDef } from "./formatSchema";
 import { VISUAL_TYPES } from "./visualTypes";
 
-const sources = [chartOptions, tableModels, visualFrame, visualContent].join("\n");
+const sources = [chartOptions, tableModels, visualFrame, visualContent, staticVisuals, staticViews, analyticsSrc].join("\n");
 
 function check(card: CardDef, where: string): string[] {
   const missing: string[] = [];
@@ -19,6 +22,15 @@ describe("the Format pane lists only settings that a renderer reads", () => {
   it("visual cards", () => {
     const problems = VISUAL_TYPES.flatMap((t) => visualCards(t.id).flatMap((c) => check(c, t.id)));
     expect([...new Set(problems)]).toEqual([]);
+  });
+
+  it("analytics cards", () => {
+    const problems = VISUAL_TYPES.flatMap((t) => analyticsCards(t.id).flatMap((c) => check(c, `analytics ${t.id}`)));
+    expect([...new Set(problems)]).toEqual([]);
+    expect(analyticsCards("lineChart").map((c) => c.id)).toContain("trendLine");
+    expect(analyticsCards("stackedColumnChart").map((c) => c.id)).not.toContain("trendLine");
+    expect(analyticsCards("hundredPercentStackedColumnChart")).toEqual([]);
+    expect(analyticsCards("pieChart")).toEqual([]);
   });
 
   it("general cards", () => {

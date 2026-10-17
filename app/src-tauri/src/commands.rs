@@ -141,3 +141,60 @@ pub fn test_pick() -> Option<String> {
     }
     g.as_mut()?.pop_front()
 }
+
+/// Reads a picture chosen for an Image visual as a data: URI (png, jpg, gif, svg, webp; up to 5 MB).
+#[tauri::command]
+pub fn read_image_data_uri(path: String) -> Result<String, String> {
+    use base64::Engine;
+    let ext = std::path::Path::new(&path).extension().and_then(|e| e.to_str()).unwrap_or("").to_ascii_lowercase();
+    let mime = match ext.as_str() {
+        "png" => "image/png",
+        "jpg" | "jpeg" => "image/jpeg",
+        "gif" => "image/gif",
+        "svg" => "image/svg+xml",
+        "webp" => "image/webp",
+        _ => return Err("Choose a png, jpg, gif, svg or webp picture.".into()),
+    };
+    let meta = std::fs::metadata(&path).map_err(|e| format!("Cannot read {path}: {e}"))?;
+    if meta.len() > 5 * 1024 * 1024 {
+        return Err("The picture is larger than 5 MB.".into());
+    }
+    let bytes = std::fs::read(&path).map_err(|e| format!("Cannot read {path}: {e}"))?;
+    Ok(format!("data:{mime};base64,{}", base64::engine::general_purpose::STANDARD.encode(bytes)))
+}
+
+/// Opens an http(s) address in the default browser.
+#[tauri::command]
+pub fn open_url(url: String) -> Result<(), String> {
+    if !(url.starts_with("http://") || url.starts_with("https://")) || url.chars().any(|c| c.is_whitespace() || c.is_control()) {
+        return Err("Only http:// and https:// addresses can be opened.".into());
+    }
+    #[cfg(windows)]
+    {
+        // rundll32 receives the address as one argument, never through a shell
+        std::process::Command::new("rundll32.exe").args(["url.dll,FileProtocolHandler", &url]).spawn().map(|_| ()).map_err(|e| e.to_string())
+    }
+    #[cfg(not(windows))]
+    {
+        Err("Opening addresses is only implemented on Windows.".into())
+    }
+}
+
+#[cfg(test)]
+mod image_tests {
+    use super::*;
+
+    #[test]
+    fn image_becomes_a_data_uri_and_other_files_are_refused() {
+        let dir = std::env::temp_dir().join("biforge-img-test");
+        std::fs::create_dir_all(&dir).unwrap();
+        let png = dir.join("a.png");
+        std::fs::write(&png, [137, 80, 78, 71]).unwrap();
+        assert_eq!(read_image_data_uri(png.to_string_lossy().into()).unwrap(), "data:image/png;base64,iVBORw==");
+        let txt = dir.join("a.txt");
+        std::fs::write(&txt, "x").unwrap();
+        assert!(read_image_data_uri(txt.to_string_lossy().into()).is_err());
+        assert!(open_url("file:///c:/windows/system32/calc.exe".into()).is_err());
+        assert!(open_url("https://example.com/a b".into()).is_err());
+    }
+}

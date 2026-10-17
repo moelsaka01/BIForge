@@ -11,7 +11,7 @@ export interface RoleDef {
   max: number;
 }
 
-export type VisualFamily = "cartesian" | "pie" | "scatter" | "table" | "matrix" | "card" | "kpi" | "gauge" | "treemap" | "funnel" | "waterfall" | "slicer" | "map";
+export type VisualFamily = "cartesian" | "pie" | "scatter" | "table" | "matrix" | "card" | "kpi" | "gauge" | "treemap" | "funnel" | "waterfall" | "slicer" | "map" | "textbox" | "shape" | "image" | "button" | "pageNavigator";
 
 export interface VisualTypeDef {
   id: string;
@@ -23,6 +23,8 @@ export interface VisualTypeDef {
   glyph: string;
   /** Marked as not implemented in the UI; the visual shows a placeholder. */
   deferred?: boolean;
+  /** An object that shows no data (text box, shape, image, button, page navigator): inserted from the Insert tab, not the gallery. */
+  static?: boolean;
 }
 
 const cat = (max = 8): RoleDef => ({ name: "Category", label: "X-axis", accepts: "column", max });
@@ -48,6 +50,8 @@ export const VISUAL_TYPES: VisualTypeDef[] = [
   cartesian("lineChart", "Line chart", "╱╲"),
   cartesian("areaChart", "Area chart", "◿"),
   cartesian("stackedAreaChart", "Stacked area chart", "◢"),
+  cartesian("hundredPercentStackedAreaChart", "100% stacked area chart", "%◢"),
+  cartesian("ribbonChart", "Ribbon chart", "▮≈"),
   cartesian("lineClusteredColumnComboChart", "Line and clustered column chart", "▮╱", [{ name: "Y2", label: "Line y-axis", accepts: "value", max: 12 }]),
   {
     id: "pieChart",
@@ -172,6 +176,18 @@ export const VISUAL_TYPES: VisualTypeDef[] = [
     deferred: true,
   },
 ];
+
+const staticType = (id: string, label: string, family: VisualFamily, glyph: string, size: { width: number; height: number }): VisualTypeDef => ({ id, label, family, roles: [], size, glyph, static: true });
+
+VISUAL_TYPES.push(
+  staticType("textbox", "Text box", "textbox", "T", { width: 300, height: 80 }),
+  staticType("shape", "Shape", "shape", "◻", { width: 160, height: 120 }),
+  staticType("image", "Image", "image", "🖼", { width: 200, height: 150 }),
+  staticType("actionButton", "Button", "button", "▭", { width: 160, height: 40 }),
+  staticType("pageNavigator", "Page navigator", "pageNavigator", "⇆", { width: 420, height: 48 }),
+);
+
+export const isStatic = (typeId: string): boolean => visualType(typeId)?.static === true;
 
 export function visualType(id: string): VisualTypeDef | undefined {
   return VISUAL_TYPES.find((t) => t.id === id);

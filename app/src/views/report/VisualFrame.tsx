@@ -5,6 +5,7 @@ import { FormatReader } from "../../core/report/formatReader";
 import { resolveInteraction, supportsHighlight } from "../../core/report/interactions";
 import type { PageModel, Position, VisualModel } from "../../core/report/visualDoc";
 import { visualType } from "../../core/report/visualTypes";
+import { ALT_TEXT, rotationOf } from "../../core/report/staticVisuals";
 import { drillPlan } from "../../core/report/queryBuilder";
 import { useReport, type MenuItem } from "./reportContext";
 import { VisualContent } from "./VisualContent";
@@ -170,7 +171,7 @@ export function VisualFrame(p: FrameProps) {
   return (
     <div
       role="group"
-      aria-label={`Visual: ${titleText || type?.label || visual.visualType}`}
+      aria-label={`Visual: ${ALT_TEXT(visual) || titleText || type?.label || visual.visualType}`}
       data-visual={visual.name}
       data-selected={p.selected}
       style={outer}
@@ -189,7 +190,11 @@ export function VisualFrame(p: FrameProps) {
         </div>
       )}
       <div style={{ position: "absolute", left: pad, right: pad, top: titleH + pad, bottom: pad, overflow: "hidden" }}>
-        {pos.width > 20 && <VisualContent page={page} visual={visual} width={Math.max(20, pos.width - pad * 2)} height={Math.max(20, pos.height - titleH - pad * 2)} />}
+        {pos.width > 20 && (
+          <div style={{ width: "100%", height: "100%", transform: rotationOf(visual) ? `rotate(${rotationOf(visual)}deg)` : undefined }}>
+            <VisualContent page={page} visual={visual} width={Math.max(20, pos.width - pad * 2)} height={Math.max(20, pos.height - titleH - pad * 2)} runOnClick={(e) => !p.editing || c.readOnly || e.ctrlKey || e.metaKey} />
+          </div>
+        )}
       </div>
       {p.editing && !c.readOnly && showBar && !editingSource && (
         <div

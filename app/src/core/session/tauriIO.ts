@@ -11,6 +11,8 @@ export const tauriIO: ProjectIO = {
   readRecovery: (root) => invoke<Project | null>("read_recovery", { root }),
   clearRecovery: (root) => invoke<void>("clear_recovery", { root }),
   writeSampleData: (root) => invoke<string[]>("write_sample_data", { root }),
+  readImage: (path) => invoke<string>("read_image_data_uri", { path }),
+  openUrl: (url) => invoke<void>("open_url", { url }),
 };
 
 // real-window UI test seam (see test_pick in commands.rs): answers from BIFORGE_TEST_PICKS when it is set

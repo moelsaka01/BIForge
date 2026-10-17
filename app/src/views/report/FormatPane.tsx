@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { Accordion, AccordionHeader, AccordionItem, AccordionPanel, Button, Input, Select, Switch, Tab, TabList } from "@fluentui/react-components";
 import { fieldKey, fieldLabel, lit, type FieldRef, type Lit } from "../../core/report/fields";
-import { generalCards, visualCards, type CardDef, type PropDef } from "../../core/report/formatSchema";
+import { analyticsCards, generalCards, visualCards, type CardContext, type CardDef, type PropDef } from "../../core/report/formatSchema";
+import { listBookmarks } from "../../core/report/bookmarks";
+import { readTextbox } from "../../core/report/staticVisuals";
 import { queryRefOf } from "../../core/report/pbir";
 import { getFormat, getRawProp, type PageModel, type VisualModel } from "../../core/report/visualDoc";
 import { visualType } from "../../core/report/visualTypes";
@@ -10,6 +12,9 @@ import { CondFormatDialog } from "./CondFormatDialog";
 import { useReport, type Dispatch } from "./reportContext";
 
 export interface FormatPaneProps {
+  /** The Analytics tab of the Visualizations pane: reference lines and trend line instead of the format cards. */
+  analytics?: boolean;
+  bookmarks?: { id: string; name: string }[];
   page: PageModel;
   visual: VisualModel;
   pages: PageModel[];
@@ -86,6 +91,40 @@ function PropControl({ def, value, onChange }: { def: PropDef; value: Lit | null
   }
 }
 
+/** Content and style of a text box (the paragraphs are PBIR text runs, so a plain card cannot edit them). */
+function TextboxEditor({ page, visual, dispatch }: { page: PageModel; visual: VisualModel; dispatch: Dispatch }) {
+  const m = readTextbox(visual.json);
+  const set = (patch: object) => dispatch("report.textbox.set", { page: page.name, visual: visual.name, patch });
+  const row: React.CSSProperties = { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, fontSize: 12 };
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <label style={{ ...row, flexDirection: "column", alignItems: "stretch" }}>
+        Text
+        <textarea aria-label="Text box content" rows={4} defaultValue={m.text} key={visual.name + m.text} onBlur={(e) => e.currentTarget.value !== m.text && set({ text: e.currentTarget.value })} style={{ font: "inherit", resize: "vertical" }} />
+      </label>
+      <label style={row}>
+        Text size
+        <Input size="small" type="number" style={{ width: 90 }} value={String(m.fontSize)} onChange={(_, d) => Number(d.value) >= 6 && Number(d.value) <= 120 && set({ fontSize: Number(d.value) })} />
+      </label>
+      <Switch checked={m.bold} label="Bold" onChange={(_, d) => set({ bold: d.checked })} />
+      <Switch checked={m.italic} label="Italic" onChange={(_, d) => set({ italic: d.checked })} />
+      <Switch checked={m.underline} label="Underline" onChange={(_, d) => set({ underline: d.checked })} />
+      <label style={row}>
+        Alignment
+        <Select size="small" style={{ width: 150 }} aria-label="Text alignment" value={m.align} onChange={(_, d) => set({ align: d.value })}>
+          <option value="left">Left</option>
+          <option value="center">Center</option>
+          <option value="right">Right</option>
+        </Select>
+      </label>
+      <label style={row}>
+        Text color
+        <input type="color" aria-label="Text color" value={m.color && /^#[0-9a-f]{6}$/i.test(m.color) ? m.color : "#252423"} onChange={(e) => set({ color: e.target.value })} />
+      </label>
+    </div>
+  );
+}
+
 export function FormatPane(p: FormatPaneProps) {
   const [tab, setTab] = useState<"visual" | "general">("visual");
   const [q, setQ] = useState("");
@@ -98,7 +137,7 @@ export function FormatPane(p: FormatPaneProps) {
   // On-object formatting asks for a card: show the tab that has it, open it and scroll to it
   useEffect(() => {
     if (!focus) return;
-    const inVisual = visualCards(p.visual.visualType).some((x) => x.id === focus.card);
+    const inVisual = visualCards(p.visual.visualType, undefined).some((x) => x.id === focus.card);
     setTab(inVisual ? "visual" : generalIds.includes(focus.card) ? "general" : "visual");
     setQ("");
     setOpen([focus.card]);
@@ -107,7 +146,8 @@ export function FormatPane(p: FormatPaneProps) {
   }, [focus?.tick]); // eslint-disable-line react-hooks/exhaustive-deps
   const type = visualType(p.visual.visualType);
   const needle = q.trim().toLowerCase();
-  const cards: CardDef[] = tab === "visual" ? visualCards(p.visual.visualType) : generalCards(p.pages.filter((x) => x.type === "Tooltip").map((x) => ({ name: x.name, displayName: x.displayName })));
+  const ctx: CardContext = { pages: p.pages.filter((x) => !x.type).map((x) => ({ name: x.name, displayName: x.displayName })), bookmarks: listBookmarks(rc.project).map((b) => ({ id: b.id, name: b.name })) };
+  const cards: CardDef[] = p.analytics ? analyticsCards(p.visual.visualType) : tab === "visual" ? visualCards(p.visual.visualType, ctx) : generalCards(p.pages.filter((x) => x.type === "Tooltip").map((x) => ({ name: x.name, displayName: x.displayName })));
   const shown = cards
     .map((c) => ({ ...c, props: c.label.toLowerCase().includes(needle) ? c.props : c.props.filter((x) => x.label.toLowerCase().includes(needle)) }))
     .filter((c) => needle === "" || c.props.length > 0);
@@ -135,17 +175,37 @@ export function FormatPane(p: FormatPaneProps) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6, padding: 8, height: "100%", overflow: "auto" }} aria-label="Format pane">
-      <TabList size="small" selectedValue={tab} onTabSelect={(_, d) => setTab(d.value as typeof tab)}>
-        <Tab value="visual">Visual</Tab>
-        <Tab value="general">General</Tab>
-      </TabList>
+      {!p.analytics && (
+        <TabList size="small" selectedValue={tab} onTabSelect={(_, d) => setTab(d.value as typeof tab)}>
+          <Tab value="visual">Visual</Tab>
+          <Tab value="general">General</Tab>
+        </TabList>
+      )}
       <Input size="small" placeholder="Search" aria-label="Search the Format pane" value={q} onChange={(_, d) => setQ(d.value)} />
       <Accordion
         multiple
         collapsible
-        {...(open ? { openItems: open, onToggle: (_: unknown, d: { openItems: unknown[] }) => setOpen(d.openItems as string[]) } : { defaultOpenItems: shown.slice(0, 2).map((c) => c.id) })}
+        {...(open ? { openItems: open, onToggle: (_: unknown, d: { openItems: unknown[] }) => setOpen(d.openItems as string[]) } : { defaultOpenItems: [...(type?.family === "textbox" ? ["textContent"] : type?.family === "image" ? ["imageSource"] : []), ...shown.slice(0, 2).map((c) => c.id)] })}
         key={`${tab}-${p.visual.name}-${needle}-${open ? "c" : "u"}`}
       >
+        {tab === "visual" && type?.family === "textbox" && needle === "" && (
+          <AccordionItem value="textContent" data-card="textContent">
+            <AccordionHeader size="small">Text</AccordionHeader>
+            <AccordionPanel>
+              <TextboxEditor page={p.page} visual={p.visual} dispatch={p.dispatch} />
+            </AccordionPanel>
+          </AccordionItem>
+        )}
+        {tab === "visual" && type?.family === "image" && needle === "" && (
+          <AccordionItem value="imageSource" data-card="imageSource">
+            <AccordionHeader size="small">Picture</AccordionHeader>
+            <AccordionPanel>
+              <Button size="small" onClick={() => p.dispatch("report.image.choose", { page: p.page.name, visual: p.visual.name })}>
+                Choose a picture…
+              </Button>
+            </AccordionPanel>
+          </AccordionItem>
+        )}
         {shown.map((c) => (
           <AccordionItem key={c.id} value={c.id} data-card={c.id}>
             <AccordionHeader size="small">{c.label}</AccordionHeader>
@@ -190,7 +250,7 @@ export function FormatPane(p: FormatPaneProps) {
             </AccordionPanel>
           </AccordionItem>
         ))}
-        {tab === "general" && !needle && (
+        {tab === "general" && !needle && !p.analytics && (
           <AccordionItem value="position">
             <AccordionHeader size="small">Size and position</AccordionHeader>
             <AccordionPanel>

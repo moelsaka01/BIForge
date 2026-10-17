@@ -76,6 +76,16 @@ export class FakeIO implements ProjectIO {
     if (!p) throw new Error(`cannot access ${pbipPath}`);
     return structuredClone(p);
   }
+  images = new Map<string, string>();
+  opened: string[] = [];
+  async readImage(path: string): Promise<string> {
+    const u = this.images.get(path);
+    if (!u) throw new Error(`cannot read ${path}`);
+    return u;
+  }
+  async openUrl(url: string): Promise<void> {
+    this.opened.push(url);
+  }
   async writeSampleData(root: string): Promise<string[]> {
     this.calls.push(`sample:${root}`);
     return ["Date", "Customer", "Product", "Sales"].map((n) => `${root}/data/${n}.csv`);

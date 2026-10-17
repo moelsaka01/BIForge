@@ -27,6 +27,7 @@ import {
   type VisualModel,
 } from "./visualDoc";
 import { defaultRole, roleDef, visualType } from "./visualTypes";
+import { writeTextbox } from "./staticVisuals";
 
 export class ReportError extends Error {
   constructor(message: string) {
@@ -212,9 +213,17 @@ export function addVisual(p: Project, page: string, typeId: string, opt: { posit
     position: { x: 40 + (n % 6) * 24, y: 40 + (n % 6) * 24, z, width: t.size.width, height: t.size.height, tabOrder: z, ...opt.position },
     visual: { visualType: typeId, drillFilterOtherVisuals: true },
   };
+  if (typeId === "textbox") writeTextbox(json, { text: "Text box" });
   files(p)[visualKey(page, name)] = json;
   for (const { role, field } of opt.fields ?? []) addField(p, page, name, role, field);
   return name;
+}
+
+/** Edits a visual of a given type through `fn` (used by objects that keep their content in the visual JSON). */
+export function editStatic(p: Project, page: string, visual: string, typeId: string, fn: (json: J) => void): void {
+  const j = visualJson(p, page, visual);
+  if (j.visual?.visualType !== typeId) throw new ReportError(`Visual "${visual}" is not a ${typeId}.`);
+  fn(j);
 }
 
 export function deleteVisual(p: Project, page: string, visual: string): void {

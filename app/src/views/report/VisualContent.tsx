@@ -8,17 +8,19 @@ import { drillPlan } from "../../core/report/queryBuilder";
 import { buildCard, buildKpi, buildMatrix, buildMultiRowCard, buildTable } from "../../core/report/tableModels";
 import type { PageModel, VisualModel } from "../../core/report/visualDoc";
 import { listPageNames } from "../../core/report/visualDoc";
-import { visualType } from "../../core/report/visualTypes";
+import { isStatic, visualType } from "../../core/report/visualTypes";
 import { ChartView } from "./ChartView";
 import { CardView, KpiView, MatrixView, MultiRowCardView, TableView } from "./DomVisuals";
 import { useReport } from "./reportContext";
 import { SlicerView, type SlicerMode } from "./SlicerView";
+import { ButtonView, ImageView, PageNavigatorView, ShapeView, TextboxView } from "./StaticVisuals";
 
 /** Loads the data of one visual and draws it according to its type. */
-export function VisualContent({ page, visual, width, height }: { page: PageModel; visual: VisualModel; width: number; height: number }) {
+export function VisualContent({ page, visual, width, height, runOnClick }: { page: PageModel; visual: VisualModel; width: number; height: number; runOnClick?: (e: React.MouseEvent) => boolean }) {
   const c = useReport();
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   useEffect(() => {
+    if (isStatic(visual.visualType)) return;
     let off = false;
     void c.data.load(c.project, page, visual, c.view, c.model).then((r) => {
       if (!off) setLoaded(r);
@@ -80,6 +82,21 @@ export function VisualContent({ page, visual, width, height }: { page: PageModel
     c.dispatch("report.visual.setSort", { page: page.name, visual: visual.name, sort: cur === null ? { field, dir: "asc" } : cur === "asc" ? { field, dir: "desc" } : null });
   };
 
+  if (type && isStatic(type.id)) {
+    const sp = { page, visual, width, height, runOnClick: runOnClick ?? (() => true) };
+    switch (type.family) {
+      case "textbox":
+        return <TextboxView {...sp} />;
+      case "shape":
+        return <ShapeView {...sp} />;
+      case "image":
+        return <ImageView {...sp} />;
+      case "button":
+        return <ButtonView {...sp} />;
+      default:
+        return <PageNavigatorView {...sp} />;
+    }
+  }
   if (!type) return <Notice>Unknown visual type "{visual.visualType}".</Notice>;
   if (type.deferred) {
     return (

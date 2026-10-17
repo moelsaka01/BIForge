@@ -21,6 +21,10 @@ export interface ProjectIO {
   clearRecovery(root: string): Promise<void>;
   /** Writes the data files of the sample project under `<root>/data` and returns their paths (Date, Customer, Product, Sales). */
   writeSampleData?(root: string): Promise<string[]>;
+  /** Reads a picture file (png, jpg, gif, svg, webp, up to 5 MB) as a data: URI. */
+  readImage?(path: string): Promise<string>;
+  /** Opens an http(s) address in the user's browser. */
+  openUrl?(url: string): Promise<void>;
 }
 
 export interface Dialogs {

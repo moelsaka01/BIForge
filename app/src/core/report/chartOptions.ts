@@ -3,6 +3,7 @@
 import type { Value } from "./cells";
 import { BLANK_LABEL, columnsOf, labelOf, num as valueNum, pivot, pointOfCategory, valueToLit, type Pivot } from "./chartData";
 import { condFormatFromPbir, colorFn } from "./condFormat";
+import { REFERENCE_KINDS, linearTrend, referenceValue, ribbonLayout } from "./analytics";
 import type { FieldRef } from "./fields";
 import { FormatReader } from "./formatReader";
 import type { Loaded } from "./dataLoader";
@@ -110,7 +111,8 @@ function cartesian(inp: ChartInput): ChartBuild {
   const hundred = t.startsWith("hundredPercent");
   const stacked = hundred || t === "stackedBarChart" || t === "stackedColumnChart" || t === "stackedAreaChart";
   const lineOnly = t === "lineChart";
-  const areaOnly = t === "areaChart" || t === "stackedAreaChart";
+  const areaOnly = t === "areaChart" || t === "stackedAreaChart" || t === "hundredPercentStackedAreaChart";
+  const ribbon = t === "ribbonChart";
   const combo = t === "lineClusteredColumnComboChart";
 
   const valueCols = ["Y", "Y2"].flatMap((r) => columnsOf(q, r, "value"));
@@ -188,6 +190,82 @@ function cartesian(inp: ChartInput): ChartBuild {
   valueCols.forEach((_, vi) => p.series.forEach((_s, si) => addSeries(vi, si, false)));
   if (hl) valueCols.forEach((_, vi) => p.series.forEach((_s, si) => addSeries(vi, si, true)));
 
+  if (ribbon) {
+    // one custom series per legend entry: a column slot per category and a ribbon to the next category
+    seriesOut.length = 0;
+    meta.length = 0;
+    const layout = ribbonLayout(p.series.map((_s, si) => p.cells[0][si]));
+    p.series.forEach((s, si) => {
+      const name = hasSeries ? s.label || BLANK_LABEL : valueCols[0].label;
+      const color = f.color("dataPoint", "fill", name) ?? f.color("dataPoint", "defaultColor") ?? seriesColor(theme, si);
+      const dimmed = p.categories.map((_c, ci) => selecting && !isSelected(ci, si));
+      seriesOut.push({
+        name,
+        type: "custom",
+        encode: { x: 0, y: [1, 2] },
+        itemStyle: { color },
+        data: p.categories.map((_c, ci) => {
+          const slot = layout[ci][si];
+          const next = layout[ci + 1]?.[si];
+          return { value: [ci, slot.start, slot.end, next ? next.start : null, next ? next.end : null], raw: p.cells[0][si][ci], rank: slot.rank };
+        }),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        renderItem: (params: O, api: any) => {
+          const ci = params.dataIndex as number;
+          const lo = api.coord([ci, api.value(1)]);
+          const hi = api.coord([ci, api.value(2)]);
+          const half = api.size([1, 0])[0] * 0.28;
+          const op = dimmed[ci] ? DIM : 1;
+          const children: O[] = [{ type: "rect", shape: { x: lo[0] - half, y: Math.min(lo[1], hi[1]), width: half * 2, height: Math.abs(lo[1] - hi[1]) }, style: { fill: color, opacity: op } }];
+          if (api.value(3) !== null && api.value(3) !== undefined && !Number.isNaN(api.value(3))) {
+            const nlo = api.coord([ci + 1, api.value(3)]);
+            const nhi = api.coord([ci + 1, api.value(4)]);
+            children.push({ type: "polygon", shape: { points: [[lo[0] + half, lo[1]], [nlo[0] - half, nlo[1]], [nhi[0] - half, nhi[1]], [hi[0] + half, hi[1]]] }, style: { fill: color, opacity: op * 0.4 } });
+          }
+          return { type: "group", children };
+        },
+      });
+      meta.push({ vi: 0, si });
+    });
+  }
+
+  // Analytics: reference lines over the plotted values, and a trend line
+  if (!hundred && !ribbon && seriesOut.length > 0) {
+    const pooled: (number | null)[] = [];
+    valueCols.forEach((c, vi) => c.role === "Y" && p.series.forEach((_s, si) => p.categories.forEach((_c, ci) => pooled.push(shown(vi, si, ci)))));
+    const fmtRef = valueCols[0]?.format ?? null;
+    const marks: O[] = [];
+    for (const k of REFERENCE_KINDS) {
+      if (!f.bool(k.kind, "show", false)) continue;
+      const v = referenceValue(k.kind, pooled, { constant: f.has(k.kind, "value") ? f.num(k.kind, "value", 0) : undefined, percentile: f.num(k.kind, "percentile", 50) });
+      if (v === null) continue;
+      const color = f.color(k.kind, "lineColor") ?? theme.muted;
+      const title = f.str(k.kind, "displayName", "") || (k.kind === "percentileLine" ? `${f.num(k.kind, "percentile", 50)}th percentile` : k.name);
+      marks.push({
+        name: title,
+        [horizontal ? "xAxis" : "yAxis"]: v,
+        lineStyle: { color, width: f.num(k.kind, "strokeWidth", 1), type: f.str(k.kind, "style", "dashed"), opacity: 1 - Math.min(100, Math.max(0, f.num(k.kind, "transparency", 0))) / 100 },
+        label: { show: f.bool(k.kind, "dataLabelShow", false), formatter: () => `${title}: ${valueText(v, fmtRef, f, "valueAxis")}`, color, position: "insideEndTop" },
+      });
+    }
+    if (marks.length) seriesOut[0].markLine = { silent: true, symbol: "none", animation: false, data: marks };
+    if (f.bool("trendLine", "show", false) && !stacked && valueCols.length > 0 && p.series.length > 0) {
+      const tr = linearTrend(p.categories.map((_c, ci) => shown(0, 0, ci)));
+      if (tr) {
+        seriesOut.push({
+          name: "Trend line",
+          type: "line",
+          data: p.categories.map((_c, ci) => ({ value: tr.at(ci), raw: tr.at(ci) })),
+          symbol: "none",
+          silent: true,
+          z: 6,
+          lineStyle: { color: f.color("trendLine", "lineColor") ?? theme.muted, width: f.num("trendLine", "strokeWidth", 2), type: f.str("trendLine", "style", "dashed") },
+          tooltip: { show: false },
+        });
+      }
+    }
+  }
+
   const catLabels = p.categories.map((c) => c.label);
   const fg = f.color("categoryAxis", "labelColor") ?? theme.textClasses.label.color;
   const axisFont = { color: fg, fontSize: f.num("categoryAxis", "fontSize", theme.textClasses.label.fontSize), fontFamily: theme.textClasses.label.fontFace };
@@ -235,7 +313,7 @@ function cartesian(inp: ChartInput): ChartBuild {
       axisPointer: { type: horizontal ? "shadow" : "line" },
       confine: true,
       formatter: (params: O[]) => {
-        const rows = (Array.isArray(params) ? params : [params]).filter((x) => !String(x.seriesName).endsWith("(highlighted)"));
+        const rows = (Array.isArray(params) ? params : [params]).filter((x) => !String(x.seriesName).endsWith("(highlighted)") && meta[x.seriesIndex]);
         const head = rows[0]?.name ?? "";
         const lines = rows.map((x) => {
           const m = meta[x.seriesIndex];

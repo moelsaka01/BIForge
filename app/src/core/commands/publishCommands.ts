@@ -14,6 +14,7 @@ const VIEWING_ALLOWED: RegExp[] = [
   /^view\.(report|zoom)$/,
   /^pane\.toggle$/,
   /^report\.page\.go$/,
+  /^report\.button\.run$/,
   /^report\.visuals\.(pause|refresh)$/,
   /^report\.view\./,
   /^file\.(close|open|new|newBlank|newSample|newSample\.run)$/,

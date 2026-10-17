@@ -153,12 +153,35 @@ const queriesGroup = (): RibbonGroup => ({
   ],
 });
 
+const shapeItem = (label: string, shape: string): RibbonMenuItem => ({ label, command: "report.visual.add", args: { type: "shape", format: [{ object: "shape", prop: "tileShape", value: { t: "string", v: shape } }] } });
+const buttonItem = (label: string, type: string, extra: object[] = []): RibbonMenuItem => ({
+  label,
+  command: "report.visual.add",
+  args: { type: "actionButton", format: [{ object: "visualLink", prop: "type", value: { t: "string", v: type } }, { object: "text", prop: "text", value: { t: "string", v: label } }, ...extra] },
+});
+/** Text box, Buttons, Shapes, Image, Page navigator: the objects that show no data. */
+const elementControls = (): RibbonControl[] => [
+  cmd("textBox", "Text box", "textBox", "report.visual.add", { size: "large", args: { type: "textbox" }, keytip: "TB" }),
+  cmd("button", "Buttons", "button", "report.visual.add", {
+    size: "large",
+    args: { type: "actionButton" },
+    menu: [buttonItem("Blank", "None"), buttonItem("Back", "Back"), buttonItem("Bookmark", "Bookmark"), buttonItem("Page navigation", "PageNavigation"), buttonItem("Web URL", "WebUrl")],
+  }),
+  cmd("shapes", "Shapes", "shapes", "report.visual.add", {
+    size: "large",
+    args: { type: "shape" },
+    menu: [shapeItem("Rectangle", "rectangle"), shapeItem("Rounded rectangle", "roundedRectangle"), shapeItem("Oval", "oval"), shapeItem("Triangle", "triangle"), shapeItem("Line", "line")],
+  }),
+  cmd("image", "Image", "image", "report.image.insert", { size: "large" }),
+  cmd("pageNavigator", "Page navigator", "bookmarks", "report.visual.add", { size: "large", args: { type: "pageNavigator" } }),
+];
+
 const insertGroup = (): RibbonGroup => ({
   id: "insert",
   label: "Insert",
   controls: [
     cmd("newVisual", "New visual", "newVisual", "report.visual.add", { size: "large", args: { type: "clusteredColumnChart" }, keytip: "V" }),
-    todo("textBox", "Text box", "textBox", { size: "large" }),
+    cmd("textBox", "Text box", "textBox", "report.visual.add", { size: "large", args: { type: "textbox" }, keytip: "TB" }),
     todo("moreVisuals", "More visuals", "moreVisuals", { size: "large" }),
   ],
 });
@@ -354,7 +377,7 @@ function reportTabs(shell: ShellKind): RibbonTab[] {
       {
         id: "elements",
         label: "Elements",
-        controls: [todo("textBox", "Text box", "textBox", { size: "large" }), todo("button", "Buttons", "button", { size: "large" }), todo("shapes", "Shapes", "shapes", { size: "large" }), todo("image", "Image", "image", { size: "large" })],
+        controls: elementControls(),
       },
     ],
   };

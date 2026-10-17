@@ -166,7 +166,7 @@ export function hasField(list: Projection[], f: FieldRef): boolean {
  * Where a formatting object lives. PBIR keeps the general container settings (title, background, border,
  * shadow, tooltip) in visual.visualContainerObjects and everything else in visual.objects.
  */
-export const CONTAINER_OBJECTS = new Set(["title", "subTitle", "background", "border", "dropShadow", "visualTooltip", "padding", "visualHeader", "divider", "spacing", "lockAspect"]);
+export const CONTAINER_OBJECTS = new Set(["title", "subTitle", "background", "border", "dropShadow", "visualTooltip", "padding", "visualHeader", "divider", "spacing", "lockAspect", "visualLink", "altText"]);
 
 function bag(json: J, object: string): J {
   const key = CONTAINER_OBJECTS.has(object) ? "visualContainerObjects" : "objects";

@@ -4,6 +4,7 @@ import { AGG_LABELS, fieldKey, fieldLabel, type AggFn, type FieldRef } from "../
 import { fieldForRole } from "../../core/report/fieldRouting";
 import type { PageModel, VisualModel } from "../../core/report/visualDoc";
 import { VISUAL_TYPES, visualType } from "../../core/report/visualTypes";
+import { analyticsCards } from "../../core/report/formatSchema";
 import { FormatPane } from "./FormatPane";
 import { useReport } from "./reportContext";
 
@@ -29,7 +30,7 @@ export interface VisualizationsPaneProps {
 
 export function VisualizationsPane(p: VisualizationsPaneProps) {
   const c = useReport();
-  const [tab, setTab] = useState<"build" | "format">("build");
+  const [tab, setTab] = useState<"build" | "format" | "analytics">("build");
   const { visual, page } = p;
   const focus = c.snap.formatFocus;
   useEffect(() => {
@@ -73,16 +74,23 @@ export function VisualizationsPane(p: VisualizationsPaneProps) {
           <Tab value="format" disabled={!visual}>
             Format visual
           </Tab>
+          <Tab value="analytics" disabled={!visual || analyticsCards(visual.visualType).length === 0}>
+            Analytics
+          </Tab>
         </TabList>
       </div>
-      {tab === "format" && visual ? (
+      {tab === "analytics" && visual ? (
+        <div style={{ flex: 1, minHeight: 0 }}>
+          <FormatPane analytics page={page} visual={visual} pages={c.pages} dispatch={c.dispatch} />
+        </div>
+      ) : tab === "format" && visual ? (
         <div style={{ flex: 1, minHeight: 0 }}>
           <FormatPane page={page} visual={visual} pages={c.pages} dispatch={c.dispatch} />
         </div>
       ) : (
         <div style={{ flex: 1, overflow: "auto", padding: 8, display: "flex", flexDirection: "column", gap: 8 }}>
           <div role="group" aria-label="Visual types" style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 4 }}>
-            {VISUAL_TYPES.map((t) => (
+            {VISUAL_TYPES.filter((t) => !t.static).map((t) => (
               <Button
                 key={t.id}
                 size="small"

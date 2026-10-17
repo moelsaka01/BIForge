@@ -3,14 +3,16 @@
 import type { CommandRegistry } from "./registry";
 import type { Session } from "../session/session";
 import * as bm from "../report/bookmarks";
-import type { FieldRef, Lit } from "../report/fields";
+import { lit, type FieldRef, type Lit } from "../report/fields";
 import type { FilterDef } from "../report/filters";
 import { drillthroughFilters, drillthroughTargets, type SelectedPoint } from "../report/interactions";
 import type { J } from "../report/pbir";
 import * as ops from "../report/reportOps";
 import { applyThemeToProject, BUILTIN_THEMES, clearCustomTheme, parseThemeJson } from "../report/theme";
-import { activePageName, listPageNames, type Position, type SortSpec } from "../report/visualDoc";
+import { activePageName, listPageNames, parsePage, type Position, type SortSpec } from "../report/visualDoc";
 import { VISUAL_TYPES } from "../report/visualTypes";
+import { actionProblem, readAction, writeTextbox, type TextboxModel } from "../report/staticVisuals";
+import { listBookmarks } from "../report/bookmarks";
 
 const hasProject = (s: Session) => s.store.project !== null;
 
@@ -46,7 +48,8 @@ export function registerReportCommands(r: CommandRegistry<Session>): void {
     const { page } = need<{ page: string }>(a, ["page"]);
     if (!listPageNames(s.store.project!).includes(page)) throw new Error(`Page "${page}" does not exist.`);
     s.report.goToPage(page);
-    edit(s, "Switch page", (p) => ops.setActivePage(p, page));
+    // a shared report is read-only: the page changes in the view only
+    if (!s.store.getSnapshot().readOnly) edit(s, "Switch page", (p) => ops.setActivePage(p, page));
   });
   reg("report.page.rename", "Rename page", (s, a) => {
     const x = need<{ page: string; name: string }>(a, ["page", "name"]);
@@ -93,12 +96,73 @@ export function registerReportCommands(r: CommandRegistry<Session>): void {
   r.register({ id: "report.visuals.refresh", label: "Refresh visuals", category: "Report", isEnabled: (s) => s.store.project !== null, run: (s) => s.report.refreshVisuals() });
   reg("report.visual.add", "Add visual", (s, a) => {
     const x = need<{ type: string }>(a, ["type"]);
-    const args = a as { page?: string; position?: Partial<Position>; fields?: { role: string; field: FieldRef }[] };
+    const args = a as { page?: string; position?: Partial<Position>; fields?: { role: string; field: FieldRef }[]; format?: { object: string; prop: string; value: Lit }[] };
     if (!VISUAL_TYPES.some((t) => t.id === x.type)) throw new Error(`Unknown visual type "${x.type}".`);
     edit(s, "Add visual", (p) => {
-      ops.addVisual(p, args.page ?? currentPage(s), x.type, { position: args.position, fields: args.fields });
+      const page = args.page ?? currentPage(s);
+      const name = ops.addVisual(p, page, x.type, { position: args.position, fields: args.fields });
+      for (const f of args.format ?? []) ops.setVisualFormat(p, page, name, f.object, f.prop, f.value);
     });
   });
+  reg("report.textbox.set", "Edit text box", (s, a) => {
+    const x = need<{ page: string; visual: string }>(a, ["page", "visual"]);
+    const patch = (a as { patch?: Partial<TextboxModel> }).patch ?? {};
+    edit(s, "Edit text box", (p) => ops.editStatic(p, x.page, x.visual, "textbox", (json) => writeTextbox(json, patch)));
+  });
+  reg("report.image.insert", "Insert image", async (s, a) => {
+    const path = await s.dialogs.pickFile("Picture", ["png", "jpg", "jpeg", "gif", "svg", "webp"]);
+    if (!path) return;
+    if (!s.io.readImage) throw new Error("Choosing an image is not available here.");
+    const uri = await s.io.readImage(path);
+    edit(s, "Insert image", (p) => {
+      const page = ((a ?? {}) as { page?: string }).page ?? currentPage(s);
+      const name = ops.addVisual(p, page, "image");
+      ops.setVisualFormat(p, page, name, "image", "imageUrl", lit.str(uri));
+    });
+  });
+  reg("report.image.choose", "Choose image", async (s, a) => {
+    const x = need<{ page: string; visual: string }>(a, ["page", "visual"]);
+    const path = await s.dialogs.pickFile("Picture", ["png", "jpg", "jpeg", "gif", "svg", "webp"]);
+    if (path) await r.execute("report.image.set", { ...x, path }).then((res) => { if (!res.ok) throw new Error(res.message); });
+  });
+  reg("report.image.set", "Choose image", async (s, a) => {
+    const x = need<{ page: string; visual: string; path: string }>(a, ["page", "visual", "path"]);
+    if (!s.io.readImage) throw new Error("Choosing an image is not available here.");
+    const uri = await s.io.readImage(x.path);
+    edit(s, "Choose image", (p) => ops.setVisualFormat(p, x.page, x.visual, "image", "imageUrl", lit.str(uri)));
+  });
+  reg(
+    "report.button.run",
+    "Run button action",
+    async (s, a) => {
+      const x = need<{ page: string; visual: string }>(a, ["page", "visual"]);
+      const p = s.store.project!;
+      const v = parsePage(p, x.page)?.visuals.find((y) => y.name === x.visual);
+      if (!v) throw new Error(`Visual "${x.visual}" does not exist.`);
+      const act = readAction(v.json);
+      const problem = actionProblem(act, listPageNames(p), listBookmarks(p).map((b) => b.id));
+      if (problem) throw new Error(problem);
+      switch (act.type) {
+        case "PageNavigation":
+          s.report.goToPage(act.page!);
+          if (!s.store.getSnapshot().readOnly) edit(s, "Switch page", (d) => ops.setActivePage(d, act.page!));
+          break;
+        case "Bookmark":
+          if (s.store.getSnapshot().readOnly) throw new Error("Bookmark buttons do not work yet in a report opened for viewing.");
+          await r.execute("report.bookmark.apply", { id: act.bookmark });
+          break;
+        case "Back":
+          s.report.back();
+          break;
+        case "WebUrl":
+          if (!s.io.openUrl) throw new Error("Opening a web link is not available here.");
+          await s.io.openUrl(act.url!);
+          break;
+        default:
+          break;
+      }
+    },
+  );
   reg("report.visual.delete", "Delete visual", (s, a) => {
     const x = need<{ page: string; visual: string }>(a, ["page", "visual"]);
     edit(s, "Delete visual", (p) => ops.deleteVisual(p, x.page, x.visual));
