@@ -220,7 +220,14 @@ const smScenario = (type: string): Scenario => ({
 
 /** Same function for every visual type: the look of the container. */
 const containerScenario: Scenario = {
-  make: () => visualOf("clusteredColumnChart", { Category: [Cat], Y: [Qty] }),
+  // a title, a subtitle and a divider are on, so that the spacing between them can be seen
+  make: () => {
+    const v = visualOf("clusteredColumnChart", { Category: [Cat], Y: [Qty] });
+    setFormat(v.json, "subTitle", "show", lit.bool(true));
+    setFormat(v.json, "subTitle", "text", lit.str("Sub"));
+    setFormat(v.json, "divider", "show", lit.bool(true));
+    return v;
+  },
   render: (v) => buildContainer({ f: new FormatReader(v.json, DEFAULT_THEME, v.visualType), theme: DEFAULT_THEME, autoTitle: "Auto", titleByDefault: true, noAutoText: false }),
 };
 

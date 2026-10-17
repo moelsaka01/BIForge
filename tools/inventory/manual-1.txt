@@ -172,7 +172,7 @@ N | Local model server for external tools (port and database name arguments)
 D | Edit interactions
 N | Align (left, center, right, top, middle, bottom)
 N | Distribute horizontally / vertically
-N | Group / Ungroup
+D | Group / Ungroup
 D | Bring forward / Send backward (to front / to back)
 D | Selection pane
 D | Size and position
@@ -219,7 +219,7 @@ D | Visual frames: drag, resize (8 handles), nudge, delete, z-order, duplicate
 D | Zoom: fit, 50%, 75%, 100%, 150%
 D | Multi-selection with rubber band and Shift/Ctrl click
 P | Align and distribute with smart guides
-N | Group visuals and nested groups
+D | Group visuals and nested groups
 D | Copy and paste visuals between pages and reports
 D | Rotation (shapes, images, text box)
 P | Selection pane (rename, show/hide, reorder, tab order)
@@ -236,7 +236,7 @@ D | Drill down / drill up / next level / expand all
 D | Drillthrough to pages with Back button
 D | Report-page tooltips
 D | Sync slicers across pages
-N | Hierarchy slicer
+D | Hierarchy slicer
 N | Show data point as a table / See records
 N | Spotlight
 N | Export data (summarized / underlying)
@@ -246,7 +246,7 @@ N | Annotations
 ### Bookmarks
 D | Add, apply, update, rename, reorder, delete bookmarks
 D | Data / Display / Current page options
-N | Bookmark groups
+D | Bookmark groups
 N | Selection-pane based bookmark visibility
 N | Bookmark navigator visual
 N | Bookmark view mode (presenting)

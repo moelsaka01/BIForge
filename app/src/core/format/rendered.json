@@ -35,6 +35,10 @@
    "width"
   ],
   "spacing": [
+   "spaceAboveDivider",
+   "spaceAbovePlotArea",
+   "spaceAboveSubtitle",
+   "spaceBelowSubTitle",
    "spaceBelowTitle",
    "spaceBelowTitleArea",
    "verticalSpacing"
@@ -63,6 +67,7 @@
    "angle",
    "color",
    "position",
+   "preset",
    "shadowBlur",
    "shadowDistance",
    "shadowSpread",

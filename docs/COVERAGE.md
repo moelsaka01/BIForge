@@ -80,6 +80,11 @@ Last updated: 2026-10-17, after the scope-change session was completed (see PROG
 | Reports | Tooltips: default chart tooltip and report-page tooltips drawn for the hovered data point | Done-tested (jsdom hover). No tooltip size modes and no touch support |
 | Reports | Conditional formatting: gradient, rules, field value on table and matrix cells (background, font), chart bars and card values; data bars | Done-tested (condFormat.test.ts, dialog test). Icons and web URL formatting: Not started |
 | Reports | Bookmarks: add, apply, update, rename, reorder, delete; data, display and current-page options | Done-tested. Filters, slicer state, drill and selection are stored as a BIForge annotation, so Desktop sees the page and hidden visuals only. Spotlight, bookmark groups, buttons that apply bookmarks: Not started |
+| Reports | Bookmark groups: group ticked bookmarks, rename, ungroup (bookmarks stay), delete (bookmarks go), move into or out of a group; stored as `children` of a group item in `bookmarks/bookmarks.json` | Done-tested (bookmarks.test.ts, reportView.test.tsx, validated against the published schema in pbirSchema.test.ts). Whether Desktop shows the groups as BIForge does was not checked |
+| Reports | Group members stored relative to their group (like Desktop); uploaded pictures stored as registered resources (`StaticResources/RegisteredResources/imageNNN.png`, `resourcePackages` entry of type Image, `image.sourceFile` = ResourcePackageItem) instead of data URIs | Done-tested (storage.test.ts: nested groups, old files migrate on load, the stored form validates against the PBIR schemas; Rust model test for the picture files). Limit: a Desktop file with relative positions that happen to fit inside the group box at page position (and no BIForge marker annotation) is read as page positions |
+| Reports | Hierarchy slicer: a slicer with several fields of one table shows a tree (expand, search, tri-state boxes); a branch is stored as its shortest prefix; DAX `FILTER(ALL(levels…), OR of ANDs)`; PBIR `In`/`Or` over the levels (a one-level selection is stored as an ordinary `In`) | Done-tested (hierarchySlicer.test.tsx, hierarchyReport.ui.test.tsx, crates/dax/tests/tranche_filter.rs against the real DAX engine, schema validation). Not checked: how Desktop reads these filter conditions; fields from several tables are refused |
+| Reports | Map: heat map layer (replaces the bubbles; colors, radius in pixels or meters (approximate), transparency), zoom buttons, lasso (drag a rectangle, Ctrl adds) | Done-tested at option level (mapOptions.test.ts) and in jsdom for the buttons and the lasso (maps.ui.test.tsx). The heat map layer needs a real canvas and was not drawn in jsdom; not yet looked at in the real window |
+| Reports | Tooltips card (background, transparency, title and value colors, font, bold values, underline, on/off) and Shadow presets and the spacing between title, subtitle, divider and plot area | Done-tested (mapOptions.test.ts, containerModel.test.ts, coverage.test.ts). The tooltip look applies to chart tooltips; tables, cards and matrices have no hover tooltip. Shadow preset angles are a reading of the preset names, not checked against Desktop |
 | Reports | Themes: five built-in (own palettes), import and export of a theme JSON file, apply and reset; stored as a registered resource | Done-tested (theme.test.ts, jsdom import). Imports colors, text classes and a subset of visualStyles (title, background, border, legend, axes, labels, shadow); everything else is reported as ignored. Microsoft's themes are not shipped |
 | Reports | Format pane (Visual and General tabs, search): legend, axes, data labels, colors, line styles, slices, totals, slicer settings, title, background, border, shadow, tooltip, size and position | Done-tested; a test checks that every listed setting is read by a renderer. One Format pane serves both shells. **Not started:** on-object formatting (Modern shell, Phase 6), per-category data colors, font family choice, number format string editing |
 | Reports | Number display: format strings of columns and measures, display units, decimals | Done-tested (numberFormat.test.ts: custom numeric formats, sections, percent, scaling commas, scientific). Date format strings are not interpreted (dates show as the engine prints them) |
@@ -137,8 +142,8 @@ Last updated: 2026-10-17, after the scope-change session was completed (see PROG
 | Report view ribbon: Optimize tab | 4 | 2 | 0 | 2 |
 | Report view ribbon: Help tab | 5 | 1 | 0 | 4 |
 | Report view ribbon: External Tools tab | 2 | 0 | 0 | 2 |
-| Report view contextual tabs | 35 | 12 | 2 | 21 |
-| Report canvas and page features | 53 | 22 | 2 | 29 |
+| Report view contextual tabs | 35 | 13 | 2 | 20 |
+| Report canvas and page features | 53 | 25 | 2 | 26 |
 | Visuals | 76 | 38 | 0 | 38 |
 | Table view | 18 | 3 | 0 | 15 |
 | Model view | 23 | 3 | 2 | 18 |
@@ -155,10 +160,10 @@ Last updated: 2026-10-17, after the scope-change session was completed (see PROG
 | Keyboard shortcuts | 37 | 6 | 0 | 31 |
 | Export, print and file formats | 15 | 2 | 0 | 13 |
 | Accessibility and platform | 12 | 1 | 1 | 10 |
-| Format pane cards per visual | 1264 | 220 | 311 | 733 |
+| Format pane cards per visual | 1264 | 249 | 282 | 733 |
 | DAX functions | 317 | 268 | 0 | 49 |
 | M standard library | 652 | 120 | 0 | 532 |
-| **Total** | **3008** | **842** | **340** | **1826** |
+| **Total** | **3008** | **875** | **311** | **1822** |
 <!-- inventory-status:end -->
 
 ## Online track (Publish & Share; plan in docs/ONLINE_PLAN.md)

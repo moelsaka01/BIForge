@@ -46,6 +46,18 @@ export interface ContainerInput {
 }
 
 const ALIGN: Record<string, CSSProperties["textAlign"]> = { left: "left", center: "center", right: "right", Left: "left", Center: "center", Right: "right" };
+/** Where the shadow falls for each preset of the Shadow card: the angle (degrees, counter-clockwise from the right) and the distance. */
+const SHADOW_PRESETS: Record<string, { angle: number; distance: number }> = {
+  BottomRight: { angle: 315, distance: 3 },
+  Bottom: { angle: 270, distance: 3 },
+  BottomLeft: { angle: 225, distance: 3 },
+  CenterRight: { angle: 0, distance: 3 },
+  Center: { angle: 0, distance: 0 },
+  CenterLeft: { angle: 180, distance: 3 },
+  TopRight: { angle: 45, distance: 3 },
+  Top: { angle: 90, distance: 3 },
+  TopLeft: { angle: 135, distance: 3 },
+};
 const DASH: Record<string, string> = { solid: "solid", dashed: "dashed", dotted: "dotted", custom: "dashed" };
 
 function block(f: FormatReader, theme: Theme, object: "title" | "subTitle", text: string, defaults: { size: number; color: string; family: string }, wrapDefault: boolean): TextBlock | null {
@@ -97,15 +109,17 @@ export function buildContainer(inp: ContainerInput): ContainerModel {
 
   const base = 4;
   const pad = (prop: string) => base + Math.max(0, f.num("padding", prop, 0));
-  const body = { left: pad("left"), right: pad("right"), top: y + pad("top"), bottom: pad("bottom") };
+  const body = { left: pad("left"), right: pad("right"), top: y + sp("spaceAbovePlotArea", 0) + pad("top"), bottom: pad("bottom") };
 
   const bgOn = f.bool("background", "show", true);
   const bgAlpha = opacityOf(f.num("background", "transparency", 0));
   const bgColor = f.color("background", "color") ?? theme.background;
   const borderOn = f.bool("border", "show", false);
   const shadowOn = f.bool("dropShadow", "show", false);
-  const angle = (f.num("dropShadow", "angle", 45) * Math.PI) / 180;
-  const dist = f.num("dropShadow", "shadowDistance", 3);
+  // a preset is a direction (and a default distance); Custom keeps the angle and distance of the card
+  const preset = SHADOW_PRESETS[f.str("dropShadow", "preset", "Custom")];
+  const angle = ((preset ? preset.angle : f.num("dropShadow", "angle", 45)) * Math.PI) / 180;
+  const dist = preset ? preset.distance : f.num("dropShadow", "shadowDistance", 3);
   const blur = f.num("dropShadow", "shadowBlur", 4);
   const spread = f.num("dropShadow", "shadowSpread", 0);
   const shadowAlpha = opacityOf(f.num("dropShadow", "transparency", 70));
