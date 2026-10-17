@@ -20,6 +20,7 @@ const check = (ok, what) => { console.log(`${ok ? "PASS" : "FAIL"}: ${what}`); i
 const child = spawn(exe, [], {
   env: {
     ...process.env,
+    BIFORGE_TEST_DEBUG_PORT: String(port), // the app opens its windows with this DevTools port (inert when unset)
     WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port}`,
     WEBVIEW2_USER_DATA_FOLDER: join(work, "webview"),
     BIFORGE_TEST_PICKS: [parent].join("|"),

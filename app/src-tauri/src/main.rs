@@ -7,7 +7,22 @@ mod pq;
 mod publish;
 mod syskeys;
 
+/// The real-window test (app/e2e) drives the app over the DevTools protocol. WebView2 reads the port from an environment
+/// variable on most runtime versions, but not on all (the 154 runtime of the CI image ignores it), so the test asks the app
+/// itself: when BIFORGE_TEST_DEBUG_PORT is set, the windows are created with that debugging port. Inert when unset.
+fn apply_test_debug_port(context: &mut tauri::Context) {
+    if let Ok(port) = std::env::var("BIFORGE_TEST_DEBUG_PORT") {
+        if port.chars().all(|c| c.is_ascii_digit()) && !port.is_empty() {
+            for w in context.config_mut().app.windows.iter_mut() {
+                w.additional_browser_args = Some(format!("--remote-debugging-port={port}"));
+            }
+        }
+    }
+}
+
 fn main() {
+    let mut context = tauri::generate_context!();
+    apply_test_debug_port(&mut context);
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .manage(data::DataService::system())
@@ -77,6 +92,6 @@ fn main() {
             publish::deep_link_parse,
             publish::startup_open,
         ])
-        .run(tauri::generate_context!())
+        .run(context)
         .expect("error while running BIForge");
 }
