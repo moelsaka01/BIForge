@@ -44,7 +44,13 @@ try {
     console.log("--- listening\n" + sh('powershell -NoProfile -Command "Get-NetTCPConnection -State Listen | Where-Object { $_.LocalPort -ge 9000 -and $_.LocalPort -le 9999 } | Format-Table | Out-String"'));
   }
   if (!browser) throw new Error(`could not attach to the app window (exe ${exe} exists: ${existsSync(exe)}; ${exited ?? "process still running"})`);
-  const page = browser.contexts()[0].pages()[0];
+  // the window's page may appear a moment after the debugging port answers (slower machines)
+  let page;
+  for (let i = 0; i < 60 && !page; i++) {
+    page = browser.contexts()[0]?.pages()[0];
+    if (!page) await new Promise((r) => setTimeout(r, 500));
+  }
+  if (!page) throw new Error("the app window has no page to drive");
   page.setDefaultTimeout(30000);
   await page.waitForSelector("text=Recent");
   check(true, "the real window shows the start screen");
