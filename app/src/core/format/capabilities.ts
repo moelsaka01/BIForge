@@ -19,6 +19,8 @@ export type CardProps = Readonly<Record<string, Kind>>;
 interface Raw {
   cards: Record<string, CardProps>;
   visuals: Record<string, Record<string, string>>;
+  /** Property names of the container objects in the published PBIR schema (the names a report file may use). */
+  container: Record<string, string[]>;
 }
 const data = raw as unknown as Raw;
 
@@ -91,6 +93,8 @@ export function visualObjects(visualType: string): Record<string, CardProps> | n
     if (object === "*") continue;
     const merged: Record<string, Kind> = { ...data.cards[id], ...EXTRAS[object] };
     for (const p of Object.keys(merged)) merged[p] = norm(p, merged[p])!;
+    // the container objects are limited to the names of the PBIR schema
+    if (CONTAINER_OBJECTS.has(object)) for (const p of Object.keys(merged)) if (!data.container[object]?.includes(p)) delete merged[p];
     out[object] = merged;
   }
   return out;
@@ -100,6 +104,7 @@ export function visualObjects(visualType: string): Record<string, CardProps> | n
 export function propKind(visualType: string, object: string, prop: string): Kind | null {
   const id = data.visuals[styleKey(visualType)]?.[object];
   if (id === undefined) return null;
+  if (CONTAINER_OBJECTS.has(object) && !data.container[object]?.includes(prop)) return null;
   return norm(prop, data.cards[id]?.[prop] ?? EXTRAS[object]?.[prop]);
 }
 

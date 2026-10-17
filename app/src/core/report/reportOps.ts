@@ -356,7 +356,8 @@ export function moveInOrder(p: Project, page: string, visual: string, dir: "up" 
 
 // ---- sync slicers ------------------------------------------------------------------------------
 
-export const syncGroupOf = (json: J): string | null => (typeof json?.syncGroup?.groupName === "string" ? json.syncGroup.groupName : null);
+/** The sync group of a slicer: visual.syncGroup in the report format. */
+export const syncGroupOf = (json: J): string | null => (typeof json?.visual?.syncGroup?.groupName === "string" ? json.visual.syncGroup.groupName : null);
 
 const slicersOf = (p: Project, page: string): J[] =>
   Object.keys(files(p))
@@ -380,11 +381,11 @@ export function setSlicerSync(p: Project, page: string, visual: string, group: s
   if (src.visual?.visualType !== "slicer") throw new ReportError("Only a slicer can be synced.");
   const old = syncGroupOf(src);
   if (!group) {
-    for (const pg of listPageNames(p)) for (const j of slicersOf(p, pg)) if (old && syncGroupOf(j) === old && j !== src) (j.isHidden ? deleteVisual(p, pg, j.name) : delete j.syncGroup);
-    delete src.syncGroup;
+    for (const pg of listPageNames(p)) for (const j of slicersOf(p, pg)) if (old && syncGroupOf(j) === old && j !== src) (j.isHidden ? deleteVisual(p, pg, j.name) : delete j.visual.syncGroup);
+    delete src.visual.syncGroup;
     return;
   }
-  src.syncGroup = { groupName: group, fieldChanges: true, filterChanges: true };
+  src.visual.syncGroup = { groupName: group, fieldChanges: true, filterChanges: true };
   for (const e of pages) {
     if (e.page === page) continue;
     pageJson(p, e.page);
@@ -402,7 +403,7 @@ export function setSlicerSync(p: Project, page: string, visual: string, group: s
       }
     } else if (existing) {
       if (existing.isHidden) deleteVisual(p, e.page, existing.name);
-      else delete existing.syncGroup;
+      else delete existing.visual.syncGroup;
     }
   }
 }

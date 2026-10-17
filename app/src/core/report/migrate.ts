@@ -79,6 +79,12 @@ export function migrateVisual(json: J): boolean {
     v.visualType = renamed;
     changed = true;
   }
+  // the sync group is part of the visual, not of the container
+  if (json.syncGroup) {
+    v.syncGroup = json.syncGroup;
+    delete json.syncGroup;
+    changed = true;
+  }
   const objects: Objects | undefined = v.objects;
   const container: Objects | undefined = v.visualContainerObjects;
 

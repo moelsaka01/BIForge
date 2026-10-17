@@ -92,12 +92,26 @@ for (const [vname, node] of Object.entries(styleProps)) {
   visuals[vname] = out;
 }
 
+// The container objects (title, border, tooltip, ...) are defined a second time, by name only, in the published PBIR schema,
+// and that list is the one a report file is validated against: a name the theme schema has but the PBIR schema lacks
+// would make the file invalid, so the pane only offers the names of the PBIR schema for these objects.
+const pbirSchemaFile = new URL("../../tests/pbir-schemas/fabric/item/report/definition/visualConfiguration/2.8.0/schema-embedded.json", import.meta.url);
+const pbir = JSON.parse(fs.readFileSync(pbirSchemaFile, "utf8"));
+const container = {};
+for (const [object, def] of Object.entries(pbir.definitions.VisualContainerFormattingObjects.properties)) {
+  const ref = def.items?.properties?.properties?.$ref;
+  if (!ref) continue;
+  const props = pbir.definitions[ref.split("/").pop()]?.properties;
+  if (props) container[object] = Object.keys(props);
+}
+
 const cards = Object.fromEntries([...cardTable.entries()].sort(([x], [y]) => x.localeCompare(y)));
 const result = {
   source: "Report theme schema of Power BI Desktop (object and property names, value kinds, allowed values, ranges)",
   kinds: "b boolean; n number [min,max,integer]; s text; c color; f font size [min,max]; e one of [values]; x structured value (kept as written, not edited)",
   cards,
   visuals,
+  container,
 };
 fs.writeFileSync(output, JSON.stringify(result));
 const size = fs.statSync(output).size;

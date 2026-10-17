@@ -1,0 +1,1 @@
+These JSON schemas are copied from https://github.com/microsoft/json-schemas (MIT license, see LICENSE). They are the published definition of the PBIR report files; BIForge's saved reports are validated against them by app/src/core/report/pbirSchema.test.ts. Refresh with tools/pbir-validate/fetch-schemas.mjs.
