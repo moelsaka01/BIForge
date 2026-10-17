@@ -7,7 +7,10 @@ use std::sync::Arc;
 
 use biforge_engine::{CredentialStore, Engine, SystemCredentialStore};
 use biforge_model::project::{sanitize_file_name, Project};
-use biforge_publish::adapter::{AdapterInfo, Issue, RemoteState, Registry};
+use biforge_publish::adapter::{AdapterInfo, Context, Issue, Registry, RemoteState};
+use biforge_publish::http::{Http, ReqwestHttp};
+use biforge_publish::subscribe::{self, Subscription, SubscriptionStore};
+use biforge_publish::{cloudflare, github};
 use biforge_publish::audit::{self, AuditEvent};
 use biforge_publish::deeplink::{self, Link};
 use biforge_publish::keys::KeyStore;
@@ -28,6 +31,15 @@ pub struct CredKeys(pub Arc<dyn CredentialStore>);
 
 impl KeyStore for CredKeys {
     fn get(&self, name: &str) -> biforge_publish::Result<Option<String>> {
+        // test seam, debug builds only: the real-window test supplies a GitHub token through the environment of the
+        // process it starts instead of typing it anywhere. Release builds never read it.
+        if cfg!(debug_assertions) && name == github::TOKEN_KEY {
+            if let Ok(t) = std::env::var("BIFORGE_TEST_GITHUB_TOKEN") {
+                if !t.trim().is_empty() {
+                    return Ok(Some(t));
+                }
+            }
+        }
         self.0.get(name).map_err(|e| biforge_publish::Error::KeyStore(e.to_string()))
     }
     fn set(&self, name: &str, secret: &str) -> biforge_publish::Result<()> {
@@ -71,13 +83,36 @@ pub struct OpenedPackage {
 }
 
 pub struct PublishService {
-    keys: CredKeys,
+    keys: Arc<CredKeys>,
+    http: Arc<dyn Http>,
     cache_base: PathBuf,
 }
 
 impl PublishService {
     pub fn new(creds: Arc<dyn CredentialStore>, cache_base: PathBuf) -> Self {
-        Self { keys: CredKeys(creds), cache_base }
+        let http: Arc<dyn Http> = match ReqwestHttp::new() {
+            Ok(h) => Arc::new(h),
+            Err(_) => Arc::new(biforge_publish::http::FakeHttp::new(vec![])),
+        };
+        Self { keys: Arc::new(CredKeys(creds)), http, cache_base }
+    }
+
+    pub fn with_http(mut self, http: Arc<dyn Http>) -> Self {
+        self.http = http;
+        self
+    }
+
+    fn reg(&self) -> Registry {
+        Registry::standard_with(Context { keys: self.keys.clone(), http: self.http.clone() })
+    }
+
+    /// `%LOCALAPPDATA%BIForge` (the folder above the viewing cache).
+    fn app_dir(&self) -> PathBuf {
+        self.cache_base.parent().map(Path::to_path_buf).unwrap_or_else(|| self.cache_base.clone())
+    }
+
+    fn subs(&self) -> SubscriptionStore {
+        SubscriptionStore::new(self.app_dir().join("subscriptions.json"))
     }
 
     pub fn system() -> Self {
@@ -86,7 +121,7 @@ impl PublishService {
     }
 
     pub fn adapters(&self) -> Vec<AdapterInfo> {
-        Registry::standard().infos()
+        self.reg().infos()
     }
 
     pub fn targets(&self, root: &str) -> Result<Vec<Target>, String> {
@@ -94,21 +129,21 @@ impl PublishService {
     }
 
     pub fn put_target(&self, root: &str, target: Target) -> Result<(), String> {
-        let reg = Registry::standard();
+        let reg = self.reg();
         reg.get(&target.adapter_id).map_err(msg)?;
         TargetStore::for_project(Path::new(root)).put(target).map_err(msg)
     }
 
     pub fn delete_target(&self, root: &str, id: &str) -> Result<(), String> {
         let store = TargetStore::for_project(Path::new(root));
-        let reg = Registry::standard();
-        Publisher { registry: &reg, keys: &self.keys, store: &store }.delete_target(id).map_err(msg)
+        let reg = self.reg();
+        Publisher { registry: &reg, keys: self.keys.as_ref(), store: &store }.delete_target(id).map_err(msg)
     }
 
     pub fn validate(&self, root: &str, id: &str) -> Result<Vec<Issue>, String> {
         let store = TargetStore::for_project(Path::new(root));
         let t = store.get(id).map_err(msg)?;
-        let reg = Registry::standard();
+        let reg = self.reg();
         Ok(reg.get(&t.adapter_id).map_err(msg)?.validate(&t))
     }
 
@@ -118,26 +153,26 @@ impl PublishService {
 
     pub fn unpublish(&self, root: &str, id: &str) -> Result<(), String> {
         let store = TargetStore::for_project(Path::new(root));
-        let reg = Registry::standard();
-        Publisher { registry: &reg, keys: &self.keys, store: &store }.unpublish(id).map_err(msg)
+        let reg = self.reg();
+        Publisher { registry: &reg, keys: self.keys.as_ref(), store: &store }.unpublish(id).map_err(msg)
     }
 
     pub fn share_link(&self, root: &str, id: &str) -> Result<String, String> {
         let store = TargetStore::for_project(Path::new(root));
-        let reg = Registry::standard();
-        Publisher { registry: &reg, keys: &self.keys, store: &store }.share_link(id).map_err(msg)
+        let reg = self.reg();
+        Publisher { registry: &reg, keys: self.keys.as_ref(), store: &store }.share_link(id).map_err(msg)
     }
 
     pub fn access_key(&self, root: &str, id: &str) -> Result<Option<String>, String> {
         let store = TargetStore::for_project(Path::new(root));
-        let reg = Registry::standard();
-        Publisher { registry: &reg, keys: &self.keys, store: &store }.access_key(id).map_err(msg)
+        let reg = self.reg();
+        Publisher { registry: &reg, keys: self.keys.as_ref(), store: &store }.access_key(id).map_err(msg)
     }
 
     pub fn status(&self, root: &str, id: &str) -> Result<Option<RemoteState>, String> {
         let store = TargetStore::for_project(Path::new(root));
-        let reg = Registry::standard();
-        Publisher { registry: &reg, keys: &self.keys, store: &store }.status(id).map_err(msg)
+        let reg = self.reg();
+        Publisher { registry: &reg, keys: self.keys.as_ref(), store: &store }.status(id).map_err(msg)
     }
 
     /// Builds the files of a package: the (already pruned) project as it would be saved, and one Parquet snapshot
@@ -184,8 +219,8 @@ impl PublishService {
         let mut included = args.included.clone();
         let files = data.with_store(|e| self.collect_files(project, &mut included, e))?;
         let store = TargetStore::for_project(Path::new(root));
-        let reg = Registry::standard();
-        let p = Publisher { registry: &reg, keys: &self.keys, store: &store };
+        let reg = self.reg();
+        let p = Publisher { registry: &reg, keys: self.keys.as_ref(), store: &store };
         let req = PublishRequest {
             target_id: args.target_id,
             report_name: args.report_name,
@@ -239,10 +274,170 @@ impl PublishService {
 
     pub fn parse_link(&self, link: &str) -> Result<LinkDto, String> {
         Ok(match deeplink::parse(link).map_err(msg)? {
-            Link::File { path } => LinkDto { src: "file".into(), path: Some(path), supported: true },
-            Link::Unsupported { src } => LinkDto { src, path: None, supported: false },
+            Link::File { path } => LinkDto { src: "file".into(), path: Some(path), url: None, supported: true },
+            Link::Url { url } => LinkDto { src: "url".into(), path: None, url: Some(url), supported: true },
+            Link::Unsupported { src } => LinkDto { src, path: None, url: None, supported: false },
         })
     }
+
+    // ---- accounts (tokens live in the credential store only) ----
+
+    fn token_key(provider: &str) -> Result<&'static str, String> {
+        match provider {
+            "github" => Ok(github::TOKEN_KEY),
+            "cloudflare" => Ok(cloudflare::TOKEN_KEY),
+            other => Err(format!("Unknown provider \"{other}\".")),
+        }
+    }
+
+    /// Whether a token is stored (never the token itself).
+    pub fn account_connected(&self, provider: &str) -> Result<bool, String> {
+        Ok(self.keys.get(Self::token_key(provider)?).map_err(msg)?.is_some())
+    }
+
+    /// Stores the token and checks it with the provider; a token the provider rejects is removed again.
+    pub fn account_connect(&self, provider: &str, token: &str, account_id: Option<String>) -> Result<String, String> {
+        let key = Self::token_key(provider)?;
+        let token = token.trim();
+        if token.is_empty() {
+            return Err("Paste the token first.".into());
+        }
+        let previous = self.keys.get(key).map_err(msg)?;
+        self.keys.set(key, token).map_err(msg)?;
+        let checked = match provider {
+            "github" => biforge_publish::github::GitHubAdapter::new(Context { keys: self.keys.clone(), http: self.http.clone() }).login().map_err(msg),
+            _ => {
+                let mut t = Target::new("check", cloudflare::ID, "check", biforge_publish::manifest::AccessLevel::Public);
+                t.settings.insert("accountId".into(), account_id.unwrap_or_default());
+                t.settings.insert("name".into(), "check".into());
+                self.reg().get(cloudflare::ID).map_err(msg).and_then(|a| a.authenticate(&mut t).map_err(msg)).map(|_| t.account.unwrap_or_default())
+            }
+        };
+        match checked {
+            Ok(name) => Ok(name),
+            Err(e) => {
+                match previous {
+                    Some(p) => {
+                        let _ = self.keys.set(key, &p);
+                    }
+                    None => {
+                        let _ = self.keys.delete(key);
+                    }
+                }
+                Err(e)
+            }
+        }
+    }
+
+    pub fn account_disconnect(&self, provider: &str) -> Result<(), String> {
+        self.keys.delete(Self::token_key(provider)?).map_err(msg)
+    }
+
+    /// Checks the destination's account and records the account name on the target.
+    pub fn authenticate(&self, root: &str, id: &str) -> Result<Target, String> {
+        let store = TargetStore::for_project(Path::new(root));
+        let mut t = store.get(id).map_err(msg)?;
+        self.reg().get(&t.adapter_id).map_err(msg)?.authenticate(&mut t).map_err(msg)?;
+        store.put(t.clone()).map_err(msg)?;
+        Ok(t)
+    }
+
+    // ---- subscriptions (viewer side of static hosting) ----
+
+    fn download(&self, feed_url: &str, pinned: Option<&str>) -> Result<Linked, String> {
+        let feed = subscribe::fetch_feed(self.http.as_ref(), feed_url).map_err(msg)?;
+        let bytes = subscribe::fetch_package(self.http.as_ref(), feed_url, &feed).map_err(msg)?;
+        let env = package::peek(&bytes, pinned).map_err(msg)?;
+        if env.package_id != feed.package_id || env.version != feed.version {
+            return Err("The downloaded package does not match its feed.".into());
+        }
+        let dir = self.app_dir().join("downloads");
+        fs::create_dir_all(&dir).map_err(msg)?;
+        let path = dir.join(format!("{}.biforge", feed.package_id));
+        fs::write(&path, &bytes).map_err(msg)?;
+        let existing_pin = self.subs().list().map_err(msg)?.into_iter().find(|s| s.package_id == feed.package_id).map(|s| s.pinned_publisher);
+        Ok(Linked { path: path.display().to_string(), envelope: env, existing_pin })
+    }
+
+    /// Downloads the package a feed points at into the download folder and reads its envelope.
+    pub fn linked_fetch(&self, feed_url: &str) -> Result<Linked, String> {
+        self.download(feed_url, None)
+    }
+
+    /// Remembers the report: the publisher key it was signed with is pinned (trust on first use).
+    pub fn subscription_accept(&self, feed_url: &str, path: &str, report_name: &str, access_key: Option<String>) -> Result<Subscription, String> {
+        let env = package::peek(&fs::read(path).map_err(msg)?, None).map_err(msg)?;
+        if let Some(k) = access_key.filter(|k| !k.trim().is_empty()) {
+            self.keys.set(&viewer_key_name(&env.package_id), k.trim()).map_err(msg)?;
+        }
+        let sub = Subscription {
+            package_id: env.package_id,
+            feed_url: feed_url.into(),
+            report_name: report_name.into(),
+            pinned_publisher: env.publisher_public_key,
+            have_version: env.version,
+            last_check: Some(biforge_publish::time::now_rfc3339()),
+            last_error: None,
+            package_path: path.into(),
+        };
+        self.subs().put(sub.clone()).map_err(msg)?;
+        Ok(sub)
+    }
+
+    pub fn subscriptions(&self) -> Result<Vec<Subscription>, String> {
+        self.subs().list().map_err(msg)
+    }
+
+    pub fn subscription_remove(&self, package_id: &str) -> Result<(), String> {
+        let _ = self.keys.delete(&viewer_key_name(package_id));
+        self.subs().remove(package_id).map_err(msg)
+    }
+
+    /// Looks for a newer version. When there is one it is downloaded and checked against the pinned publisher;
+    /// the caller opens it. A package signed by someone else is refused and the subscription records why.
+    pub fn subscription_check(&self, package_id: &str) -> Result<Option<Linked>, String> {
+        let store = self.subs();
+        let mut sub = store.list().map_err(msg)?.into_iter().find(|s| s.package_id == package_id).ok_or("This report is not subscribed.")?;
+        sub.last_check = Some(biforge_publish::time::now_rfc3339());
+        let outcome = (|| -> Result<Option<Linked>, String> {
+            if subscribe::newer(self.http.as_ref(), &sub.feed_url, sub.have_version).map_err(msg)?.is_none() {
+                return Ok(None);
+            }
+            Ok(Some(self.download(&sub.feed_url, Some(&sub.pinned_publisher))?))
+        })();
+        sub.last_error = outcome.as_ref().err().cloned();
+        let _ = store.put(sub);
+        outcome
+    }
+
+    /// Records that the viewer now has `version` of the report.
+    pub fn subscription_opened(&self, package_id: &str, version: u64, path: &str) -> Result<(), String> {
+        let store = self.subs();
+        if let Some(mut s) = store.list().map_err(msg)?.into_iter().find(|s| s.package_id == package_id) {
+            s.have_version = version;
+            s.package_path = path.into();
+            s.last_error = None;
+            store.put(s).map_err(msg)?;
+        }
+        Ok(())
+    }
+
+    pub fn viewer_key(&self, package_id: &str) -> Result<Option<String>, String> {
+        self.keys.get(&viewer_key_name(package_id)).map_err(msg)
+    }
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Linked {
+    pub path: String,
+    pub envelope: Envelope,
+    /// The publisher key pinned by an earlier subscription to the same report.
+    pub existing_pin: Option<String>,
+}
+
+fn viewer_key_name(package_id: &str) -> String {
+    format!("biforge.viewer.access.{package_id}")
 }
 
 #[derive(Debug, Serialize)]
@@ -250,6 +445,7 @@ impl PublishService {
 pub struct LinkDto {
     pub src: String,
     pub path: Option<String>,
+    pub url: Option<String>,
     pub supported: bool,
 }
 
@@ -342,6 +538,50 @@ pub fn package_open(s: tauri::State<PublishService>, path: String, access_key: O
 pub fn deep_link_parse(s: tauri::State<PublishService>, link: String) -> Result<LinkDto, String> {
     s.parse_link(&link)
 }
+#[tauri::command]
+pub fn account_connected(s: tauri::State<PublishService>, provider: String) -> Result<bool, String> {
+    s.account_connected(&provider)
+}
+#[tauri::command]
+pub fn account_connect(s: tauri::State<PublishService>, provider: String, token: String, account_id: Option<String>) -> Result<String, String> {
+    s.account_connect(&provider, &token, account_id)
+}
+#[tauri::command]
+pub fn account_disconnect(s: tauri::State<PublishService>, provider: String) -> Result<(), String> {
+    s.account_disconnect(&provider)
+}
+#[tauri::command]
+pub fn publish_authenticate(s: tauri::State<PublishService>, root: String, target_id: String) -> Result<Target, String> {
+    s.authenticate(&root, &target_id)
+}
+#[tauri::command]
+pub fn linked_fetch(s: tauri::State<PublishService>, feed_url: String) -> Result<Linked, String> {
+    s.linked_fetch(&feed_url)
+}
+#[tauri::command]
+pub fn subscription_accept(s: tauri::State<PublishService>, feed_url: String, path: String, report_name: String, access_key: Option<String>) -> Result<Subscription, String> {
+    s.subscription_accept(&feed_url, &path, &report_name, access_key)
+}
+#[tauri::command]
+pub fn subscriptions(s: tauri::State<PublishService>) -> Result<Vec<Subscription>, String> {
+    s.subscriptions()
+}
+#[tauri::command]
+pub fn subscription_remove(s: tauri::State<PublishService>, package_id: String) -> Result<(), String> {
+    s.subscription_remove(&package_id)
+}
+#[tauri::command]
+pub fn subscription_check(s: tauri::State<PublishService>, package_id: String) -> Result<Option<Linked>, String> {
+    s.subscription_check(&package_id)
+}
+#[tauri::command]
+pub fn subscription_opened(s: tauri::State<PublishService>, package_id: String, version: u64, path: String) -> Result<(), String> {
+    s.subscription_opened(&package_id, version, &path)
+}
+#[tauri::command]
+pub fn viewer_key(s: tauri::State<PublishService>, package_id: String) -> Result<Option<String>, String> {
+    s.viewer_key(&package_id)
+}
 /// A biforge:// link or a .biforge file given on the command line when the app was started.
 #[tauri::command]
 pub fn startup_open() -> Option<String> {
@@ -391,8 +631,8 @@ mod tests {
         assert!(files.iter().all(|f| !f.path.contains(".biforge")));
 
         let store = TargetStore::for_project(&root);
-        let reg = Registry::standard();
-        let p = Publisher { registry: &reg, keys: &svc.keys, store: &store };
+        let reg = svc.reg();
+        let p = Publisher { registry: &reg, keys: svc.keys.as_ref(), store: &store };
         let out = p
             .publish(&PublishRequest {
                 target_id: "t1".into(),
@@ -446,4 +686,79 @@ mod tests {
         assert!(!svc.parse_link("biforge://open?src=p2p&ticket=1").unwrap().supported);
         assert!(svc.parse_link("https://example.com").is_err());
     }
+    fn pkg(id: &str, version: u64, signer: &biforge_publish::keys::Identity) -> (Vec<u8>, biforge_publish::feed::Feed) {
+        use biforge_publish::manifest::AccessLevel;
+        let bytes = package::build(
+            package::BuildInput {
+                package_id: id.into(),
+                version,
+                report_name: "Demo".into(),
+                publisher_name: "Ann".into(),
+                access: AccessLevel::Public,
+                included: vec![],
+                permissions: vec![],
+                created_at: "2026-10-17T00:00:00Z".into(),
+                files: vec![PackageFile { path: "project/Demo.pbip".into(), bytes: b"{}".to_vec() }],
+                recipients: vec![],
+            },
+            signer,
+        )
+        .unwrap();
+        let feed = biforge_publish::feed::Feed { package_id: id.into(), version, file: format!("{id}.biforge"), sha256: biforge_publish::keys::sha256_hex(&bytes), access: AccessLevel::Public, updated_at: "t".into() };
+        (bytes, feed)
+    }
+
+    #[test]
+    fn a_feed_link_is_downloaded_pinned_and_later_versions_must_come_from_the_same_publisher() {
+        use biforge_publish::http::{FakeHttp, Response};
+        let tmp = tempfile::tempdir().unwrap();
+        let signer = biforge_publish::keys::Identity::generate();
+        let id = "0123456789abcdef0123456789abcdef";
+        let url = "https://ann.github.io/site/feed.json";
+        let (b1, f1) = pkg(id, 1, &signer);
+        let (b2, f2) = pkg(id, 2, &signer);
+        let mallory = biforge_publish::keys::Identity::generate();
+        let (b3, f3) = pkg(id, 3, &mallory);
+        let j = |f: &biforge_publish::feed::Feed| Response { status: 200, body: serde_json::to_vec(f).unwrap() };
+        let ok = |b: Vec<u8>| Response { status: 200, body: b };
+        let http = Arc::new(FakeHttp::new(vec![
+            j(&f1), ok(b1.clone()), // first open
+            j(&f1),                 // check: nothing newer
+            j(&f2), j(&f2), ok(b2), // check: version 2
+            j(&f3), j(&f3), ok(b3), // check: version 3 from another publisher
+        ]));
+        let svc = PublishService::new(Arc::new(Mem(MemoryKeyStore::default())), tmp.path().join("viewing")).with_http(http);
+
+        let linked = svc.linked_fetch(url).unwrap();
+        assert!(linked.existing_pin.is_none());
+        assert_eq!(linked.envelope.version, 1);
+        let sub = svc.subscription_accept(url, &linked.path, "Demo", None).unwrap();
+        assert_eq!(sub.pinned_publisher, signer.public_key());
+        assert!(svc.subscription_check(id).unwrap().is_none());
+        let up = svc.subscription_check(id).unwrap().expect("version 2 is newer");
+        assert_eq!(up.envelope.version, 2);
+        svc.subscription_opened(id, 2, &up.path).unwrap();
+        assert_eq!(svc.subscriptions().unwrap()[0].have_version, 2);
+        let err = svc.subscription_check(id).unwrap_err();
+        assert!(err.contains("different publisher"), "{err}");
+        assert!(svc.subscriptions().unwrap()[0].last_error.is_some(), "the refusal is recorded");
+        assert_eq!(svc.subscriptions().unwrap()[0].have_version, 2, "the forged version is not taken");
+    }
+
+    #[test]
+    fn tokens_are_checked_stored_and_removed_when_the_provider_rejects_them() {
+        use biforge_publish::http::{FakeHttp, Response};
+        let tmp = tempfile::tempdir().unwrap();
+        let http = Arc::new(FakeHttp::new(vec![Response { status: 401, body: b"{\"message\":\"Bad credentials\"}".to_vec() }, Response { status: 200, body: b"{\"login\":\"ann\"}".to_vec() }]));
+        let svc = PublishService::new(Arc::new(Mem(MemoryKeyStore::default())), tmp.path().join("viewing")).with_http(http);
+        assert!(!svc.account_connected("github").unwrap());
+        assert!(svc.account_connect("github", "bad", None).is_err());
+        assert!(!svc.account_connected("github").unwrap(), "a rejected token is not kept");
+        assert_eq!(svc.account_connect("github", "good", None).unwrap(), "ann");
+        assert!(svc.account_connected("github").unwrap());
+        svc.account_disconnect("github").unwrap();
+        assert!(!svc.account_connected("github").unwrap());
+        assert!(svc.account_connect("nope", "x", None).is_err());
+    }
+
 }

@@ -91,6 +91,17 @@ fn main() {
             publish::package_open,
             publish::deep_link_parse,
             publish::startup_open,
+            publish::account_connected,
+            publish::account_connect,
+            publish::account_disconnect,
+            publish::publish_authenticate,
+            publish::linked_fetch,
+            publish::subscription_accept,
+            publish::subscriptions,
+            publish::subscription_remove,
+            publish::subscription_check,
+            publish::subscription_opened,
+            publish::viewer_key,
         ])
         .run(context)
         .expect("error while running BIForge");
