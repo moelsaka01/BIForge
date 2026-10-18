@@ -174,7 +174,7 @@ impl CloudflareAdapter {
         self.ok_json(r, "publish the site")?;
         // make sure the workers.dev address is on (it is by default; ignore a refusal, the status check will tell)
         let _ = self.send(Request::new("POST", &format!("{}/accounts/{account}/workers/scripts/{name}/subdomain", self.api)).json(&json!({"enabled": true, "previews_enabled": false})), &token, "enable the address");
-        Ok(RemoteState { package_id: meta.package_id.clone(), version: meta.version, sha256: meta.sha256.clone(), location: feed_url, updated_at: meta.time.clone() })
+        Ok(RemoteState { package_id: meta.package_id.clone(), version: meta.version, sha256: meta.sha256.clone(), location: feed_url, updated_at: meta.time.clone(), rev: None })
     }
 }
 
@@ -246,7 +246,7 @@ impl Adapter for CloudflareAdapter {
         let (account, name) = Self::settings(t)?;
         let url = subscribe::feed_address(&Self::site_url(&name, &self.subdomain(&account, &self.token()?)?));
         match subscribe::fetch_feed(self.ctx.http.as_ref(), &url) {
-            Ok(f) => Ok(Some(RemoteState { package_id: f.package_id, version: f.version, sha256: f.sha256, location: url, updated_at: f.updated_at })),
+            Ok(f) => Ok(Some(RemoteState { package_id: f.package_id, version: f.version, sha256: f.sha256, location: url, updated_at: f.updated_at, rev: None })),
             Err(Error::Adapter(m)) if m.starts_with("Nothing is published") => Ok(None),
             Err(e) => Err(e),
         }

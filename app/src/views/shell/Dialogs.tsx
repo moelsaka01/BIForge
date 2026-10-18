@@ -8,6 +8,7 @@ import type { DialogRequest } from "../../core/shell/shellStore";
 import { OptionsDialog } from "./OptionsDialog";
 import { DataSourcesDialog } from "./DataSourcesDialog";
 import { GuideDialog, OpenPackageDialog, PublishDialog } from "./PublishDialog";
+import { HostDialog, JoinServerDialog } from "./HostDialog";
 import { resolveTheme } from "../../core/report/theme";
 import { themeToJson } from "../../core/report/theme";
 import { useDoc, useEnv, useSession, useSettings, useShellState } from "./ShellContext";
@@ -406,6 +407,10 @@ export function Dialogs() {
       return <ShortcutsDialog />;
     case "publish":
       return <PublishDialog />;
+    case "host":
+      return <HostDialog />;
+    case "joinServer":
+      return <JoinServerDialog request={dialog} />;
     case "openPackage":
       return <OpenPackageDialog request={dialog} />;
     case "guide":

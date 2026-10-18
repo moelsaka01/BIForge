@@ -207,7 +207,7 @@ impl GitHubAdapter {
         let mut files = feed::site_files(package, &meta.report_name, &f, &deeplink::build_url(&feed_url));
         files.push((MARKER.into(), serde_json::to_vec_pretty(&json!({"createdBy": "BIForge", "packageId": meta.package_id}))?));
         self.commit(&owner, &repo, &branch, &files, &[], &format!("BIForge: publish version {}", meta.version))?;
-        Ok(RemoteState { package_id: meta.package_id.clone(), version: meta.version, sha256: meta.sha256.clone(), location: feed_url, updated_at: meta.time.clone() })
+        Ok(RemoteState { package_id: meta.package_id.clone(), version: meta.version, sha256: meta.sha256.clone(), location: feed_url, updated_at: meta.time.clone(), rev: None })
     }
 }
 
@@ -291,7 +291,7 @@ impl Adapter for GitHubAdapter {
         let raw = v["content"].as_str().unwrap_or("").replace('\n', "");
         let bytes = B64.decode(raw).map_err(|_| Error::Adapter("feed.json in the repository is not readable".into()))?;
         let f = Feed::parse(&bytes)?;
-        Ok(Some(RemoteState { package_id: f.package_id, version: f.version, sha256: f.sha256, location: subscribe::feed_address(&Self::site_url(&owner, &repo)), updated_at: f.updated_at }))
+        Ok(Some(RemoteState { package_id: f.package_id, version: f.version, sha256: f.sha256, location: subscribe::feed_address(&Self::site_url(&owner, &repo)), updated_at: f.updated_at, rev: None }))
     }
 
     fn share_link(&self, t: &Target) -> Result<String> {

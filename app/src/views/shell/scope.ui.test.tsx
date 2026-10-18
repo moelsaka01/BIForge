@@ -57,7 +57,7 @@ describe("File menu (backstage)", () => {
     render(makeApp().element);
     const nav = within(screen.getByRole("navigation", { name: "Start" }));
     const labels = names(nav.getAllByRole("button"));
-    expect(labels).toEqual(["Home", "New", "Open", "Open shared report", "Options and settings", "About", "Exit"]);
+    expect(labels).toEqual(["Home", "New", "Open", "Open shared report", "Host and collaborate", "Join a server", "Options and settings", "About", "Exit"]);
   });
 
   it("Exit asks about unsaved changes and then closes the window", async () => {

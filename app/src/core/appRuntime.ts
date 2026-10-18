@@ -6,6 +6,8 @@ import { tauriEngine } from "./data/tauriEngine";
 import { tauriDax } from "./dax/tauriDax";
 import { tauriM } from "./queries/tauriM";
 import { tauriPublish } from "./publish/tauriPublish";
+import { tauriHost } from "./host/tauriHost";
+import { routedDax } from "./host/remoteDax";
 import { tauriTmdl, type TmdlPrinter } from "./model/tmdlPrinter";
 import { ShellStore } from "./shell/shellStore";
 import { tauriWindow } from "./shell/tauriWindow";
@@ -33,6 +35,6 @@ function windowStorage() {
 export function createAppRuntime(): AppRuntime {
   const inTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
   const shell = new ShellStore(windowStorage(), inTauri ? tauriWindow : noWindow);
-  const session = new Session(tauriIO, tauriDialogs, tauriEngine, tauriM, shell, inTauri ? tauriPublish : null);
-  return { session, registry: createRegistry(session), autosave: new AutosaveController(session, 2000), dax: tauriDax, tmdl: tauriTmdl };
+  const session = new Session(tauriIO, tauriDialogs, tauriEngine, tauriM, shell, inTauri ? tauriPublish : null, inTauri ? tauriHost : null);
+  return { session, registry: createRegistry(session), autosave: new AutosaveController(session, 2000), dax: routedDax(session, tauriDax), tmdl: tauriTmdl };
 }

@@ -69,7 +69,7 @@ describe("destinations are driven by what each adapter declares", () => {
     const text = opts.map((o) => o.textContent ?? "");
     expect(text.some((t) => /Folder on this PC/.test(t) && !/not implemented/.test(t))).toBe(true);
     expect(text.some((t) => /GitHub Pages/.test(t) && !/not implemented/.test(t))).toBe(true);
-    for (const name of ["Google Drive", "Direct connection", "Host from this PC"]) {
+    for (const name of ["Google Drive", "Direct connection"]) {
       const o = opts.find((x) => (x.textContent ?? "").includes(name))!;
       expect(o.textContent, name).toMatch(/not implemented \(planned O\d\)/);
       expect(o.getAttribute("aria-disabled"), name).toBe("true");
@@ -321,7 +321,7 @@ describe("setup pop-ups", () => {
     expect(within(dlg).queryByRole("group", { name: "Share through a folder" })).toBeNull();
   });
 
-  it("a guide for a method that is not built shows its buttons disabled with the phase that builds them", async () => {
+  it("a guide shows what is built as enabled and what is not built its buttons disabled with the phase that builds them", async () => {
     const a = makeApp();
     withData(a);
     render(a.element);
@@ -330,11 +330,11 @@ describe("setup pop-ups", () => {
       a.session.shell.openDialog({ kind: "guide", guideId: "backend-host" });
     });
     const dlg = await screen.findByRole("dialog", { name: "Host a shared workspace" });
-    for (const [label, phase] of [["Turn on Host from this PC", "O5"], ["Download biforge-server.exe", "O5"]] as const) {
-      const b = within(dlg).getByRole("button", { name: `${label} (not implemented)` }) as HTMLButtonElement;
-      expect(b.disabled).toBe(true);
-      expect(b.title).toBe(`Not implemented yet (planned for phase ${phase})`);
-    }
+    // hosting from this PC is built; downloading the standalone server comes with the release/installer phase
+    expect((within(dlg).getByRole("button", { name: "Turn on Host from this PC" }) as HTMLButtonElement).disabled).toBe(false);
+    const b = within(dlg).getByRole("button", { name: "Download biforge-server.exe (not implemented)" }) as HTMLButtonElement;
+    expect(b.disabled).toBe(true);
+    expect(b.title).toBe("Not implemented yet (planned for phase O8)");
     expect(within(dlg).queryByRole("list", { name: "How it works" })).toBeNull();
     fireEvent.click(within(dlg).getByRole("button", { name: "How it works" }));
     expect(within(dlg).getByRole("list", { name: "How it works" }).textContent).toMatch(/no Docker needed/);

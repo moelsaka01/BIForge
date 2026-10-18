@@ -104,10 +104,22 @@ pub struct OpenedPackage {
     pub data_files: Vec<(String, String)>,
 }
 
+/// Progress of a browser sign-in to a personal storage provider.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConnectStatus {
+    /// pending, done or error
+    pub state: String,
+    pub account: Option<String>,
+    pub message: Option<String>,
+}
+
 pub struct PublishService {
+    connects: Arc<std::sync::Mutex<std::collections::HashMap<String, ConnectStatus>>>,
     keys: Arc<CredKeys>,
     http: Arc<dyn Http>,
     cache_base: PathBuf,
+    p2p: Option<Arc<dyn biforge_publish::p2p::P2pBridge>>,
 }
 
 impl PublishService {
@@ -116,7 +128,13 @@ impl PublishService {
             Ok(h) => Arc::new(h),
             Err(_) => Arc::new(biforge_publish::http::FakeHttp::new(vec![])),
         };
-        Self { keys: Arc::new(CredKeys(creds)), http, cache_base }
+        Self { connects: Arc::default(), keys: Arc::new(CredKeys(creds)), http, cache_base, p2p: None }
+    }
+
+    /// The bridge to direct sharing sessions (the app's P2pService).
+    pub fn with_p2p(mut self, p2p: Arc<dyn biforge_publish::p2p::P2pBridge>) -> Self {
+        self.p2p = Some(p2p);
+        self
     }
 
     #[cfg_attr(not(test), allow(dead_code))]
@@ -126,7 +144,7 @@ impl PublishService {
     }
 
     fn reg(&self) -> Registry {
-        Registry::standard_with(Context { keys: self.keys.clone(), http: self.http.clone() })
+        Registry::standard_with_p2p(Context { keys: self.keys.clone(), http: self.http.clone() }, self.p2p.clone())
     }
 
     /// `%LOCALAPPDATA%BIForge` (the folder above the viewing cache).
@@ -139,7 +157,7 @@ impl PublishService {
     }
 
     pub fn system() -> Self {
-        let base = std::env::var_os("LOCALAPPDATA").map(PathBuf::from).unwrap_or_else(std::env::temp_dir).join("BIForge").join("viewing");
+        let base = app_dir_default().join("viewing");
         Self::new(Arc::new(SystemCredentialStore), base)
     }
 
@@ -178,6 +196,24 @@ impl PublishService {
         let store = TargetStore::for_project(Path::new(root));
         let reg = self.reg();
         Publisher { registry: &reg, keys: self.keys.as_ref(), store: &store }.unpublish(id).map_err(msg)
+    }
+
+    pub fn versions(&self, root: &str, id: &str) -> Result<Vec<biforge_publish::adapter::VersionInfo>, String> {
+        let store = TargetStore::for_project(Path::new(root));
+        let reg = self.reg();
+        Publisher { registry: &reg, keys: self.keys.as_ref(), store: &store }.versions(id).map_err(msg)
+    }
+
+    pub fn share_with(&self, root: &str, id: &str, email: &str, can_edit: bool) -> Result<(), String> {
+        let store = TargetStore::for_project(Path::new(root));
+        let reg = self.reg();
+        Publisher { registry: &reg, keys: self.keys.as_ref(), store: &store }.share_with(id, email, can_edit).map_err(msg)
+    }
+
+    pub fn allow_overwrite(&self, root: &str, id: &str) -> Result<(), String> {
+        let store = TargetStore::for_project(Path::new(root));
+        let reg = self.reg();
+        Publisher { registry: &reg, keys: self.keys.as_ref(), store: &store }.allow_overwrite(id).map_err(msg)
     }
 
     pub fn share_link(&self, root: &str, id: &str) -> Result<String, String> {
@@ -348,9 +384,10 @@ impl PublishService {
 
     pub fn parse_link(&self, link: &str) -> Result<LinkDto, String> {
         Ok(match deeplink::parse(link).map_err(msg)? {
-            Link::File { path } => LinkDto { src: "file".into(), path: Some(path), url: None, supported: true },
-            Link::Url { url } => LinkDto { src: "url".into(), path: None, url: Some(url), supported: true },
-            Link::Unsupported { src } => LinkDto { src, path: None, url: None, supported: false },
+            Link::File { path } => LinkDto { src: "file".into(), path: Some(path), url: None, supported: true, invite: None },
+            Link::Url { url } => LinkDto { src: "url".into(), path: None, url: Some(url), supported: true, invite: None },
+            Link::Server { url, invite } => LinkDto { src: "server".into(), path: None, url: Some(url), supported: true, invite: Some(invite) },
+            Link::Unsupported { src } => LinkDto { src, path: None, url: None, supported: false, invite: None },
         })
     }
 
@@ -364,8 +401,48 @@ impl PublishService {
         }
     }
 
+    fn storage_adapter(&self, provider: &str) -> Result<biforge_publish::storage::StorageAdapter, String> {
+        let ctx = Context { keys: self.keys.clone(), http: self.http.clone() };
+        match provider {
+            "google-drive" => Ok(biforge_publish::storage::StorageAdapter::google_drive(ctx)),
+            "onedrive" => Ok(biforge_publish::storage::StorageAdapter::onedrive(ctx)),
+            "dropbox" => Ok(biforge_publish::storage::StorageAdapter::dropbox(ctx)),
+            other => Err(format!("Unknown provider \"{other}\".")),
+        }
+    }
+
+    fn is_storage(provider: &str) -> bool {
+        matches!(provider, "google-drive" | "onedrive" | "dropbox")
+    }
+
+    /// Starts the browser sign-in to a personal storage provider (authorization code with PKCE on a loopback address).
+    /// Returns the address to open; a thread waits for the answer and `storage_connect_status` reports it.
+    pub fn storage_connect_start(&self, provider: &str) -> Result<String, String> {
+        let adapter = self.storage_adapter(provider)?;
+        let pending = adapter.begin_connect().map_err(msg)?;
+        let url = pending.url.clone();
+        self.connects.lock().unwrap().insert(provider.to_string(), ConnectStatus { state: "pending".into(), account: None, message: None });
+        let map = self.connects.clone();
+        let id = provider.to_string();
+        std::thread::spawn(move || {
+            let status = match adapter.finish_connect(&pending, std::time::Duration::from_secs(300)) {
+                Ok(account) => ConnectStatus { state: "done".into(), account: Some(account), message: None },
+                Err(e) => ConnectStatus { state: "error".into(), account: None, message: Some(e.to_string()) },
+            };
+            map.lock().unwrap().insert(id, status);
+        });
+        Ok(url)
+    }
+
+    pub fn storage_connect_status(&self, provider: &str) -> ConnectStatus {
+        self.connects.lock().unwrap().get(provider).cloned().unwrap_or(ConnectStatus { state: "none".into(), account: None, message: None })
+    }
+
     /// Whether a token is stored (never the token itself).
     pub fn account_connected(&self, provider: &str) -> Result<bool, String> {
+        if Self::is_storage(provider) {
+            return Ok(self.storage_adapter(provider)?.is_connected());
+        }
         Ok(self.keys.get(Self::token_key(provider)?).map_err(msg)?.is_some())
     }
 
@@ -404,6 +481,10 @@ impl PublishService {
     }
 
     pub fn account_disconnect(&self, provider: &str) -> Result<(), String> {
+        if Self::is_storage(provider) {
+            self.connects.lock().unwrap().remove(provider);
+            return self.storage_adapter(provider)?.disconnect_account().map_err(msg);
+        }
         self.keys.delete(Self::token_key(provider)?).map_err(msg)
     }
 
@@ -521,6 +602,8 @@ pub struct LinkDto {
     pub path: Option<String>,
     pub url: Option<String>,
     pub supported: bool,
+    /// Invitation code of a server link.
+    pub invite: Option<String>,
 }
 
 /// Viewing opens are recorded next to the cache, not in any project (a viewer has no project).
@@ -599,6 +682,26 @@ pub fn publish_unpublish(s: tauri::State<PublishService>, root: String, target_i
 #[tauri::command]
 pub fn publish_share_link(s: tauri::State<PublishService>, root: String, target_id: String) -> Result<String, String> {
     s.share_link(&root, &target_id)
+}
+#[tauri::command]
+pub fn storage_connect_start(s: tauri::State<PublishService>, provider: String) -> Result<String, String> {
+    s.storage_connect_start(&provider)
+}
+#[tauri::command]
+pub fn storage_connect_status(s: tauri::State<PublishService>, provider: String) -> ConnectStatus {
+    s.storage_connect_status(&provider)
+}
+#[tauri::command]
+pub fn publish_versions(s: tauri::State<PublishService>, root: String, target_id: String) -> Result<Vec<biforge_publish::adapter::VersionInfo>, String> {
+    s.versions(&root, &target_id)
+}
+#[tauri::command]
+pub fn publish_share_with(s: tauri::State<PublishService>, root: String, target_id: String, email: String, can_edit: bool) -> Result<(), String> {
+    s.share_with(&root, &target_id, &email, can_edit)
+}
+#[tauri::command]
+pub fn publish_allow_overwrite(s: tauri::State<PublishService>, root: String, target_id: String) -> Result<(), String> {
+    s.allow_overwrite(&root, &target_id)
 }
 #[tauri::command]
 pub fn publish_access_key(s: tauri::State<PublishService>, root: String, target_id: String) -> Result<Option<String>, String> {
@@ -847,4 +950,12 @@ mod tests {
         assert!(svc.account_connect("nope", "x", None).is_err());
     }
 
+}
+
+/// `%LOCALAPPDATA%\BIForge`, or the folder named by `BIFORGE_APP_DIR` (a test seam: two instances with separate data).
+pub fn app_dir_default() -> PathBuf {
+    if let Some(d) = std::env::var_os("BIFORGE_APP_DIR").filter(|d| !d.is_empty()) {
+        return PathBuf::from(d);
+    }
+    std::env::var_os("LOCALAPPDATA").map(PathBuf::from).unwrap_or_else(std::env::temp_dir).join("BIForge")
 }

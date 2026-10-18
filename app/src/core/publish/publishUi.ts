@@ -4,7 +4,19 @@ import type { Session } from "../session/session";
 import { toStored } from "../report/storage";
 import { getTableSource } from "../model/tables";
 import { pruneForPublishing, sameSelection } from "./prune";
-import type { AccessLevel, AdapterInfo, AuditEvent, IncludedTable, Issue, Outcome, Provider, PublishApi, RefreshSchedule, Target } from "./types";
+import type { AccessLevel, AdapterInfo, AuditEvent, IncludedTable, Issue, Outcome, Provider, PublishApi, RefreshSchedule, StorageProvider, Target, VersionInfo } from "./types";
+
+export const STORAGE_PROVIDERS: StorageProvider[] = ["google-drive", "onedrive", "dropbox"];
+export const isStorageProvider = (id: string): id is StorageProvider => (STORAGE_PROVIDERS as string[]).includes(id);
+
+/** Sign-in state of a personal storage account. */
+export interface StorageAccountState {
+  connected: boolean;
+  account: string | null;
+  /** The browser sign-in is open and BIForge waits for the answer. */
+  pending: boolean;
+  message: string | null;
+}
 
 /** The account behind a destination, for destinations that need one. */
 export const PROVIDER_OF: Record<string, Provider> = { "github-pages": "github", "cloudflare-pages": "cloudflare" };
@@ -29,9 +41,15 @@ export interface PublishState {
   audit: AuditEvent[];
   /** Providers with a stored token, with the account name the provider reported when it was connected. */
   connected: Partial<Record<Provider, string>>;
+  /** Personal storage accounts by provider id. */
+  storage: Record<string, StorageAccountState>;
+  /** The provider's version history of the selected destination. */
+  versions: VersionInfo[] | null;
+  /** The last publish found that someone else changed the stored file; Overwrite is offered. */
+  conflict: boolean;
 }
 
-const EMPTY: PublishState = { loaded: false, adapters: [], targets: [], selected: null, issues: [], available: [], chosen: [], warnings: [], busy: false, error: null, outcome: null, link: null, audit: [], connected: {} };
+const EMPTY: PublishState = { loaded: false, adapters: [], targets: [], selected: null, issues: [], available: [], chosen: [], warnings: [], busy: false, error: null, outcome: null, link: null, audit: [], connected: {}, storage: {}, versions: null, conflict: false };
 
 const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
@@ -59,6 +77,84 @@ export class PublishUi {
     const r = this.session.root;
     if (!r || !this.session.store.project) throw new Error("Open a project first.");
     return r;
+  }
+
+  // ---- personal storage accounts ----
+
+  private storageTimer: ReturnType<typeof setInterval> | null = null;
+
+  async storageRefresh(provider: StorageProvider): Promise<void> {
+    const connected = await this.api.storageConnected(provider);
+    const prev = this.snap.storage[provider];
+    this.set({ storage: { ...this.snap.storage, [provider]: { connected, account: connected ? (prev?.account ?? null) : null, pending: prev?.pending ?? false, message: prev?.message ?? null } } });
+  }
+
+  private setStorage(provider: StorageProvider, patch: Partial<StorageAccountState>): void {
+    const prev = this.snap.storage[provider] ?? { connected: false, account: null, pending: false, message: null };
+    this.set({ storage: { ...this.snap.storage, [provider]: { ...prev, ...patch } } });
+  }
+
+  /** Opens the provider's sign-in page in the browser and waits for the answer on the loopback address. */
+  async storageConnect(provider: StorageProvider): Promise<void> {
+    if (this.storageTimer) clearInterval(this.storageTimer);
+    this.storageTimer = null;
+    try {
+      const url = await this.api.storageConnectStart(provider);
+      this.setStorage(provider, { pending: true, message: null });
+      await this.session.io.openUrl?.(url);
+    } catch (e) {
+      this.setStorage(provider, { pending: false, message: errText(e) });
+      throw e;
+    }
+    const poll = async () => {
+      const st = await this.api.storageConnectStatus(provider).catch((e) => ({ state: "error" as const, account: null, message: errText(e) }));
+      if (st.state === "pending" || st.state === "none") return;
+      if (this.storageTimer) clearInterval(this.storageTimer);
+      this.storageTimer = null;
+      if (st.state === "done") {
+        this.setStorage(provider, { connected: true, account: st.account, pending: false, message: null });
+        this.session.setMessage(`Connected ${provider} as ${st.account ?? "your account"}.`);
+        await this.checkSelected();
+      } else {
+        this.setStorage(provider, { connected: false, pending: false, message: st.message ?? "The sign-in did not finish." });
+      }
+    };
+    this.storageTimer = setInterval(() => void poll(), 1500);
+    await poll();
+  }
+
+  async storageDisconnect(provider: StorageProvider): Promise<void> {
+    await this.api.storageDisconnect(provider);
+    this.setStorage(provider, { connected: false, account: null, pending: false, message: null });
+    await this.checkSelected();
+  }
+
+  async loadVersions(): Promise<void> {
+    const id = this.snap.selected;
+    if (!id) return;
+    try {
+      this.set({ versions: await this.api.versions(this.root, id), error: null });
+    } catch (e) {
+      this.set({ error: errText(e) });
+    }
+  }
+
+  async shareWith(email: string, canEdit: boolean): Promise<void> {
+    const id = this.snap.selected;
+    if (!id) throw new Error("Choose a destination first.");
+    if (!email.includes("@")) throw new Error("Enter the person's e-mail address.");
+    await this.api.shareWith(this.root, id, email.trim(), canEdit);
+    this.set({ audit: await this.api.audit(this.root) });
+    this.session.setMessage(`Shared with ${email.trim()} (${canEdit ? "can edit" : "can view"}). They need an account with the provider.`);
+  }
+
+  /** Replaces a file someone else changed, once, then publishes. */
+  async overwrite(publisherName: string): Promise<void> {
+    const id = this.snap.selected;
+    if (!id) throw new Error("Choose a destination first.");
+    await this.api.allowOverwrite(this.root, id);
+    this.set({ conflict: false });
+    await this.publish(publisherName);
   }
 
   adapterOf(id: string): AdapterInfo | undefined {
@@ -205,7 +301,7 @@ export class PublishUi {
       this.session.setMessage(`Published "${project.name}" to ${target.label} (version ${outcome.state.version}).`);
       await this.checkSelected();
     } catch (e) {
-      this.set({ busy: false, error: errText(e), targets: await this.api.targets(this.root).catch(() => this.snap.targets) });
+      this.set({ busy: false, error: errText(e), conflict: /Choose Overwrite/.test(errText(e)), targets: await this.api.targets(this.root).catch(() => this.snap.targets) });
       throw e;
     }
   }

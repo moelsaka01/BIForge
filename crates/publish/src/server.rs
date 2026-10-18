@@ -72,8 +72,7 @@ impl ServerAdapter {
             version: r.version,
             sha256: package_sha.to_string(),
             location: format!("{}/workspaces/{}/reports/{}", self.setting(t, "url").unwrap_or(""), t.settings.get("workspace").cloned().unwrap_or_default(), r.id),
-            updated_at: r.updated_at.clone(),
-        }
+            updated_at: r.updated_at.clone(), rev: None }
     }
 }
 

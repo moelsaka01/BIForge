@@ -140,18 +140,20 @@ fn publishing_needs_the_exact_confirmation() {
 }
 
 #[test]
-fn planned_adapters_refuse_everything() {
-    let e = env();
-    for info in e.registry.infos().into_iter().filter(|i| i.id != local::ID && i.id != "github-pages" && i.id != "cloudflare-pages" && i.id != "host-from-pc" && i.id != "biforge-server") {
-        assert!(!info.capabilities.implemented, "{} must be marked not implemented", info.id);
-        assert_eq!(info.capabilities, Capabilities::default());
-        let mut t = Target::new("p", &info.id, "x", AccessLevel::Public);
-        t.settings.insert("folder".into(), "x".into());
-        e.store.put(t).unwrap();
-        let r = publisher(&e).publish(&request("p", "x"));
-        assert!(matches!(r, Err(Error::Unsupported { .. })), "{}", info.id);
-        assert!(publisher(&e).share_link("p").is_err());
-    }
+fn a_destination_that_is_not_built_yet_refuses_everything() {
+    let mut e = env();
+    e.registry = Registry::new(vec![NotImplemented::new("planned", "Planned destination", Method::PersonalStorage, "O9", &["Not built"], &["Free"])]);
+    let info = e.registry.infos().remove(0);
+    assert!(!info.capabilities.implemented);
+    assert_eq!(info.capabilities, Capabilities::default());
+    let mut t = Target::new("p", &info.id, "x", AccessLevel::Public);
+    t.settings.insert("folder".into(), "x".into());
+    e.store.put(t).unwrap();
+    let r = publisher(&e).publish(&request("p", "x"));
+    assert!(matches!(r, Err(Error::Unsupported { .. })), "{r:?}");
+    assert!(publisher(&e).share_link("p").is_err());
+    // every destination BIForge ships is built now
+    assert!(Registry::standard().infos().iter().all(|i| i.capabilities.implemented), "a listed destination that is not built must say so");
 }
 
 #[test]

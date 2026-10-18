@@ -37,6 +37,8 @@ function navItems(hasDoc: boolean): { top: NavItem[]; bottom: NavItem[] } {
     { id: "new", label: "New", icon: "newVisual", command: "file.newBlank" },
     { id: "open", label: "Open", icon: "open", command: "file.open" },
     { id: "openShared", label: "Open shared report", icon: "open", command: "package.open" },
+    { id: "host", label: "Host and collaborate", icon: "export", command: "host.open" },
+    { id: "joinServer", label: "Join a server", icon: "open", command: "server.join" },
   ];
   // the File menu of the original: New, Open, Save, Save as, Get data, Import, Export, Options and settings, About, Exit
   if (hasDoc) {

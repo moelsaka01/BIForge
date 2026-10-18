@@ -12,6 +12,8 @@ import { findTable } from "../model/ops";
 import { ShellStore } from "../shell/shellStore";
 import type { OpenedPackage, PublishApi } from "../publish/types";
 import { PublishUi } from "../publish/publishUi";
+import { HostUi } from "../host/hostUi";
+import type { HostApi, OpenedServerReport, ServerRef } from "../host/types";
 
 export interface ProjectIO {
   newProject(root: string, name: string): Promise<Project>;
@@ -48,6 +50,10 @@ export interface ViewingInfo {
   included: { table: string; columns: string[] }[];
   /** The feed address when the report was opened from a link or subscription (updates can be checked). */
   feedUrl: string | null;
+  /** Set when the report is opened from a BIForge server: its queries go to that server, which applies row-level security. */
+  server?: ServerRef;
+  /** Set when the report came through a direct (peer to peer) session; the window follows live updates. */
+  p2p?: { guestId: string; role: string; hostId: string };
 }
 
 export interface SessionSnapshot {
@@ -92,6 +98,8 @@ export class Session {
   readonly queries = new QueryDraft();
   /** State of the Publish & Share dialog. */
   readonly publishUi = new PublishUi(this);
+  /** State of the Host and collaborate and Join a server dialogs. */
+  readonly hostUi = new HostUi(this);
   private snap: SessionSnapshot = { root: null, viewing: null, pendingRecovery: null, lastMessage: null, dataTables: [], dataEpoch: 0 };
   private listeners = new Set<() => void>();
   /** Project roots whose recovery snapshot was written by this running app (not left behind by a crash). */
@@ -108,6 +116,8 @@ export class Session {
     readonly shell: ShellStore = new ShellStore(null),
     /** Publish & Share and viewing mode (null where the engine is not available). */
     readonly publish: PublishApi | null = null,
+    /** Host from this PC, joining servers, and server reports (null where the app backend is not available). */
+    readonly host: HostApi | null = null,
   ) {}
 
   getSnapshot = (): SessionSnapshot => this.snap;
@@ -180,7 +190,7 @@ export class Session {
    * can change it), its data snapshots are loaded into a store of their own, and nothing is added to the recent list
    * or written back.
    */
-  async openViewing(opened: OpenedPackage, feedUrl: string | null = null): Promise<void> {
+  async openViewing(opened: OpenedPackage, feedUrl: string | null = null, p2p?: { guestId: string; role: string; hostId: string }): Promise<void> {
     const project = await this.io.openProject(opened.pbipPath);
     this.store.loadReadOnly(project);
     let dataNote = "";
@@ -209,11 +219,42 @@ export class Session {
         createdAt: m.createdAt,
         included: m.included.map((t) => ({ table: t.table, columns: t.columns })),
         feedUrl,
+        ...(p2p ? { p2p } : {}),
       },
       pendingRecovery: null,
       dataTables: loaded,
       dataEpoch: this.snap.dataEpoch + 1,
       lastMessage: `Viewing "${m.reportName}" (version ${m.version}), read only.${dataNote}`,
+    });
+    this.shell.enterWorkspace();
+    this.shell.setView("report");
+  }
+
+  /**
+   * Opens a report of a BIForge server for viewing: the project files (no data) were downloaded into the viewing cache,
+   * the project is read-only, and every query goes to the server (it applies the member's row-level security).
+   */
+  async openServerViewing(opened: OpenedServerReport): Promise<void> {
+    const project = await this.io.openProject(opened.pbipPath);
+    this.store.loadReadOnly(project);
+    this.set({
+      root: opened.root,
+      viewing: {
+        packageId: opened.reportId,
+        reportName: opened.reportName,
+        publisherName: opened.serverLabel,
+        keyId: "",
+        version: opened.version,
+        access: "public",
+        createdAt: "",
+        included: [],
+        feedUrl: null,
+        server: { connectionId: opened.connectionId, workspaceId: opened.workspaceId, reportId: opened.reportId, role: opened.role, identity: opened.identity, serverLabel: opened.serverLabel },
+      },
+      pendingRecovery: null,
+      dataTables: [],
+      dataEpoch: this.snap.dataEpoch + 1,
+      lastMessage: `Viewing "${opened.reportName}" from ${opened.serverLabel} as ${opened.identity} (version ${opened.version}), read only.`,
     });
     this.shell.enterWorkspace();
     this.shell.setView("report");

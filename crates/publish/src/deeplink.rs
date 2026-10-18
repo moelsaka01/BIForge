@@ -84,6 +84,11 @@ pub fn encode(s: &str) -> String {
     out
 }
 
+/// Percent-decodes one URL component.
+pub fn decode_component(s: &str) -> Result<String> {
+    decode(s)
+}
+
 fn decode(s: &str) -> Result<String> {
     let b = s.as_bytes();
     let mut out = Vec::new();

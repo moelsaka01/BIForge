@@ -9,6 +9,9 @@ export type GuideAction =
   | { kind: "pickFolder" }
   | { kind: "pickPackage" }
   | { kind: "connect"; provider: "github" | "cloudflare" }
+  | { kind: "connectStorage"; provider: "google-drive" | "onedrive" | "dropbox" }
+  | { kind: "openHost" }
+  | { kind: "openJoin" }
   | { kind: "notImplemented"; phase: string };
 
 export interface GuideButton {
@@ -101,11 +104,11 @@ const GUIDES: Guide[] = [
     ],
   },
   ...[
-    ["storage-google-drive", "Google Drive", "Connect Google Drive"],
-    ["storage-onedrive", "OneDrive", "Connect OneDrive"],
-    ["storage-dropbox", "Dropbox", "Connect Dropbox"],
+    ["storage-google-drive", "Google Drive", "Connect Google Drive", "google-drive"],
+    ["storage-onedrive", "OneDrive", "Connect OneDrive", "onedrive"],
+    ["storage-dropbox", "Dropbox", "Connect Dropbox", "dropbox"],
   ].map(
-    ([id, name, button]): Guide => ({
+    ([id, name, button, provider]): Guide => ({
       id,
       title: `Share through ${name}`,
       paragraphs: [
@@ -116,7 +119,7 @@ const GUIDES: Guide[] = [
       ],
       listsData: true,
       buttons: [
-        { id: "connect", label: button, primary: true, action: { kind: "notImplemented", phase: "O3" } },
+        { id: "connect", label: button, primary: true, action: { kind: "connectStorage", provider: provider as "google-drive" | "onedrive" | "dropbox" } },
         { id: "ok", label: "Continue", action: { kind: "continue" } },
       ],
     }),
@@ -131,8 +134,8 @@ const GUIDES: Guide[] = [
     ],
     listsData: false,
     buttons: [
-      { id: "start", label: "Start session", primary: true, action: { kind: "notImplemented", phase: "O4" } },
-      { id: "join", label: "Join with code", action: { kind: "notImplemented", phase: "O4" } },
+      { id: "start", label: "Start session", primary: true, action: { kind: "continue" } },
+      { id: "join", label: "Join with code", action: { kind: "openJoin" } },
     ],
   },
   {
@@ -149,9 +152,10 @@ const GUIDES: Guide[] = [
     ],
     listsData: false,
     buttons: [
-      { id: "host", label: "Turn on Host from this PC", primary: true, action: { kind: "notImplemented", phase: "O5" } },
-      { id: "download", label: "Download biforge-server.exe", action: { kind: "notImplemented", phase: "O5" } },
+      { id: "host", label: "Turn on Host from this PC", primary: true, action: { kind: "openHost" } },
+      { id: "download", label: "Download biforge-server.exe", action: { kind: "notImplemented", phase: "O8" } },
       { id: "how", label: "How it works", action: { kind: "reveal" } },
+      { id: "continue", label: "Continue", action: { kind: "continue" } },
     ],
   },
   {
@@ -160,8 +164,8 @@ const GUIDES: Guide[] = [
     paragraphs: ["Enter the server address your host gave you, or open the invite link they sent.", "Nothing needs to be installed."],
     listsData: false,
     buttons: [
-      { id: "enter", label: "Enter server address", primary: true, action: { kind: "notImplemented", phase: "O5" } },
-      { id: "link", label: "Open invite link", action: { kind: "notImplemented", phase: "O5" } },
+      { id: "enter", label: "Enter server address", primary: true, action: { kind: "openJoin" } },
+      { id: "link", label: "Open invite link", action: { kind: "openJoin" } },
     ],
   },
   {

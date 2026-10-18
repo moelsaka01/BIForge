@@ -62,6 +62,8 @@ export interface Issue {
 }
 
 export interface RemoteState {
+  /** The destination's own revision marker of the stored file, where it keeps one. */
+  rev?: string | null;
   packageId: string;
   version: number;
   sha256: string;
@@ -135,12 +137,28 @@ export interface OpenedPackage {
   dataFiles: [string, string][];
 }
 
+export type StorageProvider = "google-drive" | "onedrive" | "dropbox";
+
+export interface ConnectStatus {
+  state: "none" | "pending" | "done" | "error";
+  account: string | null;
+  message: string | null;
+}
+
+export interface VersionInfo {
+  id: string;
+  modified: string;
+  size: number;
+}
+
 export interface DeepLink {
   src: string;
   path: string | null;
   /** The feed address of a link that points at a static host. */
   url: string | null;
   supported: boolean;
+  /** Invitation code of a server link. */
+  invite?: string | null;
 }
 
 /** A package downloaded from a feed address, with its signed envelope; `existingPin` is the publisher key pinned earlier. */
@@ -189,6 +207,18 @@ export interface PublishApi {
   /** Stores the token in the Credential Manager after the provider accepted it; returns the account name. */
   accountConnect(provider: Provider, token: string, accountId?: string | null): Promise<string>;
   accountDisconnect(provider: Provider): Promise<void>;
+  /** Personal storage (Google Drive, OneDrive, Dropbox): the sign-in happens in the browser with PKCE on a loopback address. */
+  storageConnected(provider: StorageProvider): Promise<boolean>;
+  /** Starts the sign-in; returns the address to open in the browser. */
+  storageConnectStart(provider: StorageProvider): Promise<string>;
+  storageConnectStatus(provider: StorageProvider): Promise<ConnectStatus>;
+  storageDisconnect(provider: StorageProvider): Promise<void>;
+  /** The provider's own version history of the stored file, newest first. */
+  versions(root: string, targetId: string): Promise<VersionInfo[]>;
+  /** Gives one person access through the provider. */
+  shareWith(root: string, targetId: string, email: string, canEdit: boolean): Promise<void>;
+  /** Lets the next publish replace a file someone else changed. */
+  allowOverwrite(root: string, targetId: string): Promise<void>;
   /** Checks the destination's account and records its name on the target. */
   authenticate(root: string, targetId: string): Promise<Target>;
   linkedFetch(feedUrl: string): Promise<Linked>;

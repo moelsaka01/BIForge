@@ -2,6 +2,7 @@
 import type { CommandRegistry } from "./registry";
 import type { Session } from "../session/session";
 import type { AccessLevel, Provider, RefreshSchedule } from "../publish/types";
+import { isStorageProvider } from "../publish/publishUi";
 
 const hasProject = (s: Session) => s.store.project !== null && s.getSnapshot().viewing === null;
 const hasApi = (s: Session) => s.publish !== null;
@@ -23,7 +24,8 @@ const VIEWING_ALLOWED: RegExp[] = [
   /^report\.(visual\.setType|field\.(add|remove|setAggregation))$/,
   /^file\.(close|open|new|newBlank|newSample|newSample\.run)$/,
   /^package\./,
-  /^subscription\./,
+  /^subscription./,
+  /^(host|server|p2p)\./,
   /^link\./,
 ];
 
@@ -34,6 +36,10 @@ export function viewingGuard(s: Session, id: string): string | null {
 
 async function openLink(s: Session, link: string): Promise<void> {
   const parsed = await s.publish!.parseLink(link);
+  if (parsed.src === "server") {
+    s.shell.openDialog({ kind: "joinServer", link });
+    return;
+  }
   if (parsed.supported && parsed.url) {
     s.shell.openDialog({ kind: "openPackage", feedUrl: parsed.url, fromLink: true });
     return;
@@ -88,6 +94,46 @@ export function registerPublishCommands(r: CommandRegistry<Session>): void {
       if (p !== "github" && p !== "cloudflare") throw new Error("Choose GitHub or Cloudflare.");
       await s.publishUi.disconnect(p);
     },
+  });
+  r.register({
+    id: "storage.connect",
+    label: "Connect a personal storage account",
+    category: "Share",
+    isEnabled: hasApi,
+    async run(s, args) {
+      const p = (args as { provider?: string } | undefined)?.provider;
+      if (!p || !isStorageProvider(p)) throw new Error("Choose Google Drive, OneDrive or Dropbox.");
+      await s.publishUi.storageConnect(p);
+    },
+  });
+  r.register({
+    id: "storage.disconnect",
+    label: "Disconnect a personal storage account (removes the stored sign-in)",
+    category: "Share",
+    isEnabled: hasApi,
+    async run(s, args) {
+      const p = (args as { provider?: string } | undefined)?.provider;
+      if (!p || !isStorageProvider(p)) throw new Error("Choose Google Drive, OneDrive or Dropbox.");
+      await s.publishUi.storageDisconnect(p);
+    },
+  });
+  r.register({ id: "publish.versions", label: "Show the version history", category: "Share", isEnabled: (s) => hasProject(s) && hasApi(s), run: (s) => s.publishUi.loadVersions() });
+  r.register({
+    id: "publish.shareWith",
+    label: "Share with a person",
+    category: "Share",
+    isEnabled: (s) => hasProject(s) && hasApi(s),
+    run: (s, args) => {
+      const a = (args ?? {}) as { email?: string; canEdit?: boolean };
+      return s.publishUi.shareWith(a.email ?? "", a.canEdit === true);
+    },
+  });
+  r.register({
+    id: "publish.overwrite",
+    label: "Overwrite the file someone else changed",
+    category: "Share",
+    isEnabled: (s) => hasProject(s) && hasApi(s),
+    run: (s, args) => s.publishUi.overwrite(((args ?? {}) as { publisherName?: string }).publisherName ?? ""),
   });
   r.register({
     id: "publish.removeTarget",

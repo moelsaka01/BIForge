@@ -14,6 +14,7 @@ import { FakeDax, result } from "../../core/testing/fakeDax";
 import { FakeEngine } from "../../core/testing/fakeEngine";
 import { FakeM } from "../../core/testing/fakeM";
 import { FakePublish } from "../../core/testing/fakePublish";
+import { FakeHost } from "../../core/testing/fakeHost";
 import { FakeDialogs, FakeIO } from "../../core/testing/fakes";
 import type { FileUi } from "./files";
 
@@ -63,7 +64,7 @@ export function makeApp(opts: { storage?: MemoryStorage; withProjectOnDisk?: boo
   const dialogs = new FakeDialogs();
   const engine = new FakeEngine();
   const publish = new FakePublish();
-  const session = new Session(io, dialogs, engine, new FakeM(), shell, publish);
+  const session = new Session(io, dialogs, engine, new FakeM(), shell, publish, new FakeHost());
   const registry = createRegistry(session);
   const dax = new FakeDax();
   dax.handler = () => ({ results: [result(["x"], [])], elapsedMs: 1 });

@@ -176,6 +176,11 @@ impl<'a> Publisher<'a> {
                 target.history.push((version, now));
                 target.status = TargetStatus::Published;
                 target.last_error = None;
+                // destinations that detect changes made by someone else tell us the revision we just wrote
+                if let Some(rev) = &state.rev {
+                    target.settings.insert("rev".into(), rev.clone());
+                }
+                target.settings.remove("overwrite");
                 self.store.put(target.clone())?;
                 let kind = if rotate { "rotate-key" } else if have_version.is_some() { "update" } else { "publish" };
                 let tables: Vec<String> = req.included.iter().map(|t| format!("{}({})", t.table, t.columns.len())).collect();
@@ -293,6 +298,37 @@ impl<'a> Publisher<'a> {
         let url = adapter.trigger_refresh(&target)?;
         self.event(&target, "refresh-now", format!("started: {url}"));
         Ok(url)
+    }
+
+    /// The destination's own version history, where it keeps one.
+    pub fn versions(&self, target_id: &str) -> Result<Vec<VersionInfo>> {
+        let t = self.store.get(target_id)?;
+        let (a, c) = self.caps(&t)?;
+        if !c.version_history {
+            return Err(Error::Unsupported { adapter: a.info().name, operation: "version history".into() });
+        }
+        a.versions(&t)
+    }
+
+    /// Gives one person access to the stored file through the provider (they must have an account there).
+    pub fn share_with(&self, target_id: &str, email: &str, can_edit: bool) -> Result<()> {
+        let t = self.store.get(target_id)?;
+        let (a, c) = self.caps(&t)?;
+        if a.info().method != Method::PersonalStorage || !c.share_link {
+            return Err(Error::Unsupported { adapter: a.info().name, operation: "sharing with a person".into() });
+        }
+        a.share_with(&t, email, can_edit)?;
+        self.event(&t, "share-with", format!("{email} may {}", if can_edit { "edit" } else { "view" }));
+        Ok(())
+    }
+
+    /// Replaces the stored file although someone else changed it: the next publish overwrites it.
+    pub fn allow_overwrite(&self, target_id: &str) -> Result<()> {
+        let mut t = self.store.get(target_id)?;
+        t.settings.insert("overwrite".into(), "1".into());
+        self.store.put(t.clone())?;
+        self.event(&t, "allow-overwrite", "the next publish replaces the file at the destination".into());
+        Ok(())
     }
 
     pub fn status(&self, target_id: &str) -> Result<Option<RemoteState>> {

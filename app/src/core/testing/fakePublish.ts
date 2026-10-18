@@ -1,5 +1,5 @@
 // Test double for PublishApi: adapters are programmable, nothing touches a disk or the network.
-import type { AdapterInfo, AuditEvent, Capabilities, DeepLink, Envelope, Issue, Linked, OpenedPackage, Outcome, Provider, PublishApi, RefreshArgs, RemoteState, RunArgs, Subscription, Target } from "../publish/types";
+import type { ConnectStatus, StorageProvider, VersionInfo, AdapterInfo, AuditEvent, Capabilities, DeepLink, Envelope, Issue, Linked, OpenedPackage, Outcome, Provider, PublishApi, RefreshArgs, RemoteState, RunArgs, Subscription, Target } from "../publish/types";
 
 const NONE: Capabilities = {
   implemented: false, publicAccess: false, privateAccess: false, update: false, sync: false, shareLink: false, unpublish: false, keyRotation: false,
@@ -44,7 +44,7 @@ export const defaultAdapters = (): AdapterInfo[] => [
   fakeCloudflareAdapter,
   planned("google-drive", "Google Drive", "personalStorage", "O3", ["Free Google account, 15 GB shared with Gmail and Photos"]),
   planned("p2p", "Direct connection (peer to peer)", "peerToPeer", "O4", ["Free; may use free public relay servers"]),
-  planned("host-from-pc", "Host from this PC", "backend", "O5", ["Free; uses your PC"]),
+  { ...fakeGithubAdapter, id: "host-from-pc", name: "Host from this PC", method: "backend", phase: "O5", capabilities: { ...fakeFolderAdapter.capabilities, privateAccess: false, keyRotation: false, rowLevelSecurity: true }, limitations: ["Plain HTTP"], freeTier: ["Free; uses your PC"] },
 ];
 
 export class FakePublish implements PublishApi {
@@ -83,6 +83,7 @@ export class FakePublish implements PublishApi {
     this.calls.push(args.rotate ? `rotate:${args.targetId}` : `run:${args.targetId}`);
     this.runs.push({ root, args, project });
     if (this.fail) throw new Error(this.fail);
+    if (this.conflict) throw new Error('The file "Sales.biforge" in Google Drive was changed by someone else since your last upload. Nothing was overwritten. Choose Overwrite to replace it with this version, or download theirs first.');
     const list = this.targetsByRoot.get(root) ?? [];
     const t = list.find((x) => x.id === args.targetId)!;
     t.lastVersion = (t.lastVersion ?? 0) + 1;
@@ -154,6 +155,36 @@ export class FakePublish implements PublishApi {
   /** What the next subscriptionCheck finds (null = up to date). */
   newer: Linked | null = null;
   linked: Linked = { path: "C:\\Downloads\\pkg1.biforge", envelope: this.envelope, existingPin: null };
+  storage: Record<string, { connected: boolean; account: string | null }> = {};
+  storageStatus: ConnectStatus = { state: "none", account: null, message: null };
+  versionList: VersionInfo[] = [{ id: "r2", modified: "2026-10-18T10:00:02Z", size: 2048 }, { id: "r1", modified: "2026-10-18T10:00:01Z", size: 1024 }];
+  conflict = false;
+  async storageConnected(p: StorageProvider) {
+    return this.storage[p]?.connected === true;
+  }
+  async storageConnectStart(p: StorageProvider) {
+    this.calls.push(`storage-start:${p}`);
+    this.storageStatus = { state: "pending", account: null, message: null };
+    return `https://accounts.example/${p}/authorize?state=abc`;
+  }
+  async storageConnectStatus(_p: StorageProvider) {
+    return this.storageStatus;
+  }
+  async storageDisconnect(p: StorageProvider) {
+    this.calls.push(`storage-disconnect:${p}`);
+    this.storage[p] = { connected: false, account: null };
+  }
+  async versions(_root: string, targetId: string) {
+    this.calls.push(`versions:${targetId}`);
+    return this.versionList;
+  }
+  async shareWith(_root: string, targetId: string, email: string, canEdit: boolean) {
+    this.calls.push(`share-with:${targetId}:${email}:${canEdit ? "edit" : "view"}`);
+  }
+  async allowOverwrite(_root: string, targetId: string) {
+    this.calls.push(`overwrite:${targetId}`);
+    this.conflict = false;
+  }
   async accountConnected(p: Provider) {
     return this.connected.has(p);
   }

@@ -3,6 +3,8 @@
 mod commands;
 mod data;
 mod dax;
+mod host;
+mod p2p;
 mod pq;
 mod publish;
 mod syskeys;
@@ -23,10 +25,14 @@ fn apply_test_debug_port(context: &mut tauri::Context) {
 fn main() {
     let mut context = tauri::generate_context!();
     apply_test_debug_port(&mut context);
+    let p2p_service = std::sync::Arc::new(p2p::P2pService::system());
+    let bridge: std::sync::Arc<dyn biforge_publish::p2p::P2pBridge> = p2p_service.clone();
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .manage(data::DataService::system())
-        .manage(publish::PublishService::system())
+        .manage(publish::PublishService::system().with_p2p(bridge))
+        .manage(p2p_service)
+        .manage(host::HostService::system())
         .setup(|app| {
             // an Alt tap must not start Windows' menu mode, which swallows the next key (Print Screen)
             #[cfg(windows)]
@@ -93,6 +99,11 @@ fn main() {
             publish::publish_refresh_now,
             publish::publish_share_link,
             publish::publish_access_key,
+            publish::storage_connect_start,
+            publish::storage_connect_status,
+            publish::publish_versions,
+            publish::publish_share_with,
+            publish::publish_allow_overwrite,
             publish::publish_status,
             publish::publish_audit,
             publish::package_peek,
@@ -110,6 +121,23 @@ fn main() {
             publish::subscription_check,
             publish::subscription_opened,
             publish::viewer_key,
+            host::host_status,
+            host::host_start,
+            host::host_stop,
+            host::server_join,
+            host::server_connections,
+            host::server_forget,
+            host::server_op,
+            host::server_open_report,
+            p2p::p2p_host_state,
+            p2p::p2p_approve,
+            p2p::p2p_deny,
+            p2p::p2p_revoke,
+            p2p::p2p_take_push,
+            p2p::p2p_join,
+            p2p::p2p_guest_state,
+            p2p::p2p_push,
+            p2p::p2p_leave,
         ])
         .run(context)
         .expect("error while running BIForge");

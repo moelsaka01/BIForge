@@ -1,9 +1,10 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { Button, Checkbox, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, Dropdown, Input, Option, Radio, RadioGroup } from "@fluentui/react-components";
 import { freeTierLines, getGuide, guideForAdapter, guideHiddenKey, type Guide } from "../../core/publish/guides";
-import { PROVIDER_OF } from "../../core/publish/publishUi";
+import { isStorageProvider, PROVIDER_OF } from "../../core/publish/publishUi";
 import type { AccessLevel, AdapterInfo, Envelope, IncludedTable, Provider, RefreshSchedule, Target } from "../../core/publish/types";
 import { useEnv, useSettings } from "./ShellContext";
+import { P2pPanel } from "./HostDialog";
 
 const STATUS_TEXT: Record<Target["status"], string> = {
   neverPublished: "Not published yet",
@@ -87,12 +88,91 @@ export function ConnectPanel({ provider, accountId: givenAccountId }: { provider
   );
 }
 
+const STORAGE_NAME: Record<string, string> = { "google-drive": "Google Drive", onedrive: "OneDrive", dropbox: "Dropbox" };
+
+/** Sign-in to a personal storage account: the browser opens the provider's page; BIForge waits for the answer. */
+export function StorageAccount({ provider }: { provider: "google-drive" | "onedrive" | "dropbox" }) {
+  const env = useEnv();
+  const { state } = usePublishUi();
+  const name = STORAGE_NAME[provider];
+  useEffect(() => {
+    void env.session.publishUi.storageRefresh(provider);
+  }, [env, provider]);
+  const st = state.storage[provider];
+  return (
+    <div role="group" aria-label={`${name} account`} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      {st?.connected ? (
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <span role="status">{`${name} account: Connected${st.account ? ` as ${st.account}` : ""}`}</span>
+          <Button size="small" onClick={() => void env.run("storage.disconnect", { provider })}>
+            Disconnect
+          </Button>
+        </div>
+      ) : (
+        <>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <span role="status">{`${name} account: Not connected`}</span>
+            <Button size="small" disabled={st?.pending} onClick={() => void env.run("storage.connect", { provider })}>
+              {`Connect ${name} account`}
+            </Button>
+          </div>
+          {st?.pending && <div role="status">Finish the sign-in in your browser. BIForge keeps the sign-in only in Windows Credential Manager.</div>}
+          {st?.message && <div role="alert" style={{ color: "var(--colorPaletteRedForeground1)" }}>{st.message}</div>}
+        </>
+      )}
+    </div>
+  );
+}
+
+/** Version history, sharing with a person and the overwrite choice of a personal storage destination. */
+function StorageTools({ target, publisherName }: { target: Target; publisherName: string }) {
+  const env = useEnv();
+  const { state } = usePublishUi();
+  const [email, setEmail] = useState("");
+  const [canEdit, setCanEdit] = useState(false);
+  const published = target.status === "published";
+  return (
+    <section aria-label="Storage tools" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      {state.conflict && (
+        <div role="alert" style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <span>Someone else changed the file. Your version was not uploaded.</span>
+          <Button size="small" onClick={() => void env.run("publish.overwrite", { publisherName })}>
+            Overwrite their file with my version
+          </Button>
+        </div>
+      )}
+      {published && (
+        <>
+          <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+            <Input aria-label="Share with e-mail" placeholder="Person's e-mail address" value={email} onChange={(_, d) => setEmail(d.value)} />
+            <Checkbox label="Can edit" checked={canEdit} onChange={(_, d) => setCanEdit(d.checked === true)} />
+            <Button disabled={!email.includes("@")} onClick={() => void env.run("publish.shareWith", { email, canEdit })}>
+              Share with this person
+            </Button>
+          </div>
+          <div>
+            <Button size="small" onClick={() => void env.run("publish.versions")}>
+              Show version history
+            </Button>
+            {state.versions && (
+              <ul aria-label="Version history" style={{ margin: "4px 0 0 18px" }}>
+                {state.versions.length === 0 ? <li>No older versions are kept.</li> : state.versions.map((v) => <li key={v.id}>{`${v.modified}  ${Math.round(v.size / 1024)} KB  (${v.id})`}</li>)}
+              </ul>
+            )}
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
+
 /** Connection status of the account a destination type needs, with the way to connect (token entry) and to disconnect. Shown in the "Add a destination" form for every type. */
 export function AccountStatus({ adapterId, needsAccount, accountId }: { adapterId: string; needsAccount: boolean; accountId?: string }) {
   const env = useEnv();
   const { state } = usePublishUi();
   const [open, setOpen] = useState(false);
   const provider = PROVIDER_OF[adapterId];
+  if (isStorageProvider(adapterId)) return <StorageAccount provider={adapterId} />;
   if (!provider)
     return (
       <div role="status" aria-label="Account">
@@ -144,7 +224,7 @@ export function GuideView({ guide, adapters, included, onDone, onFolder }: { gui
           {included.length === 0 ? <li>No tables are selected.</li> : included.map((t) => <li key={t.table}>{`${t.table}: ${t.columns.join(", ")}`}</li>)}
         </ul>
       )}
-      {guide.buttons.map((b) => (b.action.kind === "connect" ? <ConnectPanel key={b.id} provider={b.action.provider} /> : null))}
+      {guide.buttons.map((b) => (b.action.kind === "connect" ? <ConnectPanel key={b.id} provider={b.action.provider} /> : b.action.kind === "connectStorage" ? <StorageAccount key={b.id} provider={b.action.provider} /> : null))}
       {how && guide.howItWorks && (
         <ul aria-label="How it works" style={{ margin: "0 0 0 18px" }}>
           {guide.howItWorks.map((l) => (
@@ -165,7 +245,7 @@ export function GuideView({ guide, adapters, included, onDone, onFolder }: { gui
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
         {guide.buttons.map((b) => {
           const a = b.action;
-          if (a.kind === "connect") return null;
+          if (a.kind === "connect" || a.kind === "connectStorage") return null;
           if (a.kind === "notImplemented")
             return (
               <Button key={b.id} disabled title={`Not implemented yet (planned for phase ${a.phase})`}>
@@ -178,6 +258,8 @@ export function GuideView({ guide, adapters, included, onDone, onFolder }: { gui
               appearance={b.primary ? "primary" : "secondary"}
               onClick={async () => {
                 if (a.kind === "reveal") return setHow((v) => !v);
+                if (a.kind === "openHost") return void env.run("host.open");
+                if (a.kind === "openJoin") return void env.run("server.join");
                 if (a.kind === "pickFolder") {
                   const f = await env.session.dialogs.pickFolder();
                   if (f && onFolder) onFolder(f);
@@ -258,15 +340,31 @@ function AddDestination({ onAdded }: { onAdded(): void }) {
   const [accountId, setAccountId] = useState("");
   const [siteName, setSiteName] = useState("");
   const [guideOpen, setGuideOpen] = useState(false);
+  const isServer = adapterId === "host-from-pc" || adapterId === "biforge-server";
+  const hostState = useSyncExternalStore(env.session.hostUi.subscribe, env.session.hostUi.getSnapshot);
+  const [serverConn, setServerConn] = useState("");
+  const [serverWs, setServerWs] = useState("");
+  const [reportId, setReportId] = useState("");
+  useEffect(() => {
+    if (isServer) void env.session.hostUi.open();
+  }, [isServer, env.session.hostUi]);
+  useEffect(() => {
+    if (isServer || adapterId === "p2p") setAccess("public");
+  }, [isServer, adapterId]);
   const projectSlug = (env.session.store.project?.name ?? "report").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "report";
   const info = state.adapters.find((a) => a.id === adapterId);
   const guide = guideForAdapter(adapterId);
   const caps = info?.capabilities;
   const accessOk = caps ? (access === "public" ? caps.publicAccess : caps.privateAccess) : false;
   const hidden = settings.options[guideHiddenKey(guide?.id ?? "")] === true;
+  const serverOptions = hostState.connections.filter((c) => c.role !== "viewer" && (adapterId === "host-from-pc" ? c.isHost : !c.isHost));
+  const chosenConn = serverOptions.find((c) => c.id === serverConn) ?? serverOptions[0];
+  const chosenWs = chosenConn ? (chosenConn.workspaceId || (hostState.selected === chosenConn.id ? serverWs || hostState.workspace || "" : "")) : "";
   const add = async () => {
     const settings: Record<string, string> =
-      adapterId === "local-folder" ? { folder } : adapterId === "github-pages" ? { repo: repo.trim() || `biforge-${projectSlug}` } : adapterId === "cloudflare-pages" ? { accountId: accountId.trim(), name: siteName.trim() || `biforge-${projectSlug}` } : {};
+      isServer
+        ? { url: chosenConn?.url ?? "", connection: chosenConn?.id ?? "", workspace: chosenWs, report: reportId.trim() || projectSlug }
+        : adapterId === "local-folder" ? { folder } : adapterId === "github-pages" ? { repo: repo.trim() || `biforge-${projectSlug}` } : adapterId === "cloudflare-pages" ? { accountId: accountId.trim(), name: siteName.trim() || `biforge-${projectSlug}` } : {};
     const ok = await env.run("publish.addTarget", { adapterId, label, access, settings });
     if (ok) onAdded();
   };
@@ -310,6 +408,36 @@ function AddDestination({ onAdded }: { onAdded(): void }) {
           <Button onClick={async () => setFolder((await env.session.dialogs.pickFolder()) ?? folder)}>Browse…</Button>
         </div>
       )}
+      {isServer && (
+        <>
+          {serverOptions.length === 0 ? (
+            <div role="status" style={{ fontSize: 12 }}>
+              {adapterId === "host-from-pc" ? "Hosting is off. Turn it on in Host and collaborate first, and create a workspace." : "You have not joined a server where you may publish (editor or admin). Join one first."}
+            </div>
+          ) : (
+            <>
+              <Dropdown aria-label="Server" value={chosenConn?.label ?? ""} selectedOptions={chosenConn ? [chosenConn.id] : []} onOptionSelect={(_, d) => { setServerConn(d.optionValue ?? ""); void env.session.hostUi.select(d.optionValue ?? ""); }}>
+                {serverOptions.map((c) => (
+                  <Option key={c.id} value={c.id} text={c.label}>
+                    {c.label}
+                  </Option>
+                ))}
+              </Dropdown>
+              {chosenConn && !chosenConn.workspaceId && (
+                <Dropdown aria-label="Workspace" value={hostState.workspaces.find((w) => w.id === chosenWs)?.name ?? ""} selectedOptions={chosenWs ? [chosenWs] : []} onOptionSelect={(_, d) => setServerWs(d.optionValue ?? "")}>
+                  {hostState.workspaces.map((w) => (
+                    <Option key={w.id} value={w.id} text={w.name}>
+                      {w.name}
+                    </Option>
+                  ))}
+                </Dropdown>
+              )}
+              <Input aria-label="Report id on the server" placeholder={`Report id (default ${projectSlug})`} value={reportId} onChange={(_, d) => setReportId(d.value)} />
+              <div style={{ fontSize: 12 }}>The server reads the data to answer queries, so the package is signed but not encrypted. Who sees which rows is decided by invitations and data roles on the server.</div>
+            </>
+          )}
+        </>
+      )}
       {adapterId === "github-pages" && <Input aria-label="Repository name" placeholder={`Repository for the site (default biforge-${projectSlug})`} value={repo} onChange={(_, d) => setRepo(d.value)} />}
       {adapterId === "cloudflare-pages" && (
         <>
@@ -326,7 +454,7 @@ function AddDestination({ onAdded }: { onAdded(): void }) {
         </ul>
       )}
       <div>
-        <Button appearance="primary" disabled={!caps?.implemented || !accessOk || !label.trim() || (adapterId === "local-folder" && !folder.trim()) || (adapterId === "cloudflare-pages" && !accountId.trim())} onClick={startAdd}>
+        <Button appearance="primary" disabled={!caps?.implemented || !accessOk || !label.trim() || (adapterId === "local-folder" && !folder.trim()) || (adapterId === "cloudflare-pages" && !accountId.trim()) || (isServer && (!chosenConn || !chosenWs))} onClick={startAdd}>
           Add destination
         </Button>
         {guide && hidden && (
@@ -443,6 +571,9 @@ function TargetDetails({ target, info }: { target: Target; info: AdapterInfo }) 
       {row("Last sync", target.lastSync ?? "Never")}
       {row("Version", target.lastVersion === null ? "-" : String(target.lastVersion))}
       {target.lastError && <div role="alert" style={{ color: "var(--colorPaletteRedForeground1)" }}>{target.lastError}</div>}
+      {target.adapterId === "p2p" && <P2pPanel targetId={target.id} />}
+      {isStorageProvider(target.adapterId) && <StorageAccount provider={target.adapterId} />}
+      {info.method === "personalStorage" && <StorageTools target={target} publisherName={name} />}
       {!c.implemented && <div role="note">Not implemented yet (planned for phase {info.phase}). Nothing can be published here.</div>}
       {provider && state.connected[provider] === undefined && (
         <details open>
@@ -551,7 +682,7 @@ export function PublishDialog() {
     <Frame title="Publish & Share" onClose={close} actions={<Button appearance="primary" onClick={close}>Close</Button>} label="Publish and Share">
       {state.error && <div role="alert" style={{ color: "var(--colorPaletteRedForeground1)" }}>{state.error}</div>}
       <div style={{ fontSize: 12, opacity: 0.8 }}>
-        BIForge has no servers and costs nothing: you share through a folder, a free account of your own, or your own computer. Row-level security is only enforced by a hosted workspace (not available yet); packages show everything they contain to everyone who can open them.
+        BIForge has no servers and costs nothing: you share through a folder, a free account of your own, or your own computer. Row-level security is only enforced by a hosted workspace (Host from this PC or biforge-server.exe); packages show everything they contain to everyone who can open them.
       </div>
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }} role="tablist" aria-label="Destinations of this report">
         {state.targets.map((t) => (

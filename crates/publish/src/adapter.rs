@@ -88,6 +88,10 @@ pub struct Issue {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RemoteState {
+    /// The destination's own revision marker of the stored file (an etag, a revision id), for destinations that detect
+    /// changes made by someone else. The publisher keeps it in the target's settings (`rev`).
+    #[serde(default)]
+    pub rev: Option<String>,
     pub package_id: String,
     pub version: u64,
     pub sha256: String,
@@ -105,6 +109,15 @@ pub struct PackageMeta {
     pub access: AccessLevel,
     pub sha256: String,
     pub time: String,
+}
+
+/// One stored version of the file at a destination that keeps a history.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VersionInfo {
+    pub id: String,
+    pub modified: String,
+    pub size: u64,
 }
 
 pub trait Adapter: Send + Sync {
@@ -151,6 +164,14 @@ pub trait Adapter: Send + Sync {
     fn trigger_refresh(&self, _target: &Target) -> Result<String> {
         Err(self.unsupported("scheduled refresh"))
     }
+    /// The destination's own version history of the stored file, newest first, where the provider keeps one.
+    fn versions(&self, _target: &Target) -> Result<Vec<VersionInfo>> {
+        Err(self.unsupported("version history"))
+    }
+    /// Gives one person access to the stored file by e-mail address (providers with accounts).
+    fn share_with(&self, _target: &Target, _email: &str, _can_edit: bool) -> Result<()> {
+        Err(self.unsupported("sharing with a person"))
+    }
     /// Forgets the account connection (tokens). Never deletes published data.
     fn disconnect(&self, _target: &mut Target) -> Result<()> {
         Err(self.unsupported("disconnect"))
@@ -167,7 +188,8 @@ pub struct NotImplemented {
 }
 
 impl NotImplemented {
-    fn new(id: &str, name: &str, method: Method, phase: &str, limitations: &[&str], free_tier: &[&str]) -> Box<dyn Adapter> {
+    /// For a destination that is listed before it is built (every operation fails; nothing is simulated).
+    pub fn new(id: &str, name: &str, method: Method, phase: &str, limitations: &[&str], free_tier: &[&str]) -> Box<dyn Adapter> {
         Box::new(Self {
             info: AdapterInfo {
                 id: id.into(),
@@ -224,42 +246,19 @@ impl Registry {
     }
 
     pub fn standard_with(ctx: Context) -> Self {
+        Self::standard_with_p2p(ctx, None)
+    }
+
+    /// Like [`Registry::standard_with`], with the app's bridge to direct sharing sessions.
+    pub fn standard_with_p2p(ctx: Context, p2p: Option<Arc<dyn crate::p2p::P2pBridge>>) -> Self {
         Self::new(vec![
             Box::new(LocalFolderAdapter),
             Box::new(GitHubAdapter::new(ctx.clone())),
             Box::new(CloudflareAdapter::new(ctx.clone())),
-            NotImplemented::new(
-                "google-drive",
-                "Google Drive",
-                Method::PersonalStorage,
-                "O3",
-                &["Shares the editable project, not a live dashboard", "Only files BIForge creates are visible to it (drive.file)"],
-                &["Free Google account, 15 GB shared with Gmail and Photos"],
-            ),
-            NotImplemented::new(
-                "onedrive",
-                "OneDrive",
-                Method::PersonalStorage,
-                "O3",
-                &["Shares the editable project, not a live dashboard"],
-                &["Free Microsoft account, 5 GB"],
-            ),
-            NotImplemented::new(
-                "dropbox",
-                "Dropbox",
-                Method::PersonalStorage,
-                "O3",
-                &["Shares the editable project, not a live dashboard"],
-                &["Free Dropbox Basic account, 2 GB"],
-            ),
-            NotImplemented::new(
-                "p2p",
-                "Direct connection (peer to peer)",
-                Method::PeerToPeer,
-                "O4",
-                &["Both people must be online at the same time", "May fail on some networks; use another method then"],
-                &["Free; uses the free public relay servers of the iroh project when a direct connection is impossible (no guarantee of availability)"],
-            ),
+            Box::new(crate::storage::StorageAdapter::google_drive(ctx.clone())),
+            Box::new(crate::storage::StorageAdapter::onedrive(ctx.clone())),
+            Box::new(crate::storage::StorageAdapter::dropbox(ctx.clone())),
+            Box::new(crate::p2p::P2pAdapter::new(p2p)),
             Box::new(crate::server::ServerAdapter::host_from_pc(ctx.clone())),
             Box::new(crate::server::ServerAdapter::standalone(ctx)),
         ])

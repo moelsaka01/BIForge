@@ -127,9 +127,9 @@ describe("setup guides", () => {
   const byId = (id: string) => getGuide(id)!;
   const labels = (id: string) => byId(id).buttons.map((b) => b.label);
 
-  it("backend hosting says what to do and offers the three buttons", () => {
+  it("backend hosting says what to do and offers its buttons", () => {
     expect(byId("backend-host").paragraphs[0]).toBe("To host a shared workspace for others, either turn on Host from this PC (BIForge must stay open and this PC online), or install biforge-server.exe on a computer that stays on.");
-    expect(labels("backend-host")).toEqual(["Turn on Host from this PC", "Download biforge-server.exe", "How it works"]);
+    expect(labels("backend-host")).toEqual(["Turn on Host from this PC", "Download biforge-server.exe", "How it works", "Continue"]);
     expect(byId("backend-host").howItWorks!.length).toBeGreaterThan(1);
   });
   it("backend connecting needs no install", () => {
@@ -172,7 +172,7 @@ describe("setup guides", () => {
     const adapters = defaultAdapters();
     for (const g of allGuides()) {
       for (const b of g.buttons) {
-        if (b.action.kind === "notImplemented") expect(b.action.phase, `${g.id}/${b.label}`).toMatch(/^O[2-7]$/);
+        if (b.action.kind === "notImplemented") expect(b.action.phase, `${g.id}/${b.label}`).toMatch(/^O[2-8]$/);
       }
     }
     // the only guide that can start something today is the folder one

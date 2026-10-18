@@ -8,6 +8,7 @@ import { registerReportCommands } from "./reportCommands";
 import { registerQueryCommands } from "./queryCommands";
 import { registerShellCommands } from "./shellCommands";
 import { registerPublishCommands } from "./publishCommands";
+import { registerHostCommands } from "./hostCommands";
 import { createSampleProject } from "../session/sample";
 
 function argsOf<T extends object>(args: unknown, required: (keyof T & string)[]): T {
@@ -287,6 +288,7 @@ export function createRegistry(session: Session): CommandRegistry<Session> {
   registerQueryCommands(r);
   registerShellCommands(r);
   registerPublishCommands(r);
+  registerHostCommands(r);
 
   return r;
 }

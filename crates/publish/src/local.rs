@@ -52,7 +52,7 @@ fn write_atomic(path: &Path, bytes: &[u8]) -> Result<()> {
 }
 
 fn state(dir: &Path, f: &Feed) -> RemoteState {
-    RemoteState { package_id: f.package_id.clone(), version: f.version, sha256: f.sha256.clone(), location: dir.join(&f.file).display().to_string(), updated_at: f.updated_at.clone() }
+    RemoteState { package_id: f.package_id.clone(), version: f.version, sha256: f.sha256.clone(), location: dir.join(&f.file).display().to_string(), updated_at: f.updated_at.clone(), rev: None }
 }
 
 fn put(t: &Target, package: &[u8], meta: &PackageMeta) -> Result<RemoteState> {

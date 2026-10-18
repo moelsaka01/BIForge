@@ -11,11 +11,20 @@ export function ViewingBar({ viewing }: { viewing: ViewingInfo }) {
       <strong>Viewing mode</strong>
       <span>{viewing.reportName}</span>
       <span>version {viewing.version}</span>
-      <span>
-        published by {viewing.publisherName} (key {viewing.keyId})
-      </span>
-      <span>{viewing.access === "private" ? "private (encrypted)" : "public"}</span>
+      {viewing.p2p ? (
+        <span>{`direct session with the host (${viewing.p2p.hostId.slice(0, 10)}…), role ${viewing.p2p.role === "edit" ? "edit" : "read only"}. New versions the host shares open here by themselves.`}</span>
+      ) : viewing.server ? (
+        <span>{`from ${viewing.server.serverLabel}, as ${viewing.server.identity} (${viewing.server.role}). The server decides which rows you see.`}</span>
+      ) : (
+        <>
+          <span>
+            published by {viewing.publisherName} (key {viewing.keyId})
+          </span>
+          <span>{viewing.access === "private" ? "private (encrypted)" : "public"}</span>
+        </>
+      )}
       <span>Read only: this copy cannot be changed or saved.</span>
+      {!viewing.server && !viewing.p2p && (
       <details style={{ flex: "1 1 auto" }}>
         <summary>Data in this report</summary>
         <ul style={{ margin: "4px 0 0 18px" }}>
@@ -24,6 +33,7 @@ export function ViewingBar({ viewing }: { viewing: ViewingInfo }) {
           ))}
         </ul>
       </details>
+      )}
       {doc.viewChanged && (
         <Button size="small" onClick={() => void env.run("report.view.resetChanges")}>
           Reset view
@@ -32,6 +42,11 @@ export function ViewingBar({ viewing }: { viewing: ViewingInfo }) {
       <Button size="small" onClick={() => void env.run("report.visuals.refresh")}>
         Refresh visuals
       </Button>
+      {viewing.p2p?.role === "edit" && (
+        <Button size="small" onClick={() => void env.run("p2p.guest.push")}>
+          Send my copy to the host…
+        </Button>
+      )}
       {viewing.feedUrl && (
         <Button size="small" onClick={() => void env.run("subscription.check")}>
           Check for updates

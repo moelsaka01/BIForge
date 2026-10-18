@@ -34,6 +34,9 @@ pub enum Error {
     UnknownTarget(String),
     #[error("{0}")]
     Adapter(String),
+    /// The file at the destination was changed by someone else since this PC last wrote it.
+    #[error("{0}")]
+    Conflict(String),
     #[error("credential store: {0}")]
     KeyStore(String),
     #[error("io: {0}")]

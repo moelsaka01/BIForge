@@ -225,6 +225,33 @@ try {
   await page.screenshot({ path: join(work, "editing.png") });
   await page.getByRole("tab", { name: "Home", exact: true }).click();
 
+  // hierarchy slicer: a slicer with two fields of one table shows a tree; a branch selects as a prefix and filters the report
+  const slicersBefore = await page.getByRole("button", { name: "Select Slicer", exact: true }).count();
+  await page.getByRole("button", { name: "Slicer", exact: true }).first().click();
+  await page.getByRole("tab", { name: "View", exact: true }).click();
+  if (!(await page.getByRole("tree", { name: "Visuals and groups" }).isVisible().catch(() => false))) await page.getByRole("button", { name: "Selection", exact: true }).click();
+  await page.getByRole("tree", { name: "Visuals and groups" }).waitFor();
+  check((await page.getByRole("button", { name: "Select Slicer", exact: true }).count()) === slicersBefore + 1, "the Slicer gallery button adds a slicer");
+  await page.getByRole("button", { name: "Select Slicer", exact: true }).last().click();
+  for (const field of ["Region", "City"]) {
+    const box = page.getByRole("checkbox", { name: `Use ${field} in the selected visual` });
+    if (!(await box.isVisible().catch(() => false))) await page.getByRole("treeitem", { name: /^Customer/ }).locator("svg").first().click();
+    await box.check();
+  }
+  const htree = page.getByRole("tree", { name: "Hierarchy values" });
+  await htree.waitFor();
+  const top = htree.getByRole("treeitem", { level: 1 });
+  check((await top.count()) >= 2, `the slicer with two fields is a tree of regions (${await top.count()} top branches)`);
+  const firstRegion = (await top.first().innerText()).trim();
+  await htree.getByRole("button", { name: `Expand ${firstRegion}` }).click();
+  check((await htree.getByRole("treeitem", { level: 2 }).count()) > 0, `a branch (${firstRegion}) opens to its cities`);
+  const cardsBefore = await page.locator("[data-testid=card-value]").allInnerTexts();
+  await htree.getByRole("checkbox", { name: firstRegion, exact: true }).check();
+  await page.waitForFunction((b) => JSON.stringify([...document.querySelectorAll("[data-testid=card-value]")].map((e) => e.textContent?.trim())) !== JSON.stringify(b.map((x) => x.trim())), cardsBefore, { timeout: 30000 });
+  check((await htree.getByRole("treeitem", { level: 1 }).first().getAttribute("aria-selected")) === "true", "ticking a branch selects it as a whole (every city below)");
+  check(true, `ticking ${firstRegion} filters the other visuals (cards: ${cardsBefore.join(",")} -> ${(await page.locator("[data-testid=card-value]").allInnerTexts()).join(",")})`);
+  await page.getByRole("tab", { name: "Home", exact: true }).click();
+
   // 2. Publish & Share to the folder adapter
   await page.getByRole("button", { name: /Publish & Share/ }).first().click();
   const dlg = page.getByRole("dialog", { name: "Publish and Share" });

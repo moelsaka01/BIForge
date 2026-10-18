@@ -246,6 +246,8 @@ const shareGroup = (): RibbonGroup => ({
   controls: [
     cmd("publishShare", "Publish & Share", "export", "publish.open", { size: "large", keytip: "PS" }),
     cmd("openShared", "Open shared report", "open", "package.open", { size: "large", keytip: "OS" }),
+    cmd("hostShare", "Host and collaborate", "export", "host.open", { size: "large", keytip: "HC" }),
+    cmd("joinServer", "Join a server", "open", "server.join", { size: "large", keytip: "JS" }),
   ],
 });
 
