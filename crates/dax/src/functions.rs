@@ -21,7 +21,7 @@ pub const IMPLEMENTED: &[&str] = &[
     // relationships
     "RELATED", "RELATEDTABLE", "USERELATIONSHIP", "CROSSFILTER",
     // information
-    "BLANK", "ISBLANK", "ISFILTERED", "ISCROSSFILTERED", "HASONEVALUE", "ISEMPTY",
+    "BLANK", "USERNAME", "USERPRINCIPALNAME", "ISBLANK", "ISFILTERED", "ISCROSSFILTERED", "HASONEVALUE", "ISEMPTY",
     // logical (core)
     "IF", "AND", "OR", "NOT", "TRUE", "FALSE", "COALESCE",
     // aggregation (core)
@@ -386,6 +386,7 @@ pub fn call<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], whole: &'a
         }
         // ---------------------------------------------------------------- information
         "BLANK" => s(Value::Blank),
+        "USERNAME" | "USERPRINCIPALNAME" => s(Value::str(&ev.data.identity)),
         "ISBLANK" => s(Value::Bool(ev.scalar(&args[0], env)?.is_blank())),
         "ISFILTERED" => {
             if let Some(c) = args[0].col() {

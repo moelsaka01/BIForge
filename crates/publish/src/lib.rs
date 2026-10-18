@@ -9,6 +9,7 @@
 //! No network code lives here; provider adapters arrive in later phases (docs/ONLINE_PLAN.md).
 pub mod adapter;
 pub mod audit;
+pub mod backend;
 pub mod cloudflare;
 pub mod deeplink;
 pub mod error;
@@ -21,6 +22,7 @@ pub mod manifest;
 pub mod package;
 pub mod publisher;
 pub mod refresh;
+pub mod server;
 pub mod subscribe;
 pub mod targets;
 pub mod time;

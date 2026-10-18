@@ -21,6 +21,7 @@ pub mod lexer;
 pub mod model;
 pub mod parser;
 pub mod query;
+pub mod security;
 pub mod sql;
 pub mod table;
 pub mod value;

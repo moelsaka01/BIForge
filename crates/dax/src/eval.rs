@@ -751,6 +751,16 @@ impl Engine {
         Ok(eng)
     }
 
+    /// Like [`Engine::new`], with the identity USERNAME() and USERPRINCIPALNAME() return (set before the
+    /// calculated columns are computed, so they can use it).
+    pub fn new_as(model: Model, source: &dyn DataSource, identity: &str) -> Result<Engine, String> {
+        let mut data = ModelData::load(model, source)?;
+        data.identity = identity.to_string();
+        let mut eng = Engine { data, column_errors: vec![] };
+        eng.process_calculated_columns();
+        Ok(eng)
+    }
+
     /// Computes calculated columns in dependency order. A column that fails is left BLANK and reported.
     fn process_calculated_columns(&mut self) {
         let calcs: Vec<ColId> = (0..self.data.model.tables.len())

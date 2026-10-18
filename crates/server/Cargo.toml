@@ -1,0 +1,29 @@
+[package]
+name = "biforge-server"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "BIForge server (method D): workspaces, invite links, roles, server-side authorization, row-level security, audit log. Also embedded in the app as Host from this PC."
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "biforge-server"
+path = "src/main.rs"
+
+[dependencies]
+axum = "0.8"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "sync", "time"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+base64 = "0.22"
+tempfile = "3"
+biforge-publish = { path = "../publish" }
+biforge-dax = { path = "../dax" }
+biforge-model = { path = "../model" }
+biforge-engine = { path = "../engine" }
+
+[dev-dependencies]
+tempfile = "3"

@@ -15,6 +15,8 @@ pub enum Link {
     File { path: String },
     /// A feed on a static host: `biforge://open?src=url&url=<feed address>`.
     Url { url: String },
+    /// A BIForge server invitation: `biforge://open?src=server&url=<server address>&invite=<invite token>`.
+    Server { url: String, invite: String },
     /// A source this BIForge version does not know yet.
     Unsupported { src: String },
 }
@@ -36,12 +38,14 @@ pub fn parse(link: &str) -> Result<Link> {
     let mut src = None;
     let mut path = None;
     let mut url = None;
+    let mut invite = None;
     for pair in query.split('&').filter(|p| !p.is_empty()) {
         let (k, v) = pair.split_once('=').unwrap_or((pair, ""));
         match k {
             "src" => src = Some(decode(v)?),
             "path" => path = Some(decode(v)?),
             "url" => url = Some(decode(v)?),
+            "invite" => invite = Some(decode(v)?),
             _ => {}
         }
     }
@@ -58,12 +62,17 @@ pub fn parse(link: &str) -> Result<Link> {
             crate::feed::check_feed_url(&url).map_err(|e| Error::Invalid(e.to_string()))?;
             Ok(Link::Url { url })
         }
+        Some("server") => {
+            let url = url.filter(|u| u.starts_with("http://") || u.starts_with("https://")).ok_or_else(|| Error::Invalid("the link has no server address".into()))?;
+            let invite = invite.filter(|i| !i.is_empty()).ok_or_else(|| Error::Invalid("the link has no invitation".into()))?;
+            Ok(Link::Server { url, invite })
+        }
         Some(other) => Ok(Link::Unsupported { src: other.to_string() }),
         None => Err(Error::Invalid("the link has no source".into())),
     }
 }
 
-fn encode(s: &str) -> String {
+pub fn encode(s: &str) -> String {
     let mut out = String::new();
     for b in s.bytes() {
         if b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'.' | b'~') {
@@ -124,6 +133,19 @@ mod tests {
 
     #[test]
     fn later_sources_are_reported_not_guessed() {
-        assert_eq!(parse("biforge://open?src=p2p&ticket=abc").unwrap(), Link::Unsupported { src: "p2p".into() });
+        assert_eq!(parse("biforge://open?src=future&ticket=abc").unwrap(), Link::Unsupported { src: "future".into() });
+    }
+}
+
+#[cfg(test)]
+mod server_tests {
+    use super::*;
+
+    #[test]
+    fn server_invitations_round_trip() {
+        let l = crate::backend::build_link("http://192.168.1.5:7878", "bfi_abc");
+        assert_eq!(parse(&l).unwrap(), Link::Server { url: "http://192.168.1.5:7878".into(), invite: "bfi_abc".into() });
+        assert!(parse("biforge://open?src=server&url=http%3A%2F%2Fx").is_err());
+        assert!(parse("biforge://open?src=server&url=ftp%3A%2F%2Fx&invite=a").is_err());
     }
 }

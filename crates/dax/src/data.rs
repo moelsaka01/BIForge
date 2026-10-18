@@ -110,6 +110,13 @@ pub struct ModelData {
     pub tables: Vec<TableData>,
     rel_index: Vec<OnceLock<Arc<RelIndex>>>,
     blank_rows: OnceLock<Vec<bool>>,
+    /// What USERNAME() and USERPRINCIPALNAME() return (set by the host for row-level security).
+    pub identity: String,
+}
+
+/// The Windows user name, used for USERNAME() when no identity is set (desktop use, no sign-in).
+fn default_identity() -> String {
+    std::env::var("USERNAME").or_else(|_| std::env::var("USER")).unwrap_or_default()
 }
 
 impl ModelData {
@@ -136,7 +143,7 @@ impl ModelData {
             tables.push(TableData { nrows, columns, dup_groups: OnceLock::new() });
         }
         let rel_index = (0..model.relationships.len()).map(|_| OnceLock::new()).collect();
-        Ok(ModelData { model, tables, rel_index, blank_rows: OnceLock::new() })
+        Ok(ModelData { model, tables, rel_index, blank_rows: OnceLock::new(), identity: default_identity() })
     }
 
     /// Replaces a calculated column's values (used while processing calculated columns).

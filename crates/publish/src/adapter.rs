@@ -227,7 +227,7 @@ impl Registry {
         Self::new(vec![
             Box::new(LocalFolderAdapter),
             Box::new(GitHubAdapter::new(ctx.clone())),
-            Box::new(CloudflareAdapter::new(ctx)),
+            Box::new(CloudflareAdapter::new(ctx.clone())),
             NotImplemented::new(
                 "google-drive",
                 "Google Drive",
@@ -260,22 +260,8 @@ impl Registry {
                 &["Both people must be online at the same time", "May fail on some networks; use another method then"],
                 &["Free; uses the free public relay servers of the iroh project when a direct connection is impossible (no guarantee of availability)"],
             ),
-            NotImplemented::new(
-                "host-from-pc",
-                "Host from this PC",
-                Method::Backend,
-                "O5",
-                &["BIForge must stay open and this PC online for others to connect"],
-                &["Free; uses your PC and your internet connection"],
-            ),
-            NotImplemented::new(
-                "biforge-server",
-                "BIForge server (biforge-server.exe)",
-                Method::Backend,
-                "O5",
-                &["Needs a computer that stays on"],
-                &["Free software; you provide the computer"],
-            ),
+            Box::new(crate::server::ServerAdapter::host_from_pc(ctx.clone())),
+            Box::new(crate::server::ServerAdapter::standalone(ctx)),
         ])
     }
 
