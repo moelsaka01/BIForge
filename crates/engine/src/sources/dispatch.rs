@@ -145,6 +145,8 @@ fn read_other_n(spec: &SourceSpec, creds: &dyn CredentialStore, limit: Option<us
             Some(n) => odbc_src::preview(spec, creds, n),
             None => odbc_src::read(spec, creds),
         },
+        SourceSpec::OleDb { .. } | SourceSpec::AnalysisServices { .. } => oledb_src::read(spec, creds, limit),
+        SourceSpec::Script { .. } => script_src::read(spec),
         SourceSpec::Xml { path, table } => xml_src::read(&String::from_utf8_lossy(&read_file(path)?), table.as_deref()),
         SourceSpec::Pdf { path, table } => {
             read_file(path)?;
@@ -172,6 +174,8 @@ pub fn choices(spec: &SourceSpec, creds: &dyn CredentialStore) -> Result<Vec<Str
         SourceSpec::SqlServer { .. } => sqlserver_src::list_tables(spec, creds),
         SourceSpec::MySql { .. } => mysql_src::list_tables(spec, creds),
         SourceSpec::Odbc { .. } => odbc_src::list_tables(spec, creds),
+        SourceSpec::OleDb { .. } | SourceSpec::AnalysisServices { .. } => oledb_src::list_tables(spec, creds),
+        SourceSpec::Script { .. } => script_src::choices(spec),
         SourceSpec::Xml { path, .. } => xml_src::tables_of(&String::from_utf8_lossy(&read_file(path)?)),
         SourceSpec::Pdf { path, .. } => {
             read_file(path)?;
@@ -191,6 +195,9 @@ pub fn preview_page(spec: &SourceSpec, creds: &dyn CredentialStore, limit: usize
         SourceSpec::SqlServer { .. } => sqlserver_src::read_n(spec, creds, Some(limit))?,
         SourceSpec::MySql { .. }
         | SourceSpec::Odbc { .. }
+        | SourceSpec::OleDb { .. }
+        | SourceSpec::AnalysisServices { .. }
+        | SourceSpec::Script { .. }
         | SourceSpec::Xml { .. }
         | SourceSpec::Pdf { .. }
         | SourceSpec::FixedWidth { .. }

@@ -42,6 +42,13 @@ const cases: [string, SourceSpec][] = [
   ["web_xml", { kind: "web", url: "https://example.com/d.xml", format: "xml", table: "item" }],
   ["inline_table", { kind: "inline", columns: [{ name: "Name", type: "text" }, { name: "Qty", type: "whole" }, { name: "Price", type: "decimal" }, { name: "Ok", type: "logical" }, { name: "Day", type: "date" }, { name: "At", type: "datetime" }], rows: [["a \"q\"", "2", "1,5", "yes", "2024-01-02", "2024-01-02 03:04"], [null, null, null, null, null, null]] }],
   ["json_nested", { kind: "json", path: "C:/data/nested.json" }],
+  ["web_json_headers", { kind: "web", url: "https://api.example.com/v1/items", format: "json", table: "rows", headers: [{ name: "X-Api-Version", value: "2", secret: false }, { name: "Authorization", value: null, secret: true }] }],
+  ["oledb_table", { kind: "oledb", connection: "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\\data\\shop.accdb", table: "Order Details" }],
+  ["oledb_query", { kind: "oledb", connection: "Provider=SQLOLEDB;Data Source=srv;Initial Catalog=Shop", user: "u", query: "SELECT Id, Name FROM dbo.People;" }],
+  ["analysis_table", { kind: "analysisServices", server: "localhost:51234", database: "Model", table: "Sales" }],
+  ["analysis_query", { kind: "analysisServices", server: "ssas01", database: "Cube", query: 'EVALUATE SUMMARIZECOLUMNS(Product[Category], "n", [Orders])' }],
+  ["python_script", { kind: "script", language: "python", code: "import pandas as pd\ndf = pd.DataFrame({'Id': [1, 2], 'Name': ['a', 'b']})", table: "df" }],
+  ["r_script", { kind: "script", language: "r", code: 'df <- data.frame(Id = 1:2, Name = c("a", "b"))' }],
   ["odata_entity", { kind: "odata", url: "https://svc.example.com/odata", entity: "Products" }],
 ];
 
@@ -86,6 +93,17 @@ describe("partition M written for each connector", () => {
     expect(m("pdf_table")).toContain('Source{[Id="Table002"]}[Data]');
     expect(m("web_html_numbered")).toContain('Source{[Id="Table 2"]}[Data]'); // Power Query counts from 0
     expect(m("web_json")).toContain('Source["rows"]');
+    expect(m("oledb_table")).toContain('OleDb.Query("Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\\data\\shop.accdb", "SELECT * FROM Order Details")');
+    expect(m("oledb_query")).toContain('OleDb.Query("Provider=SQLOLEDB;Data Source=srv;Initial Catalog=Shop", "SELECT Id, Name FROM dbo.People")');
+    expect(m("analysis_table")).toContain('AnalysisServices.Database("localhost:51234", "Model", [Query="EVALUATE \'Sales\'"])');
+    expect(m("analysis_query")).toContain('AnalysisServices.Database("ssas01", "Cube", [Query="EVALUATE SUMMARIZECOLUMNS(Product[Category], ""n"", [Orders])"])');
+    expect(m("python_script")).toContain('Python.Execute("import pandas as pd#(lf)df = pd.DataFrame({\'Id\': [1, 2], \'Name\': [\'a\', \'b\']})")');
+    expect(m("python_script")).toContain('Source{[Name="df"]}[Value]');
+    expect(m("r_script")).toContain("R.Execute(");
+    expect(m("r_script")).toContain("Source{0}[Value]");
+    // request headers: the plain ones are in the query, a secret one never is (its value lives in the credential store)
+    expect(m("web_json_headers")).toContain('Json.Document(Web.Contents("https://api.example.com/v1/items", [Headers=[#"X-Api-Version"="2"]]))');
+    expect(m("web_json_headers")).not.toContain("Authorization");
     expect(m("odata_entity")).toContain('OData.Feed("https://svc.example.com/odata", null, [Implementation="2.0"])');
     expect(m("inline_table")).toContain('#table(type table [#"Name" = text, #"Qty" = Int64.Type, #"Price" = number, #"Ok" = logical, #"Day" = date, #"At" = datetime], {{"a ""q""", 2, 1.5, true, #date(2024, 1, 2), #datetime(2024, 1, 2, 3, 4, 0)}, {null, null, null, null, null, null}})');
     // nested JSON: the records that the import expanded are expanded in M too, level by level
@@ -136,6 +154,29 @@ describe("Get data form", () => {
 
   it("validates web addresses, OData entities and fixed widths", () => {
     expect(buildSpec(form({ kind: "web", url: "ftp://x" }))).toEqual({ error: "Enter an http:// or https:// web address." });
+    // OLE DB, Analysis Services, scripts and the blank query
+    expect(spec(buildSpec(form({ kind: "oledb", connection: " Provider=X;Data Source=y ", user: " u " }), "T"))).toEqual({ kind: "oledb", connection: "Provider=X;Data Source=y", user: "u", table: "T" });
+    expect(buildSpec(form({ kind: "oledb", connection: "" }), "T")).toMatchObject({ error: expect.stringContaining("connection string") });
+    expect(buildSpec(form({ kind: "oledb", connection: "Provider=X;Password=a" }), "T")).toMatchObject({ error: expect.stringContaining("Password field") });
+    expect(buildSpec(form({ kind: "oledb", connection: "Provider=X" }), "")).toEqual({ error: "Choose a table." });
+    expect(spec(buildSpec(form({ kind: "oledb", connection: "Provider=X", query: "SELECT 1" }), ""))).toEqual({ kind: "oledb", connection: "Provider=X", user: null, table: null, query: "SELECT 1" });
+    expect(spec(buildSpec(form({ kind: "analysisServices", host: "localhost:5", database: "M" }), "Sales"))).toEqual({ kind: "analysisServices", server: "localhost:5", database: "M", user: null, table: "Sales" });
+    expect(buildSpec(form({ kind: "analysisServices", host: "a;b", database: "M" }), "Sales")).toMatchObject({ error: expect.stringContaining("semicolon") });
+    expect(buildSpec(form({ kind: "analysisServices", host: "s", database: "M" }), "")).toMatchObject({ error: expect.stringContaining("DAX") });
+    expect(spec(buildSpec(form({ kind: "python", code: "df = 1", home: " C:\\Py " }), ""))).toEqual({ kind: "script", language: "python", code: "df = 1", table: null, home: "C:\\Py" });
+    expect(spec(buildSpec(form({ kind: "r", code: "df <- 1" }), "df"))).toMatchObject({ kind: "script", language: "r", table: "df" });
+    expect(buildSpec(form({ kind: "python", code: "  " }), "")).toMatchObject({ error: expect.stringContaining("Python script") });
+    expect(buildSpec(form({ kind: "blank" }), "")).toMatchObject({ error: expect.stringContaining("no data source") });
+    expect(defaultTableName({ kind: "script", language: "python", code: "x" })).toBe("Script");
+    expect(defaultTableName({ kind: "analysisServices", server: "s", database: "d", table: "Sales" })).toBe("Sales");
+    // request headers: kept in the spec, a secret one without its value; bad ones are refused with a reason
+    const h = (name: string, value: string, secret = false) => ({ name, value, secret });
+    expect(spec(buildSpec(form({ kind: "web", url: "https://a.b/c", headers: [h("X-Key", "v1"), h("Authorization", "Bearer t", true), h("", "")] })))).toMatchObject({ headers: [{ name: "X-Key", value: "v1", secret: false }, { name: "Authorization", value: null, secret: true }] });
+    expect(JSON.stringify(buildSpec(form({ kind: "web", url: "https://a.b/c", headers: [h("Authorization", "Bearer t", true)] })))).not.toContain("Bearer t");
+    expect(buildSpec(form({ kind: "web", url: "https://a.b/c", headers: [h("", "v")] }))).toEqual({ error: "Every request header needs a name." });
+    expect(buildSpec(form({ kind: "web", url: "https://a.b/c", headers: [h("Host", "x")] }))).toMatchObject({ error: expect.stringContaining("BIForge sets Host") });
+    expect(buildSpec(form({ kind: "web", url: "https://a.b/c", headers: [h("X-A", "a\nb")] }))).toEqual({ error: "A header value must be on one line." });
+    expect(buildSpec(form({ kind: "web", url: "https://a.b/c", headers: [h("bad name", "x")] }))).toMatchObject({ error: expect.stringContaining("header name") });
     expect(spec(buildSpec(form({ kind: "web", url: "https://a.b/c", format: "json" }), "rows"))).toEqual({ kind: "web", url: "https://a.b/c", format: "json", table: "rows", user: null });
     expect(buildSpec(form({ kind: "odata", url: "https://svc/odata" }), "")).toEqual({ error: "Choose an entity set." });
     expect(spec(buildSpec(form({ kind: "fixedWidth", path: "a.txt", widths: "4, 10 3" })))).toMatchObject({ widths: [4, 10, 3] });

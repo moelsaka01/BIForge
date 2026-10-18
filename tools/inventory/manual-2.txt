@@ -364,25 +364,25 @@ P | Snowflake (ODBC)
 P | Google BigQuery (ODBC)
 P | Databricks (ODBC)
 D | Generic ODBC
-N | Generic OLE DB
-N | Analysis Services (local multidimensional/tabular)
+D | Generic OLE DB
+P | Analysis Services (local multidimensional/tabular)
 D | Custom SQL query text for any database connector
 P | Native query toggle
 ### Other
 D | Web (HTML tables from a URL)
-P | Web API (reqwest, headers, JSON/CSV/XML body)
+D | Web API (reqwest, headers, JSON/CSV/XML body)
 D | OData feed
 P | REST via Web.Contents
 N | Active Directory (local)
 N | Exchange (on-premises)
 N | SharePoint list (on-premises)
 N | SharePoint folder (on-premises)
-N | Blank query
+D | Blank query
 D | Enter data
 D | Sample data (own)
-N | Python/R script as source
+P | Python/R script as source
 P | Connector credentials dialog (Windows, Basic, Database, Anonymous)
-N | Privacy levels dialog
+P | Privacy levels dialog
 D | Navigator (preview, multi-select)
 D | Data source settings (change source, edit permissions, clear)
 N | DirectQuery mode for supported databases
@@ -450,8 +450,8 @@ N | Font size and zoom of the interface
 N | Show recent files count
 N | Always show start screen
 ### External tools / Scripting
-N | R scripting: home directory, IDE
-N | Python scripting: home directory, IDE
+P | R scripting: home directory, IDE
+P | Python scripting: home directory, IDE
 N | R/Python script timeouts
 ### Data cache
 N | Data cache management permissions

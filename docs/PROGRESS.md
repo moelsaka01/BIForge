@@ -297,3 +297,40 @@ BIForge uses the authorization-code flow with PKCE and a loopback redirect. The 
 - Server: expiry of an invitation (time-dependent), concurrent uploads of the same report, a model whose RLS expression is slow on a large table (the filter is evaluated once per row and per user and the engine per user is cached by role set), the audit log growing without bound, join rate limiting, a viewer opening a server report whose model uses a feature the viewing mode cannot show, TLS.
 - P2P: the relay path, a guest that reconnects after the host restarted (the session is gone; the code is new), several hosts at once on one PC (works per target, untested), very large packages (limit 256 MB), IPv6-only networks.
 - O3: Drive files deleted from the BIForge folder by the user (the cached folder id is per adapter instance, so it recovers on the next operation), Dropbox files over 150 MB (refused with a message, no upload session), OneDrive personal vs. work accounts (anonymous links may be disabled by an organisation), token revocation in the middle of an upload.
+
+### Step 4: desktop leftovers
+- **CI.** The last two runs of the previous session (shadow/spacing, heat map) were green. This session's first push failed only in the real-window step: the new hierarchy-slicer step of `app/e2e/o1.mjs` looked for a Slicer button that does not exist in the ribbon. Fixed (it now turns the sample's Region slicer into a hierarchy slicer by adding City) and run again locally, all steps pass.
+- **Hierarchy slicer in the real window** (and in `npm run e2e`): the slicer with two fields is a tree (6 regions), a branch opens to its cities, ticking a branch selects it as a whole and both cards change (358K / 400 to 61.4K / 65). A first version of the check compared a card before the other had reloaded; it now waits.
+- **Phase 8 leftovers**
+  - Web custom request headers (secret ones only in Credential Manager; transport headers refused). Done-tested.
+  - Blank query in Get data (opens Power Query on an empty query). Done-tested.
+  - OLE DB through Windows PowerShell and System.Data.OleDb (no Rust crate wraps OLE DB; no secret on a command line). **Run against a real Access database with the ACE provider on this PC**: tables, a table name with a space, queries, types, nulls, commas and quotes, preview limit, errors. Other providers not run.
+  - Analysis Services (MSOLAP): connection, command text and M tested as text. **Never run against a server** (the provider is installed here, no Analysis Services instance was available).
+  - Python and R sources: the runner, the detection of the interpreter and the install guidance are tested; **the wrappers never ran with a real Python or R, because neither is installed here** (`python.exe` here is the Microsoft Store stub, which BIForge correctly refuses). A script runs only after a confirmation box.
+  - Privacy levels: a per-source setting (None, Public, Organizational, Private) stored in the project and shown in Data source settings, with the sentence that it changes nothing: BIForge never sends data from one source to another and its M evaluator reads local files only, so there is no firewall to enforce. The Options pages for "combine by privacy level" stay Not started.
+- **Format properties (not drawn yet), first batch**, all measured by `coverage.test.ts` (`rendered.json` regenerated, 321 more entries) and unit-tested in `chartFormat2.test.ts`: plot area color and transparency; gridline dash pattern and cap on both axes; line smoothing amount and type, steps, dash pattern, cap and join, show markers; marker transparency, rotation and border for lines; data label alignment, maximum width with wrapping, background transparency, hide overlapping labels; the zoom slider (category and value axis, labels, range); slice borders (color, size, transparency, match fill, outline only) for pie, donut and funnel; reference line dash and cap; pie label units and precision (the measurement now sets the label style that shows a value). **Still not drawn (most used first):** data label title/detail parts and number formats (`valueFormatString`, `showBlankAs`), legend title, error bars (`error`, 24 properties), small multiples layout (15), x-axis and y-axis reference lines' shading and the x reference line (23), category axis range/log/display units, secondary axis (22 on combo charts), the visual header buttons, `visualTooltip` (22), `visualLink` (13), table and matrix outlines (the outline style codes are unverified), `stylePreset`.
+- **Server fix found while reviewing:** a report id with encoded slashes could climb out of a workspace's folder (`..%2F..%2Fother%2Freports%2Fx`) and read another workspace's report. Every path built from an id now goes through one check; `a_report_id_cannot_reach_another_workspace` covers it.
+- **Flaky under load (not new):** `dataSources.ui.test.tsx` "Change source ..." and one `scope.ui.test.tsx` test failed once in a full parallel run and pass alone (slow role queries). Not changed.
+
+### Numbers
+- **Inventory: 885 Done-tested / 339 Partial / 1784 Not started of 3008** (start of session: 875 / 311 / 1822; +10 / +28 / -38). Part of the change is the measurement (more format properties drawn); hierarchy slicer was already counted Done.
+- Tests: Rust workspace all pass (new: dax rls 4, server 4, p2p 3, publish storage 9 + 3 live skips, engine headers, oledb real provider, script runner, app host/p2p); frontend 838 (2 flaky under load, see above); real window `npm run e2e` = o1 + o5 + o4, all steps pass locally on the final build.
+
+### Online-track status per phase
+| Phase | Status |
+| --- | --- |
+| O0 research | done |
+| O1 packages, folder adapter, viewing mode, deep links | done |
+| O2 static hosting | GitHub Pages live-tested (earlier session); Cloudflare fakes only (needs your API token; I have your account ID but no token) |
+| **O3 personal storage** | **fakes only**: sign-in with PKCE, three adapters, conflict detection, sharing, version history, all tested against fakes; live tests written and skipping until your client IDs and a connected account |
+| **O4 peer to peer** | **done for direct addresses** (two real iroh endpoints and two real windows on this PC); the public relay path is **not tested** |
+| **O5 backend** | **done** over real HTTP and in real windows (host plus two guests with different rows); no TLS, no free always-on hosting found, `biforge-server.exe` release workflow not run |
+| O6 collaboration | not started (the P2P edit role sends a copy, not co-editing) |
+| O7 scheduled refresh | GitHub part done (earlier); server and this-PC options not started |
+| O8 integration, installer, security review | not started (deep-link registration, `.biforge` association, TLS, review of the new network code) |
+
+### Next steps
+1. You: register the OAuth apps, put the client IDs in `%LOCALAPPDATA%\BIForge\oauth-clients.json`, connect each provider once in the app, run `cargo test -p biforge-publish --test storage_live -- --nocapture`; give me the Cloudflare token for its live test.
+2. Test the iroh public-relay path with two computers (or one behind a phone hotspot); test Analysis Services against a running Power BI Desktop instance; install Python/R and run the script wrappers.
+3. O6 collaboration on top of the server and P2P (yrs), TLS for the server, then O8.
+4. More "(not drawn yet)" properties from the list above; make the two load-flaky UI tests robust.

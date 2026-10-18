@@ -19,6 +19,12 @@ Last updated: 2026-10-17, after the scope-change session was completed (see PROG
 | Connectivity | SQL Server (tiberius): tables, views, custom SQL (sp_describe_first_result_set), SQL login or Windows authentication (Windows only), TLS with an optional "trust the server certificate" | Done-tested in CI against SQL Server 2022 in a container (job `sqlserver`; types int, bigint, decimal, date, bit, nvarchar; custom SQL; preview). Not run against Azure SQL, Express with Windows authentication or a named instance over the browser service |
 | Connectivity | MySQL / MariaDB (mysql crate): tables, custom SQL, password in Credential Manager, partition M `MySQL.Database` | Done-tested in CI against MySQL 8 (Windows runner) and in the real window. No TLS yet. MariaDB is expected to work (same protocol) but was not run |
 | Connectivity | ODBC (odbc-api): any driver on the machine; flavors Access, Oracle, Db2, Teradata, SAP HANA, Redshift, Snowflake and a plain connection string; tables from SQLTables, custom SQL, driver list, password never in the connection string | Done-tested with the real Access driver on this machine (types, custom SQL, table list, refused password in string, e2e). **Oracle, Db2, Teradata, HANA, Redshift, Snowflake, BigQuery, Databricks, Sybase were not run against their drivers**: their connection-string templates and Desktop M (`Oracle.Database`, `DB2.Database`, `Teradata.Database`, `AmazonRedshift.Database`; the others `Odbc.Query`) are written but untested against a server. The driver must be installed (64-bit) |
+| Connectivity | OLE DB (any installed provider, 64 bit) through Windows PowerShell and System.Data.OleDb (no Rust crate wraps OLE DB): tables from the provider's schema, custom SQL, user and password (password in Credential Manager, never in the connection string or the command line), preview limit, typed columns and nulls, readable errors, partition M `OleDb.Query` | Done-tested against a real Access database with the ACE provider (crates/engine/tests/oledb.rs, skipped when the provider is missing; the CI runner has none). Windows only. A different provider (SQLOLEDB, MSOLEDBSQL) has not been run |
+| Connectivity | Analysis Services (local or on premises) through the MSOLAP provider: a table of a tabular model (`EVALUATE 'Table'`) or a DAX/MDX query, Windows or user authentication, partition M `AnalysisServices.Database` | **Partial.** The connection string, command text and the M are unit-tested; **never run against a server**: the MSOLAP provider is installed on this PC (with Power BI Desktop) but no Analysis Services instance was running, and starting Desktop's msmdsrv by hand was not attempted |
+| Connectivity | Python and R script sources: the user's own interpreter runs the script, each pandas DataFrame / data.frame becomes a table, a confirmation box before it runs, interpreter found on the PATH / usual folders / the home folder of the options, a message with install steps when none is found, timeout, interpreter errors shown | **Partial.** Runner tested with a stand-in interpreter (files in, tables out, order, errors, timeout) and the detection logic (the Windows Store python stub is not taken for Python); **the wrappers have never run with a real Python or R: none is installed on this PC.** Timeouts of the options are not wired (fixed 30 minutes) |
+| Connectivity | Web: custom request headers (plain headers in the source and the query; a secret header's value only in Credential Manager; Host, Content-Length and other transport headers refused; no header injection) | Done-tested (engine connectors.rs against a local server, connectors.test.ts, the real window checks that a server that demands the header answers) |
+| Power Query | Blank query from Get data (a new empty query in the editor) | Done-tested (importDialog.test.tsx). Also in the Power Query editor's New Source menu |
+| Data source settings | Privacy level per data source (None, Public, Organizational, Private) recorded in the project (annotation, undoable, kept across refresh) | Done-tested for the setting. **No firewall:** BIForge never forwards data from one source to another, so the level changes nothing when data loads, and the dialog says so. The options pages for combining by privacy level stay Not started |
 | Connectivity | Web (reqwest): HTML tables (scraper), JSON (arrays, nested records), CSV, XML; Basic authentication; OData v4 JSON feeds with paging and entity-set listing | Done-tested against a local HTTP server (crates/engine/tests/connectors.rs) and in the real window. Not supported: custom request headers, OAuth, POST, pages that draw their tables with scripts, OData v2/XML |
 | Connectivity | XML (quick-xml) and PDF (lopdf) tables, fixed-width text, Enter data (typed grid) | XML, fixed-width and Enter data Done-tested (engine tests, M parse/evaluation, dialog tests, e2e for XML). PDF Partial: text laid out in a grid is found (tested on generated PDFs); scanned pages and PDFs with custom font encodings give nothing |
 | Connectivity | Not built | Generic OLE DB, Analysis Services, Active Directory, Exchange, SharePoint (list/folder, on-premises servers), Python/R script source, Blank query source, DirectQuery, Excel through the ACE provider (`.xls` through calamine is untested), privacy levels (not stored in PBIP; BIForge never sends data from one source to another) |
@@ -153,17 +159,17 @@ Last updated: 2026-10-17, after the scope-change session was completed (see PROG
 | DAX language | 15 | 8 | 0 | 7 |
 | Power Query editor: window and ribbon | 94 | 33 | 1 | 60 |
 | M language | 12 | 2 | 0 | 10 |
-| Get data: connectors | 47 | 21 | 15 | 11 |
-| Options dialog: Global | 61 | 4 | 0 | 57 |
+| Get data: connectors | 47 | 24 | 17 | 6 |
+| Options dialog: Global | 61 | 4 | 2 | 55 |
 | Options dialog: Current File | 23 | 0 | 0 | 23 |
 | Dialogs | 48 | 12 | 0 | 36 |
 | Keyboard shortcuts | 37 | 6 | 0 | 31 |
 | Export, print and file formats | 15 | 2 | 0 | 13 |
 | Accessibility and platform | 12 | 1 | 1 | 10 |
-| Format pane cards per visual | 1264 | 249 | 282 | 733 |
+| Format pane cards per visual | 1264 | 256 | 306 | 702 |
 | DAX functions | 317 | 268 | 0 | 49 |
 | M standard library | 652 | 120 | 0 | 532 |
-| **Total** | **3008** | **875** | **311** | **1822** |
+| **Total** | **3008** | **885** | **339** | **1784** |
 <!-- inventory-status:end -->
 
 ## Online track (Publish & Share; plan in docs/ONLINE_PLAN.md)

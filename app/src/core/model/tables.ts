@@ -86,6 +86,28 @@ export function applyImport(
   return { created, removedRelationships };
 }
 
+export type PrivacyLevel = "none" | "public" | "organizational" | "private";
+export const PRIVACY_LEVELS: PrivacyLevel[] = ["none", "public", "organizational", "private"];
+const PRIVACY_ANNOTATION = "BIForge.PrivacyLevel";
+
+/** The privacy level recorded for a table's data source ("none" when never set). */
+export function getPrivacyLevel(p: Project, table: string): PrivacyLevel {
+  const a = findTable(p, table)?.node.children.find((c) => c.kind === "annotation" && c.name === PRIVACY_ANNOTATION);
+  const v = a?.default?.text;
+  return PRIVACY_LEVELS.includes(v as PrivacyLevel) ? (v as PrivacyLevel) : "none";
+}
+
+/** Records the privacy level on a table; "none" removes the annotation. */
+export function setPrivacyLevel(p: Project, table: string, level: PrivacyLevel): void {
+  const t = findTable(p, table);
+  if (!t) throw new Error(`There is no table "${table}".`);
+  t.node.children = t.node.children.filter((c) => !(c.kind === "annotation" && c.name === PRIVACY_ANNOTATION));
+  if (level === "none") return;
+  const ann = node("annotation", PRIVACY_ANNOTATION);
+  ann.default = { text: level, verbatim: false };
+  t.node.children.push(ann);
+}
+
 export function getTableSource(p: Project, table: string): SourceSpec | null {
   const t = findTable(p, table);
   const a = t?.node.children.find((c) => c.kind === "annotation" && c.name === SOURCE_ANNOTATION);

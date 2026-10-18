@@ -1,5 +1,5 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { Button, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, Input } from "@fluentui/react-components";
+import { Button, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, Input, Select } from "@fluentui/react-components";
 import { listDataSources, locationOf, type DataSourceInfo, type SourceLocation } from "../../core/data/dataSources";
 import { useEnv } from "./ShellContext";
 
@@ -45,6 +45,18 @@ function SourceRow({ src, onNote }: { src: DataSourceInfo; onNote(text: string):
     <section aria-label={`Data source ${src.label}`} style={{ border: "1px solid var(--colorNeutralStroke2)", padding: 8, display: "flex", flexDirection: "column", gap: 6 }}>
       <div style={{ fontWeight: 600, overflowWrap: "anywhere" }}>{src.label}</div>
       <div>Used by: {src.tables.join(", ")}</div>
+      {src.kind !== "inline" && (
+        <label style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          Privacy level
+          <Select aria-label={`Privacy level of ${src.label}`} size="small" value={src.privacy} onChange={(_, d) => void run("data.source.setPrivacy", { id: src.id, level: d.value }, "The privacy level was recorded.")}>
+            <option value="none">None</option>
+            <option value="public">Public</option>
+            <option value="organizational">Organizational</option>
+            <option value="private">Private</option>
+          </Select>
+          <span style={{ fontSize: 12, opacity: 0.8 }}>Recorded in this project. It changes nothing when data loads: BIForge never sends data from one source to another.</span>
+        </label>
+      )}
       {src.hasSecret && <div role="status">{src.user ? `User ${src.user}: ` : ""}{stored === null ? "checking the stored password…" : stored ? "a password is stored in Windows Credential Manager" : "no password is stored"}</div>}
       {!src.hasSecret && src.kind !== "inline" && <div style={{ opacity: 0.8 }}>This source needs no stored password.</div>}
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -116,7 +128,7 @@ export function DataSourcesDialog() {
             ))}
             {last && <div role="status" aria-label="Result">{last}</div>}
             <div style={{ fontSize: 12, opacity: 0.8 }}>
-              Passwords are kept in Windows Credential Manager and never written into the project. Privacy levels are not stored in a Power BI project file and BIForge never sends data from one source to another, so there is nothing to set here.
+              Passwords are kept in Windows Credential Manager and never written into the project. Privacy levels are kept by BIForge only (a Power BI project file does not store them) and have no effect on loading, because BIForge never sends data from one source to another.
             </div>
           </DialogContent>
           <DialogActions>

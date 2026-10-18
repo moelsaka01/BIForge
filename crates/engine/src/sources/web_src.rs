@@ -19,7 +19,28 @@ pub fn check_url(url: &str) -> Result<()> {
     Ok(())
 }
 
+/// Header names the HTTP layer owns; setting them would break the request.
+const FORBIDDEN_HEADERS: &[&str] = &["host", "content-length", "connection", "transfer-encoding", "upgrade", "te", "trailer", "proxy-authorization"];
+
+fn check_header(name: &str, value: &str) -> Result<()> {
+    let n = name.trim();
+    if n.is_empty() || reqwest::header::HeaderName::from_bytes(n.as_bytes()).is_err() {
+        return Err(EngineError::Source(format!("\"{n}\" is not a valid header name.")));
+    }
+    if FORBIDDEN_HEADERS.contains(&n.to_ascii_lowercase().as_str()) {
+        return Err(EngineError::Source(format!("The header {n} is set by BIForge and cannot be changed.")));
+    }
+    if reqwest::header::HeaderValue::from_str(value).is_err() || value.contains(['\n', '\r']) {
+        return Err(EngineError::Source(format!("The value of the header {n} contains characters a header cannot have.")));
+    }
+    Ok(())
+}
+
 pub fn get(url: &str, auth: Option<(&str, String)>, accept: &str) -> Result<(Vec<u8>, String)> {
+    get_with(url, auth, accept, &[])
+}
+
+pub fn get_with(url: &str, auth: Option<(&str, String)>, accept: &str, headers: &[(String, String)]) -> Result<(Vec<u8>, String)> {
     check_url(url)?;
     let client = reqwest::blocking::Client::builder()
         .timeout(std::time::Duration::from_secs(60))
@@ -27,6 +48,10 @@ pub fn get(url: &str, auth: Option<(&str, String)>, accept: &str) -> Result<(Vec
         .build()
         .map_err(err)?;
     let mut rq = client.get(url.trim()).header("Accept", accept);
+    for (n, v) in headers {
+        check_header(n, v)?;
+        rq = rq.header(n.trim(), v.as_str());
+    }
     if let Some((u, p)) = auth {
         rq = rq.basic_auth(u, Some(p));
     }
@@ -51,9 +76,24 @@ fn auth_of(spec: &SourceSpec, creds: &dyn CredentialStore) -> Option<(String, St
     Some((user, pw))
 }
 
+/// The extra headers of a Web source, secret values read from the credential store.
+fn headers_of(spec: &SourceSpec, creds: &dyn CredentialStore) -> Result<Vec<(String, String)>> {
+    let SourceSpec::Web { headers, .. } = spec else { return Ok(vec![]) };
+    let mut out = Vec::new();
+    for h in headers {
+        let value = if h.secret {
+            spec.header_credential_key(&h.name).and_then(|k| creds.get(&k).ok().flatten()).ok_or_else(|| EngineError::Source(format!("The value of the header {} is not stored on this computer. Open Data source settings and enter it again.", h.name)))?
+        } else {
+            h.value.clone().unwrap_or_default()
+        };
+        out.push((h.name.clone(), value));
+    }
+    Ok(out)
+}
+
 fn fetch(spec: &SourceSpec, url: &str, creds: &dyn CredentialStore, accept: &str) -> Result<(Vec<u8>, String)> {
     let a = auth_of(spec, creds);
-    get(url, a.as_ref().map(|(u, p)| (u.as_str(), p.clone())), accept)
+    get_with(url, a.as_ref().map(|(u, p)| (u.as_str(), p.clone())), accept, &headers_of(spec, creds)?)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -11,7 +11,7 @@ import type { ConnectorId } from "./importForm";
 installDomStubs();
 afterEach(cleanup);
 
-function setup(kind: ConnectorId, engine = new FakeEngine()) {
+function setup(kind: ConnectorId, engine = new FakeEngine(), extra: { onBlank?: () => Promise<string | null>; scriptHomes?: { python: string; r: string } } = {}) {
   const submitted: { name: string; spec: SourceSpec; password: string }[] = [];
   let closed = false;
   render(
@@ -25,6 +25,7 @@ function setup(kind: ConnectorId, engine = new FakeEngine()) {
         return null;
       }}
       onClose={() => (closed = true)}
+      {...extra}
     />,
   );
   return { engine, submitted, closed: () => closed, dlg: () => screen.getByRole("dialog", { name: "Import data" }) };
@@ -174,5 +175,69 @@ describe("Get data dialog", () => {
     expect(within(dlg()).queryByLabelText("Password")).toBeNull();
     type(dlg(), "User", "ann");
     expect(within(dlg()).getByLabelText("Password")).toBeTruthy();
+  });
+
+  it("OLE DB: a connection string without a password, a table from the navigator, the password in the credential store", async () => {
+    const e = new FakeEngine();
+    e.choices.set("oledb", ["Parts", "Order Details"]);
+    const { dlg, submitted } = setup("oledb", e);
+    type(dlg(), "OLE DB connection string", "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\\shop.accdb");
+    expect(within(dlg()).queryByLabelText("Password")).toBeNull();
+    type(dlg(), "User", "ann");
+    type(dlg(), "Password", "pw9");
+    fireEvent.click(within(dlg()).getByRole("button", { name: "List tables" }));
+    const nav = await within(dlg()).findByRole("group", { name: "Navigator" });
+    fireEvent.click(within(nav).getByRole("checkbox", { name: "Select Order Details" }));
+    fireEvent.click(within(dlg()).getByRole("button", { name: "Import" }));
+    await waitFor(() => expect(submitted.length).toBe(1));
+    expect(submitted[0].spec).toMatchObject({ kind: "oledb", user: "ann", table: "Order Details" });
+    expect(JSON.stringify(submitted[0].spec)).not.toContain("pw9");
+    expect(e.calls).toContain("cred:oledb:3");
+  });
+
+  it("Analysis Services: server, model and a DAX query or a table", async () => {
+    const e = new FakeEngine();
+    const { dlg, submitted } = setup("analysisServices", e);
+    type(dlg(), "Server", "localhost:51234");
+    type(dlg(), "Database", "Model");
+    type(dlg(), "DAX or MDX query", "EVALUATE 'Sales'");
+    fireEvent.click(within(dlg()).getByRole("button", { name: "Import" }));
+    await waitFor(() => expect(submitted.length).toBe(1));
+    expect(submitted[0].spec).toMatchObject({ kind: "analysisServices", server: "localhost:51234", database: "Model", query: "EVALUATE 'Sales'" });
+  });
+
+  it("a Python or R script runs only after the user confirmed it, with the interpreter folder from the options", async () => {
+    const e = new FakeEngine();
+    e.choices.set("script", ["df", "other"]);
+    const { dlg, submitted } = setup("python", e, { scriptHomes: { python: "C:\\Python312", r: "" } });
+    expect(within(dlg()).getByText(/runs your own Python 3 with pandas/i)).toBeTruthy();
+    type(dlg(), "Script", "import pandas as pd\ndf = pd.DataFrame({'a': [1]})");
+    expect((within(dlg()).getByLabelText("Interpreter folder") as HTMLInputElement).value).toBe("C:\\Python312");
+    const list = within(dlg()).getByRole("button", { name: "Run the script and list its tables" }) as HTMLButtonElement;
+    expect(list.disabled).toBe(true); // not before the box is ticked
+    fireEvent.click(within(dlg()).getByRole("button", { name: "Import" }));
+    await waitFor(() => expect(within(dlg()).getByRole("alert").textContent).toMatch(/Tick the box/));
+    expect(submitted).toEqual([]);
+    fireEvent.click(within(dlg()).getByRole("checkbox", { name: /runs on my computer/ }));
+    expect(list.disabled).toBe(false);
+    fireEvent.click(list);
+    const nav = await within(dlg()).findByRole("group", { name: "Navigator" });
+    fireEvent.click(within(nav).getByRole("checkbox", { name: "Select df" }));
+    fireEvent.click(within(dlg()).getByRole("button", { name: "Import" }));
+    await waitFor(() => expect(submitted.length).toBe(1));
+    expect(submitted[0].spec).toMatchObject({ kind: "script", language: "python", table: "df" });
+  });
+
+  it("Blank query creates an empty query in Power Query instead of importing a source", async () => {
+    let blanks = 0;
+    const { dlg, submitted, closed } = setup("blank", new FakeEngine(), { onBlank: async () => {
+      blanks += 1;
+      return null;
+    } });
+    expect(within(dlg()).getByText(/no data source/i)).toBeTruthy();
+    fireEvent.click(within(dlg()).getByRole("button", { name: "Import" }));
+    await waitFor(() => expect(closed()).toBe(true));
+    expect(blanks).toBe(1);
+    expect(submitted).toEqual([]);
   });
 });

@@ -5,7 +5,7 @@ import { act, cleanup, fireEvent, render, waitFor, within } from "@testing-libra
 import { installDomStubs } from "../../core/testing/domStubs";
 import { col } from "../../core/testing/fakeEngine";
 import { listDataSources, sourceIdentity, withLocation } from "../../core/data/dataSources";
-import { getTableSource } from "../../core/model/tables";
+import { getPrivacyLevel, getTableSource } from "../../core/model/tables";
 import type { SourceSpec } from "../../core/data/types";
 import { PBIP, makeApp } from "./testApp";
 
@@ -97,6 +97,35 @@ describe("data source model", () => {
     expect(withLocation({ kind: "odbc", flavor: "odbc", connection: "DSN=a", table: "t" }, { connection: "DSN=b;PWD=x" })).toEqual({ error: "Do not put the password in the connection string." });
     expect(withLocation({ kind: "sqlserver", server: "s", database: "d", table: "t", trustCertificate: true }, { host: "s2", database: "d2", port: "", user: "" })).toEqual({ kind: "sqlserver", server: "s2", port: null, database: "d2", user: null, table: "t", trustCertificate: true });
     expect(listDataSources({ model: { tmdl: {} } } as never)).toEqual([]);
+  });
+});
+
+describe("Privacy level of a data source", () => {
+  it("is recorded for every table of the source, shown in the dialog, kept across a refresh, and undoable", async () => {
+    const { a, dlg } = await setup();
+    const label = (name: RegExp) => within(dlg).getByRole("region", { name });
+    const db = label(/Data source MySQL database: db1:3306 \/ shop/);
+    const select = within(db).getByLabelText(/Privacy level of/) as HTMLSelectElement;
+    expect(select.value).toBe("none");
+    expect(db.textContent).toMatch(/changes nothing when data loads/);
+    await act(async () => {
+      fireEvent.change(select, { target: { value: "private" } });
+    });
+    await waitFor(() => expect(getPrivacyLevel(a.session.store.project!, "Orders")).toBe("private"));
+    expect(getPrivacyLevel(a.session.store.project!, "Items")).toBe("private");
+    expect(getPrivacyLevel(a.session.store.project!, "Csv")).toBe("none"); // another source
+    expect(listDataSources(a.session.store.project!).find((s) => s.kind === "mysql")?.privacy).toBe("private");
+    // a refresh rebuilds the table's partition but keeps the level
+    await act(async () => void (await a.registry.execute("data.refreshTable", { name: "Orders" })));
+    expect(getPrivacyLevel(a.session.store.project!, "Orders")).toBe("private");
+    // an unknown level is refused, and undo restores the earlier state
+    expect((await a.registry.execute("data.source.setPrivacy", { id: sourceIdentity(mysql("orders")), level: "secret" })).ok).toBe(false);
+    await act(async () => {
+      expect((await a.registry.execute("data.source.setPrivacy", { id: sourceIdentity(mysql("orders")), level: "public" })).ok).toBe(true);
+    });
+    expect(getPrivacyLevel(a.session.store.project!, "Items")).toBe("public");
+    await act(async () => void a.session.store.undo());
+    expect(getPrivacyLevel(a.session.store.project!, "Items")).toBe("private");
   });
 });
 

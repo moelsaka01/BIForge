@@ -168,6 +168,9 @@ impl Principal {
 
 impl App {
     fn ws_dir(&self, wid: &str) -> PathBuf {
+        if !valid_id(wid) {
+            return self.dir.join("no-such-workspace");
+        }
         self.dir.join("workspaces").join(wid)
     }
 
@@ -233,7 +236,12 @@ impl App {
 
     // -------------------------------------------------------------------------------------------- reports
 
+    /// The folder of one report. A report id from a request is checked here, in the one place that builds the path:
+    /// an id with a slash or dots ("../../other-workspace/reports/x") must never reach another folder.
     fn report_dir(&self, wid: &str, rid: &str) -> PathBuf {
+        if !valid_id(rid) || !valid_id(wid) {
+            return self.dir.join("no-such-report");
+        }
         self.ws_dir(wid).join("reports").join(rid)
     }
 

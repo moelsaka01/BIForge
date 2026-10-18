@@ -77,7 +77,8 @@ function testValues(prop: string, kind: Kind): Lit[] {
 
 /** Switches that make the other properties of an object matter (a card whose `show` is off draws nothing). */
 const ENABLE: Record<string, Record<string, Lit>> = {
-  labels: { show: lit.bool(true), enableBackground: lit.bool(true) },
+  // labelStyle matters for pies (a label with the value and the percentage), and is ignored elsewhere
+  labels: { show: lit.bool(true), enableBackground: lit.bool(true), labelStyle: lit.str("Data value, percent of total") },
   legend: { show: lit.bool(true), showTitle: lit.bool(true) },
   categoryAxis: { show: lit.bool(true), showAxisTitle: lit.bool(true), gridlineShow: lit.bool(true) },
   valueAxis: { show: lit.bool(true), showAxisTitle: lit.bool(true), gridlineShow: lit.bool(true), secShowAxisTitle: lit.bool(true) },
@@ -110,6 +111,7 @@ const ENABLE: Record<string, Record<string, Lit>> = {
   card: { barShow: lit.bool(true) },
   subTotals: { rowSubtotals: lit.bool(true), columnSubtotals: lit.bool(true) },
   heatMap: { show: lit.bool(true) },
+  zoom: { show: lit.bool(true) },
 };
 
 /** Properties that only matter together with another one. */

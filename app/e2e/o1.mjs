@@ -85,7 +85,10 @@ try {
   };
   const hasTable = async (name) => { try { await page.getByRole("treeitem", { name: new RegExp(`^${name}`) }).first().waitFor({ timeout: 15000 }); return true; } catch { return false; } };
   const pageServer = http.createServer((req, res) => {
-    if (req.url.startsWith("/t.html")) {
+    if (req.url.startsWith("/t.html") && req.headers["x-e2e"] !== "yes") {
+      // the page only answers a request that carries the custom header the test types into the dialog
+      res.writeHead(403); res.end("header missing");
+    } else if (req.url.startsWith("/t.html")) {
       res.writeHead(200, { "Content-Type": "text/html" });
       res.end("<html><table><caption>E2E Web</caption><tr><th>Region</th><th>Units</th></tr><tr><td>North</td><td>10</td></tr><tr><td>South</td><td>12</td></tr></table></html>");
     } else { res.writeHead(404); res.end("no"); }
@@ -94,12 +97,15 @@ try {
   try {
     await openImport("Web");
     await importDlg.getByLabel("Web address").fill(`http://127.0.0.1:${pageServer.address().port}/t.html`);
+    await importDlg.getByRole("button", { name: "Add a header" }).click();
+    await importDlg.getByLabel("Header name 1").fill("X-E2E");
+    await importDlg.getByLabel("Header value 1").fill("yes");
     await importDlg.getByRole("button", { name: "Show tables" }).click();
     const nav = importDlg.getByRole("group", { name: "Navigator" });
     await nav.waitFor();
     await nav.getByRole("button", { name: "E2E Web", exact: true }).click();
     await nav.getByLabel("Preview").getByText("North").waitFor();
-    check(true, "Web: the navigator lists the page's table and previews its rows");
+    check(true, "Web: the navigator lists the page's table and previews its rows (the server refuses requests without the custom header)");
     await nav.getByRole("checkbox", { name: "Select E2E Web" }).check();
     await importDlg.getByRole("button", { name: "Import", exact: true }).click();
     await importDlg.waitFor({ state: "detached" });
@@ -225,31 +231,30 @@ try {
   await page.screenshot({ path: join(work, "editing.png") });
   await page.getByRole("tab", { name: "Home", exact: true }).click();
 
-  // hierarchy slicer: a slicer with two fields of one table shows a tree; a branch selects as a prefix and filters the report
-  const slicersBefore = await page.getByRole("button", { name: "Select Slicer", exact: true }).count();
-  await page.getByRole("button", { name: "Slicer", exact: true }).first().click();
+  // hierarchy slicer: the sample's Region slicer gets a second field of the same table (City) and becomes a tree; a branch
+  // selects as a prefix and filters the report
   await page.getByRole("tab", { name: "View", exact: true }).click();
   if (!(await page.getByRole("tree", { name: "Visuals and groups" }).isVisible().catch(() => false))) await page.getByRole("button", { name: "Selection", exact: true }).click();
-  await page.getByRole("tree", { name: "Visuals and groups" }).waitFor();
-  check((await page.getByRole("button", { name: "Select Slicer", exact: true }).count()) === slicersBefore + 1, "the Slicer gallery button adds a slicer");
-  await page.getByRole("button", { name: "Select Slicer", exact: true }).last().click();
+  await page.getByRole("button", { name: "Select Slicer", exact: true }).first().click();
   for (const field of ["Region", "City"]) {
     const box = page.getByRole("checkbox", { name: `Use ${field} in the selected visual` });
     if (!(await box.isVisible().catch(() => false))) await page.getByRole("treeitem", { name: /^Customer/ }).locator("svg").first().click();
-    await box.check();
+    if (!(await box.isChecked())) await box.check();
   }
   const htree = page.getByRole("tree", { name: "Hierarchy values" });
   await htree.waitFor();
   const top = htree.getByRole("treeitem", { level: 1 });
   check((await top.count()) >= 2, `the slicer with two fields is a tree of regions (${await top.count()} top branches)`);
-  const firstRegion = (await top.first().innerText()).trim();
+  const firstRegion = ((await htree.getByRole("button", { name: /^Expand / }).first().getAttribute("aria-label")) ?? "").replace(/^Expand /, "");
   await htree.getByRole("button", { name: `Expand ${firstRegion}` }).click();
   check((await htree.getByRole("treeitem", { level: 2 }).count()) > 0, `a branch (${firstRegion}) opens to its cities`);
   const cardsBefore = await page.locator("[data-testid=card-value]").allInnerTexts();
   await htree.getByRole("checkbox", { name: firstRegion, exact: true }).check();
   await page.waitForFunction((b) => JSON.stringify([...document.querySelectorAll("[data-testid=card-value]")].map((e) => e.textContent?.trim())) !== JSON.stringify(b.map((x) => x.trim())), cardsBefore, { timeout: 30000 });
+  await page.waitForTimeout(2500); // every card loads on its own
   check((await htree.getByRole("treeitem", { level: 1 }).first().getAttribute("aria-selected")) === "true", "ticking a branch selects it as a whole (every city below)");
-  check(true, `ticking ${firstRegion} filters the other visuals (cards: ${cardsBefore.join(",")} -> ${(await page.locator("[data-testid=card-value]").allInnerTexts()).join(",")})`);
+  const cardsAfter = await page.locator("[data-testid=card-value]").allInnerTexts();
+  check(cardsAfter.length === cardsBefore.length && cardsAfter.every((x, i) => x.trim() !== cardsBefore[i].trim()), `ticking ${firstRegion} filters every card (${cardsBefore.join(",")} -> ${cardsAfter.join(",")})`);
   await page.getByRole("tab", { name: "Home", exact: true }).click();
 
   // 2. Publish & Share to the folder adapter

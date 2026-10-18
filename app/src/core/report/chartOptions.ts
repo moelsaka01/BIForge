@@ -9,7 +9,7 @@ import { FormatReader } from "./formatReader";
 import type { Loaded } from "./dataLoader";
 import type { SelectedPoint } from "./interactions";
 import { formatCompact, formatNumber } from "./numberFormat";
-import { axisBlock, gridFor, labelBlock, labelDefaults, legendBlock, lineSeriesStyle, referenceLineMark, valueText, type LineSpec } from "./chartFormat";
+import { axisBlock, gridFor, labelBlock, labelDefaults, legendBlock, lineSeriesStyle, referenceLineMark, sliceItemStyle, valueText, zoomBlock, type LineSpec } from "./chartFormat";
 import { echartsText, opacityOf, readFont } from "../format/styles";
 import { seriesColor, type Theme } from "./theme";
 import type { VisualModel } from "./visualDoc";
@@ -154,6 +154,7 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
         },
       }),
     };
+    if (f.bool("labels", "optimizeLabelDisplay", false)) s.labelLayout = { hideOverlap: true };
     if (stacked) s.stack = isHighlight ? "highlight" : "total";
     if (asLine) {
       Object.assign(s, lineSeriesStyle(f, color, hl !== null && !isHighlight));
@@ -285,6 +286,13 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
     yAxis: horizontal ? catAxis : valAxes,
     series: seriesOut,
   };
+  const zoom = zoomBlock(f, horizontal);
+  if (zoom) {
+    option.dataZoom = zoom.dataZoom;
+    // the sliders sit below columns (or beside bars): the plot area leaves room for them
+    if (horizontal) option.grid = { ...option.grid, right: (option.grid.right ?? 12) + zoom.room };
+    else option.grid = { ...option.grid, bottom: (option.grid.bottom ?? 8) + zoom.room };
+  }
   if (horizontal) option.yAxis = catAxis;
 
   return {
@@ -498,14 +506,18 @@ function pie(inp: ChartInput): ChartBuild {
   const selKeys = new Set(inp.selected.map((s) => JSON.stringify(s.values)));
   const style = SLICE_STYLES[f.str("labels", "labelStyle", "Category")] ?? SLICE_STYLES.Category;
   const sliceAlpha = opacityOf(f.num("dataPoint", "fillTransparency", 0));
-  const data = p.categories.map((c, i) => ({
-    name: c.label,
-    value: values[i] ?? 0,
-    itemStyle: {
-      color: f.color("dataPoint", "fill", c.label) ?? f.color("dataPoint", "defaultColor") ?? seriesColor(theme, i),
-      opacity: ((selKeys.size > 0 && !selKeys.has(JSON.stringify(c.values.map(valueToLit)))) || (hlByKey !== null && (hlByKey.get(c.key) ?? 0) === 0) ? DIM : 1) * sliceAlpha,
-    },
-  }));
+  const data = p.categories.map((c, i) => {
+    const fill = f.color("dataPoint", "fill", c.label) ?? f.color("dataPoint", "defaultColor") ?? seriesColor(theme, i);
+    return {
+      name: c.label,
+      value: values[i] ?? 0,
+      itemStyle: {
+        color: fill,
+        opacity: ((selKeys.size > 0 && !selKeys.has(JSON.stringify(c.values.map(valueToLit)))) || (hlByKey !== null && (hlByKey.get(c.key) ?? 0) === 0) ? DIM : 1) * sliceAlpha,
+        ...(f.bool("dataPoint", "borderShow", false) ? sliceItemStyle(f, theme, fill) : {}),
+      },
+    };
+  });
   const pctDigits = f.num("labels", "percentageLabelPrecision", 1);
   const text = (pa: O) => {
     const parts: string[] = [];
@@ -549,7 +561,10 @@ function funnel(inp: ChartInput): ChartBuild {
   const { visual, theme } = inp;
   const f = new FormatReader(visual.json, theme, visual.visualType);
   const { p, vcol, values } = sliceData(inp);
-  const data = p.categories.map((c, i) => ({ name: c.label, value: values[i] ?? 0, itemStyle: { color: f.color("dataPoint", "fill", c.label) ?? f.color("dataPoint", "defaultColor") ?? seriesColor(theme, i) } }));
+  const data = p.categories.map((c, i) => {
+    const fill = f.color("dataPoint", "fill", c.label) ?? f.color("dataPoint", "defaultColor") ?? seriesColor(theme, i);
+    return { name: c.label, value: values[i] ?? 0, itemStyle: { color: fill, ...(f.bool("dataPoint", "borderShow", false) ? sliceItemStyle(f, theme, fill) : {}) } };
+  });
   const first = values[0] ?? 0;
   const fmtStyle = f.str("labels", "funnelLabelStyle", "Data");
   const pctDigits = f.num("labels", "percentageLabelPrecision", 0);

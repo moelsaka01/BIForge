@@ -115,6 +115,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
    "gridlineThickness",
@@ -146,19 +147,24 @@
   ],
   "labels": [
    "backgroundColor",
+   "backgroundTransparency",
    "bold",
    "color",
    "enableBackground",
    "fontFamily",
    "fontSize",
+   "horizontalAlignment",
    "italic",
+   "labelContainerMaxWidth",
    "labelDisplayUnits",
    "labelOrientation",
    "labelPosition",
    "labelPrecision",
+   "optimizeLabelDisplay",
    "show",
    "showSeries",
-   "transparency"
+   "transparency",
+   "wordWrap"
   ],
   "legend": [
    "bold",
@@ -169,7 +175,11 @@
    "position",
    "show"
   ],
+  "plotArea": [
+   "color"
+  ],
   "referenceLine": [
+   "dashCap",
    "dataLabelColor",
    "dataLabelDisplayUnits",
    "dataLabelHorizontalPosition",
@@ -200,6 +210,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
    "gridlineThickness",
@@ -222,6 +233,7 @@
    "titleText"
   ],
   "y1AxisReferenceLine": [
+   "dashCap",
    "dataLabelColor",
    "dataLabelDisplayUnits",
    "dataLabelHorizontalPosition",
@@ -236,6 +248,15 @@
    "transparency",
    "value",
    "width"
+  ],
+  "zoom": [
+   "categoryMax",
+   "categoryMin",
+   "categorySize",
+   "show",
+   "showLabels",
+   "showOnCategoryAxis",
+   "showOnValueAxis"
   ],
   "smallMultiplesLayout": [
    "backgroundColor",
@@ -259,6 +280,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
    "gridlineThickness",
@@ -290,19 +312,24 @@
   ],
   "labels": [
    "backgroundColor",
+   "backgroundTransparency",
    "bold",
    "color",
    "enableBackground",
    "fontFamily",
    "fontSize",
+   "horizontalAlignment",
    "italic",
+   "labelContainerMaxWidth",
    "labelDisplayUnits",
    "labelOrientation",
    "labelPosition",
    "labelPrecision",
+   "optimizeLabelDisplay",
    "show",
    "showSeries",
-   "transparency"
+   "transparency",
+   "wordWrap"
   ],
   "legend": [
    "bold",
@@ -313,7 +340,11 @@
    "position",
    "show"
   ],
+  "plotArea": [
+   "color"
+  ],
   "referenceLine": [
+   "dashCap",
    "dataLabelColor",
    "dataLabelDisplayUnits",
    "dataLabelHorizontalPosition",
@@ -344,6 +375,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
    "gridlineThickness",
@@ -366,6 +398,7 @@
    "titleText"
   ],
   "y1AxisReferenceLine": [
+   "dashCap",
    "dataLabelColor",
    "dataLabelDisplayUnits",
    "dataLabelHorizontalPosition",
@@ -380,6 +413,15 @@
    "transparency",
    "value",
    "width"
+  ],
+  "zoom": [
+   "categoryMax",
+   "categoryMin",
+   "categorySize",
+   "show",
+   "showLabels",
+   "showOnCategoryAxis",
+   "showOnValueAxis"
   ],
   "smallMultiplesLayout": [
    "backgroundColor",
@@ -403,6 +445,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
    "gridlineThickness",
@@ -434,19 +477,24 @@
   ],
   "labels": [
    "backgroundColor",
+   "backgroundTransparency",
    "bold",
    "color",
    "enableBackground",
    "fontFamily",
    "fontSize",
+   "horizontalAlignment",
    "italic",
+   "labelContainerMaxWidth",
    "labelDisplayUnits",
    "labelOrientation",
    "labelPosition",
    "labelPrecision",
+   "optimizeLabelDisplay",
    "show",
    "showSeries",
-   "transparency"
+   "transparency",
+   "wordWrap"
   ],
   "legend": [
    "bold",
@@ -457,6 +505,9 @@
    "position",
    "show"
   ],
+  "plotArea": [
+   "color"
+  ],
   "valueAxis": [
    "axisStyle",
    "bold",
@@ -464,6 +515,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
    "gridlineThickness",
@@ -486,6 +538,7 @@
    "titleText"
   ],
   "y1AxisReferenceLine": [
+   "dashCap",
    "dataLabelColor",
    "dataLabelDisplayUnits",
    "dataLabelHorizontalPosition",
@@ -500,6 +553,15 @@
    "transparency",
    "value",
    "width"
+  ],
+  "zoom": [
+   "categoryMax",
+   "categoryMin",
+   "categorySize",
+   "show",
+   "showLabels",
+   "showOnCategoryAxis",
+   "showOnValueAxis"
   ],
   "smallMultiplesLayout": [
    "backgroundColor",
@@ -523,6 +585,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
    "gridlineThickness",
@@ -554,19 +617,24 @@
   ],
   "labels": [
    "backgroundColor",
+   "backgroundTransparency",
    "bold",
    "color",
    "enableBackground",
    "fontFamily",
    "fontSize",
+   "horizontalAlignment",
    "italic",
+   "labelContainerMaxWidth",
    "labelDisplayUnits",
    "labelOrientation",
    "labelPosition",
    "labelPrecision",
+   "optimizeLabelDisplay",
    "show",
    "showSeries",
-   "transparency"
+   "transparency",
+   "wordWrap"
   ],
   "legend": [
    "bold",
@@ -577,6 +645,9 @@
    "position",
    "show"
   ],
+  "plotArea": [
+   "color"
+  ],
   "valueAxis": [
    "axisStyle",
    "bold",
@@ -584,6 +655,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
    "gridlineThickness",
@@ -606,6 +678,7 @@
    "titleText"
   ],
   "y1AxisReferenceLine": [
+   "dashCap",
    "dataLabelColor",
    "dataLabelDisplayUnits",
    "dataLabelHorizontalPosition",
@@ -620,6 +693,15 @@
    "transparency",
    "value",
    "width"
+  ],
+  "zoom": [
+   "categoryMax",
+   "categoryMin",
+   "categorySize",
+   "show",
+   "showLabels",
+   "showOnCategoryAxis",
+   "showOnValueAxis"
   ],
   "smallMultiplesLayout": [
    "backgroundColor",
@@ -643,6 +725,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
    "gridlineThickness",
@@ -674,17 +757,22 @@
   ],
   "labels": [
    "backgroundColor",
+   "backgroundTransparency",
    "bold",
    "color",
    "enableBackground",
    "fontFamily",
    "fontSize",
+   "horizontalAlignment",
    "italic",
+   "labelContainerMaxWidth",
    "labelOrientation",
    "labelPosition",
+   "optimizeLabelDisplay",
    "show",
    "showSeries",
-   "transparency"
+   "transparency",
+   "wordWrap"
   ],
   "legend": [
    "bold",
@@ -695,6 +783,9 @@
    "position",
    "show"
   ],
+  "plotArea": [
+   "color"
+  ],
   "valueAxis": [
    "axisStyle",
    "bold",
@@ -702,6 +793,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
    "gridlineThickness",
@@ -720,6 +812,15 @@
    "titleFontSize",
    "titleItalic",
    "titleText"
+  ],
+  "zoom": [
+   "categoryMax",
+   "categoryMin",
+   "categorySize",
+   "show",
+   "showLabels",
+   "showOnCategoryAxis",
+   "showOnValueAxis"
   ],
   "smallMultiplesLayout": [
    "backgroundColor",
@@ -743,6 +844,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
    "gridlineThickness",
@@ -774,17 +876,22 @@
   ],
   "labels": [
    "backgroundColor",
+   "backgroundTransparency",
    "bold",
    "color",
    "enableBackground",
    "fontFamily",
    "fontSize",
+   "horizontalAlignment",
    "italic",
+   "labelContainerMaxWidth",
    "labelOrientation",
    "labelPosition",
+   "optimizeLabelDisplay",
    "show",
    "showSeries",
-   "transparency"
+   "transparency",
+   "wordWrap"
   ],
   "legend": [
    "bold",
@@ -795,6 +902,9 @@
    "position",
    "show"
   ],
+  "plotArea": [
+   "color"
+  ],
   "valueAxis": [
    "axisStyle",
    "bold",
@@ -802,6 +912,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
    "gridlineThickness",
@@ -820,6 +931,15 @@
    "titleFontSize",
    "titleItalic",
    "titleText"
+  ],
+  "zoom": [
+   "categoryMax",
+   "categoryMin",
+   "categorySize",
+   "show",
+   "showLabels",
+   "showOnCategoryAxis",
+   "showOnValueAxis"
   ],
   "smallMultiplesLayout": [
    "backgroundColor",
@@ -843,6 +963,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
    "gridlineThickness",
@@ -866,15 +987,19 @@
   ],
   "labels": [
    "backgroundColor",
+   "backgroundTransparency",
    "bold",
    "color",
    "enableBackground",
    "fontFamily",
    "fontSize",
+   "horizontalAlignment",
    "italic",
+   "labelContainerMaxWidth",
    "labelDisplayUnits",
    "labelPosition",
    "labelPrecision",
+   "optimizeLabelDisplay",
    "show",
    "showSeries",
    "transparency"
@@ -891,18 +1016,37 @@
   ],
   "lineStyles": [
    "areaShow",
+   "interpolationSmooth",
+   "interpolationSmoothParam",
+   "interpolationStep",
    "lineChartType",
    "lineStyle",
    "markerColor",
    "markerShape",
    "markerSize",
    "showMarker",
+   "showMarkerByDefault",
    "strokeColor",
+   "strokeDashCap",
+   "strokeLineJoin",
    "strokeShow",
    "strokeTransparency",
    "strokeWidth"
   ],
+  "markers": [
+   "borderColor",
+   "borderColorMatchFill",
+   "borderShow",
+   "borderTransparency",
+   "borderWidth",
+   "rotation",
+   "transparency"
+  ],
+  "plotArea": [
+   "color"
+  ],
   "referenceLine": [
+   "dashCap",
    "dataLabelColor",
    "dataLabelDisplayUnits",
    "dataLabelHorizontalPosition",
@@ -933,6 +1077,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
    "gridlineThickness",
@@ -955,6 +1100,7 @@
    "titleText"
   ],
   "y1AxisReferenceLine": [
+   "dashCap",
    "dataLabelColor",
    "dataLabelDisplayUnits",
    "dataLabelHorizontalPosition",
@@ -969,6 +1115,15 @@
    "transparency",
    "value",
    "width"
+  ],
+  "zoom": [
+   "categoryMax",
+   "categoryMin",
+   "categorySize",
+   "show",
+   "showLabels",
+   "showOnCategoryAxis",
+   "showOnValueAxis"
   ],
   "smallMultiplesLayout": [
    "backgroundColor",
@@ -992,6 +1147,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
    "gridlineThickness",
@@ -1015,15 +1171,19 @@
   ],
   "labels": [
    "backgroundColor",
+   "backgroundTransparency",
    "bold",
    "color",
    "enableBackground",
    "fontFamily",
    "fontSize",
+   "horizontalAlignment",
    "italic",
+   "labelContainerMaxWidth",
    "labelDisplayUnits",
    "labelPosition",
    "labelPrecision",
+   "optimizeLabelDisplay",
    "show",
    "showSeries",
    "transparency"
@@ -1039,18 +1199,37 @@
    "show"
   ],
   "lineStyles": [
+   "interpolationSmooth",
+   "interpolationSmoothParam",
+   "interpolationStep",
    "lineChartType",
    "lineStyle",
    "markerColor",
    "markerShape",
    "markerSize",
    "showMarker",
+   "showMarkerByDefault",
    "strokeColor",
+   "strokeDashCap",
+   "strokeLineJoin",
    "strokeShow",
    "strokeTransparency",
    "strokeWidth"
   ],
+  "markers": [
+   "borderColor",
+   "borderColorMatchFill",
+   "borderShow",
+   "borderTransparency",
+   "borderWidth",
+   "rotation",
+   "transparency"
+  ],
+  "plotArea": [
+   "color"
+  ],
   "referenceLine": [
+   "dashCap",
    "dataLabelColor",
    "dataLabelDisplayUnits",
    "dataLabelHorizontalPosition",
@@ -1081,6 +1260,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
    "gridlineThickness",
@@ -1103,6 +1283,7 @@
    "titleText"
   ],
   "y1AxisReferenceLine": [
+   "dashCap",
    "dataLabelColor",
    "dataLabelDisplayUnits",
    "dataLabelHorizontalPosition",
@@ -1117,6 +1298,15 @@
    "transparency",
    "value",
    "width"
+  ],
+  "zoom": [
+   "categoryMax",
+   "categoryMin",
+   "categorySize",
+   "show",
+   "showLabels",
+   "showOnCategoryAxis",
+   "showOnValueAxis"
   ],
   "smallMultiplesLayout": [
    "backgroundColor",
@@ -1140,6 +1330,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
    "gridlineThickness",
@@ -1163,15 +1354,19 @@
   ],
   "labels": [
    "backgroundColor",
+   "backgroundTransparency",
    "bold",
    "color",
    "enableBackground",
    "fontFamily",
    "fontSize",
+   "horizontalAlignment",
    "italic",
+   "labelContainerMaxWidth",
    "labelDisplayUnits",
    "labelPosition",
    "labelPrecision",
+   "optimizeLabelDisplay",
    "show",
    "showSeries",
    "transparency"
@@ -1187,16 +1382,34 @@
    "show"
   ],
   "lineStyles": [
+   "interpolationSmooth",
+   "interpolationSmoothParam",
+   "interpolationStep",
    "lineChartType",
    "lineStyle",
    "markerColor",
    "markerShape",
    "markerSize",
    "showMarker",
+   "showMarkerByDefault",
    "strokeColor",
+   "strokeDashCap",
+   "strokeLineJoin",
    "strokeShow",
    "strokeTransparency",
    "strokeWidth"
+  ],
+  "markers": [
+   "borderColor",
+   "borderColorMatchFill",
+   "borderShow",
+   "borderTransparency",
+   "borderWidth",
+   "rotation",
+   "transparency"
+  ],
+  "plotArea": [
+   "color"
   ],
   "valueAxis": [
    "axisStyle",
@@ -1205,6 +1418,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
    "gridlineThickness",
@@ -1227,6 +1441,7 @@
    "titleText"
   ],
   "y1AxisReferenceLine": [
+   "dashCap",
    "dataLabelColor",
    "dataLabelDisplayUnits",
    "dataLabelHorizontalPosition",
@@ -1241,6 +1456,15 @@
    "transparency",
    "value",
    "width"
+  ],
+  "zoom": [
+   "categoryMax",
+   "categoryMin",
+   "categorySize",
+   "show",
+   "showLabels",
+   "showOnCategoryAxis",
+   "showOnValueAxis"
   ],
   "smallMultiplesLayout": [
    "backgroundColor",
@@ -1264,6 +1488,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
    "gridlineThickness",
@@ -1287,13 +1512,17 @@
   ],
   "labels": [
    "backgroundColor",
+   "backgroundTransparency",
    "bold",
    "color",
    "enableBackground",
    "fontFamily",
    "fontSize",
+   "horizontalAlignment",
    "italic",
+   "labelContainerMaxWidth",
    "labelPosition",
+   "optimizeLabelDisplay",
    "show",
    "showSeries",
    "transparency"
@@ -1309,16 +1538,34 @@
    "show"
   ],
   "lineStyles": [
+   "interpolationSmooth",
+   "interpolationSmoothParam",
+   "interpolationStep",
    "lineChartType",
    "lineStyle",
    "markerColor",
    "markerShape",
    "markerSize",
    "showMarker",
+   "showMarkerByDefault",
    "strokeColor",
+   "strokeDashCap",
+   "strokeLineJoin",
    "strokeShow",
    "strokeTransparency",
    "strokeWidth"
+  ],
+  "markers": [
+   "borderColor",
+   "borderColorMatchFill",
+   "borderShow",
+   "borderTransparency",
+   "borderWidth",
+   "rotation",
+   "transparency"
+  ],
+  "plotArea": [
+   "color"
   ],
   "valueAxis": [
    "axisStyle",
@@ -1327,6 +1574,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
    "gridlineThickness",
@@ -1345,6 +1593,15 @@
    "titleFontSize",
    "titleItalic",
    "titleText"
+  ],
+  "zoom": [
+   "categoryMax",
+   "categoryMin",
+   "categorySize",
+   "show",
+   "showLabels",
+   "showOnCategoryAxis",
+   "showOnValueAxis"
   ],
   "smallMultiplesLayout": [
    "backgroundColor",
@@ -1368,6 +1625,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
    "gridlineThickness",
@@ -1399,6 +1657,9 @@
    "position",
    "show"
   ],
+  "plotArea": [
+   "color"
+  ],
   "valueAxis": [
    "axisStyle",
    "bold",
@@ -1406,6 +1667,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
    "gridlineThickness",
@@ -1426,6 +1688,15 @@
    "titleFontSize",
    "titleItalic",
    "titleText"
+  ],
+  "zoom": [
+   "categoryMax",
+   "categoryMin",
+   "categorySize",
+   "show",
+   "showLabels",
+   "showOnCategoryAxis",
+   "showOnValueAxis"
   ]
  },
  "lineClusteredColumnComboChart": {
@@ -1435,6 +1706,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
    "gridlineThickness",
@@ -1465,16 +1737,19 @@
   ],
   "labels": [
    "backgroundColor",
+   "backgroundTransparency",
    "bold",
    "color",
    "enableBackground",
    "fontFamily",
    "fontSize",
    "italic",
+   "labelContainerMaxWidth",
    "labelDisplayUnits",
    "labelOrientation",
    "labelPosition",
    "labelPrecision",
+   "optimizeLabelDisplay",
    "show",
    "showSeries",
    "transparency"
@@ -1491,17 +1766,36 @@
   ],
   "lineStyles": [
    "areaShow",
+   "interpolationSmooth",
+   "interpolationSmoothParam",
+   "interpolationStep",
    "lineChartType",
    "lineStyle",
    "markerColor",
    "markerShape",
    "markerSize",
    "showMarker",
+   "showMarkerByDefault",
+   "strokeDashCap",
+   "strokeLineJoin",
    "strokeShow",
    "strokeTransparency",
    "strokeWidth"
   ],
+  "markers": [
+   "borderColor",
+   "borderColorMatchFill",
+   "borderShow",
+   "borderTransparency",
+   "borderWidth",
+   "rotation",
+   "transparency"
+  ],
+  "plotArea": [
+   "color"
+  ],
   "referenceLine": [
+   "dashCap",
    "dataLabelColor",
    "dataLabelDecimalPoints",
    "dataLabelDisplayUnits",
@@ -1533,6 +1827,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
    "gridlineThickness",
@@ -1574,6 +1869,7 @@
    "titleText"
   ],
   "y1AxisReferenceLine": [
+   "dashCap",
    "dataLabelColor",
    "dataLabelDisplayUnits",
    "dataLabelHorizontalPosition",
@@ -1588,10 +1884,25 @@
    "transparency",
    "value",
    "width"
+  ],
+  "zoom": [
+   "categoryMax",
+   "categoryMin",
+   "categorySize",
+   "show",
+   "showLabels",
+   "showOnCategoryAxis",
+   "showOnValueAxis"
   ]
  },
  "pieChart": {
   "dataPoint": [
+   "borderColor",
+   "borderColorMatchFill",
+   "borderOutlineOnly",
+   "borderShow",
+   "borderSize",
+   "borderTransparency",
    "defaultColor",
    "fill",
    "fillTransparency"
@@ -1603,8 +1914,11 @@
    "fontFamily",
    "fontSize",
    "italic",
+   "labelDisplayUnits",
+   "labelPrecision",
    "labelStyle",
    "overflow",
+   "percentageLabelPrecision",
    "position",
    "show"
   ],
@@ -1623,6 +1937,12 @@
  },
  "donutChart": {
   "dataPoint": [
+   "borderColor",
+   "borderColorMatchFill",
+   "borderOutlineOnly",
+   "borderShow",
+   "borderSize",
+   "borderTransparency",
    "defaultColor",
    "fill",
    "fillTransparency"
@@ -1634,8 +1954,11 @@
    "fontFamily",
    "fontSize",
    "italic",
+   "labelDisplayUnits",
+   "labelPrecision",
    "labelStyle",
    "overflow",
+   "percentageLabelPrecision",
    "position",
    "show"
   ],
@@ -1720,6 +2043,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
    "gridlineThickness",
@@ -1769,6 +2093,9 @@
    "rotation",
    "transparency"
   ],
+  "plotArea": [
+   "color"
+  ],
   "valueAxis": [
    "axisStyle",
    "bold",
@@ -1776,6 +2103,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
    "gridlineThickness",
@@ -1901,6 +2229,7 @@
   ],
   "labels": [
    "backgroundColor",
+   "backgroundTransparency",
    "bold",
    "color",
    "enableBackground",
@@ -1922,6 +2251,9 @@
    "position",
    "show"
   ],
+  "plotArea": [
+   "color"
+  ],
   "sentimentColors": [
    "decreaseFill",
    "increaseFill",
@@ -1934,6 +2266,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
    "gridlineThickness",

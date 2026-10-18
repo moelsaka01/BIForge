@@ -112,31 +112,39 @@ function odbcSteps(source: Extract<SourceSpec, { kind: "odbc" }>, steps: Step[])
   }
 }
 
+/** Web.Contents with the plain request headers; secret headers are not written into the query (their values live only in the credential store). */
+function webContents(source: Extract<SourceSpec, { kind: "web" }>): string {
+  const plain = (source.headers ?? []).filter((h) => !h.secret && h.name.trim() !== "");
+  const opt = plain.length ? `, [Headers=[${plain.map((h) => `#${mText(h.name.trim())}=${mText(h.value ?? "")}`).join(", ")}]]` : "";
+  return `Web.Contents(${mText(source.url)}${opt})`;
+}
+
 function webSteps(source: Extract<SourceSpec, { kind: "web" }>, columns: ColumnInfo[], steps: Step[]): void {
   const url = mText(source.url);
+  const wc = webContents(source);
   const prev = () => steps[steps.length - 1].name;
   switch ((source.format ?? "auto").toLowerCase()) {
     case "json":
-      steps.push(step("Source", `Json.Document(Web.Contents(${url}))`));
+      steps.push(step("Source", `Json.Document(${wc})`));
       if (source.table) steps.push(step('#"Navigation"', `Source[${mText(source.table)}]`));
       steps.push(step('#"Converted to Table"', `Table.FromRecords(${prev()})`));
       expandSteps(columns, steps);
       steps.push(typeStep(prev(), columns));
       return;
     case "csv":
-      steps.push(step("Source", `Csv.Document(Web.Contents(${url}), [Delimiter=",", Encoding=65001, QuoteStyle=QuoteStyle.Csv])`));
+      steps.push(step("Source", `Csv.Document(${wc}, [Delimiter=",", Encoding=65001, QuoteStyle=QuoteStyle.Csv])`));
       steps.push(step('#"Promoted Headers"', `Table.PromoteHeaders(${prev()}, [PromoteAllScalars=true])`));
       steps.push(typeStep(prev(), columns));
       return;
     case "xml":
-      steps.push(step("Source", `Xml.Tables(Web.Contents(${url}))`));
+      steps.push(step("Source", `Xml.Tables(${wc})`));
       steps.push(step('#"Table"', source.table ? `Source{[Name=${mText(source.table)}]}[Table]` : "Source{0}[Table]"));
       steps.push(typeStep(prev(), columns));
       return;
     default: {
       // pages without captions name their tables "Table N" counting from 1; Power Query's own ids count from 0
       const m = /^Table (\d+)$/.exec(source.table ?? "");
-      steps.push(step("Source", `Web.Page(Web.Contents(${url}))`));
+      steps.push(step("Source", `Web.Page(${wc})`));
       steps.push(step('#"Table"', m ? `Source{[Id=${mText(`Table ${Number(m[1]) - 1}`)}]}[Data]` : source.table ? `Source{[Caption=${mText(source.table)}]}[Data]` : "Source{0}[Data]"));
       steps.push(typeStep(prev(), columns));
     }
@@ -227,6 +235,16 @@ export function partitionM(source: SourceSpec, columns: ColumnInfo[]): string {
       break;
     case "odbc":
       odbcSteps(source, steps);
+      break;
+    case "oledb":
+      steps.push(step("Source", `OleDb.Query(${mText(source.connection)}, ${mText(hasQuery(source.query) ? cleanQuery(source.query!) : `SELECT * FROM ${source.table}`)})`));
+      break;
+    case "analysisServices":
+      steps.push(step("Source", `AnalysisServices.Database(${mText(source.server)}, ${mText(source.database)}, [Query=${mText(hasQuery(source.query) ? cleanQuery(source.query!) : `EVALUATE '${(source.table ?? "").replace(/'/g, "''")}'`)}])`));
+      break;
+    case "script":
+      steps.push(step("Source", `${source.language === "r" ? "R" : "Python"}.Execute(${mText(source.code)})`));
+      steps.push(step('#"Table"', source.table ? `Source{[Name=${mText(source.table)}]}[Value]` : "Source{0}[Value]"));
       break;
     case "xml":
       steps.push(step("Source", `Xml.Tables(File.Contents(${mText(source.path)}))`));

@@ -110,6 +110,9 @@ export class FakeEngine implements EngineApi {
   async odbcDrivers(): Promise<string[]> {
     return this.drivers;
   }
+  async setHeaderSecret(spec: SourceSpec, name: string, value: string): Promise<void> {
+    this.calls.push(`header-secret:${spec.kind}:${name}:${value.length}`);
+  }
   async setCredential(spec: SourceSpec, secret: string): Promise<void> {
     this.calls.push(`cred:${spec.kind}:${secret.length}`);
     this.stored.add(JSON.stringify(spec));

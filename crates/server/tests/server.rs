@@ -172,6 +172,36 @@ fn two_guests_see_different_rows_and_the_server_enforces_roles() {
 }
 
 #[test]
+fn a_report_id_cannot_reach_another_workspace() {
+    use biforge_publish::http::{Http, Request};
+    let dir = tempfile::tempdir().unwrap();
+    let http = ReqwestHttp::new().unwrap();
+    let srv = host(dir.path(), Some("bfa_fixed".into()));
+    let admin = Client::new(&http, &srv.url(), "bfa_fixed");
+    let a = admin.create_workspace("A").unwrap().id;
+    let b = admin.create_workspace("B").unwrap().id;
+    let signer = Identity::generate();
+    admin.upload_report(&b, "secret", package_bytes(1, &signer, "")).unwrap();
+    let in_a = join(&http, &srv, &admin, &a, WsRole::Viewer, "a@x.com", &[]);
+    // the member of A tries to read B's report through a report id that climbs out of A's folder
+    for rid in [format!("..%2F..%2F{b}%2Freports%2Fsecret"), format!("..%5C..%5C{b}%5Creports%5Csecret"), format!("%2E%2E%2F%2E%2E%2F{b}%2Freports%2Fsecret")] {
+        for (method, tail, body) in [("GET", "project", None), ("GET", "roles", None), ("POST", "query", Some(r#"{"query":"EVALUATE ROW(\"t\", 1)"}"#))] {
+            let url = format!("{}/api/workspaces/{a}/reports/{rid}/{tail}", srv.url());
+            let mut req = Request::new(method, &url).bearer(&in_a.token);
+            if let Some(b) = body {
+                req = req.bytes("application/json", b.as_bytes().to_vec());
+            }
+            let r = http.send(&req).unwrap();
+            assert!(!r.ok(), "{method} {tail} {rid} must not work: {}", r.describe());
+        }
+    }
+    // and the real one is still reachable by the admin
+    assert!(admin.project(&b, "secret").is_ok());
+    // an upload with such an id is refused too
+    assert!(admin.upload_report(&a, "../x", package_bytes(1, &signer, "")).is_err());
+}
+
+#[test]
 fn only_the_server_admin_creates_workspaces() {
     let dir = tempfile::tempdir().unwrap();
     let http = ReqwestHttp::new().unwrap();

@@ -37,6 +37,26 @@ export interface Defaults {
 }
 export const labelDefaults = (theme: Theme): Defaults => ({ family: theme.textClasses.label.fontFace, size: theme.textClasses.label.fontSize, color: theme.textClasses.label.color });
 
+// ---- small helpers for colors and dashes ----------------------------------------------------------------
+
+/** "#rrggbb" or "#rgb" with an opacity as an rgba() color; other color texts are returned unchanged. */
+export function withOpacity(color: string, opacity: number): string {
+  const m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(color.trim());
+  if (!m) return color;
+  const h = m[1].length === 3 ? m[1].split("").map((c) => c + c).join("") : m[1];
+  const n = parseInt(h, 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${Math.round(opacity * 1000) / 1000})`;
+}
+
+/** A dash pattern written as "5 3" or "5,3" (lengths of dash and gap); null when it holds no usable pattern. */
+export function dashOf(text: string): number[] | null {
+  const n = text.split(/[\s,]+/).filter(Boolean).map(Number);
+  return n.length > 0 && n.every((x) => Number.isFinite(x) && x >= 0) && n.some((x) => x > 0) ? n : null;
+}
+
+/** The line end of a dash cap setting (none, round, square) as ECharts names it. */
+const CAP: Record<string, string> = { none: "butt", round: "round", square: "square" };
+
 // ---- legend ---------------------------------------------------------------------------------------------
 
 const LEGEND_POS: Record<string, O> = {
@@ -70,6 +90,12 @@ export function legendBlock(f: FormatReader, theme: Theme, show: boolean): O {
 export function gridFor(f: FormatReader, legendShown: boolean): O {
   const pos = f.str("legend", "position", "Top");
   const g: O = { left: 8, right: 12, top: 8, bottom: 8, containLabel: true };
+  // the plot area's own background (a color and how transparent it is)
+  const plot = f.color("plotArea", "color");
+  if (plot) {
+    g.show = true;
+    g.backgroundColor = withOpacity(plot, opacityOf(f.num("plotArea", "colorTransparency", 0)));
+  }
   if (legendShown) {
     if (pos.startsWith("Bottom")) g.bottom = 30;
     else if (pos.startsWith("Left")) g.left = 90;
@@ -118,6 +144,9 @@ export function axisBlock(a: AxisInput): O {
   const title = style === "showUnitOnly" ? unitText : style === "showBoth" && unitText ? `${titleText} (${unitText})` : titleText;
   const showTitle = f.bool(object, k("showAxisTitle"), false) && title !== "";
   const gridOn = f.bool(object, "gridlineShow", a.gridDefault ?? a.kind === "value");
+  // a dash pattern without a style name makes the style custom
+  const dash = dashOf(f.str(object, "gridlineDashArray", ""));
+  const gridStyle = f.has(object, "gridlineStyle") ? f.str(object, "gridlineStyle", "solid") : dash ? "custom" : "solid";
   const gridAlpha = opacityOf(f.num(object, "gridlineTransparency", 0));
   const gridBase = f.color(object, "gridlineColor") ?? (theme.dark ? "#ffffff" : "#000000");
   const baseAlpha = f.has(object, "gridlineColor") ? 1 : theme.dark ? 0.12 : 0.1;
@@ -135,7 +164,7 @@ export function axisBlock(a: AxisInput): O {
     nameLocation: "middle",
     nameGap: kind === "value" ? 44 : 28,
     nameTextStyle: echartsText(titleFont, { family: d.family, size: d.size, color: d.color }),
-    splitLine: { show: gridOn, lineStyle: { color: gridBase, opacity: baseAlpha * gridAlpha, width: f.num(object, "gridlineThickness", 1), type: DASH[f.str(object, "gridlineStyle", "solid")] ?? "solid" } },
+    splitLine: { show: gridOn, lineStyle: { color: gridBase, opacity: baseAlpha * gridAlpha, width: f.num(object, "gridlineThickness", 1), type: gridStyle === "custom" && dash ? dash : (DASH[gridStyle] ?? "solid"), ...(f.has(object, "gridlineDashCap") ? { cap: CAP[f.str(object, "gridlineDashCap", "none")] ?? "butt" } : {}) } },
   };
   if (kind === "category") {
     base.axisLabel = { ...base.axisLabel, hideOverlap: true, width: f.has(object, "preferredCategoryWidth") ? f.num(object, "preferredCategoryWidth", 90) : a.horizontal ? 110 : 90, overflow: "truncate" };
@@ -190,8 +219,13 @@ export function labelBlock(a: LabelInput): O {
     formatter: a.text,
     opacity: opacityOf(f.num("labels", "transparency", 0)),
   };
+  if (f.has("labels", "horizontalAlignment")) out.align = f.str("labels", "horizontalAlignment", "center");
+  if (f.has("labels", "wordWrap") || f.has("labels", "labelContainerMaxWidth")) {
+    out.overflow = f.bool("labels", "wordWrap", false) ? "break" : "truncate";
+    if (f.has("labels", "labelContainerMaxWidth")) out.width = Math.max(10, f.num("labels", "labelContainerMaxWidth", 120));
+  }
   if (f.bool("labels", "enableBackground", false)) {
-    out.backgroundColor = f.color("labels", "backgroundColor") ?? theme.background;
+    out.backgroundColor = withOpacity(f.color("labels", "backgroundColor") ?? theme.background, opacityOf(f.num("labels", "backgroundTransparency", 0)));
     out.padding = [2, 4];
     out.borderRadius = 2;
   }
@@ -216,23 +250,37 @@ const STEP: Record<string, string> = { before: "start", center: "middle", after:
 /** Line series options from the lineStyles object (line width and dash, markers, smoothing or steps, area). */
 export function lineSeriesStyle(f: FormatReader, color: string, dimmed: boolean): O {
   const kindOf = f.str("lineStyles", "lineChartType", "linear");
+  const strokeDash = dashOf(f.str("lineStyles", "strokeDashArray", ""));
+  const lineStyleName = f.str("lineStyles", "lineStyle", "solid");
   const showLine = f.bool("lineStyles", "strokeShow", true);
   const marker = f.bool("lineStyles", "showMarker", false);
   const out: O = {
     symbol: SYMBOL[f.str("lineStyles", "markerShape", "circle")] ?? "circle",
     symbolSize: marker ? f.num("lineStyles", "markerSize", 8) : 5,
-    showSymbol: true,
-    smooth: kindOf === "smooth",
+    showSymbol: f.bool("lineStyles", "showMarkerByDefault", true),
+    // a smoothing type or amount in the file means a smooth line
+    smooth: kindOf === "smooth" || f.has("lineStyles", "interpolationSmooth") || f.has("lineStyles", "interpolationSmoothParam") ? (f.has("lineStyles", "interpolationSmoothParam") ? Math.min(1, Math.max(0, f.num("lineStyles", "interpolationSmoothParam", 0.5))) : true) : false,
     lineStyle: {
       color: f.color("lineStyles", "strokeColor") ?? color,
       width: showLine ? f.num("lineStyles", "strokeWidth", 2) : 0,
-      type: f.str("lineStyles", "lineStyle", "solid") === "custom" ? "dashed" : f.str("lineStyles", "lineStyle", "solid"),
+      type: strokeDash && (lineStyleName === "custom" || !f.has("lineStyles", "lineStyle")) ? strokeDash : lineStyleName === "custom" ? "dashed" : lineStyleName,
       opacity: (dimmed ? 0.35 : 1) * opacityOf(f.num("lineStyles", "strokeTransparency", 0)),
+      ...(f.has("lineStyles", "strokeDashCap") ? { cap: CAP[f.str("lineStyles", "strokeDashCap", "none")] ?? "butt" } : {}),
+      ...(f.has("lineStyles", "strokeLineJoin") ? { join: f.str("lineStyles", "strokeLineJoin", "miter") } : {}),
     },
   };
-  if (kindOf === "step") out.step = STEP[f.str("lineStyles", "interpolationStep", "center")] ?? "middle";
+  if (kindOf === "step" || f.has("lineStyles", "interpolationStep")) out.step = STEP[f.str("lineStyles", "interpolationStep", "center")] ?? "middle";
   const markerColor = f.color("lineStyles", "markerColor");
-  if (markerColor) out.itemStyle = { color: markerColor };
+  // the markers object: transparency, rotation and the border of each marker
+  const markerItem: O = {};
+  if (markerColor) markerItem.color = markerColor;
+  if (f.has("markers", "transparency")) markerItem.opacity = opacityOf(f.num("markers", "transparency", 0));
+  if (f.bool("markers", "borderShow", false)) {
+    markerItem.borderColor = f.bool("markers", "borderColorMatchFill", false) ? (markerColor ?? color) : withOpacity(f.color("markers", "borderColor") ?? "#000000", opacityOf(f.num("markers", "borderTransparency", 0)));
+    markerItem.borderWidth = f.num("markers", "borderWidth", 1);
+  }
+  if (Object.keys(markerItem).length) out.itemStyle = markerItem;
+  if (f.has("markers", "rotation")) out.symbolRotate = f.num("markers", "rotation", 0);
   return out;
 }
 
@@ -253,6 +301,7 @@ export function referenceLineMark(f: FormatReader, theme: Theme, spec: LineSpec,
   const color = f.color(spec.object, "lineColor", sel) ?? theme.muted;
   const title = f.str(spec.object, "displayName", "", sel) || nameFallback;
   const style = f.str(spec.object, "style", "dashed", sel);
+  const refDash = dashOf(f.str(spec.object, "dashArray", "", sel));
   const what = f.str(spec.object, "dataLabelText", "ValueAndName", sel);
   const labelUnits = unitsOf(f, spec.object, "dataLabelDisplayUnits", sel);
   const dec = f.has(spec.object, "dataLabelDecimalPoints", sel) ? f.num(spec.object, "dataLabelDecimalPoints", 1, sel) : labelUnits === "none" ? 2 : 1;
@@ -263,8 +312,53 @@ export function referenceLineMark(f: FormatReader, theme: Theme, spec: LineSpec,
   return {
     name: title,
     [axisKey]: value,
-    lineStyle: { color, width: f.num(spec.object, "width", 1, sel), type: style === "custom" ? "dashed" : style, opacity: opacityOf(f.num(spec.object, "transparency", 0, sel)) },
+    lineStyle: {
+      color,
+      width: f.num(spec.object, "width", 1, sel),
+      type: refDash && (style === "custom" || !f.has(spec.object, "style", sel)) ? refDash : style === "custom" ? "dashed" : style,
+      opacity: opacityOf(f.num(spec.object, "transparency", 0, sel)),
+      ...(f.has(spec.object, "dashCap", sel) ? { cap: CAP[f.str(spec.object, "dashCap", "none", sel)] ?? "butt" } : {}),
+    },
     label: { show: f.bool(spec.object, "dataLabelShow", false, sel), formatter: () => label, color: f.color(spec.object, "dataLabelColor", sel) ?? color, position: `${H_POS[side] ?? "insideEndTop"}`.replace("Top", above ? "Top" : "Bottom") },
     z: f.str(spec.object, "position", "front", sel) === "back" ? 1 : 10,
   };
+}
+
+// ---- zoom slider -----------------------------------------------------------------------------------------
+
+/** The zoom card: sliders on the category axis and/or the value axis. Returns the dataZoom entries and the room they need. */
+export function zoomBlock(f: FormatReader, horizontal: boolean): { dataZoom: O[]; room: number } | null {
+  if (!f.bool("zoom", "show", false)) return null;
+  const labels = f.bool("zoom", "showLabels", true);
+  const slider = (axis: "category" | "value"): O => {
+    // category axis: x for columns, y for bars; the value axis is the other one
+    const onX = (axis === "category") !== horizontal;
+    const lo = axis === "category" ? "categoryMin" : "valueMin";
+    const hi = axis === "category" ? "categoryMax" : "valueMax";
+    const out: O = { type: "slider", [onX ? "xAxisIndex" : "yAxisIndex"]: 0, showDetail: labels, brushSelect: false, filterMode: axis === "category" ? "filter" : "empty" };
+    if (f.has("zoom", lo)) out.startValue = f.num("zoom", lo, 0);
+    if (f.has("zoom", hi)) out.endValue = f.num("zoom", hi, 0);
+    if (axis === "category" && f.has("zoom", "categorySize") && !f.has("zoom", hi)) out.end = Math.min(100, Math.max(1, f.num("zoom", "categorySize", 100)));
+    return out;
+  };
+  const dz: O[] = [];
+  if (f.bool("zoom", "showOnCategoryAxis", true)) dz.push(slider("category"));
+  if (f.bool("zoom", "showOnValueAxis", false)) dz.push(slider("value"));
+  return dz.length ? { dataZoom: dz, room: 28 * dz.length } : null;
+}
+
+// ---- borders of slices (pie, donut, funnel) -------------------------------------------------------------------
+
+/** The dataPoint border of a slice: border color, size, transparency, "match fill" and "outline only". */
+export function sliceItemStyle(f: FormatReader, theme: Theme, fill: string): O {
+  if (!f.bool("dataPoint", "borderShow", false)) return { borderColor: theme.background, borderWidth: 1 };
+  const base = f.bool("dataPoint", "borderColorMatchFill", false) ? fill : (f.color("dataPoint", "borderColor") ?? theme.foreground);
+  const out: O = { borderColor: withOpacity(base, opacityOf(f.num("dataPoint", "borderTransparency", 0))), borderWidth: Math.max(0, f.num("dataPoint", "borderSize", 1)) };
+  // "outline only": the slice itself is empty and only its border is drawn, in the slice's color
+  if (f.bool("dataPoint", "borderOutlineOnly", false)) {
+    out.color = "transparent";
+    out.borderColor = withOpacity(fill, opacityOf(f.num("dataPoint", "borderTransparency", 0)));
+    out.borderWidth = Math.max(1, f.num("dataPoint", "borderSize", 1));
+  }
+  return out;
 }

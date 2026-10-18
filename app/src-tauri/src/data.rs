@@ -102,6 +102,11 @@ impl DataService {
         let key = spec.credential_key().ok_or("This source type does not use a stored credential.")?;
         self.creds.set(&key, secret).map_err(msg)
     }
+    /// Keeps the value of a secret request header of a Web source in the credential store.
+    pub fn set_header_secret(&self, spec: &SourceSpec, name: &str, value: &str) -> Result<(), String> {
+        let key = spec.header_credential_key(name).ok_or("Only Web sources have request headers.")?;
+        self.creds.set(&key, value).map_err(msg)
+    }
     pub fn sqlserver_tables(&self, spec: &SourceSpec) -> Result<Vec<String>, String> {
         biforge_engine::sqlserver_tables(spec, self.creds.as_ref()).map_err(msg)
     }
@@ -189,6 +194,10 @@ pub fn engine_clear_credential(state: tauri::State<DataService>, spec: SourceSpe
         Some(k) => state.creds.delete(&k).map_err(msg),
         None => Ok(()),
     }
+}
+#[tauri::command]
+pub fn engine_set_header_secret(state: tauri::State<DataService>, spec: SourceSpec, name: String, value: String) -> Result<(), String> {
+    state.set_header_secret(&spec, &name, &value)
 }
 #[tauri::command]
 pub fn engine_set_credential(state: tauri::State<DataService>, spec: SourceSpec, secret: String) -> Result<(), String> {

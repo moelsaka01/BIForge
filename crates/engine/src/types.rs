@@ -86,6 +86,41 @@ pub enum SourceSpec {
         #[serde(default)]
         query: Option<String>,
     },
+    /// An OLE DB data source (any provider installed on this PC, 64 bit): a table or a query. The password of `user` is kept
+    /// in the Windows Credential Manager and never in the connection string.
+    #[serde(rename = "oledb")]
+    OleDb {
+        connection: String,
+        #[serde(default)]
+        user: Option<String>,
+        #[serde(default)]
+        table: Option<String>,
+        #[serde(default)]
+        query: Option<String>,
+    },
+    /// SQL Server Analysis Services (local, such as a running Power BI Desktop instance, or on premises) through the
+    /// MSOLAP provider: a table of a tabular model, or a DAX or MDX query. Without `user` Windows authentication.
+    #[serde(rename = "analysisServices")]
+    AnalysisServices {
+        server: String,
+        database: String,
+        #[serde(default)]
+        user: Option<String>,
+        #[serde(default)]
+        table: Option<String>,
+        #[serde(default)]
+        query: Option<String>,
+    },
+    /// A Python or R script run by the user's own interpreter; each pandas DataFrame / data.frame it leaves behind is a
+    /// table. `language` is python or r; `home` is the interpreter's home folder (blank = look for it).
+    Script {
+        language: String,
+        code: String,
+        #[serde(default)]
+        table: Option<String>,
+        #[serde(default)]
+        home: Option<String>,
+    },
     /// XML file; `table` names one of the tables found in it (blank = the first).
     Xml {
         path: String,
@@ -101,6 +136,9 @@ pub enum SourceSpec {
         table: Option<String>,
         #[serde(default)]
         user: Option<String>,
+        /// Extra request headers. A header marked `secret` keeps its value in the Windows Credential Manager (never here).
+        #[serde(default)]
+        headers: Vec<WebHeader>,
     },
     /// OData v4 feed: `entity` is an entity set of the service.
     #[serde(rename = "odata")]
@@ -162,6 +200,14 @@ fn pg_schema() -> String {
 }
 
 impl SourceSpec {
+    /// Key under which the value of a secret request header of a Web source is kept.
+    pub fn header_credential_key(&self, name: &str) -> Option<String> {
+        match self {
+            SourceSpec::Web { url, .. } => Some(format!("web-header:{}:{}", name.trim().to_ascii_lowercase(), url)),
+            _ => None,
+        }
+    }
+
     /// Key under which the secret for this source is kept in the Windows Credential Manager.
     pub fn credential_key(&self) -> Option<String> {
         match self {
@@ -173,10 +219,23 @@ impl SourceSpec {
             }
             SourceSpec::MySql { host, port, database, user, .. } => Some(format!("mysql:{user}@{host}:{port}/{database}")),
             SourceSpec::Odbc { connection, user: Some(user), .. } if !user.trim().is_empty() => Some(format!("odbc:{user}@{connection}")),
+            SourceSpec::OleDb { connection, user: Some(user), .. } if !user.trim().is_empty() => Some(format!("oledb:{user}@{connection}")),
+            SourceSpec::AnalysisServices { server, database, user: Some(user), .. } if !user.trim().is_empty() => Some(format!("as:{user}@{server}/{database}")),
             SourceSpec::Web { url, user: Some(user), .. } | SourceSpec::OData { url, user: Some(user), .. } if !user.trim().is_empty() => Some(format!("web:{user}@{url}")),
             _ => None,
         }
     }
+}
+
+/// One extra request header of a Web source.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct WebHeader {
+    pub name: String,
+    /// The value, unless the header is secret (then it is in the credential store).
+    #[serde(default)]
+    pub value: Option<String>,
+    #[serde(default)]
+    pub secret: bool,
 }
 
 /// Data types used by the model (TMDL `dataType` values).

@@ -231,6 +231,11 @@ function ImportHost({ request }: { request: Extract<DialogRequest, { kind: "impo
       engine={engine}
       dialogs={env.session.dialogs}
       onClose={close}
+      scriptHomes={{ python: String(env.session.shell.settings.getSnapshot().options["python.home"] ?? ""), r: String(env.session.shell.settings.getSnapshot().options["r.home"] ?? "") }}
+      onBlank={async () => {
+        const r = await env.registry.execute("query.addBlank");
+        return r.ok ? null : r.message;
+      }}
       onSubmit={async (name, spec) => {
         const r = await env.registry.execute("data.import", { name, spec });
         if (r.ok) env.session.shell.selectTable(name);

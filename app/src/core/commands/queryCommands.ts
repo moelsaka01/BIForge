@@ -82,6 +82,13 @@ export function registerQueryCommands(r: CommandRegistry<Session>): void {
     s.queries.add(name, args.text ?? 'let\n    Source = #table({"Column1"}, {})\nin\n    Source', args.loaded ?? true);
   });
 
+  reg("query.addBlank", "Blank query", async (s) => {
+    // a query with no source yet: Power Query opens on it so the M can be written
+    const name = s.queries.uniqueName("Query");
+    s.queries.add(name, 'let\n    Source = ""\nin\n    Source', false);
+    await s.openQueryEditor(name);
+  });
+
   reg("query.addFromFolder", "New query from folder", async (s, a) => {
     const args = need<{ folder: string; extension: string; delimiter?: string; name?: string }>(a, ["folder", "extension"]);
     const text = await api(s).folderQuery(args.folder, args.extension, args.delimiter ?? ",");

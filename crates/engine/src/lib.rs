@@ -219,7 +219,7 @@ impl Engine {
                 let raw = sources::sqlserver_src::read(spec, creds)?;
                 sources::load(&self.conn, STAGE, &raw)
             }
-            SourceSpec::MySql { .. } | SourceSpec::Odbc { .. } | SourceSpec::Xml { .. } | SourceSpec::Web { .. } | SourceSpec::OData { .. } | SourceSpec::Pdf { .. } | SourceSpec::FixedWidth { .. } | SourceSpec::Inline { .. } => {
+            SourceSpec::MySql { .. } | SourceSpec::Odbc { .. } | SourceSpec::OleDb { .. } | SourceSpec::AnalysisServices { .. } | SourceSpec::Script { .. } | SourceSpec::Xml { .. } | SourceSpec::Web { .. } | SourceSpec::OData { .. } | SourceSpec::Pdf { .. } | SourceSpec::FixedWidth { .. } | SourceSpec::Inline { .. } => {
                 let raw = sources::read_other(spec, creds)?;
                 sources::load(&self.conn, STAGE, &raw)
             }

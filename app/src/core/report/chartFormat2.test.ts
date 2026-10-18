@@ -1,0 +1,191 @@
+// More of the formatting cards, drawn: plot area background, gridline dash patterns, line and marker styles, label
+// alignment / width / background, the zoom slider, and the dash of a reference line. Each one is checked on the chart
+// option the renderer hands to ECharts.
+import { describe, expect, it } from "vitest";
+import { decodeCell } from "./cells";
+import { dashOf, withOpacity } from "./chartFormat";
+import { buildChart } from "./chartOptions";
+import type { Loaded } from "./dataLoader";
+import { agg, column, lit } from "./fields";
+import { buildVisualQuery } from "./queryBuilder";
+import { fixtureModel, visualOf } from "./testFixture";
+import { DEFAULT_THEME } from "./theme";
+import { setFormat, type VisualModel } from "./visualDoc";
+
+const model = fixtureModel();
+const Cat = column("Product", "Category");
+const Qty = agg("Sales", "Quantity", 0);
+
+type Cell = [string, string];
+const rows: Cell[][] = [[["text", "Accessories"], ["int", "30"]], [["text", "Bikes"], ["int", "50"]], [["text", "Shoes"], ["int", "20"]]];
+
+function build(type: string, set: (v: VisualModel) => void) {
+  const v = visualOf(type, { Category: [Cat], Y: [Qty] });
+  set(v);
+  const loaded: Extract<Loaded, { kind: "grouped" }> = {
+    kind: "grouped",
+    query: buildVisualQuery(v, model, { filters: [] })!,
+    rows: rows.map((r) => r.map(([t, x]) => decodeCell({ t: t as never, v: x }))),
+    highlightRows: null,
+    totals: null,
+    truncated: false,
+    ms: 0,
+  };
+  return buildChart({ visual: v, loaded, theme: DEFAULT_THEME, selected: [] })!.option;
+}
+
+describe("helpers", () => {
+  it("withOpacity writes an rgba color, dashOf reads a dash pattern", () => {
+    expect(withOpacity("#ff0000", 0.5)).toBe("rgba(255, 0, 0, 0.5)");
+    expect(withOpacity("#0f0", 1)).toBe("rgba(0, 255, 0, 1)");
+    expect(withOpacity("red", 0.5)).toBe("red");
+    expect(dashOf("5 3")).toEqual([5, 3]);
+    expect(dashOf("5,3, 2")).toEqual([5, 3, 2]);
+    expect(dashOf("")).toBeNull();
+    expect(dashOf("0 0")).toBeNull();
+    expect(dashOf("a b")).toBeNull();
+  });
+});
+
+describe("plot area and gridlines", () => {
+  it("the plot area color and its transparency become the grid background", () => {
+    expect(build("clusteredColumnChart", () => undefined).grid.show).toBeUndefined();
+    const o = build("clusteredColumnChart", (v) => {
+      setFormat(v.json, "plotArea", "color", lit.str("#336699"));
+      setFormat(v.json, "plotArea", "colorTransparency", lit.num(50));
+    });
+    expect(o.grid.show).toBe(true);
+    expect(o.grid.backgroundColor).toBe("rgba(51, 102, 153, 0.5)");
+  });
+
+  it("a gridline dash pattern and cap draw the grid lines of both axes", () => {
+    const o = build("clusteredColumnChart", (v) => {
+      for (const axis of ["valueAxis", "categoryAxis"]) {
+        setFormat(v.json, axis, "gridlineShow", lit.bool(true));
+        setFormat(v.json, axis, "gridlineDashArray", lit.str("8 2"));
+        setFormat(v.json, axis, "gridlineDashCap", lit.str("round"));
+      }
+    });
+    expect(o.yAxis[0].splitLine.lineStyle).toMatchObject({ type: [8, 2], cap: "round" });
+    expect(o.xAxis.splitLine.lineStyle).toMatchObject({ type: [8, 2], cap: "round" });
+    // a named style wins over a leftover pattern unless it is custom
+    const named = build("clusteredColumnChart", (v) => {
+      setFormat(v.json, "valueAxis", "gridlineDashArray", lit.str("8 2"));
+      setFormat(v.json, "valueAxis", "gridlineStyle", lit.str("dotted"));
+    });
+    expect(named.yAxis[0].splitLine.lineStyle.type).toEqual([2, 3]);
+    const custom = build("clusteredColumnChart", (v) => {
+      setFormat(v.json, "valueAxis", "gridlineDashArray", lit.str("8 2"));
+      setFormat(v.json, "valueAxis", "gridlineStyle", lit.str("custom"));
+    });
+    expect(custom.yAxis[0].splitLine.lineStyle.type).toEqual([8, 2]);
+  });
+});
+
+describe("line and marker styles", () => {
+  it("smoothing (type or amount), steps, a dash pattern with cap and join, and showing the markers", () => {
+    const smooth = build("lineChart", (v) => setFormat(v.json, "lineStyles", "interpolationSmoothParam", lit.num(0.3)));
+    expect(smooth.series[0].smooth).toBeCloseTo(0.3);
+    expect(build("lineChart", (v) => setFormat(v.json, "lineStyles", "interpolationSmooth", lit.str("cardinal"))).series[0].smooth).toBe(true);
+    expect(build("lineChart", () => undefined).series[0].smooth).toBe(false);
+    expect(build("lineChart", (v) => setFormat(v.json, "lineStyles", "interpolationStep", lit.str("after"))).series[0].step).toBe("end");
+    const dashed = build("lineChart", (v) => {
+      setFormat(v.json, "lineStyles", "strokeDashArray", lit.str("4 4"));
+      setFormat(v.json, "lineStyles", "strokeDashCap", lit.str("square"));
+      setFormat(v.json, "lineStyles", "strokeLineJoin", lit.str("bevel"));
+    });
+    expect(dashed.series[0].lineStyle).toMatchObject({ type: [4, 4], cap: "square", join: "bevel" });
+    expect(build("lineChart", () => undefined).series[0].showSymbol).toBe(true);
+    expect(build("lineChart", (v) => setFormat(v.json, "lineStyles", "showMarkerByDefault", lit.bool(false))).series[0].showSymbol).toBe(false);
+  });
+
+  it("the markers object sets opacity, rotation and the border of the line's markers", () => {
+    const o = build("lineChart", (v) => {
+      setFormat(v.json, "markers", "transparency", lit.num(40));
+      setFormat(v.json, "markers", "rotation", lit.num(45));
+      setFormat(v.json, "markers", "borderShow", lit.bool(true));
+      setFormat(v.json, "markers", "borderColor", lit.str("#ff0000"));
+      setFormat(v.json, "markers", "borderWidth", lit.num(3));
+    });
+    expect(o.series[0].symbolRotate).toBe(45);
+    expect(o.series[0].itemStyle).toMatchObject({ opacity: 0.6, borderColor: "rgba(255, 0, 0, 1)", borderWidth: 3 });
+  });
+});
+
+describe("data labels", () => {
+  it("alignment, a maximum width with wrapping, and the background with its transparency", () => {
+    const o = build("clusteredColumnChart", (v) => {
+      setFormat(v.json, "labels", "show", lit.bool(true));
+      setFormat(v.json, "labels", "horizontalAlignment", lit.str("left"));
+      setFormat(v.json, "labels", "wordWrap", lit.bool(true));
+      setFormat(v.json, "labels", "labelContainerMaxWidth", lit.num(80));
+      setFormat(v.json, "labels", "enableBackground", lit.bool(true));
+      setFormat(v.json, "labels", "backgroundColor", lit.str("#000000"));
+      setFormat(v.json, "labels", "backgroundTransparency", lit.num(75));
+      setFormat(v.json, "labels", "optimizeLabelDisplay", lit.bool(true));
+    });
+    expect(o.series[0].label).toMatchObject({ align: "left", overflow: "break", width: 80, backgroundColor: "rgba(0, 0, 0, 0.25)" });
+    expect(o.series[0].labelLayout).toEqual({ hideOverlap: true });
+    // nothing changes without them
+    const plain = build("clusteredColumnChart", (v) => setFormat(v.json, "labels", "show", lit.bool(true)));
+    expect(plain.series[0].label.align).toBeUndefined();
+    expect(plain.series[0].labelLayout).toBeUndefined();
+  });
+});
+
+describe("zoom slider", () => {
+  it("columns get sliders under the plot, bars beside it; the value axis slider is separate; the labels can be off", () => {
+    expect(build("clusteredColumnChart", () => undefined).dataZoom).toBeUndefined();
+    const cols = build("clusteredColumnChart", (v) => setFormat(v.json, "zoom", "show", lit.bool(true)));
+    expect(cols.dataZoom).toHaveLength(1);
+    expect(cols.dataZoom[0]).toMatchObject({ type: "slider", xAxisIndex: 0, showDetail: true });
+    expect(cols.grid.bottom).toBeGreaterThan(8);
+    const both = build("clusteredColumnChart", (v) => {
+      setFormat(v.json, "zoom", "show", lit.bool(true));
+      setFormat(v.json, "zoom", "showOnValueAxis", lit.bool(true));
+      setFormat(v.json, "zoom", "showLabels", lit.bool(false));
+      setFormat(v.json, "zoom", "categoryMin", lit.num(1));
+      setFormat(v.json, "zoom", "categoryMax", lit.num(2));
+    });
+    expect(both.dataZoom).toHaveLength(2);
+    expect(both.dataZoom[0]).toMatchObject({ xAxisIndex: 0, showDetail: false, startValue: 1, endValue: 2 });
+    expect(both.dataZoom[1]).toMatchObject({ yAxisIndex: 0, showDetail: false });
+    const bars = build("clusteredBarChart", (v) => setFormat(v.json, "zoom", "show", lit.bool(true)));
+    expect(bars.dataZoom[0]).toMatchObject({ yAxisIndex: 0 });
+    expect(bars.grid.right).toBeGreaterThan(12);
+    const off = build("clusteredColumnChart", (v) => {
+      setFormat(v.json, "zoom", "show", lit.bool(true));
+      setFormat(v.json, "zoom", "showOnCategoryAxis", lit.bool(false));
+    });
+    expect(off.dataZoom).toBeUndefined();
+  });
+});
+
+describe("slice borders and pie labels", () => {
+  it("pie and funnel slices take the dataPoint border: color, size, transparency, match fill and outline only", () => {
+    const plain = build("pieChart", () => undefined);
+    expect(plain.series[0].data[0].itemStyle.borderWidth).toBeUndefined();
+    expect(plain.series[0].itemStyle).toMatchObject({ borderWidth: 1 }); // the default separator between slices
+    const o = build("pieChart", (v) => {
+      setFormat(v.json, "dataPoint", "borderShow", lit.bool(true));
+      setFormat(v.json, "dataPoint", "borderColor", lit.str("#ff0000"));
+      setFormat(v.json, "dataPoint", "borderSize", lit.num(4));
+      setFormat(v.json, "dataPoint", "borderTransparency", lit.num(50));
+    });
+    expect(o.series[0].data[0].itemStyle).toMatchObject({ borderColor: "rgba(255, 0, 0, 0.5)", borderWidth: 4 });
+    const match = build("pieChart", (v) => {
+      setFormat(v.json, "dataPoint", "borderShow", lit.bool(true));
+      setFormat(v.json, "dataPoint", "borderColorMatchFill", lit.bool(true));
+      setFormat(v.json, "dataPoint", "fill", lit.str("#00ff00"), "Accessories");
+    });
+    const item = match.series[0].data.find((d: { name: string }) => d.name === "Accessories").itemStyle;
+    expect(item.borderColor).toBe("rgba(0, 255, 0, 1)");
+    const outline = build("funnel", (v) => {
+      setFormat(v.json, "dataPoint", "borderShow", lit.bool(true));
+      setFormat(v.json, "dataPoint", "borderOutlineOnly", lit.bool(true));
+      setFormat(v.json, "dataPoint", "fill", lit.str("#0000ff"), "Bikes");
+    });
+    const bikes = outline.series[0].data.find((d: { name: string }) => d.name === "Bikes").itemStyle;
+    expect(bikes).toMatchObject({ color: "transparent", borderColor: "rgba(0, 0, 255, 1)" });
+  });
+});

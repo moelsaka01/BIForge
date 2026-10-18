@@ -82,6 +82,7 @@ fn main() {
             data::engine_sqlite_tables,
             data::engine_postgres_tables,
             data::engine_set_credential,
+            data::engine_set_header_secret,
             data::engine_source_choices,
             data::engine_odbc_drivers,
             data::engine_credential_exists,

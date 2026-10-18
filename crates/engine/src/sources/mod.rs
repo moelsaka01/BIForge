@@ -133,7 +133,9 @@ pub fn load_as(conn: &Connection, table: &str, raw: &RawTable, temp: bool) -> Re
 pub mod dispatch;
 pub mod mysql_src;
 pub mod odbc_src;
+pub mod oledb_src;
 pub mod pdf_src;
+pub mod script_src;
 pub mod textinfer;
 pub mod web_src;
 pub mod xml_src;

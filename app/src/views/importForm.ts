@@ -2,7 +2,7 @@ import type { InlineType, OdbcFlavor, SourceSpec } from "../core/data/types";
 
 export type SourceKind = SourceSpec["kind"];
 /** What the user picks in Get data: a spec kind, or one of the ODBC flavors (which all produce an `odbc` spec). */
-export type ConnectorId = Exclude<SourceKind, "odbc"> | OdbcFlavor;
+export type ConnectorId = Exclude<SourceKind, "odbc" | "script"> | OdbcFlavor | "python" | "r" | "blank";
 
 export type ConnectorGroup = "File" | "Database" | "Online and other";
 
@@ -38,6 +38,11 @@ export const CONNECTORS: Connector[] = [
   { id: "inline", label: "Enter data (type the table in)", group: "Online and other", keywords: "manual table grid" },
   { id: "web", label: "Web", group: "Online and other", keywords: "html url api rest" },
   { id: "odata", label: "OData feed", group: "Online and other" },
+  { id: "oledb", label: "OLE DB", group: "Database", keywords: "ole db provider ace sqloledb" },
+  { id: "analysisServices", label: "SQL Server Analysis Services (local or on-premises)", group: "Database", keywords: "ssas msolap tabular cube dax mdx power bi desktop local" },
+  { id: "python", label: "Python script", group: "Online and other", keywords: "pandas dataframe" },
+  { id: "r", label: "R script", group: "Online and other", keywords: "data.frame rscript" },
+  { id: "blank", label: "Blank query", group: "Online and other", keywords: "empty power query m" },
 ];
 
 export interface ImportForm {
@@ -62,8 +67,13 @@ export interface ImportForm {
   /** Web and OData. */
   url: string;
   format: string;
+  /** Web: extra request headers (the value of a secret one is kept in the credential store, not in the project). */
+  headers: { name: string; value: string; secret: boolean }[];
   /** Fixed-width: "4, 10, 3". */
   widths: string;
+  /** Python and R: the script, and the interpreter's home folder (from File > Options; blank = look for it). */
+  code: string;
+  home: string;
   /** Everything ticked in the navigator. */
   selected: string[];
   /** SQL Server: accept a certificate that does not validate (self-signed). */
@@ -93,7 +103,10 @@ export const emptyForm = (kind: ConnectorId = "csv"): ImportForm => ({
   driver: "",
   url: "",
   format: "auto",
+  headers: [],
   widths: "",
+  code: "",
+  home: "",
   selected: [],
   trustCert: false,
   inlineColumns: [
@@ -122,9 +135,9 @@ export const SERVER_KINDS: ConnectorId[] = ["postgres", "sqlserver", "mysql", "o
 /** Kinds that go through an ODBC driver. */
 export const ODBC_KINDS: ConnectorId[] = ["odbc", "access", "oracle", "db2", "teradata", "saphana", "redshift", "snowflake"];
 /** Kinds that list their tables in the navigator. */
-export const NAVIGATOR_KINDS: ConnectorId[] = ["postgres", "sqlserver", "mysql", "xml", "pdf", "web", "odata", "odbc", "access", "oracle", "db2", "teradata", "saphana", "redshift", "snowflake"];
+export const NAVIGATOR_KINDS: ConnectorId[] = ["oledb", "analysisServices", "python", "r", "postgres", "sqlserver", "mysql", "xml", "pdf", "web", "odata", "odbc", "access", "oracle", "db2", "teradata", "saphana", "redshift", "snowflake"];
 /** Kinds whose password (or Basic-authentication secret) goes to Windows Credential Manager. */
-export const SECRET_KINDS: ConnectorId[] = ["postgres", "sqlserver", "mysql", "web", "odata", ...ODBC_KINDS];
+export const SECRET_KINDS: ConnectorId[] = ["postgres", "sqlserver", "mysql", "oledb", "analysisServices", "web", "odata", ...ODBC_KINDS];
 /** Words that identify the installed ODBC driver of a flavor. */
 export const DRIVER_PATTERNS: Partial<Record<ConnectorId, RegExp>> = {
   access: /access.*(accdb|mdb)|(accdb|mdb).*access/i,
@@ -226,9 +239,36 @@ export function buildSpec(f: ImportForm, table: string = f.pgTable): { spec: Sou
       if (rows.length === 0) return { error: "Type at least one row." };
       return { spec: { kind: "inline", columns: f.inlineColumns.map((c, i) => ({ name: names[i], type: c.type })), rows: rows.map((r) => f.inlineColumns.map((_, i) => (r[i] ?? "").trim() === "" ? null : r[i])) } };
     }
+    case "oledb": {
+      if (!f.connection.trim()) return { error: "Enter the OLE DB connection string, for example Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\\data\\shop.accdb" };
+      if (/(^|;)\s*(password|pwd)\s*=/i.test(f.connection)) return { error: "Do not put the password in the connection string: enter it in the Password field, it is kept in Windows Credential Manager." };
+      const e = needTable();
+      if (e) return { error: e };
+      return { spec: { kind: "oledb", connection: f.connection.trim(), user: f.user.trim() || null, table: table.trim() || null, ...withQuery } };
+    }
+    case "analysisServices": {
+      if (!f.host.trim()) return { error: "Enter the server (a name, or host:port of a local instance)." };
+      if (!f.database.trim()) return { error: "Enter the database (the model's name)." };
+      if (/;/.test(f.host + f.database)) return { error: "The server and database names cannot contain a semicolon." };
+      if (!hasQuery && !table.trim()) return { error: "Choose a table, or write a DAX (EVALUATE ...) or MDX query." };
+      return { spec: { kind: "analysisServices", server: f.host.trim(), database: f.database.trim(), user: f.user.trim() || null, table: table.trim() || null, ...withQuery } };
+    }
+    case "python":
+    case "r": {
+      if (!f.code.trim()) return { error: f.kind === "r" ? "Write the R script. Every data.frame it leaves behind becomes a table." : "Write the Python script. Every pandas DataFrame it leaves behind becomes a table." };
+      return { spec: { kind: "script", language: f.kind, code: f.code, table: table.trim() || null, home: f.home.trim() || null } };
+    }
+    case "blank":
+      return { error: "A blank query has no data source: it opens in Power Query." };
     case "web": {
       if (!/^https?:\/\/\S+$/i.test(f.url.trim())) return { error: "Enter an http:// or https:// web address." };
-      return { spec: { kind: "web", url: f.url.trim(), format: f.format === "auto" ? null : f.format, table: table || null, user: f.user.trim() || null } };
+      const rows = f.headers.filter((h) => h.name.trim() !== "" || h.value.trim() !== "");
+      if (rows.some((h) => h.name.trim() === "")) return { error: "Every request header needs a name." };
+      if (rows.some((h) => !/^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/.test(h.name.trim()))) return { error: "A header name may only use letters, digits and - _ . ~ ! # $ % & ' * + ^ ` |." };
+      if (rows.some((h) => /^(host|content-length|connection|transfer-encoding|upgrade|te|trailer|proxy-authorization)$/i.test(h.name.trim()))) return { error: "BIForge sets Host, Content-Length, Connection and similar headers itself." };
+      if (rows.some((h) => /[\r\n]/.test(h.value))) return { error: "A header value must be on one line." };
+      const headers = rows.map((h) => ({ name: h.name.trim(), value: h.secret ? null : h.value, secret: h.secret }));
+      return { spec: { kind: "web", url: f.url.trim(), format: f.format === "auto" ? null : f.format, table: table || null, user: f.user.trim() || null, ...(headers.length ? { headers } : {}) } };
     }
     case "odata": {
       if (!/^https?:\/\/\S+$/i.test(f.url.trim())) return { error: "Enter the http:// or https:// address of the OData service." };
@@ -273,6 +313,11 @@ export function defaultTableName(spec: SourceSpec): string {
       return spec.table ? last(spec.table) : "Query";
     case "odata":
       return spec.entity;
+    case "oledb":
+    case "analysisServices":
+      return spec.table ? last(spec.table).replace(/^['"\[]|['"\]]$/g, "") : "Query";
+    case "script":
+      return spec.table || "Script";
     case "inline":
       return "Table";
     case "web":

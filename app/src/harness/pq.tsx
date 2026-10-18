@@ -40,6 +40,7 @@ const httpEngine: EngineApi = {
   credentialExists: () => Promise.resolve(false),
   clearCredential: unsupported,
   setCredential: unsupported,
+  setHeaderSecret: unsupported,
 };
 
 const httpM: MApi = {

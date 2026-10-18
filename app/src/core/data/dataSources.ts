@@ -1,7 +1,7 @@
 // The data sources of a project, as the Data source settings dialog shows them: one row per place data comes from (a file,
 // a server and database, a web address), with the tables that use it. Pure; the dialog and the commands call these.
 import type { Project } from "../model/types";
-import { getTableSource, importedTables } from "../model/tables";
+import { getPrivacyLevel, getTableSource, importedTables, type PrivacyLevel } from "../model/tables";
 import type { SourceSpec } from "./types";
 
 export interface DataSourceInfo {
@@ -14,6 +14,8 @@ export interface DataSourceInfo {
   /** True when a password or token can be stored for this source. */
   hasSecret: boolean;
   tables: string[];
+  /** The privacy level recorded for this source (it changes nothing in BIForge, which never sends data from one source to another). */
+  privacy: PrivacyLevel;
   /** A spec of one of the tables, used to reach the credential. */
   spec: SourceSpec;
 }
@@ -28,6 +30,9 @@ const KIND_LABEL: Record<SourceSpec["kind"], string> = {
   sqlserver: "SQL Server database",
   mysql: "MySQL database",
   odbc: "ODBC",
+  oledb: "OLE DB",
+  analysisServices: "Analysis Services",
+  script: "Script",
   xml: "XML file",
   web: "Web",
   odata: "OData feed",
@@ -56,6 +61,12 @@ export function sourceIdentity(s: SourceSpec): string {
       return `sqlserver|${s.server.toLowerCase()}:${s.port ?? ""}/${s.database.toLowerCase()}|${s.user ?? ""}`;
     case "odbc":
       return `odbc|${s.connection.toLowerCase()}|${s.user ?? ""}`;
+    case "oledb":
+      return `oledb|${s.connection.toLowerCase()}|${s.user ?? ""}`;
+    case "analysisServices":
+      return `as|${s.server.toLowerCase()}/${s.database.toLowerCase()}|${s.user ?? ""}`;
+    case "script":
+      return `script|${s.language}|${s.code}`;
     case "web":
     case "odata":
       return `${s.kind}|${s.url.toLowerCase()}|${s.user ?? ""}`;
@@ -82,6 +93,12 @@ export function describeSource(s: SourceSpec): string {
       return `${s.server}${s.port ? `,${s.port}` : ""} / ${s.database}`;
     case "odbc":
       return s.connection;
+    case "oledb":
+      return s.connection;
+    case "analysisServices":
+      return `${s.server} / ${s.database}`;
+    case "script":
+      return `${s.language === "r" ? "R" : "Python"} script (${s.code.split(/\r?\n/)[0].slice(0, 40)})`;
     case "web":
     case "odata":
       return s.url;
@@ -106,8 +123,9 @@ export function listDataSources(p: Project): DataSourceInfo[] {
         kind: spec.kind,
         label: `${KIND_LABEL[spec.kind]}: ${describeSource(spec)}`,
         user: userOf(spec),
-        hasSecret: ["postgres", "mysql", "sqlserver", "odbc", "web", "odata"].includes(spec.kind) && userOf(spec) !== null,
+        hasSecret: ["postgres", "mysql", "sqlserver", "odbc", "oledb", "analysisServices", "web", "odata"].includes(spec.kind) && userOf(spec) !== null,
         tables: [t],
+        privacy: getPrivacyLevel(p, t),
         spec,
       });
   }
@@ -143,6 +161,12 @@ export function locationOf(s: SourceSpec): SourceLocation {
       return { host: s.server, port: s.port ? String(s.port) : "", database: s.database, user: s.user ?? "" };
     case "odbc":
       return { connection: s.connection, user: s.user ?? "" };
+    case "oledb":
+      return { connection: s.connection, user: s.user ?? "" };
+    case "analysisServices":
+      return { host: s.server, database: s.database, user: s.user ?? "" };
+    case "script":
+      return {};
     case "web":
     case "odata":
       return { url: s.url, user: s.user ?? "" };
@@ -192,6 +216,19 @@ export function withLocation(s: SourceSpec, loc: SourceLocation): SourceSpec | {
       if (/(^|;)\s*(pwd|password)\s*=/i.test(loc.connection!)) return { error: "Do not put the password in the connection string." };
       return { ...s, connection: loc.connection!.trim(), user: loc.user?.trim() ? loc.user.trim() : null };
     }
+    case "oledb": {
+      const e = need(loc.connection, "The connection string");
+      if (e) return { error: e };
+      if (/(^|;)\s*(pwd|password)\s*=/i.test(loc.connection!)) return { error: "Do not put the password in the connection string." };
+      return { ...s, connection: loc.connection!.trim(), user: loc.user?.trim() ? loc.user.trim() : null };
+    }
+    case "analysisServices": {
+      const e = need(loc.host, "Server") ?? need(loc.database, "Database");
+      if (e) return { error: e };
+      return { ...s, server: loc.host!.trim(), database: loc.database!.trim(), user: loc.user?.trim() ? loc.user.trim() : null };
+    }
+    case "script":
+      return { error: "A script has no location to change: edit the query in Power Query." };
     case "web":
     case "odata": {
       if (!/^https?:\/\/\S+$/i.test(loc.url?.trim() ?? "")) return { error: "Enter an http:// or https:// web address." };

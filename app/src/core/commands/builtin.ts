@@ -2,6 +2,7 @@ import { CommandRegistry } from "./registry";
 import type { SourceLocation } from "../data/dataSources";
 import type { Session } from "../session/session";
 import * as ops from "../model/ops";
+import type { PrivacyLevel } from "../model/tables";
 import * as rel from "../model/relationships";
 import type { SourceSpec } from "../data/types";
 import { registerReportCommands } from "./reportCommands";
@@ -202,6 +203,16 @@ export function createRegistry(session: Session): CommandRegistry<Session> {
       const location = (args as { location?: SourceLocation }).location;
       if (!location || typeof location !== "object") throw new Error("Missing value: location.");
       await s.changeDataSource(a.id, location);
+    },
+  });
+  r.register({
+    id: "data.source.setPrivacy",
+    label: "Set the privacy level of a data source",
+    category: "Data",
+    isEnabled: (s) => hasProject(s),
+    run: (s, args) => {
+      const a = argsOf<{ id: string; level: string }>(args, ["id", "level"]);
+      s.setDataSourcePrivacy(a.id, a.level as PrivacyLevel);
     },
   });
   r.register({

@@ -2,7 +2,7 @@ import { DocumentStore } from "../store/documentStore";
 import { ReportRuntime } from "../report/runtime";
 import type { Project, SaveReport } from "../model/types";
 import type { EngineApi, SourceSpec } from "../data/types";
-import { applyImport, getTableSource, importedTables } from "../model/tables";
+import { applyImport, getTableSource, importedTables, PRIVACY_LEVELS, setPrivacyLevel, type PrivacyLevel } from "../model/tables";
 import { listTables, deleteTable } from "../model/ops";
 import { listDataSources, withLocation, type SourceLocation } from "../data/dataSources";
 import { QueryDraft } from "../queries/draft";
@@ -443,6 +443,17 @@ export class Session {
       return [t, r] as const;
     });
     for (const [t, spec] of next) await this.importTable(t, spec);
+  }
+
+  /** Records the privacy level of a data source on every table that reads from it (one undoable step). */
+  setDataSourcePrivacy(id: string, level: PrivacyLevel): void {
+    const p = this.store.project;
+    const src = p ? listDataSources(p).find((x) => x.id === id) : undefined;
+    if (!src) throw new Error("That data source is no longer used by any table.");
+    if (!PRIVACY_LEVELS.includes(level)) throw new Error("Choose None, Public, Organizational or Private.");
+    this.store.transact("Set privacy level", (proj) => {
+      for (const t of src.tables) setPrivacyLevel(proj, t, level);
+    });
   }
 
   /** Stores (or with null removes) the password or token of a data source in the credential store. */

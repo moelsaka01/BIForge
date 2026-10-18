@@ -39,7 +39,7 @@ fn creds() -> MemoryCredentialStore {
 }
 
 fn web(url: String, format: Option<&str>, table: Option<&str>) -> SourceSpec {
-    SourceSpec::Web { url, format: format.map(String::from), table: table.map(String::from), user: None }
+    SourceSpec::Web { url, format: format.map(String::from), table: table.map(String::from), user: None, headers: vec![] }
 }
 
 #[test]
@@ -85,7 +85,7 @@ fn web_pages_json_and_csv_import_as_typed_tables() {
 #[test]
 fn basic_authentication_uses_the_stored_secret_and_the_spec_holds_none() {
     let (base, log) = serve(vec![("/secure", "application/json", r#"[{"x":1}]"#.into())]);
-    let spec = SourceSpec::Web { url: format!("{base}/secure"), format: None, table: None, user: Some("ann".into()) };
+    let spec = SourceSpec::Web { url: format!("{base}/secure"), format: None, table: None, user: Some("ann".into()), headers: vec![] };
     let c = creds();
     use biforge_engine::CredentialStore;
     c.set(&spec.credential_key().unwrap(), "s3cret").unwrap();
@@ -305,5 +305,52 @@ fn the_kind_names_of_the_app_are_the_ones_the_engine_reads() {
         let s: SourceSpec = serde_json::from_str(c).unwrap_or_else(|e| panic!("{c}: {e}"));
         let back = serde_json::to_value(&s).unwrap();
         assert_eq!(back["kind"], serde_json::from_str::<serde_json::Value>(c).unwrap()["kind"], "{c}");
+    }
+}
+
+/// A tiny HTTP server that answers every request with `body` (JSON) and keeps the raw requests.
+fn serve_raw(body: &'static str) -> (String, Arc<Mutex<Vec<String>>>) {
+    let l = TcpListener::bind("127.0.0.1:0").unwrap();
+    let base = format!("http://{}", l.local_addr().unwrap());
+    let log = Arc::new(Mutex::new(Vec::new()));
+    let log2 = log.clone();
+    std::thread::spawn(move || {
+        for s in l.incoming() {
+            let Ok(mut s) = s else { continue };
+            let mut buf = [0u8; 8192];
+            let n = s.read(&mut buf).unwrap_or(0);
+            log2.lock().unwrap().push(String::from_utf8_lossy(&buf[..n]).to_string());
+            let _ = write!(s, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len());
+        }
+    });
+    (base, log)
+}
+
+#[test]
+fn custom_request_headers_are_sent_and_secret_ones_come_from_the_credential_store() {
+    use biforge_engine::{CredentialStore, WebHeader};
+    let (base, raw) = serve_raw(r#"[{"x":1}]"#);
+    let header = |name: &str, value: Option<&str>, secret: bool| WebHeader { name: name.into(), value: value.map(String::from), secret };
+    let spec = |headers: Vec<WebHeader>| SourceSpec::Web { url: format!("{base}/api"), format: None, table: None, user: None, headers };
+    let c = creds();
+    let e = Engine::in_memory().unwrap();
+
+    let s = spec(vec![header("X-Api-Version", Some("2"), false), header("X-Api-Key", None, true)]);
+    // a secret header whose value is not stored here is a readable error, not a silent request without it
+    let err = e.import("T", &s, &c).unwrap_err().to_string();
+    assert!(err.contains("X-Api-Key") && err.contains("not stored"), "{err}");
+    assert!(raw.lock().unwrap().is_empty(), "nothing was sent without the secret header");
+
+    c.set(&s.header_credential_key("X-Api-Key").unwrap(), "k-123").unwrap();
+    assert_eq!(e.import("T", &s, &c).unwrap().row_count, 1);
+    let req = raw.lock().unwrap().last().unwrap().to_ascii_lowercase();
+    assert!(req.contains("x-api-version: 2\r\n") && req.contains("x-api-key: k-123\r\n"), "{req}");
+    assert!(!serde_json::to_string(&s).unwrap().contains("k-123"), "the secret is not in the source description");
+    // the preview and the choices use the same headers
+    assert_eq!(source_preview(&s, &c, 5).unwrap().rows.len(), 1);
+
+    // headers that would break the request, or smuggle another one, are refused
+    for bad in [header("Host", Some("evil"), false), header("Content-Length", Some("5"), false), header("bad name", Some("x"), false), header("X-A", Some("a\r\nX-B: b"), false), header("", Some("x"), false)] {
+        assert!(e.import("T", &spec(vec![bad]), &c).is_err());
     }
 }
