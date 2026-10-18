@@ -212,6 +212,9 @@ export interface PublishApi {
   /** Starts the sign-in; returns the address to open in the browser. */
   storageConnectStart(provider: StorageProvider): Promise<string>;
   storageConnectStatus(provider: StorageProvider): Promise<ConnectStatus>;
+  /** Whether the client id of the app registered with the provider is known (the id is a public value). */
+  storageClientIdKnown(provider: StorageProvider): Promise<boolean>;
+  storageSetClientId(provider: StorageProvider, id: string): Promise<void>;
   storageDisconnect(provider: StorageProvider): Promise<void>;
   /** The provider's own version history of the stored file, newest first. */
   versions(root: string, targetId: string): Promise<VersionInfo[]>;

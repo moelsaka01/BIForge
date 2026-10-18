@@ -67,8 +67,7 @@ pub fn client_id_for(provider: &str) -> Option<String> {
             return Some(v.trim().to_string());
         }
     }
-    let dir = std::env::var_os("BIFORGE_APP_DIR").filter(|d| !d.is_empty()).map(PathBuf::from).or_else(|| std::env::var_os("LOCALAPPDATA").map(|d| PathBuf::from(d).join("BIForge")))?;
-    let text = std::fs::read_to_string(dir.join("oauth-clients.json")).ok()?;
+    let text = std::fs::read_to_string(app_dir()?.join("oauth-clients.json")).ok()?;
     let v: serde_json::Value = serde_json::from_str(&text).ok()?;
     let alias = match provider {
         "google-drive" => "google",
@@ -76,6 +75,30 @@ pub fn client_id_for(provider: &str) -> Option<String> {
         other => other,
     };
     v.get(provider).or_else(|| v.get(alias)).and_then(|x| x.as_str()).map(|s| s.trim().to_string()).filter(|s| !s.is_empty())
+}
+
+/// The folder with `oauth-clients.json`: BIFORGE_APP_DIR, or %LOCALAPPDATA%\\BIForge.
+fn app_dir() -> Option<PathBuf> {
+    std::env::var_os("BIFORGE_APP_DIR").filter(|d| !d.is_empty()).map(PathBuf::from).or_else(|| std::env::var_os("LOCALAPPDATA").map(|d| PathBuf::from(d).join("BIForge")))
+}
+
+/// Writes a provider's public client id into `oauth-clients.json` (other providers' ids stay). Client ids are public
+/// values, not secrets; the file holds nothing else.
+pub fn set_client_id(provider: &str, id: &str) -> Result<()> {
+    let id = id.trim();
+    if id.is_empty() || id.len() > 300 || id.chars().any(|c| c.is_whitespace() || c.is_control() || c == '"' || c == '\\') {
+        return Err(Error::Adapter("The client id is the value the provider showed you when you registered the app: letters, digits, dots and dashes, no spaces.".into()));
+    }
+    let dir = app_dir().ok_or_else(|| Error::Adapter("BIForge cannot find its data folder.".into()))?;
+    std::fs::create_dir_all(&dir)?;
+    let path = dir.join("oauth-clients.json");
+    let mut v: serde_json::Value = std::fs::read_to_string(&path).ok().and_then(|t| serde_json::from_str(&t).ok()).unwrap_or_else(|| serde_json::json!({}));
+    if !v.is_object() {
+        v = serde_json::json!({});
+    }
+    v[provider] = serde_json::Value::String(id.to_string());
+    std::fs::write(&path, serde_json::to_vec_pretty(&v)?)?;
+    Ok(())
 }
 
 /// A sign-in in progress: the address to open in the browser and what is needed to finish it.
@@ -172,7 +195,7 @@ impl StorageAdapter {
 
     /// Forgets the tokens. Files already in the account stay there.
     pub fn disconnect_account(&self) -> Result<()> {
-        self.keys().delete(&oauth::token_key(self.cfg.id))
+        oauth::delete_tokens(self.keys(), self.cfg.id)
     }
 
     fn token(&self) -> Result<String> {

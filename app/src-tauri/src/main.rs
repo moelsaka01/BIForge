@@ -100,6 +100,8 @@ fn main() {
             publish::publish_refresh_now,
             publish::publish_share_link,
             publish::publish_access_key,
+            publish::storage_client_id_known,
+            publish::storage_set_client_id,
             publish::storage_connect_start,
             publish::storage_connect_status,
             publish::publish_versions,

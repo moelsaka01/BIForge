@@ -131,12 +131,62 @@ pub fn token_key(provider: &str) -> String {
     format!("biforge.oauth.{provider}")
 }
 
+/// A Windows credential holds at most 2,560 bytes and the store writes text as UTF-16, so a long token (Microsoft's
+/// access and refresh tokens together are often over 3,000 characters) is kept in pieces: the base key holds
+/// `chunks:<n>`, the pieces live under `<base>.0` ... `<base>.<n-1>`.
+const CHUNK: usize = 600;
+
+fn forget_tokens(keys: &dyn KeyStore, provider: &str) -> Result<()> {
+    let base = token_key(provider);
+    if let Some(head) = keys.get(&base)? {
+        if let Some(n) = head.strip_prefix("chunks:").and_then(|n| n.parse::<usize>().ok()) {
+            for i in 0..n {
+                keys.delete(&format!("{base}.{i}"))?;
+            }
+        }
+    }
+    keys.delete(&base)
+}
+
 pub fn load_tokens(keys: &dyn KeyStore, provider: &str) -> Result<Option<Tokens>> {
-    Ok(keys.get(&token_key(provider))?.and_then(|s| serde_json::from_str(&s).ok()))
+    let base = token_key(provider);
+    let Some(head) = keys.get(&base)? else { return Ok(None) };
+    let json = match head.strip_prefix("chunks:").and_then(|n| n.parse::<usize>().ok()) {
+        Some(n) => {
+            let mut all = String::new();
+            for i in 0..n {
+                match keys.get(&format!("{base}.{i}"))? {
+                    Some(p) => all.push_str(&p),
+                    None => return Ok(None), // a piece is missing: treat as not connected
+                }
+            }
+            all
+        }
+        None => head,
+    };
+    Ok(serde_json::from_str(&json).ok())
 }
 
 pub fn store_tokens(keys: &dyn KeyStore, provider: &str, t: &Tokens) -> Result<()> {
-    keys.set(&token_key(provider), &serde_json::to_string(t)?)
+    let base = token_key(provider);
+    let json = serde_json::to_string(t)?;
+    // pieces first, the head last: a reader never sees a head without its pieces
+    let chars: Vec<char> = json.chars().collect();
+    let pieces: Vec<String> = chars.chunks(CHUNK).map(|c| c.iter().collect()).collect();
+    for (i, p) in pieces.iter().enumerate() {
+        keys.set(&format!("{base}.{i}"), p)?;
+    }
+    // pieces of an older, longer value are removed
+    let mut i = pieces.len();
+    while keys.get(&format!("{base}.{i}"))?.is_some() {
+        keys.delete(&format!("{base}.{i}"))?;
+        i += 1;
+    }
+    keys.set(&base, &format!("chunks:{}", pieces.len()))
+}
+
+pub fn delete_tokens(keys: &dyn KeyStore, provider: &str) -> Result<()> {
+    forget_tokens(keys, provider)
 }
 
 fn form(pairs: &[(&str, &str)]) -> String {

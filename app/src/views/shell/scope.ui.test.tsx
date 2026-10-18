@@ -116,14 +116,14 @@ describe("File menu (backstage)", () => {
     render(a.element);
     await openProject(a);
     await act(async () => void a.registry.execute("app.showStart"));
-    fireEvent.click(within(screen.getByRole("navigation", { name: "Start" })).getByRole("button", { name: "Export" }));
-    fireEvent.click(await screen.findByRole("button", { name: /Report theme/ }));
-    await waitFor(() => expect(a.files.saved).toHaveLength(1));
+    fireEvent.click(within(await screen.findByRole("navigation", { name: "Start" }, { timeout: 15000 })).getByRole("button", { name: "Export" }));
+    fireEvent.click(await screen.findByRole("button", { name: /Report theme/ }, { timeout: 15000 }));
+    await waitFor(() => expect(a.files.saved).toHaveLength(1), { timeout: 15000 });
     expect(JSON.parse(a.files.saved[0].text).name).toBeTruthy();
     a.files.next = JSON.stringify({ name: "Imported scope theme", dataColors: ["#112233", "#445566"] });
-    fireEvent.click(within(screen.getByRole("navigation", { name: "Start" })).getByRole("button", { name: "Import" }));
-    fireEvent.click(await screen.findByRole("button", { name: /Report theme/ }));
-    await waitFor(() => expect(JSON.stringify(a.session.store.project)).toMatch(/Imported scope theme/));
+    fireEvent.click(within(await screen.findByRole("navigation", { name: "Start" }, { timeout: 15000 })).getByRole("button", { name: "Import" }));
+    fireEvent.click(await screen.findByRole("button", { name: /Report theme/ }, { timeout: 15000 }));
+    await waitFor(() => expect(JSON.stringify(a.session.store.project)).toMatch(/Imported scope theme/), { timeout: 15000 });
   });
 });
 

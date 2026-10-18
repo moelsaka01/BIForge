@@ -107,6 +107,17 @@ export function registerPublishCommands(r: CommandRegistry<Session>): void {
     },
   });
   r.register({
+    id: "storage.clientId.set",
+    label: "Set the client id of a personal storage provider",
+    category: "Share",
+    isEnabled: hasApi,
+    async run(s, args) {
+      const a = (args ?? {}) as { provider?: string; id?: string };
+      if (!a.provider || !isStorageProvider(a.provider)) throw new Error("Choose Google Drive, OneDrive or Dropbox.");
+      await s.publishUi.storageSetClientId(a.provider, a.id ?? "");
+    },
+  });
+  r.register({
     id: "storage.disconnect",
     label: "Disconnect a personal storage account (removes the stored sign-in)",
     category: "Share",

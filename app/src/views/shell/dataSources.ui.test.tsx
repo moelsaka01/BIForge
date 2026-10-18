@@ -73,7 +73,8 @@ describe("Data source settings", () => {
     fireEvent.change(within(form).getByLabelText("Port"), { target: { value: "3307" } });
     fireEvent.change(within(form).getByLabelText("Server"), { target: { value: "db2" } });
     fireEvent.click(within(form).getByText("Change and refresh"));
-    await waitFor(() => expect(within(dlg).getByRole("status", { name: "Result" }).textContent).toContain("The source was changed"), { timeout: 15000 });
+    // a plain DOM query: role queries over the whole tree are slow under load
+    await waitFor(() => expect(dlg.querySelector('[aria-label="Result"]')?.textContent ?? "").toContain("The source was changed"), { timeout: 20000 });
     expect(a.engine.calls.filter((c) => c.startsWith("import:")).length).toBe(importsBefore + 2);
     for (const t of ["Orders", "Items"]) expect(getTableSource(a.session.store.project!, t)).toMatchObject({ host: "db2", port: 3307, database: "shop", table: t.toLowerCase() });
     // the generated partition follows

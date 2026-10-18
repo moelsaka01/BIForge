@@ -170,6 +170,14 @@ export class FakePublish implements PublishApi {
   async storageConnectStatus(_p: StorageProvider) {
     return this.storageStatus;
   }
+  clientIds = new Set<string>(['google-drive', 'onedrive', 'dropbox']);
+  async storageClientIdKnown(p: StorageProvider) {
+    return this.clientIds.has(p);
+  }
+  async storageSetClientId(p: StorageProvider, id: string) {
+    this.calls.push(`client-id:${p}:${id}`);
+    this.clientIds.add(p);
+  }
   async storageDisconnect(p: StorageProvider) {
     this.calls.push(`storage-disconnect:${p}`);
     this.storage[p] = { connected: false, account: null };

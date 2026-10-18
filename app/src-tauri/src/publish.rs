@@ -434,6 +434,18 @@ impl PublishService {
         Ok(url)
     }
 
+    /// Whether a client id is known for the provider (the id itself is public but is never sent to the window).
+    pub fn storage_client_id_known(&self, provider: &str) -> bool {
+        biforge_publish::storage::client_id_for(provider).is_some()
+    }
+
+    pub fn storage_set_client_id(&self, provider: &str, id: &str) -> Result<(), String> {
+        if !Self::is_storage(provider) {
+            return Err(format!("Unknown provider \"{provider}\"."));
+        }
+        biforge_publish::storage::set_client_id(provider, id).map_err(msg)
+    }
+
     pub fn storage_connect_status(&self, provider: &str) -> ConnectStatus {
         self.connects.lock().unwrap().get(provider).cloned().unwrap_or(ConnectStatus { state: "none".into(), account: None, message: None })
     }
@@ -686,6 +698,14 @@ pub fn publish_share_link(s: tauri::State<PublishService>, root: String, target_
 #[tauri::command]
 pub fn storage_connect_start(s: tauri::State<PublishService>, provider: String) -> Result<String, String> {
     s.storage_connect_start(&provider)
+}
+#[tauri::command]
+pub fn storage_client_id_known(s: tauri::State<PublishService>, provider: String) -> bool {
+    s.storage_client_id_known(&provider)
+}
+#[tauri::command]
+pub fn storage_set_client_id(s: tauri::State<PublishService>, provider: String, id: String) -> Result<(), String> {
+    s.storage_set_client_id(&provider, &id)
 }
 #[tauri::command]
 pub fn storage_connect_status(s: tauri::State<PublishService>, provider: String) -> ConnectStatus {

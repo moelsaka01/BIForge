@@ -99,6 +99,7 @@ export function StorageAccount({ provider }: { provider: "google-drive" | "onedr
     void env.session.publishUi.storageRefresh(provider);
   }, [env, provider]);
   const st = state.storage[provider];
+  const [clientId, setClientId] = useState("");
   return (
     <div role="group" aria-label={`${name} account`} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
       {st?.connected ? (
@@ -112,10 +113,21 @@ export function StorageAccount({ provider }: { provider: "google-drive" | "onedr
         <>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <span role="status">{`${name} account: Not connected`}</span>
-            <Button size="small" disabled={st?.pending} onClick={() => void env.run("storage.connect", { provider })}>
+            <Button size="small" disabled={st?.pending || (st !== undefined && !st.clientId)} onClick={() => void env.run("storage.connect", { provider })}>
               {`Connect ${name} account`}
             </Button>
           </div>
+          {st && !st.clientId && (
+            <div role="group" aria-label="Client id" style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <div style={{ fontSize: 12 }}>BIForge needs the client id of the app you registered with {name} (a public value that {name} shows in its console; the steps are in docs/PROGRESS.md, Owner steps). It is kept in BIForge's data folder, not in the project.</div>
+              <div style={{ display: "flex", gap: 6 }}>
+                <Input aria-label={`${name} client id`} placeholder="Client id" value={clientId} onChange={(_, d) => setClientId(d.value)} />
+                <Button size="small" disabled={!clientId.trim()} onClick={() => void env.run("storage.clientId.set", { provider, id: clientId })}>
+                  Save client id
+                </Button>
+              </div>
+            </div>
+          )}
           {st?.pending && <div role="status">Finish the sign-in in your browser. BIForge keeps the sign-in only in Windows Credential Manager.</div>}
           {st?.message && <div role="alert" style={{ color: "var(--colorPaletteRedForeground1)" }}>{st.message}</div>}
         </>

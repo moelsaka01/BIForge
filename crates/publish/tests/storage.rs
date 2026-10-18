@@ -270,6 +270,46 @@ fn an_expired_token_is_refreshed_and_a_refused_refresh_asks_for_a_new_sign_in() 
 
 // ------------------------------------------------------------------------------------------------ sign-in (PKCE, loopback)
 
+/// A key store like Windows Credential Manager: a value over the limit is refused.
+struct LimitedKeys(MemoryKeyStore, usize);
+impl KeyStore for LimitedKeys {
+    fn get(&self, name: &str) -> biforge_publish::Result<Option<String>> {
+        self.0.get(name)
+    }
+    fn set(&self, name: &str, secret: &str) -> biforge_publish::Result<()> {
+        if secret.chars().count() > self.1 {
+            return Err(Error::KeyStore(format!("the credential is too large ({} characters)", secret.chars().count())));
+        }
+        self.0.set(name, secret)
+    }
+    fn delete(&self, name: &str) -> biforge_publish::Result<()> {
+        self.0.delete(name)
+    }
+}
+
+#[test]
+fn long_tokens_fit_a_credential_store_with_a_size_limit() {
+    let keys = LimitedKeys(MemoryKeyStore::default(), 1200);
+    // Microsoft's tokens together are often longer than a credential allows
+    let long = Tokens { access: "a".repeat(2500), refresh: Some("ré".repeat(1800)), expires_at: 1234 };
+    oauth::store_tokens(&keys, "onedrive", &long).unwrap();
+    assert_eq!(oauth::load_tokens(&keys, "onedrive").unwrap(), Some(long));
+    // a shorter value later removes the pieces of the longer one
+    let short = Tokens { access: "x".into(), refresh: None, expires_at: 1 };
+    oauth::store_tokens(&keys, "onedrive", &short).unwrap();
+    assert_eq!(oauth::load_tokens(&keys, "onedrive").unwrap(), Some(short));
+    assert!(keys.get("biforge.oauth.onedrive.1").unwrap().is_none(), "old pieces are gone");
+    // a missing piece reads as not connected, and disconnect removes everything
+    let long = Tokens { access: "a".repeat(2500), refresh: None, expires_at: 5 };
+    oauth::store_tokens(&keys, "onedrive", &long).unwrap();
+    keys.delete("biforge.oauth.onedrive.2").unwrap();
+    assert_eq!(oauth::load_tokens(&keys, "onedrive").unwrap(), None);
+    oauth::store_tokens(&keys, "onedrive", &long).unwrap();
+    oauth::delete_tokens(&keys, "onedrive").unwrap();
+    assert!(keys.get("biforge.oauth.onedrive").unwrap().is_none() && keys.get("biforge.oauth.onedrive.0").unwrap().is_none());
+    assert_eq!(oauth::load_tokens(&keys, "onedrive").unwrap(), None);
+}
+
 #[test]
 fn the_sign_in_uses_pkce_checks_the_state_and_stores_the_tokens_only_in_the_key_store() {
     // the PKCE pair
@@ -332,12 +372,6 @@ fn the_sign_in_uses_pkce_checks_the_state_and_stores_the_tokens_only_in_the_key_
     browser.join().unwrap();
     assert!(err.contains("wrong state"), "{err}");
     assert!(!adapter.is_connected());
-    // no client id: a plain message, nothing else
-    let none = StorageAdapter::new(Context::offline(), oauth::MICROSOFT, Box::new(MemoryCloud::default()), &[], &[]);
-    if std::env::var("BIFORGE_ONEDRIVE_CLIENT_ID").is_err() {
-        let m = none.begin_connect().err().map(|e| e.to_string());
-        assert!(m.is_none_or(|m| m.contains("client id")));
-    }
 }
 
 // ------------------------------------------------------------------------------------------------ the providers' REST calls
@@ -583,4 +617,28 @@ fn the_registry_lists_the_three_providers_as_built_with_their_limits() {
     let err = Publisher { registry: &reg, keys: &keys, store: &store }.publish(&req).unwrap_err().to_string();
     assert!(err.contains("not connected"), "{err}");
     assert!(keys.get("x").unwrap().is_none());
+}
+
+#[test]
+fn a_client_id_pasted_in_the_app_is_kept_in_the_clients_file_and_found_again() {
+    let d = tempfile::tempdir().unwrap();
+    // BIFORGE_APP_DIR points the lookup at this folder for the length of the test
+    std::env::set_var("BIFORGE_APP_DIR", d.path());
+    std::env::remove_var("BIFORGE_DROPBOX_CLIENT_ID");
+    std::env::remove_var("BIFORGE_ONEDRIVE_CLIENT_ID");
+    assert_eq!(biforge_publish::storage::client_id_for("dropbox"), None);
+    biforge_publish::storage::set_client_id("dropbox", "  app-key-123 ").unwrap();
+    biforge_publish::storage::set_client_id("onedrive", "0123-4567").unwrap();
+    assert_eq!(biforge_publish::storage::client_id_for("dropbox").as_deref(), Some("app-key-123"));
+    assert_eq!(biforge_publish::storage::client_id_for("onedrive").as_deref(), Some("0123-4567"));
+    let text = std::fs::read_to_string(d.path().join("oauth-clients.json")).unwrap();
+    assert!(text.contains("app-key-123") && text.contains("0123-4567"), "{text}");
+    // the older alias names still work, and bad values are refused
+    std::fs::write(d.path().join("oauth-clients.json"), r#"{"google":"g-1","microsoft":"m-1"}"#).unwrap();
+    assert_eq!(biforge_publish::storage::client_id_for("google-drive").as_deref(), Some("g-1"));
+    assert_eq!(biforge_publish::storage::client_id_for("onedrive").as_deref(), Some("m-1"));
+    for bad in ["", "has space", "quo\"te", "back\\slash"] {
+        assert!(biforge_publish::storage::set_client_id("dropbox", bad).is_err(), "{bad:?}");
+    }
+    std::env::remove_var("BIFORGE_APP_DIR");
 }

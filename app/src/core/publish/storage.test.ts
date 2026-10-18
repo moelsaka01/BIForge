@@ -59,6 +59,18 @@ describe("personal storage in the app (fakes)", () => {
     expect(session.publishUi.getSnapshot().storage["google-drive"].connected).toBe(false);
   });
 
+  it("without the client id of a registered app the sign-in cannot start; the id pasted in the form is kept", async () => {
+    const { publish, session, registry } = await setup();
+    publish.clientIds.clear();
+    await session.publishUi.storageRefresh("dropbox");
+    expect(session.publishUi.getSnapshot().storage.dropbox).toMatchObject({ connected: false, clientId: false });
+    expect((await registry.execute("storage.clientId.set", { provider: "dropbox", id: "  " })).ok).toBe(true); // the engine side refuses an empty id
+    expect((await registry.execute("storage.clientId.set", { provider: "nope", id: "x" })).ok).toBe(false);
+    expect((await registry.execute("storage.clientId.set", { provider: "dropbox", id: "app-key-1" })).ok).toBe(true);
+    expect(publish.calls).toContain("client-id:dropbox:app-key-1");
+    expect(session.publishUi.getSnapshot().storage.dropbox.clientId).toBe(true);
+  });
+
   it("a refused or abandoned sign-in shows the reason and stops waiting", async () => {
     vi.useFakeTimers();
     const { io, publish, session, registry } = await setup();

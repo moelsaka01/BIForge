@@ -16,6 +16,8 @@ export interface StorageAccountState {
   /** The browser sign-in is open and BIForge waits for the answer. */
   pending: boolean;
   message: string | null;
+  /** The client id of the registered app is known (otherwise the sign-in cannot start and the form asks for it). */
+  clientId: boolean;
 }
 
 /** The account behind a destination, for destinations that need one. */
@@ -86,11 +88,12 @@ export class PublishUi {
   async storageRefresh(provider: StorageProvider): Promise<void> {
     const connected = await this.api.storageConnected(provider);
     const prev = this.snap.storage[provider];
-    this.set({ storage: { ...this.snap.storage, [provider]: { connected, account: connected ? (prev?.account ?? null) : null, pending: prev?.pending ?? false, message: prev?.message ?? null } } });
+    const clientId = await this.api.storageClientIdKnown(provider).catch(() => false);
+    this.set({ storage: { ...this.snap.storage, [provider]: { connected, account: connected ? (prev?.account ?? null) : null, pending: prev?.pending ?? false, message: prev?.message ?? null, clientId } } });
   }
 
   private setStorage(provider: StorageProvider, patch: Partial<StorageAccountState>): void {
-    const prev = this.snap.storage[provider] ?? { connected: false, account: null, pending: false, message: null };
+    const prev = this.snap.storage[provider] ?? { connected: false, account: null, pending: false, message: null, clientId: true };
     this.set({ storage: { ...this.snap.storage, [provider]: { ...prev, ...patch } } });
   }
 
@@ -121,6 +124,12 @@ export class PublishUi {
     };
     this.storageTimer = setInterval(() => void poll(), 1500);
     await poll();
+  }
+
+  /** Keeps the public client id of the app registered with the provider (from the provider's console), then retries. */
+  async storageSetClientId(provider: StorageProvider, id: string): Promise<void> {
+    await this.api.storageSetClientId(provider, id);
+    this.setStorage(provider, { clientId: true, message: null });
   }
 
   async storageDisconnect(provider: StorageProvider): Promise<void> {
