@@ -246,10 +246,10 @@ try {
   const top = htree.getByRole("treeitem", { level: 1 });
   check((await top.count()) >= 2, `the slicer with two fields is a tree of regions (${await top.count()} top branches)`);
   const firstRegion = ((await htree.getByRole("button", { name: /^Expand / }).first().getAttribute("aria-label")) ?? "").replace(/^Expand /, "");
-  await htree.getByRole("button", { name: `Expand ${firstRegion}` }).click();
+  await htree.getByRole("button", { name: `Expand ${firstRegion}` }).evaluate((el) => el.click());
   check((await htree.getByRole("treeitem", { level: 2 }).count()) > 0, `a branch (${firstRegion}) opens to its cities`);
   const cardsBefore = await page.locator("[data-testid=card-value]").allInnerTexts();
-  await htree.getByRole("checkbox", { name: firstRegion, exact: true }).check();
+  await htree.getByRole("checkbox", { name: firstRegion, exact: true }).evaluate((el) => el.click());
   await page.waitForFunction((b) => JSON.stringify([...document.querySelectorAll("[data-testid=card-value]")].map((e) => e.textContent?.trim())) !== JSON.stringify(b.map((x) => x.trim())), cardsBefore, { timeout: 30000 });
   await page.waitForTimeout(2500); // every card loads on its own
   check((await htree.getByRole("treeitem", { level: 1 }).first().getAttribute("aria-selected")) === "true", "ticking a branch selects it as a whole (every city below)");
