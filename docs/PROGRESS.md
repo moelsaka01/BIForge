@@ -252,3 +252,32 @@
 3. Look at the heat map and the hierarchy slicer in the real window (add to the e2e).
 4. Phase 7: draw more "(not drawn yet)" properties (small multiples layout, axis reference lines, error bars, label options), Q&A/R/Python visuals decision.
 5. Phase 8 remainder: Oracle/Db2/etc. need drivers to test; PDF tables on real-world PDFs; custom headers for Web; Blank query and the File > Options entry for Data source settings.
+
+## 2026-10-18 (session 4): O5, O4, O3, desktop leftovers
+### Owner steps (OAuth apps for O3; free, no payment card, no client secret shipped)
+BIForge uses the authorization-code flow with PKCE and a loopback redirect. The redirect address is fixed: **`http://127.0.0.1:53682/callback`** (Microsoft: `http://localhost:53682/callback`). Give back **client IDs only**; put them into BIForge's config file `%APPDATA%\BIForge\oauth-clients.json` as `{"google":"...","microsoft":"...","dropbox":"..."}` or tell me, they are public values. (These steps are written from memory of the vendors' consoles; menu names may differ slightly. Tell me where one differs and I will correct this note.)
+
+**Google Drive** (console.cloud.google.com)
+1. Sign in with the Google account that will own the app. Top bar project picker, New project, name `BIForge`, Create. Select it.
+2. Left menu, APIs & Services, Library, search `Google Drive API`, Enable.
+3. APIs & Services, OAuth consent screen (or "Google Auth platform", Branding). User type External, Create. App name `BIForge`, support e-mail and developer e-mail yours, Save and continue.
+4. Scopes (Data access), Add or remove scopes, tick `.../auth/drive.file` ("See, edit, create and delete only the specific Google Drive files you use with this app"), Update, Save.
+5. Test users: add your own Google address (and any tester). Publishing status stays **Testing** (up to 100 test users; refresh tokens last 7 days in Testing). Click "Publish app" later only if you want longer tokens; `drive.file` is a non-sensitive scope.
+6. Clients (Credentials), Create credentials / Create client, OAuth client ID, Application type **Desktop app**, name `BIForge desktop`, Create.
+7. Copy the **Client ID** (`....apps.googleusercontent.com`). Note: Google also shows a "client secret" for desktop clients. Google documents it as not confidential for installed apps, but its token endpoint still asks for it. If you want the live Drive test, put it in the environment variable `BIFORGE_GOOGLE_CLIENT_SECRET` on your PC (never in chat or in git); BIForge sends it only to Google's token endpoint. Fakes and the other two providers need no secret.
+8. Redirect: nothing to register for Desktop clients (loopback is allowed on any port).
+
+**Microsoft OneDrive** (entra.microsoft.com, or portal.azure.com, then Microsoft Entra ID)
+1. Sign in with a Microsoft account (a personal account is enough; if asked to create a tenant, accept the free default).
+2. Entra ID, App registrations, New registration. Name `BIForge`. Supported account types: **Accounts in any organizational directory and personal Microsoft accounts**. Redirect URI: platform **Public client/native (mobile & desktop)**, value `http://localhost`. Register. (Entra ignores the port for `http://localhost`.)
+3. On the app's Overview copy **Application (client) ID**.
+4. Authentication, Advanced settings, **Allow public client flows = Yes**, Save. Do not create a client secret.
+5. API permissions, Add a permission, Microsoft Graph, Delegated: `Files.ReadWrite.AppFolder`, `offline_access`, `User.Read`. No admin consent needed.
+
+**Dropbox** (dropbox.com/developers/apps)
+1. Sign in, Create app. Scoped access, access type **App folder**, name `BIForge-<something unique>` (names are global), Create app.
+2. Permissions tab: tick `files.metadata.read`, `files.metadata.write`, `files.content.read`, `files.content.write`, `sharing.read`, `sharing.write`, then Submit.
+3. Settings tab: copy **App key** (this is the client ID). Do not use the App secret. Under OAuth 2, Redirect URIs, add `http://127.0.0.1:53682/callback`, Add. Leave "Allow public clients (Implicit Grant & PKCE)" on Allow.
+4. The app stays in Development status (limit 500 linked users, fine).
+
+**Already given:** Cloudflare account ID (received in chat; not written to any file). For the Cloudflare live test I still need the API token (steps in the 2026-10-17 Owner steps above); set `BIFORGE_TEST_CLOUDFLARE_TOKEN` and `BIFORGE_TEST_CLOUDFLARE_ACCOUNT_ID` in your environment.
