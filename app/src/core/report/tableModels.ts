@@ -110,10 +110,21 @@ export function buildTable(visual: VisualModel, loaded: Extract<Loaded, { kind: 
     sort: sortKey && sortKey === fieldKey(pc.field) ? visual.sort!.dir : null,
   }));
   const stylers = cols.map(({ pc }) => columnStyler(f, pc, loaded.rows.map((r) => num(r[pc.index]))));
-  const rows = loaded.rows.map((row) =>
+  // alternate rows: the second, fourth, ... row use the secondary colors of the values card (unless a rule colored the cell)
+  const altBg = f.color("values", "backColorSecondary");
+  const altFg = f.color("values", "fontColorSecondary");
+  const rows = loaded.rows.map((row, r) =>
     cols.map(({ pc }, i) => {
       const v = row[pc.index];
-      return { text: displayValue(v, pc, f), style: stylers[i](v), raw: v };
+      const style = stylers[i](v);
+      if (r % 2 === 1) {
+        if (altBg && !style.background) {
+          style.background = altBg;
+          if (!style.color) style.color = textOn(altBg);
+        }
+        if (altFg && !style.bar) style.color = style.background && f.color("values", "fontColor", queryRefOf(pc.field)) ? style.color : altFg;
+      }
+      return { text: displayValue(v, pc, f), style, raw: v };
     }),
   );
   const style = tableStyle(f, theme);

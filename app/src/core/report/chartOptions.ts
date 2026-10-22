@@ -9,7 +9,7 @@ import { FormatReader } from "./formatReader";
 import type { Loaded } from "./dataLoader";
 import type { SelectedPoint } from "./interactions";
 import { formatCompact, formatNumber } from "./numberFormat";
-import { axisBlock, gridFor, labelBlock, labelDefaults, legendBlock, lineSeriesStyle, referenceLineMark, sliceItemStyle, valueText, zoomBlock, type LineSpec } from "./chartFormat";
+import { axisBlock, CAP, dashOf, gridFor, labelBlock, labelDefaults, legendBlock, lineSeriesStyle, referenceLineMark, referenceLineShade, sliceItemStyle, valueText, zoomBlock, type LineSpec } from "./chartFormat";
 import { echartsText, opacityOf, readFont } from "../format/styles";
 import { seriesColor, type Theme } from "./theme";
 import type { VisualModel } from "./visualDoc";
@@ -164,6 +164,8 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
       if (hl) s.barGap = "-100%";
       else if (f.has("categoryAxis", "innerPadding")) s.barGap = `${f.num("categoryAxis", "innerPadding", 0)}%`;
       if (f.has("categoryAxis", "outerPadding")) s.barCategoryGap = `${f.num("categoryAxis", "outerPadding", 20)}%`;
+      // the layout card's gap between the groups of bars, as a percentage of a bar
+      if (f.has("layout", "clusteredGapSize")) s.barCategoryGap = `${Math.min(500, Math.max(0, f.num("layout", "clusteredGapSize", 20)))}%`;
     }
     if (isHighlight) {
       s.z = 5;
@@ -221,6 +223,7 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
     valueCols.forEach((c, vi) => c.role === "Y" && p.series.forEach((_s, si) => p.categories.forEach((_c, ci) => pooled.push(shown(vi, si, ci)))));
     const fmtRef = valueCols[0]?.format ?? null;
     const marks: O[] = [];
+    const shades: O[][] = [];
     for (const k of REFERENCE_KINDS) {
       const sel = `id:${k.kind}`;
       const spec: LineSpec = { object: k.object, id: k.kind };
@@ -230,12 +233,16 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
       const name = k.kind === "percentile" ? `${f.num(k.object, "percentile", 50, sel)}th percentile` : k.name;
       const mark = referenceLineMark(f, theme, spec, v, name, horizontal ? "xAxis" : "yAxis", fmtRef);
       if (mark) marks.push(mark);
+      const shade = referenceLineShade(f, theme, spec, v, horizontal ? "xAxis" : "yAxis");
+      if (shade) shades.push(shade);
     }
     if (marks.length) seriesOut[0].markLine = { silent: true, symbol: "none", animation: false, data: marks };
+    if (shades.length) seriesOut[0].markArea = { silent: true, animation: false, data: shades };
     if (f.bool("trend", "show", false) && !stacked && valueCols.length > 0 && p.series.length > 0) {
       const tr = linearTrend(p.categories.map((_c, ci) => shown(0, 0, ci)));
       if (tr) {
         const style = f.str("trend", "style", "dashed");
+        const trendDash = dashOf(f.str("trend", "dashArray", ""));
         seriesOut.push({
           name: f.str("trend", "displayName", "") || "Trend line",
           type: "line",
@@ -243,7 +250,13 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
           symbol: "none",
           silent: true,
           z: 6,
-          lineStyle: { color: f.color("trend", "lineColor") ?? theme.muted, width: f.num("trend", "width", 2), type: style === "custom" ? "dashed" : style, opacity: opacityOf(f.num("trend", "transparency", 0)) },
+          lineStyle: {
+            color: f.color("trend", "lineColor") ?? theme.muted,
+            width: f.num("trend", "width", 2),
+            type: trendDash && (style === "custom" || !f.has("trend", "style")) ? trendDash : style === "custom" ? "dashed" : style,
+            opacity: opacityOf(f.num("trend", "transparency", 0)),
+            ...(f.has("trend", "dashCap") ? { cap: CAP[f.str("trend", "dashCap", "none")] ?? "butt" } : {}),
+          },
           tooltip: { show: false },
         });
       }

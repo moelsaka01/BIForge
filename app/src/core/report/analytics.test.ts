@@ -118,6 +118,51 @@ describe("Analytics on a chart", () => {
     expect(tip).not.toContain("Trend line");
   });
 
+  it("shades the side of a reference line the shading names, in the line's color or its own", () => {
+    const v = mk();
+    ref(v, "constant", "show", lit.bool(true));
+    ref(v, "constant", "value", lit.num(25));
+    expect(build(v, grouped(v, rows)).option.series[0].markArea).toBeUndefined();
+    ref(v, "constant", "shadeShow", lit.bool(true));
+    expect(build(v, grouped(v, rows)).option.series[0].markArea).toBeUndefined(); // no region chosen
+    ref(v, "constant", "shadeRegion", lit.str("before"));
+    ref(v, "constant", "shadeColor", lit.str("#00ff00"));
+    ref(v, "constant", "shadeTransparency", lit.num(70));
+    let area = build(v, grouped(v, rows)).option.series[0].markArea.data[0];
+    expect(area[1].yAxis).toBe(25);
+    expect(area[0].yAxis).toBeLessThan(-1e9);
+    expect(area[0].itemStyle).toMatchObject({ color: "#00ff00" });
+    expect(area[0].itemStyle.opacity).toBeCloseTo(0.3, 5);
+    ref(v, "constant", "shadeRegion", lit.str("after"));
+    ref(v, "constant", "shadeColorMatchStroke", lit.bool(true));
+    ref(v, "constant", "lineColor", lit.str("#ff0000"));
+    area = build(v, grouped(v, rows)).option.series[0].markArea.data[0];
+    expect(area[0].yAxis).toBe(25);
+    expect(area[1].yAxis).toBeGreaterThan(1e9);
+    expect(area[0].itemStyle.color).toBe("#ff0000");
+    // horizontal bars shade along the x axis
+    const h = mk("clusteredBarChart");
+    ref(h, "constant", "show", lit.bool(true));
+    ref(h, "constant", "value", lit.num(25));
+    ref(h, "constant", "shadeShow", lit.bool(true));
+    ref(h, "constant", "shadeRegion", lit.str("after"));
+    expect(build(h, grouped(h, rows)).option.series[0].markArea.data[0][0].xAxis).toBe(25);
+  });
+
+  it("the trend line takes a dash pattern and a cap, and the columns a gap from the layout card", () => {
+    const v = mk("lineChart");
+    fmt(v, "trend", "show", lit.bool(true));
+    fmt(v, "trend", "dashArray", lit.str("8 2"));
+    fmt(v, "trend", "dashCap", lit.str("round"));
+    const t = build(v, grouped(v, rows)).option.series[1].lineStyle;
+    expect(t.type).toEqual([8, 2]);
+    expect(t.cap).toBe("round");
+    const c = mk();
+    expect(build(c, grouped(c, rows)).option.series[0].barCategoryGap).toBeUndefined();
+    fmt(c, "layout", "clusteredGapSize", lit.num(80));
+    expect(build(c, grouped(c, rows)).option.series[0].barCategoryGap).toBe("80%");
+  });
+
   it("is not offered or drawn on 100% stacked charts", () => {
     const v = mk("hundredPercentStackedColumnChart");
     ref(v, "average", "show", lit.bool(true));

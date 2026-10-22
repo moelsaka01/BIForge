@@ -166,6 +166,9 @@
    "transparency",
    "wordWrap"
   ],
+  "layout": [
+   "clusteredGapSize"
+  ],
   "legend": [
    "bold",
    "fontFamily",
@@ -196,6 +199,7 @@
    "width"
   ],
   "trend": [
+   "dashCap",
    "displayName",
    "lineColor",
    "show",
@@ -331,6 +335,9 @@
    "transparency",
    "wordWrap"
   ],
+  "layout": [
+   "clusteredGapSize"
+  ],
   "legend": [
    "bold",
    "fontFamily",
@@ -361,6 +368,7 @@
    "width"
   ],
   "trend": [
+   "dashCap",
    "displayName",
    "lineColor",
    "show",
@@ -1063,6 +1071,7 @@
    "width"
   ],
   "trend": [
+   "dashCap",
    "displayName",
    "lineColor",
    "show",
@@ -1246,6 +1255,7 @@
    "width"
   ],
   "trend": [
+   "dashCap",
    "displayName",
    "lineColor",
    "show",
@@ -1754,6 +1764,9 @@
    "showSeries",
    "transparency"
   ],
+  "layout": [
+   "clusteredGapSize"
+  ],
   "legend": [
    "bold",
    "fontFamily",
@@ -1813,6 +1826,7 @@
    "width"
   ],
   "trend": [
+   "dashCap",
    "displayName",
    "lineColor",
    "show",
@@ -2372,9 +2386,11 @@
   "values": [
    "backColor",
    "backColorPrimary",
+   "backColorSecondary",
    "bold",
    "fontColor",
    "fontColorPrimary",
+   "fontColorSecondary",
    "fontFamily",
    "fontSize",
    "italic",

@@ -35,6 +35,21 @@ describe("table", () => {
     expect(m.totals).toBeNull();
   });
 
+  it("alternate rows take the secondary colors, but never over a color a rule gave the cell", () => {
+    const v = visualOf("tableEx", { Values: [Cat, Qty] });
+    setFormat(v.json, "values", "backColorSecondary", lit.str("#eeeeee"));
+    setFormat(v.json, "values", "fontColorSecondary", lit.str("#112233"));
+    const rows = [[t("A"), n(1)], [t("B"), n(2)], [t("C"), n(3)], [t("D"), n(4)]];
+    const m = buildTable(v, grouped(v, rows), DEFAULT_THEME, null);
+    expect(m.rows.map((r) => r[0].style.background)).toEqual([undefined, "#eeeeee", undefined, "#eeeeee"]);
+    expect(m.rows.map((r) => r[0].style.color)).toEqual([undefined, "#112233", undefined, "#112233"]);
+    // a column background wins in the rows it colors
+    setFormat(v.json, "values", "backColor", lit.str("#ff0000"), queryRefOf(Qty));
+    const m2 = buildTable(v, grouped(v, rows), DEFAULT_THEME, null);
+    expect(m2.rows[1][1].style.background).toBe("#ff0000");
+    expect(m2.rows[1][0].style.background).toBe("#eeeeee");
+  });
+
   it("totals row, sort indicator", () => {
     const v = visualOf("tableEx", { Values: [Cat, Qty] }, { sort: { field: { Column: { Expression: { SourceRef: { Entity: "Product" } }, Property: "Category" } }, direction: "Descending" } });
     const m = buildTable(v, grouped(v, [[t("Bikes"), n(10)]]), DEFAULT_THEME, dec([n(10)]));

@@ -55,7 +55,7 @@ export function dashOf(text: string): number[] | null {
 }
 
 /** The line end of a dash cap setting (none, round, square) as ECharts names it. */
-const CAP: Record<string, string> = { none: "butt", round: "round", square: "square" };
+export const CAP: Record<string, string> = { none: "butt", round: "round", square: "square" };
 
 // ---- legend ---------------------------------------------------------------------------------------------
 
@@ -322,6 +322,22 @@ export function referenceLineMark(f: FormatReader, theme: Theme, spec: LineSpec,
     label: { show: f.bool(spec.object, "dataLabelShow", false, sel), formatter: () => label, color: f.color(spec.object, "dataLabelColor", sel) ?? color, position: `${H_POS[side] ?? "insideEndTop"}`.replace("Top", above ? "Top" : "Bottom") },
     z: f.str(spec.object, "position", "front", sel) === "back" ? 1 : 10,
   };
+}
+
+/**
+ * The shaded side of a reference line (shadeRegion before / after the value) as an ECharts markArea entry; null when
+ * the line is off, has no shading or no value. The area runs to the far edge of the axis (it is clipped by the plot).
+ */
+export function referenceLineShade(f: FormatReader, theme: Theme, spec: LineSpec, value: number | null, axisKey: "xAxis" | "yAxis"): O[] | null {
+  const sel = `id:${spec.id}`;
+  if (value === null || !f.bool(spec.object, "show", false, sel) || !f.bool(spec.object, "shadeShow", false, sel)) return null;
+  const region = f.str(spec.object, "shadeRegion", "none", sel);
+  if (region !== "before" && region !== "after") return null;
+  const base = f.bool(spec.object, "shadeColorMatchStroke", false, sel) ? (f.color(spec.object, "lineColor", sel) ?? theme.muted) : (f.color(spec.object, "shadeColor", sel) ?? theme.muted);
+  const far = 1e12;
+  const pair: O[] = region === "before" ? [{ [axisKey]: -far }, { [axisKey]: value }] : [{ [axisKey]: value }, { [axisKey]: far }];
+  pair[0] = { ...pair[0], itemStyle: { color: base, opacity: opacityOf(f.num(spec.object, "shadeTransparency", 50, sel)) } };
+  return pair;
 }
 
 // ---- zoom slider -----------------------------------------------------------------------------------------
