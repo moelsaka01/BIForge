@@ -33,6 +33,13 @@ const appEnv = {
 };
 
 // the BIForge tasks that exist before the test, so only the ones it made are removed
+// adds a copy of the last data row, starting a new line first when the file does not end with one
+const addRow = (file) => {
+  const t = readFileSync(file, "utf8");
+  const eol = t.includes("\r\n") ? "\r\n" : "\n";
+  const last = t.trimEnd().split(/\r?\n/).pop();
+  appendFileSync(file, (/\r?\n$/.test(t) ? "" : eol) + last + eol);
+};
 const biforgeTasks = () => {
   const r = spawnSync("schtasks.exe", ["/Query", "/FO", "CSV", "/NH"], { encoding: "utf8" });
   return new Set((r.stdout ?? "").split(/\r?\n/).map((l) => l.split('","')[0]?.replace(/^"/, "")).filter((n) => n && n.startsWith("\\BIForge\\")));
@@ -91,7 +98,7 @@ try {
   check(created.length === 1, `a task was registered with Windows Task Scheduler (${created.join(", ")})`);
   check(/Task Scheduler: (Ready|Running)/.test(await sec.innerText()), "the dialog shows the task's state from Task Scheduler");
 
-  appendFileSync(salesCsv, readFileSync(salesCsv, "utf8").trim().split(/\r?\n/).pop() + "\n");
+  addRow(salesCsv);
   await sec.getByRole("button", { name: "Refresh now on this PC" }).click();
   try { await sec.getByText(/published version 2/).waitFor({ timeout: 90000 }); } catch (e) { console.log("SECTION", await sec.innerText()); throw e; }
   let hist = await sec.getByRole("list", { name: "Refresh history" }).innerText();
@@ -101,7 +108,7 @@ try {
   check(true, "a second run with the same data publishes nothing");
 
   // the way Task Scheduler runs it: the app started without a window
-  appendFileSync(salesCsv, readFileSync(salesCsv, "utf8").trim().split(/\r?\n/).pop() + "\n");
+  addRow(salesCsv);
   const targets = JSON.parse(readFileSync(join(root, ".biforge", "publish", "targets.json"), "utf8"));
   const targetId = (Array.isArray(targets) ? targets : (targets.targets ?? Object.values(targets)))[0].id;
   const headless = spawnSync(exe, ["--run-scheduled", root, targetId], { env: { ...appEnv, BIFORGE_TEST_DEBUG_PORT: "" }, encoding: "utf8", timeout: 180000 });
@@ -157,7 +164,7 @@ try {
   mkdirSync(srcFolder, { recursive: true });
   const changed = join(srcFolder, "Sales.csv");
   copyFileSync(salesCsv, changed);
-  appendFileSync(changed, readFileSync(changed, "utf8").trim().split(/\r?\n/).pop() + "\n");
+  addRow(changed);
   await ssec.getByRole("button", { name: "Refresh now on the server" }).click();
   await ssec.getByText(/Reloaded \d+ tables; the report now answers with the new data/).waitFor({ timeout: 120000 });
   hist = await ssec.getByRole("list", { name: "Refresh history" }).innerText();

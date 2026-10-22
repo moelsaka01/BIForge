@@ -128,6 +128,21 @@ pub enum Transform {
     UnpivotOther { columns: Vec<String> },
     TransformText { columns: Vec<String>, op: String },
     Round { columns: Vec<String>, digits: i64 },
+    ReverseRows,
+    Transpose,
+    /// Removes `remove` rows after skipping `offset`, keeps `keep`, and repeats.
+    RemoveAlternateRows { offset: u64, remove: u64, keep: u64 },
+    MergeColumns { columns: Vec<String>, delimiter: String, new_name: String },
+    /// Applies a library function to each value of the columns: `function(_, args...)` (Text.*, Number.*, Date.*, DateTime.*, Time.*).
+    TransformColumn {
+        columns: Vec<String>,
+        function: String,
+        #[serde(default)]
+        args: Vec<serde_json::Value>,
+        #[serde(default)]
+        value_type: Option<String>,
+        label: String,
+    },
     /// Any M expression as a new step (the formula bar / "Add step").
     Custom { name: String, expr: String },
 }
@@ -426,6 +441,40 @@ impl Transform {
             Round { columns, digits } => {
                 let items: Vec<String> = columns.iter().map(|c| format!("{{{}, each Number.Round(_, {digits}), type number}}", m_text(c))).collect();
                 step("Rounded Off", format!("Table.TransformColumns({p}, {{{}}})", items.join(", ")))
+            }
+            ReverseRows => step("Reversed Rows", format!("Table.ReverseRows({p})")),
+            Transpose => step("Transposed Table", format!("Table.Transpose({p})")),
+            RemoveAlternateRows { offset, remove, keep } => {
+                if *remove == 0 || *keep == 0 {
+                    return Err("Enter how many rows to remove and how many to keep (both at least 1).".into());
+                }
+                step("Removed Alternate Rows", format!("Table.AlternateRows({p}, {offset}, {remove}, {keep})"))
+            }
+            MergeColumns { columns, delimiter, new_name } => {
+                if columns.len() < 2 {
+                    return Err("Choose at least two columns to merge.".into());
+                }
+                if new_name.trim().is_empty() {
+                    return Err("Enter a name for the merged column.".into());
+                }
+                step("Merged Columns", format!("Table.CombineColumns({p}, {}, Combiner.CombineTextByDelimiter({}, QuoteStyle.None), {})", list_text(columns), m_text(delimiter), m_text(new_name)))
+            }
+            TransformColumn { columns, function, args, value_type, label } => {
+                let ok = function.split('.').count() == 2
+                    && function.chars().all(|c| c.is_ascii_alphanumeric() || c == '.')
+                    && ["Text.", "Number.", "Date.", "DateTime.", "Time."].iter().any(|p| function.starts_with(p));
+                if !ok {
+                    return Err(format!("\"{function}\" is not a function a column can be transformed with."));
+                }
+                if columns.is_empty() {
+                    return Err("No column was chosen.".into());
+                }
+                let extra: Result<Vec<String>, String> = args.iter().map(|a| literal(a, None)).collect();
+                let extra = extra?;
+                let call = if extra.is_empty() { format!("{function}(_)") } else { format!("{function}(_, {})", extra.join(", ")) };
+                let ty = match value_type { Some(t) => format!(", {}", m_type(t)?), None => String::new() };
+                let items: Vec<String> = columns.iter().map(|c| format!("{{{}, each {call}{ty}}}", m_text(c))).collect();
+                step(label, format!("Table.TransformColumns({p}, {{{}}})", items.join(", ")))
             }
             Custom { name, expr } => step(name, expr.trim().to_string()),
         })

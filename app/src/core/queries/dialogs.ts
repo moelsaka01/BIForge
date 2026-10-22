@@ -45,7 +45,8 @@ export interface DialogContext {
 export type DialogKind =
   | "filter" | "keepTop" | "keepBottom" | "keepRange" | "removeTop" | "removeBottom" | "replace" | "split" | "group" | "merge"
   | "append" | "conditional" | "custom" | "chooseColumns" | "pivot" | "round" | "rename" | "newCsv" | "newExcel" | "newFolder"
-  | "enterData" | "customStep" | "indexCustom";
+  | "enterData" | "customStep" | "indexCustom" | "removeAlt" | "mergeColumns" | "extractFirst" | "extractLast" | "extractRange"
+  | "extractBefore" | "extractAfter" | "extractBetween";
 
 const NUMERIC = /^(TINYINT|SMALLINT|INTEGER|BIGINT|HUGEINT|UTINYINT|USMALLINT|UINTEGER|UBIGINT|FLOAT|DOUBLE|DECIMAL)/i;
 
@@ -466,6 +467,85 @@ export function dialogFor(kind: DialogKind, c: DialogContext): DialogDef {
           const columns = (v.columns as string[]) ?? [];
           if (!columns.length) throw new Error("Choose at least one column.");
           return { transform: { kind: "round", columns, digits: Number(v.digits ?? 0) } };
+        },
+      };
+    case "removeAlt":
+      return {
+        title: "Remove Alternate Rows",
+        submitLabel: "OK",
+        fields: [
+          { kind: "number", key: "first", label: "First row to remove", default: 1, min: 1 },
+          { kind: "number", key: "remove", label: "Number of rows to remove", default: 1, min: 1 },
+          { kind: "number", key: "keep", label: "Number of rows to keep", default: 1, min: 1 },
+        ],
+        build: (v) => {
+          const first = count(v.first, "The first row to remove");
+          if (first < 1) throw new Error("The first row to remove must be at least 1.");
+          return { transform: { kind: "removeAlternateRows", offset: first - 1, remove: count(v.remove, "The number of rows to remove"), keep: count(v.keep, "The number of rows to keep") } };
+        },
+      };
+    case "mergeColumns":
+      return {
+        title: "Merge Columns",
+        submitLabel: "OK",
+        fields: [
+          { kind: "multi", key: "columns", label: "Columns to merge", options: cols, default: c.selected },
+          { kind: "select", key: "separator", label: "Separator", options: [{ value: ",", label: "Comma" }, { value: ";", label: "Semicolon" }, { value: " ", label: "Space" }, { value: "\t", label: "Tab" }, { value: "", label: "None" }, { value: "custom", label: "Custom" }], default: "," },
+          { kind: "text", key: "custom", label: "Custom separator (when Custom is chosen)" },
+          { kind: "text", key: "name", label: "New column name", default: "Merged" },
+        ],
+        build: (v) => {
+          const columns = (v.columns as string[]) ?? [];
+          if (columns.length < 2) throw new Error("Choose at least two columns to merge.");
+          const sep = v.separator === "custom" ? String(v.custom ?? "") : String(v.separator ?? ",");
+          const name = String(v.name ?? "").trim();
+          if (!name) throw new Error("Enter a name for the merged column.");
+          return { transform: { kind: "mergeColumns", columns, delimiter: sep, newName: name } };
+        },
+      };
+    case "extractFirst":
+    case "extractLast":
+      return {
+        title: kind === "extractFirst" ? "Extract First Characters" : "Extract Last Characters",
+        submitLabel: "OK",
+        fields: [{ kind: "number", key: "count", label: "Count", default: 1, min: 0 }],
+        build: (v) => ({ transform: { kind: "transformColumn", columns: c.selected, function: kind === "extractFirst" ? "Text.Start" : "Text.End", args: [count(v.count, "The count")], valueType: "text", label: kind === "extractFirst" ? "Extracted First Characters" : "Extracted Last Characters" } }),
+      };
+    case "extractRange":
+      return {
+        title: "Extract Text Range",
+        submitLabel: "OK",
+        fields: [
+          { kind: "number", key: "start", label: "Starting index (0 is the first character)", default: 0, min: 0 },
+          { kind: "number", key: "count", label: "Number of characters", default: 1, min: 0 },
+        ],
+        build: (v) => ({ transform: { kind: "transformColumn", columns: c.selected, function: "Text.Middle", args: [count(v.start, "The starting index"), count(v.count, "The number of characters")], valueType: "text", label: "Extracted Text Range" } }),
+      };
+    case "extractBefore":
+    case "extractAfter":
+      return {
+        title: kind === "extractBefore" ? "Text Before Delimiter" : "Text After Delimiter",
+        submitLabel: "OK",
+        fields: [{ kind: "text", key: "delimiter", label: "Delimiter" }],
+        build: (v) => {
+          const d = String(v.delimiter ?? "");
+          if (!d) throw new Error("Enter the delimiter.");
+          return { transform: { kind: "transformColumn", columns: c.selected, function: kind === "extractBefore" ? "Text.BeforeDelimiter" : "Text.AfterDelimiter", args: [d], valueType: "text", label: kind === "extractBefore" ? "Extracted Text Before Delimiter" : "Extracted Text After Delimiter" } };
+        },
+      };
+    case "extractBetween":
+      return {
+        title: "Text Between Delimiters",
+        submitLabel: "OK",
+        fields: [
+          { kind: "text", key: "start", label: "Start delimiter" },
+          { kind: "text", key: "end", label: "End delimiter" },
+        ],
+        build: (v) => {
+          const s = String(v.start ?? "");
+          const e = String(v.end ?? "");
+          if (!s || !e) throw new Error("Enter both delimiters.");
+          return { transform: { kind: "transformColumn", columns: c.selected, function: "Text.BetweenDelimiters", args: [s, e], valueType: "text", label: "Extracted Text Between Delimiters" } };
         },
       };
     case "rename":

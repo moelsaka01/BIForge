@@ -20,7 +20,11 @@ const SCALAR_FNS: &[&str] = &[
     "Splitter.SplitTextByDelimiter", "Splitter.SplitTextByAnyDelimiter", "Splitter.SplitTextByPositions",
     "Splitter.SplitTextByLengths", "Splitter.SplitTextByRepeatedLengths", "Splitter.SplitTextByEachDelimiter",
     "Splitter.SplitTextByCharacterTransition", "Replacer.ReplaceText", "Replacer.ReplaceValue", "Comparer.Ordinal",
-    "Comparer.OrdinalIgnoreCase",
+    "Comparer.OrdinalIgnoreCase", "Text.BeforeDelimiter", "Text.AfterDelimiter", "Text.BetweenDelimiters", "Number.Ln",
+    "Number.Log10", "Number.Exp", "Number.Sin", "Number.Cos", "Number.Tan", "Number.IsEven", "Number.IsOdd", "Date.DayOfYear",
+    "Date.MonthName", "Date.DayOfWeekName", "Date.EndOfYear", "Date.StartOfQuarter", "Date.EndOfQuarter", "Date.DaysInMonth",
+    "Date.AddQuarters", "Date.AddWeeks", "DateTime.Hour", "DateTime.Minute", "DateTime.Second", "Time.Hour", "Time.Minute",
+    "Time.Second", "Combiner.CombineTextByDelimiter",
 ];
 
 pub fn is_builtin(name: &str) -> bool {
@@ -176,6 +180,26 @@ pub fn call(ev: &Ev, name: &str, args: Vec<Value>) -> R<Value> {
         "Text.Reverse" => sql(format!("reverse({})", s(0)?)),
         "Text.Repeat" => sql(format!("repeat({}, {})", s(0)?, s(1)?)),
         "Text.PositionOf" => sql(format!("(instr({}, {}) - 1)", s(0)?, s(1)?)),
+        // the first occurrence of the delimiter; text without it gives an empty text
+        "Text.BeforeDelimiter" | "Text.AfterDelimiter" => {
+            if a.len() > 2 {
+                return Err(MError::unsupported(format!("{name} with an occurrence or a direction is not supported; use the first occurrence.")));
+            }
+            let (x, d) = (s(0)?, s(1)?);
+            if name == "Text.BeforeDelimiter" {
+                sql(format!("(CASE WHEN instr({x}, {d}) = 0 THEN '' ELSE left({x}, instr({x}, {d}) - 1) END)"))
+            } else {
+                sql(format!("(CASE WHEN instr({x}, {d}) = 0 THEN '' ELSE substring({x}, instr({x}, {d}) + length({d})) END)"))
+            }
+        }
+        "Text.BetweenDelimiters" => {
+            if a.len() > 3 {
+                return Err(MError::unsupported("Text.BetweenDelimiters with occurrences or directions is not supported; use the first occurrences."));
+            }
+            let (x, d1, d2) = (s(0)?, s(1)?, s(2)?);
+            let rest = format!("substring({x}, instr({x}, {d1}) + length({d1}))");
+            sql(format!("(CASE WHEN instr({x}, {d1}) = 0 OR instr({rest}, {d2}) = 0 THEN '' ELSE left({rest}, instr({rest}, {d2}) - 1) END)"))
+        }
         "Text.Combine" => {
             let Value::List(items) = arg(a, 0, name)? else {
                 return Err(MError::expr("Text.Combine needs a list of text."));
@@ -210,6 +234,14 @@ pub fn call(ev: &Ev, name: &str, args: Vec<Value>) -> R<Value> {
         "Number.Abs" => sql(format!("abs({})", s(0)?)),
         "Number.Sign" => sql(format!("sign({})", s(0)?)),
         "Number.Sqrt" => sql(format!("sqrt({})", s(0)?)),
+        "Number.Ln" => sql(format!("ln({})", s(0)?)),
+        "Number.Log10" => sql(format!("log10({})", s(0)?)),
+        "Number.Exp" => sql(format!("exp({})", s(0)?)),
+        "Number.Sin" => sql(format!("sin({})", s(0)?)),
+        "Number.Cos" => sql(format!("cos({})", s(0)?)),
+        "Number.Tan" => sql(format!("tan({})", s(0)?)),
+        "Number.IsEven" => sql(format!("(CAST({} AS BIGINT) % 2 = 0)", s(0)?)),
+        "Number.IsOdd" => sql(format!("(CAST({} AS BIGINT) % 2 <> 0)", s(0)?)),
         "Number.Power" => sql(format!("power({}, {})", s(0)?, s(1)?)),
         "Number.Mod" => sql(format!("({} % {})", s(0)?, s(1)?)),
         "Number.IntegerDivide" => sql(format!("CAST(trunc({} / CAST({} AS DOUBLE)) AS BIGINT)", s(0)?, s(1)?)),
@@ -235,6 +267,18 @@ pub fn call(ev: &Ev, name: &str, args: Vec<Value>) -> R<Value> {
             };
             sql(format!("((dayofweek({}) - {first} + 7) % 7)", s(0)?))
         }
+        "Date.DayOfYear" => sql(format!("dayofyear({})", s(0)?)),
+        "Date.MonthName" => sql(format!("monthname({})", s(0)?)),
+        "Date.DayOfWeekName" => sql(format!("dayname({})", s(0)?)),
+        "Date.EndOfYear" => sql(format!("CAST(date_trunc('year', {}) + INTERVAL 1 YEAR - INTERVAL 1 DAY AS DATE)", s(0)?)),
+        "Date.StartOfQuarter" => sql(format!("CAST(date_trunc('quarter', {}) AS DATE)", s(0)?)),
+        "Date.EndOfQuarter" => sql(format!("CAST(date_trunc('quarter', {}) + INTERVAL 3 MONTH - INTERVAL 1 DAY AS DATE)", s(0)?)),
+        "Date.DaysInMonth" => sql(format!("day(last_day(CAST({} AS DATE)))", s(0)?)),
+        "Date.AddQuarters" => sql(format!("({} + to_months(3 * CAST({} AS INTEGER)))", s(0)?, s(1)?)),
+        "Date.AddWeeks" => sql(format!("({} + to_days(7 * CAST({} AS INTEGER)))", s(0)?, s(1)?)),
+        "DateTime.Hour" | "Time.Hour" => sql(format!("hour({})", s(0)?)),
+        "DateTime.Minute" | "Time.Minute" => sql(format!("minute({})", s(0)?)),
+        "DateTime.Second" | "Time.Second" => sql(format!("CAST(floor(second({})) AS BIGINT)", s(0)?)),
         "Date.From" => sql(format!("CAST({} AS DATE)", s(0)?)),
         "DateTime.Date" => sql(format!("CAST({} AS DATE)", s(0)?)),
         "DateTime.From" => sql(format!("CAST({} AS TIMESTAMP)", s(0)?)),
@@ -375,7 +419,7 @@ pub fn call(ev: &Ev, name: &str, args: Vec<Value>) -> R<Value> {
             _ => Err(MError::expr("A list is needed.")),
         },
         // ---- splitters, replacers, comparers (used as values) ----
-        n if n.starts_with("Splitter.") => Ok(Value::Native(n.to_string(), args)),
+        n if n.starts_with("Splitter.") || n.starts_with("Combiner.") => Ok(Value::Native(n.to_string(), args)),
         _ => Err(MError::unsupported(format!(
             "The function {name} cannot be used on its own here, or is not supported by BIForge's query engine yet."
         ))),
@@ -441,7 +485,7 @@ fn aggregate(name: &str, v: &Value) -> R<Value> {
 /// Functions the library knows by name but that BIForge's engine reports as not supported.
 pub const NOT_SUPPORTED: &[&str] = &[
     "Web.Contents", "Sql.Database", "PostgreSQL.Database", "OData.Feed", "Table.RemoveRowsWithErrors", "Table.SelectRowsWithErrors",
-    "Table.ReplaceErrorValues", "Table.Transpose", "Table.CombineColumns", "Table.ExpandRecordColumn", "Table.ExpandListColumn",
+    "Table.ReplaceErrorValues", "Table.ExpandRecordColumn", "Table.ExpandListColumn",
     "Table.Profile", "Table.TransformColumnNames", "#time", "#duration", "Splitter.SplitTextByEachDelimiter",
     "Splitter.SplitTextByCharacterTransition",
 ];

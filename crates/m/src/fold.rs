@@ -9,7 +9,7 @@ pub const TABLE_FNS: &[&str] = &[
     "Csv.Document", "Excel.Workbook", "Parquet.Document", "Json.Document", "File.Contents", "Folder.Files", "Folder.Contents",
     "Odbc.Query", "Table.FromRecords", "#table", "Table.FromRows", "Table.PromoteHeaders", "Table.DemoteHeaders",
     "Table.SelectColumns", "Table.RemoveColumns", "Table.ReorderColumns", "Table.RenameColumns", "Table.DuplicateColumn",
-    "Table.TransformColumnTypes", "Table.TransformColumns", "Table.SelectRows", "Table.Sort", "Table.FirstN", "Table.LastN",
+    "Table.TransformColumnTypes", "Table.TransformColumns", "Table.ReverseRows", "Table.AlternateRows", "Table.SelectRows", "Table.Sort", "Table.FirstN", "Table.LastN",
     "Table.Skip", "Table.RemoveFirstN", "Table.RemoveLastN", "Table.Range", "Table.RemoveRows", "Table.Distinct",
     "Table.ReplaceValue", "Table.SplitColumn", "Table.AddColumn", "Table.AddIndexColumn", "Table.Group", "Table.Pivot",
     "Table.Unpivot", "Table.UnpivotOtherColumns", "Table.FillDown", "Table.FillUp", "Table.Combine", "Table.NestedJoin",
@@ -433,7 +433,11 @@ impl<'a> Ev<'a> {
                     "{name} is not supported: BIForge's query engine has no cell-level errors (a failed conversion fails the whole step)."
                 )))
             }
-            "Table.Transpose" | "Table.CombineColumns" | "Table.ExpandRecordColumn" | "Table.ExpandListColumn" | "Table.Profile" | "Table.TransformColumnNames" => {
+            "Table.ReverseRows" => self.reverse_rows(a)?,
+            "Table.AlternateRows" => self.alternate_rows(a)?,
+            "Table.Transpose" => self.transpose(a)?,
+            "Table.CombineColumns" => self.combine_columns(a)?,
+            "Table.ExpandRecordColumn" | "Table.ExpandListColumn" | "Table.Profile" | "Table.TransformColumnNames" => {
                 return Err(MError::unsupported(format!("{name} is not supported yet.")))
             }
             _ => return Ok(None),
@@ -942,6 +946,97 @@ impl<'a> Ev<'a> {
             qi(&t.name),
             cond
         );
+        Ok(Value::Table(self.derive(&[&t], body)?))
+    }
+
+    fn reverse_rows(&self, a: &[Value]) -> R<Value> {
+        let t = table_arg(a, 0, "Table.ReverseRows")?;
+        self.no_nested(&t)?;
+        let body = format!("SELECT row_number() OVER (ORDER BY {o} DESC) AS {o}, {} FROM {}", Self::col_list_sql(&t), qi(&t.name), o = qi(ORD));
+        Ok(Value::Table(self.derive(&[&t], body)?))
+    }
+
+    /// Table.AlternateRows(table, offset, skip, take): keeps the first `offset` rows, then repeatedly drops `skip` rows and keeps `take`.
+    fn alternate_rows(&self, a: &[Value]) -> R<Value> {
+        let t = table_arg(a, 0, "Table.AlternateRows")?;
+        self.no_nested(&t)?;
+        let n = |i: usize| -> R<i64> {
+            let v = num_arg(arg(a, i, "Table.AlternateRows")?, "The row count")?;
+            if v < 0.0 {
+                return Err(MError::expr("The row counts cannot be negative."));
+            }
+            Ok(v as i64)
+        };
+        let (offset, skip, take) = (n(1)?, n(2)?, n(3)?);
+        if skip + take == 0 {
+            return Err(MError::expr("Table.AlternateRows needs a skip or a take count above zero."));
+        }
+        let body = format!(
+            "SELECT {o}, {cols} FROM (SELECT *, row_number() OVER (ORDER BY {o}) AS \"__rn\" FROM {t}) AS w WHERE \"__rn\" <= {offset} OR ((\"__rn\" - {offset} - 1) % {period}) >= {skip}",
+            o = qi(ORD),
+            cols = Self::col_list_sql(&t),
+            t = qi(&t.name),
+            period = skip + take
+        );
+        Ok(Value::Table(self.derive(&[&t], body)?))
+    }
+
+    /// Rows become columns named Column1, Column2, ... (every value as text; at most 500 rows can become columns).
+    fn transpose(&self, a: &[Value]) -> R<Value> {
+        let t = table_arg(a, 0, "Table.Transpose")?;
+        self.no_nested(&t)?;
+        let count_sql = format!("{}SELECT count(*) FROM {}", t.prefix(), qi(&t.name));
+        let rows = self.be.rows(&count_sql, 1).map_err(MError::expr)?;
+        let n: i64 = rows[0][0].as_deref().unwrap_or("0").parse().unwrap_or(0);
+        if n > 500 {
+            return Err(MError::unsupported(format!("Table.Transpose makes one column for each row, and this table has {n} rows (the limit is 500).")));
+        }
+        let cols: Vec<String> = t.plain_cols().map(|c| c.name.clone()).collect();
+        if cols.is_empty() {
+            return Err(MError::expr("The table has no columns to transpose."));
+        }
+        let n = n.max(1);
+        let pick = |c: &str| -> String { (1..=n).map(|k| format!("max(CASE WHEN \"__rn\" = {k} THEN CAST({} AS VARCHAR) END) AS {}", qi(c), qi(&format!("Column{k}")))).collect::<Vec<_>>().join(", ") };
+        let numbered = format!("(SELECT *, row_number() OVER (ORDER BY {}) AS \"__rn\" FROM {}) AS w", qi(ORD), qi(&t.name));
+        let parts: Vec<String> = cols.iter().enumerate().map(|(j, c)| format!("SELECT CAST({} AS BIGINT) AS {}, {} FROM {numbered}", j + 1, qi(ORD), pick(c))).collect();
+        Ok(Value::Table(self.derive(&[&t], parts.join(" UNION ALL "))?))
+    }
+
+    /// Table.CombineColumns(table, columns, Combiner.CombineTextByDelimiter(delimiter, ...), newName): the new column takes the
+    /// place of the first merged column; an empty value counts as empty text ("a,,c").
+    fn combine_columns(&self, a: &[Value]) -> R<Value> {
+        let t = table_arg(a, 0, "Table.CombineColumns")?;
+        self.no_nested(&t)?;
+        let cols = text_list(arg(a, 1, "Table.CombineColumns")?, "The columns")?;
+        self.need(&t, &cols)?;
+        let Value::Native(f, fargs) = arg(a, 2, "Table.CombineColumns")? else {
+            return Err(MError::unsupported("Table.CombineColumns needs Combiner.CombineTextByDelimiter."));
+        };
+        if f != "Combiner.CombineTextByDelimiter" {
+            return Err(MError::unsupported(format!("{f} is not supported; use Combiner.CombineTextByDelimiter.")));
+        }
+        let Some(Value::Text(delim)) = fargs.first() else { return Err(MError::expr("The delimiter must be text.")) };
+        let Value::Text(new_name) = arg(a, 3, "Table.CombineColumns")? else { return Err(MError::expr("The new column name must be text.")) };
+        if cols.is_empty() {
+            return Err(MError::expr("Choose the columns to merge."));
+        }
+        if t.col(new_name).is_some() && !cols.contains(new_name) {
+            return Err(MError::expr(format!("The column \"{new_name}\" already exists.")));
+        }
+        let joined = format!("concat_ws({}, {})", ql(delim), cols.iter().map(|c| format!("coalesce(CAST({} AS VARCHAR), '')", qi(c))).collect::<Vec<_>>().join(", "));
+        let mut sel = Vec::new();
+        let mut placed = false;
+        for c in t.plain_cols() {
+            if cols.contains(&c.name) {
+                if !placed {
+                    sel.push(format!("{joined} AS {}", qi(new_name)));
+                    placed = true;
+                }
+            } else {
+                sel.push(qi(&c.name));
+            }
+        }
+        let body = format!("SELECT {}, {} FROM {}", qi(ORD), sel.join(", "), qi(&t.name));
         Ok(Value::Table(self.derive(&[&t], body)?))
     }
 

@@ -194,3 +194,72 @@ fn folder_combine_template_runs() {
     assert_eq!(c, ["k", "v"]);
     assert_eq!(rows(&r), ["1|x", "2|y"]);
 }
+
+#[test]
+fn reverse_alternate_transpose_and_merge_columns() {
+    let (_, r, _) = chain(BASE, &[r#"{"kind":"reverseRows"}"#], &[]);
+    assert_eq!(r.iter().map(|x| x[0].as_str()).collect::<Vec<_>>(), ["3", "3", "2", "1"]);
+    // remove 1 row, keep 1, starting with the first row: keeps rows 2 and 4
+    let (_, r, _) = chain(BASE, &[r#"{"kind":"removeAlternateRows","offset":0,"remove":1,"keep":1}"#], &[]);
+    assert_eq!(r.iter().map(|x| x[0].as_str()).collect::<Vec<_>>(), ["2", "3"]);
+    // keep the first row, then remove 2, keep 1: rows 1 and 4
+    let (_, r, _) = chain(BASE, &[r#"{"kind":"removeAlternateRows","offset":1,"remove":2,"keep":1}"#], &[]);
+    assert_eq!(r.iter().map(|x| x[0].as_str()).collect::<Vec<_>>(), ["1", "3"]);
+    assert!(apply_transform(BASE, None, &tr(r#"{"kind":"removeAlternateRows","offset":0,"remove":0,"keep":1}"#)).is_err());
+
+    // rows become columns (text), the old columns become rows
+    let small = "let Source = #table({\"A\",\"B\"}, {{\"1\",\"x\"},{\"2\",\"y\"},{\"3\",\"z\"}}) in Source";
+    let (c, r, _) = chain(small, &[r#"{"kind":"transpose"}"#], &[]);
+    assert_eq!(c, ["Column1", "Column2", "Column3"]);
+    assert_eq!(rows(&r), ["1|2|3", "x|y|z"]);
+    let (c, r, _) = chain(small, &[r#"{"kind":"transpose"}"#, r#"{"kind":"promoteHeaders"}"#], &[]);
+    assert_eq!(c, ["1", "2", "3"]);
+    assert_eq!(rows(&r), ["x|y|z"]);
+
+    // merge: the new column sits where the first merged column was; an empty value stays an empty part
+    let (c, r, text) = chain(BASE, &[r#"{"kind":"mergeColumns","columns":["Name","Qty"],"delimiter":" / ","newName":"NameQty"}"#], &[]);
+    assert_eq!(c, ["Id", "NameQty", "Day"]);
+    assert_eq!(r[1][1], "BOB / ");
+    assert!(text.contains("Table.CombineColumns") && text.contains("Combiner.CombineTextByDelimiter"));
+    assert!(apply_transform(BASE, None, &tr(r#"{"kind":"mergeColumns","columns":["Name"],"delimiter":",","newName":"X"}"#)).is_err());
+}
+
+#[test]
+fn extract_date_and_number_functions_on_a_column() {
+    let one = |col: &str, f: &str, args: &str, ty: &str| {
+        let t = format!(r#"{{"kind":"transformColumn","columns":["{col}"],"function":"{f}","args":[{args}],"valueType":{ty},"label":"Step"}}"#);
+        let (_, r, _) = chain(BASE, &[TYPED, &t], &[]);
+        let idx = ["Id", "Name", "Qty", "Day"].iter().position(|x| *x == col).unwrap();
+        r.iter().map(|x| x[idx].clone()).collect::<Vec<_>>()
+    };
+    assert_eq!(one("Name", "Text.Length", "", "\"int64\""), ["6", "3", "2", "2"]);
+    assert_eq!(one("Name", "Text.Start", "2", "\"text\""), ["  ", "BO", "cy", "cy"]);
+    assert_eq!(one("Name", "Text.End", "2", "\"text\""), ["n ", "OB", "cy", "cy"]);
+    assert_eq!(one("Name", "Text.Middle", "1, 2", "\"text\""), [" a", "OB", "y", "y"]);
+    assert_eq!(one("Day", "Date.Year", "", "\"int64\""), ["2024", "2024", "2024", "2024"]);
+    assert_eq!(one("Day", "Date.MonthName", "", "\"text\""), ["January", "February", "February", "February"]);
+    assert_eq!(one("Day", "Date.DayOfWeekName", "", "\"text\""), ["Friday", "Saturday", "Sunday", "Sunday"]);
+    assert_eq!(one("Day", "Date.DayOfYear", "", "\"int64\""), ["5", "41", "42", "42"]);
+    assert_eq!(one("Day", "Date.EndOfQuarter", "", "\"date\""), ["2024-03-31", "2024-03-31", "2024-03-31", "2024-03-31"]);
+    assert_eq!(one("Day", "Date.StartOfQuarter", "", "\"date\""), ["2024-01-01", "2024-01-01", "2024-01-01", "2024-01-01"]);
+    assert_eq!(one("Day", "Date.EndOfYear", "", "\"date\""), ["2024-12-31", "2024-12-31", "2024-12-31", "2024-12-31"]);
+    assert_eq!(one("Day", "Date.DaysInMonth", "", "\"int64\""), ["31", "29", "29", "29"]);
+    assert_eq!(one("Day", "Date.AddQuarters", "1", "\"date\""), ["2024-04-05", "2024-05-10", "2024-05-11", "2024-05-11"]);
+    assert_eq!(one("Qty", "Number.Abs", "", "\"number\""), ["10", "~", "7.5", "7.5"]);
+    assert_eq!(one("Qty", "Number.Sqrt", "", "\"number\"")[0].starts_with("3.162"), true);
+    assert_eq!(one("Id", "Number.IsEven", "", "\"logical\""), ["false", "true", "false", "false"]);
+    assert_eq!(one("Qty", "Number.Exp", "", "\"number\"")[0].starts_with("22026.46"), true);
+
+    // text before / after / between the first delimiter
+    let t = "let Source = #table({\"P\"}, {{\"ab-cd-ef\"},{\"none\"},{\"[x] tail\"}}) in Source";
+    let run = |f: &str, args: &str| {
+        let tt = format!(r#"{{"kind":"transformColumn","columns":["P"],"function":"{f}","args":[{args}],"label":"S"}}"#);
+        chain(t, &[&tt], &[]).1.iter().map(|x| x[0].clone()).collect::<Vec<_>>()
+    };
+    assert_eq!(run("Text.BeforeDelimiter", "\"-\""), ["ab", "", "[x] tail"].map(String::from).map(|s| if s == "[x] tail" { String::new() } else { s }));
+    assert_eq!(run("Text.AfterDelimiter", "\"-\""), ["cd-ef", "", ""]);
+    assert_eq!(run("Text.BetweenDelimiters", "\"[\", \"]\""), ["", "", "x"]);
+    // anything that is not a library function of those families is refused
+    assert!(apply_transform(BASE, None, &tr(r#"{"kind":"transformColumn","columns":["Name"],"function":"File.Contents","label":"x"}"#)).is_err());
+    assert!(apply_transform(BASE, None, &tr(r#"{"kind":"transformColumn","columns":["Name"],"function":"Text.Upper(1); x","label":"x"}"#)).is_err());
+}

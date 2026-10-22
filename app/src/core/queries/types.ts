@@ -123,6 +123,11 @@ export type Transform =
   | { kind: "unpivotOther"; columns: string[] }
   | { kind: "transformText"; columns: string[]; op: "upper" | "lower" | "trim" | "clean" }
   | { kind: "round"; columns: string[]; digits: number }
+  | { kind: "reverseRows" }
+  | { kind: "transpose" }
+  | { kind: "removeAlternateRows"; offset: number; remove: number; keep: number }
+  | { kind: "mergeColumns"; columns: string[]; delimiter: string; newName: string }
+  | { kind: "transformColumn"; columns: string[]; function: string; args?: (string | number)[]; valueType?: DataTypeName; label: string }
   | { kind: "custom"; name: string; expr: string };
 
 /** The M engine and M text tools as the UI sees them. The real implementation calls Tauri commands. */

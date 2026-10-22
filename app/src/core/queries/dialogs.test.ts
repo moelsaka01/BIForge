@@ -177,6 +177,33 @@ describe("ribbon", () => {
     expect(item("type.int64").action.type === "transform" && (item("type.int64").action as { build: (c: RibbonContext) => unknown }).build(rc({ selected: ["Name"] }))).toEqual({ kind: "changeType", changes: [{ column: "Name", type: "int64" }] });
   });
 
+  it("the new transforms: reverse, transpose, alternate rows, merge, extract, date and number functions", () => {
+    const run = (id: string, selected: string[] = ["Name"]) => {
+      const a = item(id).action;
+      if (a.type !== "transform") throw new Error(`${id} is not a transform`);
+      return a.build(rc({ selected }));
+    };
+    expect(run("t.reverse")).toEqual({ kind: "reverseRows" });
+    expect(run("t.transpose")).toEqual({ kind: "transpose" });
+    expect(run("t.ext.length")).toMatchObject({ kind: "transformColumn", columns: ["Name"], function: "Text.Length", valueType: "int64" });
+    expect(run("t.date.monthname", ["Day"])).toMatchObject({ function: "Date.MonthName", valueType: "text" });
+    expect(run("t.sci.sqrt", ["Amount"])).toMatchObject({ function: "Number.Sqrt" });
+    // every Extract / Date / Number menu entry is a real, allowed library function
+    for (const i of all().filter((x) => /^t\.(ext|date|time|std|sci)\./.test(x.id))) {
+      const a = i.action;
+      if (a.type === "transform") expect((a.build(rc({ selected: ["X"] })) as { function: string }).function).toMatch(/^(Text|Number|Date|DateTime|Time)\.[A-Za-z0-9]+$/);
+    }
+    expect(transformOf(build("removeAlt", { first: "1", remove: "2", keep: "3" }))).toEqual({ kind: "removeAlternateRows", offset: 0, remove: 2, keep: 3 });
+    expect(() => build("removeAlt", { first: "0", remove: 1, keep: 1 })).toThrow("at least 1");
+    expect(transformOf(build("mergeColumns", { columns: ["Id", "Name"], separator: "custom", custom: " - ", name: "Both" }))).toEqual({ kind: "mergeColumns", columns: ["Id", "Name"], delimiter: " - ", newName: "Both" });
+    expect(() => build("mergeColumns", { columns: ["Id"], separator: ",", name: "x" })).toThrow("at least two");
+    expect(() => build("mergeColumns", { columns: ["Id", "Name"], separator: ",", name: " " })).toThrow("name");
+    expect(transformOf(build("extractFirst", { count: "3" }))).toMatchObject({ function: "Text.Start", args: [3] });
+    expect(transformOf(build("extractRange", { start: "2", count: "4" }))).toMatchObject({ function: "Text.Middle", args: [2, 4] });
+    expect(transformOf(build("extractBetween", { start: "[", end: "]" }))).toMatchObject({ function: "Text.BetweenDelimiters", args: ["[", "]"] });
+    expect(() => build("extractBefore", { delimiter: "" })).toThrow("delimiter");
+  });
+
   it("availability depends on the selection and column types, with a reason", () => {
     expect(itemState(item("removeColumns.sel"), rc())).toEqual({ enabled: false, reason: "Select a column first." });
     expect(itemState(item("removeColumns.sel"), rc({ selected: ["Id"] })).enabled).toBe(true);
@@ -188,7 +215,8 @@ describe("ribbon", () => {
     expect(itemState(item("promote"), rc({ hasTable: false })).reason).toContain("not a table");
     expect(itemState(item("promote"), rc({ hasQuery: false })).reason).toBe("Select a query first.");
     expect(itemState(item("closeApply"), rc({ hasQuery: false })).enabled).toBe(true);
-    expect(itemState(item("t.transpose"), rc({ selected: ["Id"] }))).toEqual({ enabled: false, reason: "Not implemented in BIForge yet." });
+    expect(itemState(item("t.transpose"), rc({ selected: ["Id"] })).enabled).toBe(true);
+    expect(itemState(item("t.duration"), rc({ selected: ["Id"] }))).toEqual({ enabled: false, reason: "Not implemented in BIForge yet." });
     // a menu button is available when one of its entries is
     expect(itemState(item("dataType"), rc()).enabled).toBe(false);
     expect(itemState(item("dataType"), rc({ selected: ["Id"] })).enabled).toBe(true);
@@ -206,7 +234,8 @@ describe("M language", () => {
       expect(re instanceof RegExp).toBe(true);
     }
     expect(SUPPORTED_FUNCTIONS).toContain("Table.SelectRows");
-    expect(SUPPORTED_FUNCTIONS).not.toContain("Table.Transpose");
+    expect(SUPPORTED_FUNCTIONS).toContain("Table.Transpose");
+    expect(SUPPORTED_FUNCTIONS).not.toContain("Table.Profile");
   });
 
   it("completions: functions, steps, queries, columns inside [ ], nothing inside text", () => {

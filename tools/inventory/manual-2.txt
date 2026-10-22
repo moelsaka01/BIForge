@@ -259,7 +259,7 @@ N | Properties
 D | Advanced editor
 N | Manage (delete, duplicate, reference)
 D | Choose columns / Remove columns
-D | Keep rows (top, bottom, range, duplicates, errors) / Remove rows (top, bottom, alternate, duplicates, blank, errors)
+P | Keep rows (top, bottom, range, duplicates, errors) / Remove rows (top, bottom, alternate, duplicates, blank, errors)
 D | Sort ascending / descending
 D | Split column
 D | Group by
@@ -283,8 +283,8 @@ D | Pivot column / Unpivot columns / Unpivot other / Unpivot selected
 N | Move (to beginning, left, right, to end)
 N | Convert to list
 N | Format: lowercase, UPPERCASE, Capitalize each word, Trim, Clean, Add prefix, Add suffix
-N | Merge columns
-N | Extract: length, first characters, last characters, range, text before/after/between delimiter
+D | Merge columns
+D | Extract: length, first characters, last characters, range, text before/after/between delimiter
 N | Parse: JSON, XML
 N | Statistics: sum, min, max, median, average, count values, count distinct, standard deviation
 N | Standard: add, multiply, subtract, divide, integer-divide, modulo, percentage, percent of

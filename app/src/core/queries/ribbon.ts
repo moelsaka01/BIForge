@@ -1,7 +1,7 @@
 // The Power Query editor ribbon as data: tabs, groups and buttons (labels follow the editor's command inventory in
 // research/ui-ribbon-commands.md). A button either opens a dialog, runs a transform on the selected columns, runs a
 // command, or is listed as not implemented (shown disabled with a tooltip so the gap is visible).
-import type { StepColumn, Transform } from "./types";
+import type { DataTypeName, StepColumn, Transform } from "./types";
 import { DATA_TYPES, isTextType, valueTypeOf, type DialogKind } from "./dialogs";
 
 export interface RibbonContext {
@@ -47,6 +47,13 @@ export interface RibbonTab {
 
 const tf = (build: (c: RibbonContext) => Transform): RibbonAction => ({ type: "transform", build });
 const dlg = (dialog: DialogKind): RibbonAction => ({ type: "dialog", dialog });
+/** A button that applies a library function to each value of the selected columns, in place. */
+const colFn = (id: string, label: string, fn: string, step: string, valueType: DataTypeName): RibbonItem => ({
+  id,
+  label,
+  need: "columns",
+  action: tf((c) => ({ kind: "transformColumn", columns: c.selected, function: fn, valueType, label: step })),
+});
 const todo = (id: string, label: string, need: Need = "table"): RibbonItem => ({ id, label, need, action: { type: "none" }, notImplemented: true });
 
 const typeMenu: RibbonItem[] = DATA_TYPES.map((t) => ({
@@ -167,7 +174,7 @@ export const RIBBON: RibbonTab[] = [
             menu: [
               { id: "remove.top", label: "Remove Top Rows", need: "table", action: dlg("removeTop") },
               { id: "remove.bottom", label: "Remove Bottom Rows", need: "table", action: dlg("removeBottom") },
-              { id: "remove.alt", label: "Remove Alternate Rows", need: "table", action: { type: "none" }, notImplemented: true },
+              { id: "remove.alt", label: "Remove Alternate Rows", need: "table", action: dlg("removeAlt") },
               { id: "remove.dups", label: "Remove Duplicates", need: "columns", action: tf((c) => ({ kind: "removeDuplicates", columns: c.selected })) },
               {
                 id: "remove.blank",
@@ -215,8 +222,8 @@ export const RIBBON: RibbonTab[] = [
           { id: "t.group", label: "Group By", need: "table", action: dlg("group") },
           { id: "t.promote", label: "Use First Row as Headers", need: "table", action: tf(() => ({ kind: "promoteHeaders" })) },
           { id: "t.demote", label: "Use Headers as First Row", need: "table", action: tf(() => ({ kind: "demoteHeaders" })) },
-          todo("t.transpose", "Transpose"),
-          todo("t.reverse", "Reverse Rows"),
+          { id: "t.transpose", label: "Transpose", need: "table", action: tf(() => ({ kind: "transpose" })) },
+          { id: "t.reverse", label: "Reverse Rows", need: "table", action: tf(() => ({ kind: "reverseRows" })) },
           todo("t.count", "Count Rows"),
         ],
       },
@@ -259,8 +266,22 @@ export const RIBBON: RibbonTab[] = [
         items: [
           { id: "t.split", label: "Split Column", need: "column", action: dlg("split") },
           { id: "t.format", label: "Format", need: "textColumn", action: { type: "none" }, menu: formatItems },
-          todo("t.merge", "Merge Columns", "columns"),
-          todo("t.extract", "Extract", "textColumn"),
+          { id: "t.merge", label: "Merge Columns", need: "columns", action: dlg("mergeColumns") },
+          {
+            id: "t.extract",
+            label: "Extract",
+            need: "textColumn",
+            action: { type: "none" },
+            menu: [
+              colFn("t.ext.length", "Length", "Text.Length", "Extracted Text Length", "int64"),
+              { id: "t.ext.first", label: "First Characters", need: "textColumn", action: dlg("extractFirst") },
+              { id: "t.ext.last", label: "Last Characters", need: "textColumn", action: dlg("extractLast") },
+              { id: "t.ext.range", label: "Range", need: "textColumn", action: dlg("extractRange") },
+              { id: "t.ext.before", label: "Text Before Delimiter", need: "textColumn", action: dlg("extractBefore") },
+              { id: "t.ext.after", label: "Text After Delimiter", need: "textColumn", action: dlg("extractAfter") },
+              { id: "t.ext.between", label: "Text Between Delimiters", need: "textColumn", action: dlg("extractBetween") },
+            ],
+          },
           todo("t.parse", "Parse", "textColumn"),
         ],
       },
@@ -270,14 +291,70 @@ export const RIBBON: RibbonTab[] = [
         items: [
           { id: "t.round", label: "Round", need: "numberColumn", action: dlg("round") },
           todo("t.stats", "Statistics", "numberColumn"),
-          todo("t.standard", "Standard", "numberColumn"),
-          todo("t.scientific", "Scientific", "numberColumn"),
+          {
+            id: "t.standard",
+            label: "Standard",
+            need: "numberColumn",
+            action: { type: "none" },
+            menu: [colFn("t.std.abs", "Absolute Value", "Number.Abs", "Calculated Absolute Value", "number"), colFn("t.std.even", "Is Even", "Number.IsEven", "Calculated Is Even", "logical"), colFn("t.std.odd", "Is Odd", "Number.IsOdd", "Calculated Is Odd", "logical")],
+          },
+          {
+            id: "t.scientific",
+            label: "Scientific",
+            need: "numberColumn",
+            action: { type: "none" },
+            menu: [
+              colFn("t.sci.sqrt", "Square Root", "Number.Sqrt", "Calculated Square Root", "number"),
+              colFn("t.sci.exp", "Exponent", "Number.Exp", "Calculated Exponent", "number"),
+              colFn("t.sci.ln", "Natural Logarithm", "Number.Ln", "Calculated Natural Logarithm", "number"),
+              colFn("t.sci.log10", "Logarithm", "Number.Log10", "Calculated Logarithm", "number"),
+              colFn("t.sci.sin", "Sine", "Number.Sin", "Calculated Sine", "number"),
+              colFn("t.sci.cos", "Cosine", "Number.Cos", "Calculated Cosine", "number"),
+              colFn("t.sci.tan", "Tangent", "Number.Tan", "Calculated Tangent", "number"),
+            ],
+          },
         ],
       },
       {
         id: "dateColumn",
         label: "Date & Time Column",
-        items: [todo("t.date", "Date", "column"), todo("t.time", "Time", "column"), todo("t.duration", "Duration", "column")],
+        items: [
+          {
+            id: "t.date",
+            label: "Date",
+            need: "column",
+            action: { type: "none" },
+            menu: [
+              colFn("t.date.year", "Year", "Date.Year", "Extracted Year", "int64"),
+              colFn("t.date.month", "Month", "Date.Month", "Extracted Month", "int64"),
+              colFn("t.date.monthname", "Name of Month", "Date.MonthName", "Extracted Month Name", "text"),
+              colFn("t.date.quarter", "Quarter of Year", "Date.Quarter", "Extracted Quarter", "int64"),
+              colFn("t.date.day", "Day", "Date.Day", "Extracted Day", "int64"),
+              colFn("t.date.dayofweek", "Day of Week", "Date.DayOfWeek", "Extracted Day of Week", "int64"),
+              colFn("t.date.dayname", "Name of Day", "Date.DayOfWeekName", "Extracted Day Name", "text"),
+              colFn("t.date.dayofyear", "Day of Year", "Date.DayOfYear", "Extracted Day of Year", "int64"),
+              colFn("t.date.somonth", "Start of Month", "Date.StartOfMonth", "Calculated Start of Month", "date"),
+              colFn("t.date.eomonth", "End of Month", "Date.EndOfMonth", "Calculated End of Month", "date"),
+              colFn("t.date.soquarter", "Start of Quarter", "Date.StartOfQuarter", "Calculated Start of Quarter", "date"),
+              colFn("t.date.eoquarter", "End of Quarter", "Date.EndOfQuarter", "Calculated End of Quarter", "date"),
+              colFn("t.date.soyear", "Start of Year", "Date.StartOfYear", "Calculated Start of Year", "date"),
+              colFn("t.date.eoyear", "End of Year", "Date.EndOfYear", "Calculated End of Year", "date"),
+              colFn("t.date.days", "Days in Month", "Date.DaysInMonth", "Calculated Days in Month", "int64"),
+            ],
+          },
+          {
+            id: "t.time",
+            label: "Time",
+            need: "column",
+            action: { type: "none" },
+            menu: [
+              colFn("t.time.hour", "Hour", "DateTime.Hour", "Extracted Hour", "int64"),
+              colFn("t.time.minute", "Minute", "DateTime.Minute", "Extracted Minute", "int64"),
+              colFn("t.time.second", "Second", "DateTime.Second", "Extracted Second", "int64"),
+            ],
+          },
+          todo("t.duration", "Duration", "column"),
+        ],
       },
     ],
   },

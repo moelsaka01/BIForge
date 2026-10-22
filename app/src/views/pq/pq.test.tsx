@@ -84,9 +84,9 @@ describe("Power Query editor", () => {
     expect((remove as HTMLButtonElement).disabled).toBe(true);
     expect(remove.getAttribute("title")).toContain("Select a column first.");
     fireEvent.click(screen.getByRole("tab", { name: "Transform" }));
-    const transpose = screen.getByRole("button", { name: /Transpose/ });
-    expect((transpose as HTMLButtonElement).disabled).toBe(true);
-    expect(transpose.getAttribute("title")).toContain("Not implemented");
+    const dur = screen.getByRole("button", { name: /Duration/ });
+    expect((dur as HTMLButtonElement).disabled).toBe(true);
+    expect(dur.getAttribute("title")).toContain("Not implemented");
     fireEvent.click(screen.getByRole("tab", { name: "Add Column" }));
     expect((screen.getByRole("button", { name: /Column From Examples/ }) as HTMLButtonElement).disabled).toBe(true);
   });
