@@ -21,6 +21,8 @@ crypto_box = { version = "0.9", features = ["seal", "std"] }
 reqwest = { version = "0.13", default-features = false, features = ["blocking", "native-tls", "rustls-no-provider"] }
 rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
 
+biforge-collab = { path = "../collab" }
+
 [dev-dependencies]
 tempfile = "3"
 biforge-engine = { path = "../engine" }

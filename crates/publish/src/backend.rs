@@ -92,6 +92,22 @@ pub struct ReportInfo {
     pub has_roles: bool,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CollabReply {
+    pub update: Vec<u8>,
+    pub state_vector: Vec<u8>,
+    pub seeded: bool,
+    pub empty: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChangeEntry {
+    pub time: String,
+    pub actor: String,
+    pub summary: String,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct VersionInfo {
@@ -227,6 +243,35 @@ impl<'a> Client<'a> {
     /// Makes an older uploaded version the one the server answers with.
     pub fn restore_version(&self, workspace: &str, report: &str, version: u64) -> Result<ReportInfo> {
         Self::de(self.send_json("POST", &format!("/api/workspaces/{workspace}/reports/{report}/versions/{version}/restore"), &json!({}))?)
+    }
+    /// One round trip of co-editing (see biforge_collab::SharedDoc::sync). Byte fields travel as base64.
+    pub fn collab_sync(&self, workspace: &str, report: &str, state_vector: &[u8], update: &[u8], seed: bool, summary: &str) -> Result<CollabReply> {
+        use base64::Engine as _;
+        let b = base64::engine::general_purpose::STANDARD;
+        let v = self.send_json("POST", &format!("/api/workspaces/{workspace}/reports/{report}/collab/sync"), &json!({"stateVector": b.encode(state_vector), "update": b.encode(update), "seed": seed, "summary": summary}))?;
+        let get = |k: &str| -> Result<Vec<u8>> { b.decode(v.get(k).and_then(|x| x.as_str()).unwrap_or("")).map_err(|e| Error::Adapter(format!("bad answer: {e}"))) };
+        Ok(CollabReply { update: get("update")?, state_vector: get("stateVector")?, seeded: v.get("seeded").and_then(|x| x.as_bool()).unwrap_or(false), empty: v.get("empty").and_then(|x| x.as_bool()).unwrap_or(true) })
+    }
+    pub fn collab_changes(&self, workspace: &str, report: &str) -> Result<Vec<ChangeEntry>> {
+        Self::de(self.get(&format!("/api/workspaces/{workspace}/reports/{report}/collab/changes"))?)
+    }
+    pub fn comments(&self, workspace: &str, report: &str) -> Result<Vec<biforge_collab::Comment>> {
+        Self::de(self.get(&format!("/api/workspaces/{workspace}/reports/{report}/comments"))?)
+    }
+    pub fn add_comment(&self, workspace: &str, report: &str, text: &str, anchor: &biforge_collab::Anchor, parent: Option<&str>) -> Result<biforge_collab::Comment> {
+        Self::de(self.send_json("POST", &format!("/api/workspaces/{workspace}/reports/{report}/comments"), &json!({"text": text, "anchor": anchor, "parent": parent}))?)
+    }
+    pub fn resolve_comment(&self, workspace: &str, report: &str, comment: &str, resolved: bool) -> Result<()> {
+        self.send_json("POST", &format!("/api/workspaces/{workspace}/reports/{report}/comments/{comment}/resolve"), &json!({"resolved": resolved}))?;
+        Ok(())
+    }
+    pub fn delete_comment(&self, workspace: &str, report: &str, comment: &str) -> Result<()> {
+        self.call(Request::new("DELETE", &format!("{}/api/workspaces/{workspace}/reports/{report}/comments/{comment}", self.base)))?;
+        Ok(())
+    }
+    /// Open comments by others that mention the caller, in every report of the workspace.
+    pub fn mentions(&self, workspace: &str) -> Result<Vec<Value>> {
+        Self::de(self.get(&format!("/api/workspaces/{workspace}/mentions"))?)
     }
     pub fn delete_report(&self, workspace: &str, report: &str) -> Result<()> {
         self.call(Request::new("DELETE", &format!("{}/api/workspaces/{workspace}/reports/{report}", self.base)))?;

@@ -293,3 +293,96 @@ fn every_uploaded_version_is_kept_and_an_older_one_can_be_made_current() {
     let a2 = Client::new(&http, &again.url(), "bfa_v");
     assert_eq!(a2.versions(&ws, "sales").unwrap().len(), 4);
 }
+
+#[test]
+fn co_editing_through_the_server_and_comments_with_mentions() {
+    use yrs::updates::decoder::Decode;
+    use yrs::updates::encoder::Encode;
+    use yrs::{Doc, Map, ReadTxn, StateVector, Transact, Update};
+    let dir = tempfile::tempdir().unwrap();
+    let http = ReqwestHttp::new().unwrap();
+    let srv = host(dir.path(), Some("bfa_c".into()));
+    let admin = Client::new(&http, &srv.url(), "bfa_c");
+    let ws = admin.create_workspace("C").unwrap().id;
+    let signer = Identity::generate();
+    let ann = join(&http, &srv, &admin, &ws, WsRole::Editor, "ann@x.com", &[]);
+    let bob = join(&http, &srv, &admin, &ws, WsRole::Editor, "bob@x.com", &[]);
+    let vic = join(&http, &srv, &admin, &ws, WsRole::Viewer, "vic@x.com", &[]);
+    let (c_ann, c_bob, c_vic) = (Client::new(&http, &srv.url(), &ann.token), Client::new(&http, &srv.url(), &bob.token), Client::new(&http, &srv.url(), &vic.token));
+    c_ann.upload_report(&ws, "sales", package_bytes(1, &signer, "one")).unwrap();
+
+    // two editors with their own Yjs documents
+    let make = |client: u64| Doc::with_client_id(client);
+    let (da, db) = (make(11), make(12));
+    let set = |d: &Doc, key: &str, val: &str| -> Vec<u8> {
+        let before = d.transact().state_vector();
+        let m = d.get_or_insert_map("files");
+        m.insert(&mut d.transact_mut(), key, val);
+        d.transact().encode_state_as_update_v1(&before)
+    };
+    let apply = |d: &Doc, bytes: &[u8]| {
+        if !bytes.is_empty() {
+            d.transact_mut().apply_update(Update::decode_v1(bytes).unwrap()).unwrap();
+        }
+    };
+    let sv = |d: &Doc| d.transact().state_vector().encode_v1();
+
+    // viewers cannot take part
+    assert!(c_vic.collab_sync(&ws, "sales", &[], &[], false, "").unwrap_err().to_string().contains("403"));
+    // Ann seeds; Bob's simultaneous seed is refused and he receives Ann's state instead
+    let seed_a = set(&da, "report.json", "{\"v\":1}");
+    let r = c_ann.collab_sync(&ws, "sales", &sv(&da), &seed_a, true, "started").unwrap();
+    assert!(r.seeded && !r.empty);
+    let seed_b = set(&db, "report.json", "{\"v\":99}");
+    let r = c_bob.collab_sync(&ws, "sales", &StateVector::default().encode_v1(), &seed_b, true, "").unwrap();
+    assert!(!r.seeded && !r.update.is_empty());
+    // Bob discards his own seed, as the app does, and starts again from the shared state
+    let db = make(13);
+    apply(&db, &r.update);
+    // concurrent edits of different keys both survive
+    let ua = set(&da, "a.json", "from ann");
+    let ub = set(&db, "b.json", "from bob");
+    c_ann.collab_sync(&ws, "sales", &sv(&da), &ua, false, "Ann moved a visual").unwrap();
+    let rb = c_bob.collab_sync(&ws, "sales", &sv(&db), &ub, false, "Bob renamed a measure").unwrap();
+    apply(&db, &rb.update);
+    let ra = c_ann.collab_sync(&ws, "sales", &sv(&da), &[], false, "").unwrap();
+    apply(&da, &ra.update);
+    for d in [&da, &db] {
+        let m = d.get_or_insert_map("files");
+        let t = d.transact();
+        assert_eq!(m.len(&t), 3, "report.json, a.json and b.json");
+    }
+    assert_eq!(sv(&da), sv(&db));
+    // the change log names the authenticated author, not a name the client chose
+    let log = c_vic.collab_changes(&ws, "sales").unwrap();
+    assert_eq!(log.len(), 3);
+    assert!(log[0].actor.contains("bob@x.com") && log[0].summary == "Bob renamed a measure", "{log:?}");
+    // the state survives a restart of the server
+    srv.stop();
+    let srv2 = host(dir.path(), Some("bfa_c".into()));
+    let c_ann2 = Client::new(&http, &srv2.url(), &ann.token);
+    let fresh = make(14);
+    let r = c_ann2.collab_sync(&ws, "sales", &StateVector::default().encode_v1(), &[], false, "").unwrap();
+    apply(&fresh, &r.update);
+    assert_eq!(fresh.get_or_insert_map("files").len(&fresh.transact()), 3);
+    // a new uploaded version starts the shared document afresh
+    c_ann2.upload_report(&ws, "sales", package_bytes(2, &signer, "two")).unwrap();
+    assert!(c_ann2.collab_sync(&ws, "sales", &[], &[], false, "").unwrap().empty);
+
+    // comments: the author comes from the token; mentions are found among the members
+    let c1 = Client::new(&http, &srv2.url(), &vic.token).add_comment(&ws, "sales", "Is Q3 right? @bob please check", &biforge_collab::Anchor { page: Some("p1".into()), visual: None }, None).unwrap();
+    assert_eq!((c1.author.as_str(), c1.identity.as_str()), ("vic@x.com", "vic@x.com"));
+    assert_eq!(c1.mentions, ["bob@x.com"]);
+    let m = Client::new(&http, &srv2.url(), &bob.token).mentions(&ws).unwrap();
+    assert_eq!(m.len(), 1);
+    assert_eq!(m[0]["report"], "sales");
+    let reply = Client::new(&http, &srv2.url(), &bob.token).add_comment(&ws, "sales", "Checked, fine.", &Default::default(), Some(&c1.id)).unwrap();
+    assert_eq!(reply.parent.as_deref(), Some(c1.id.as_str()));
+    Client::new(&http, &srv2.url(), &bob.token).resolve_comment(&ws, "sales", &c1.id, true).unwrap();
+    assert!(Client::new(&http, &srv2.url(), &bob.token).mentions(&ws).unwrap().is_empty());
+    assert!(c_ann2.comments(&ws, "sales").unwrap().iter().all(|c| c.resolved));
+    // only the author or an admin deletes
+    assert!(Client::new(&http, &srv2.url(), &bob.token).delete_comment(&ws, "sales", &c1.id).is_err());
+    Client::new(&http, &srv2.url(), &vic.token).delete_comment(&ws, "sales", &c1.id).unwrap();
+    assert_eq!(c_ann2.comments(&ws, "sales").unwrap().len(), 0, "the answers go with the thread");
+}

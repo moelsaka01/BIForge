@@ -16,6 +16,7 @@
 //! * Limits of this version (also in docs/COVERAGE.md): plain HTTP (no TLS; use a trusted network, a VPN or a
 //!   tunnel), no rate limiting on joins (tokens are 256-bit), state is kept in JSON files, one process.
 
+mod collab_api;
 mod tls;
 
 use std::collections::{BTreeMap, HashMap};
@@ -127,6 +128,9 @@ pub struct App {
     public_url: Mutex<String>,
     /// SHA-256 fingerprint of the TLS certificate; goes into invitation links as `pin=`.
     pin: Option<String>,
+    /// The shared documents of reports opened for co-editing (see collab_api.rs), and one lock for their files.
+    collab: Mutex<HashMap<String, Arc<biforge_collab::SharedDoc>>>,
+    collab_io: Mutex<()>,
 }
 
 // ------------------------------------------------------------------------------------------------ errors
@@ -566,6 +570,7 @@ async fn upload_report(State(app): St, h: HeaderMap, UrlPath((wid, rid)): UrlPat
     fs::write(dir.join("versions").join(format!("{}.json", meta.version)), serde_json::to_vec_pretty(&sv).map_err(internal)?).map_err(internal)?;
     fs::write(dir.join("meta.json"), serde_json::to_vec_pretty(&meta).map_err(internal)?).map_err(internal)?;
     app2.forget_report(&wid, &rid);
+    app2.reset_collab(&wid, &rid);
     app2.loaded.lock().unwrap().insert(format!("{wid}/{rid}"), Arc::new(loaded));
     app2.audit(&wid, &p.actor(), "report-upload", &format!("{} ({rid}) version {}", meta.name, meta.version));
     Ok(Json(app2.info_of(&wid, &meta)))
@@ -619,6 +624,7 @@ async fn delete_report(State(app): St, h: HeaderMap, UrlPath((wid, rid)): UrlPat
     }
     fs::remove_dir_all(app.report_dir(&wid, &rid)).map_err(internal)?;
     app.forget_report(&wid, &rid);
+    app.reset_collab(&wid, &rid);
     app.audit(&wid, &p.actor(), "report-delete", &rid);
     Ok(Json(json!({"ok": true})))
 }
@@ -709,6 +715,12 @@ pub fn router(app: Arc<App>) -> Router {
         .route("/api/workspaces/{w}/reports/{r}", put(upload_report).delete(delete_report))
         .route("/api/workspaces/{w}/reports/{r}/roles", get(get_roles).put(set_roles))
         .route("/api/workspaces/{w}/reports/{r}/versions", get(list_versions))
+        .route("/api/workspaces/{w}/reports/{r}/collab/sync", post(collab_api::collab_sync))
+        .route("/api/workspaces/{w}/reports/{r}/collab/changes", get(collab_api::collab_changes))
+        .route("/api/workspaces/{w}/reports/{r}/comments", get(collab_api::list_comments).post(collab_api::add_comment))
+        .route("/api/workspaces/{w}/reports/{r}/comments/{c}", axum::routing::delete(collab_api::delete_comment))
+        .route("/api/workspaces/{w}/reports/{r}/comments/{c}/resolve", post(collab_api::resolve_comment))
+        .route("/api/workspaces/{w}/mentions", get(collab_api::my_mentions))
         .route("/api/workspaces/{w}/reports/{r}/versions/{v}/restore", post(restore_version))
         .route("/api/workspaces/{w}/reports/{r}/project", get(project))
         .route("/api/workspaces/{w}/reports/{r}/query", post(query))
@@ -806,6 +818,8 @@ pub fn start(cfg: Config) -> Result<Running, String> {
         secured: Mutex::new(HashMap::new()),
         public_url: Mutex::new(String::new()),
         pin: fingerprint.clone(),
+        collab: Mutex::new(HashMap::new()),
+        collab_io: Mutex::new(()),
     });
     let (tx, rx) = std::sync::mpsc::channel::<Result<SocketAddr, String>>();
     let (stop_tx, stop_rx) = tokio::sync::oneshot::channel::<()>();
