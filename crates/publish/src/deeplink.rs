@@ -54,6 +54,12 @@ pub fn parse(link: &str) -> Result<Link> {
     match src.as_deref() {
         Some("file") => {
             let path = path.filter(|p| !p.is_empty()).ok_or_else(|| Error::Invalid("the link has no path".into()))?;
+            // A link from a web page or a message must not make BIForge touch another computer: reading a file on a
+            // network path sends the user's Windows credentials to that computer before anything is shown.
+            let p = path.replace('/', "\\");
+            if p.starts_with("\\\\") {
+                return Err(Error::Invalid("links to files on network paths (\\\\computer\\share) are not opened; copy the file to this PC and open it from there".into()));
+            }
             if !path.to_ascii_lowercase().ends_with(".biforge") {
                 return Err(Error::Invalid("the link does not point to a .biforge package".into()));
             }
@@ -121,13 +127,17 @@ mod tests {
 
     #[test]
     fn round_trip_with_awkward_paths() {
-        for p in [r"C:\Users\Ann Lee\Shared\abc.biforge", "/srv/share/ü & more/x.biforge", r"\\server\share\a=b.biforge"] {
+        for p in [r"C:\Users\Ann Lee\Shared\abc.biforge", "/srv/share/ü & more/x.biforge"] {
             assert_eq!(parse(&build_file(p)).unwrap(), Link::File { path: p.into() });
         }
     }
 
     #[test]
     fn rejects_bad_links() {
+        // network paths and device paths would make the app contact another computer
+        assert!(parse("biforge://open?src=file&path=%5C%5Cevil%5Cshare%5Cx.biforge").is_err());
+        assert!(parse("biforge://open?src=file&path=%2F%2Fevil%2Fshare%2Fx.biforge").is_err());
+        assert!(parse("biforge://open?src=file&path=C%3A%5Cshared%5Cx.biforge").is_ok());
         assert!(parse("http://x").is_err());
         assert!(parse("biforge://delete?src=file&path=a.biforge").is_err());
         assert!(parse("biforge://open?src=file").is_err());

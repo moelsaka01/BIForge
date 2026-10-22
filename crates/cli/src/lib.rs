@@ -36,6 +36,15 @@ fn err<E: std::fmt::Display>(what: &str, e: E) -> String {
 /// Makes a source path from the bundle absolute under `root`.
 fn spec_in(root: &Path, value: &serde_json::Value) -> Result<SourceSpec, String> {
     let mut v = value.clone();
+    // the bundle may name only the files it carries (the runner holds secrets and a network)
+    let kind = v.get("kind").and_then(|k| k.as_str()).unwrap_or("");
+    if !["csv", "excel", "json", "parquet", "sqlite"].contains(&kind) {
+        return Err(format!("A source in the refresh bundle ({kind}) is not a file; a runner refreshes only files."));
+    }
+    match v.get("path").and_then(|p| p.as_str()) {
+        Some(p) if p.starts_with("data/src/") && biforge_publish::package::check_path(p).is_ok() => {}
+        _ => return Err("A source in the refresh bundle names a file outside the bundle.".into()),
+    }
     if let Some(p) = v.get("path").and_then(|p| p.as_str()).map(str::to_string) {
         let abs: PathBuf = root.join(&p);
         v["path"] = serde_json::Value::String(abs.display().to_string());

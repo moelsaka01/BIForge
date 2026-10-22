@@ -506,3 +506,73 @@ fn the_server_refreshes_a_report_on_a_schedule_with_history_retries_and_one_run_
         assert!(events.iter().any(|x| x == e), "{e} in {events:?}");
     }
 }
+
+#[test]
+fn a_refresh_bundle_cannot_make_the_server_read_other_files_or_connect_elsewhere() {
+    use biforge_publish::refresh::{bundle_files, RefreshConfig, RefreshSource};
+    use biforge_publish::schedule::RunStatus;
+    let dir = tempfile::tempdir().unwrap();
+    let http = ReqwestHttp::new().unwrap();
+    let srv = host(dir.path(), Some("bfa_s".into()));
+    let admin = Client::new(&http, &srv.url(), "bfa_s");
+    let ws = admin.create_workspace("S").unwrap().id;
+    let signer = Identity::generate();
+    let ed = join(&http, &srv, &admin, &ws, WsRole::Editor, "ed@x.com", &[]);
+    let c_ed = Client::new(&http, &srv.url(), &ed.token);
+    c_ed.upload_report(&ws, "sales", package_bytes(1, &signer, "one")).unwrap();
+    // a file outside the server's data that an editor must not be able to put into a report
+    let secret = dir.path().join("secret.csv");
+    std::fs::write(&secret, "Id,RegionId,Qty\n1,1,999999\n").unwrap();
+    let bundle = |spec: serde_json::Value| {
+        let config = RefreshConfig {
+            format_version: 1,
+            report_name: "Demo".into(),
+            publisher_name: "Host".into(),
+            package_id: "pkg1".into(),
+            access: AccessLevel::Public,
+            included: vec![IncludedTable { table: "Sales".into(), columns: vec!["Id".into(), "RegionId".into(), "Qty".into()], data_file: "data/Sales.parquet".into() }],
+            sources: vec![RefreshSource { table: "Sales".into(), spec, original: "x".into() }],
+        };
+        let files = bundle_files(&config, &[], &[PackageFile { path: "data/src/s.csv".into(), bytes: b"Id,RegionId,Qty\n1,1,1\n".to_vec() }]).unwrap();
+        package::build(BuildInput { package_id: "b".into(), version: 1, report_name: "b".into(), publisher_name: "Host".into(), access: AccessLevel::Public, included: vec![], permissions: vec![], created_at: "2026-10-22T00:00:00Z".into(), files, recipients: vec![] }, &signer).unwrap()
+    };
+    let abs = secret.to_string_lossy().replace('\\', "/");
+    for (what, spec) in [
+        ("an absolute path", serde_json::json!({"kind": "csv", "path": abs, "delimiter": null, "header": null})),
+        ("a path that climbs out", serde_json::json!({"kind": "csv", "path": "data/src/../../../secret.csv", "delimiter": null, "header": null})),
+        ("a database server", serde_json::json!({"kind": "postgres", "host": "10.0.0.5", "port": 5432, "database": "d", "user": "u", "schema": "public", "table": "t"})),
+        ("a web address", serde_json::json!({"kind": "web", "url": "http://127.0.0.1:1/x"})),
+    ] {
+        c_ed.refresh_put_bundle(&ws, "sales", bundle(spec)).unwrap();
+        let rec = c_ed.refresh_run(&ws, "sales").unwrap();
+        assert_eq!(rec.status, RunStatus::Failed, "{what}: {rec:?}");
+        assert!(rec.message.contains("not a file") || rec.message.contains("outside the bundle") || rec.message.contains("not valid"), "{what}: {}", rec.message);
+    }
+    assert_eq!(total(&c_ed, &ws).unwrap(), "1060", "the report still answers with the published data");
+}
+
+#[test]
+fn invitations_cannot_be_guessed_at_speed() {
+    let dir = tempfile::tempdir().unwrap();
+    let http = ReqwestHttp::new().unwrap();
+    let srv = host(dir.path(), Some("bfa_j".into()));
+    let mut last = String::new();
+    for i in 0..40 {
+        match Client::join(&http, &srv.url(), &format!("bfi_guess{i}"), "Mallory") {
+            Ok(_) => panic!("a guess worked"),
+            Err(e) => last = e.to_string(),
+        }
+    }
+    assert!(last.contains("Too many attempts"), "{last}");
+}
+
+#[test]
+fn a_big_body_is_refused_on_the_small_routes() {
+    let dir = tempfile::tempdir().unwrap();
+    let http = ReqwestHttp::new().unwrap();
+    let srv = host(dir.path(), Some("bfa_b".into()));
+    let admin = Client::new(&http, &srv.url(), "bfa_b");
+    let name = "x".repeat(3 * 1024 * 1024);
+    assert!(admin.create_workspace(&name).is_err(), "a 3 MB workspace name is refused before it is read");
+    assert!(admin.workspaces().is_ok());
+}

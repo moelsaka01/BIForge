@@ -111,9 +111,17 @@ impl App {
         let creds = MemoryCredentialStore::default();
         for s in &config.sources {
             let mut v = s.spec.clone();
-            if let Some(p) = v.get("path").and_then(|p| p.as_str()).map(str::to_string) {
-                v["path"] = serde_json::Value::String(work.path().join(&p).display().to_string());
+            // The bundle is signed by an editor of the workspace, not by the server's owner: it may name only the files
+            // it carries, and no network or database source (the server would read other files or connect for it).
+            let kind = v.get("kind").and_then(|k| k.as_str()).unwrap_or("");
+            if !["csv", "excel", "json", "parquet", "sqlite"].contains(&kind) {
+                return Err(format!("The source of table \"{}\" ({kind}) is not a file; a server refreshes only files.", s.table));
             }
+            let p = v.get("path").and_then(|p| p.as_str()).map(str::to_string).ok_or_else(|| format!("The source of table \"{}\" has no file.", s.table))?;
+            if !p.starts_with("data/src/") || biforge_publish::package::check_path(&p).is_err() {
+                return Err(format!("The source of table \"{}\" names a file outside the bundle.", s.table));
+            }
+            v["path"] = serde_json::Value::String(work.path().join(&p).display().to_string());
             let spec: SourceSpec = serde_json::from_value(v).map_err(|e| format!("A source in the bundle is not valid: {e}"))?;
             engine.import(&s.table, &spec, &creds).map_err(|e| format!("Could not reload table \"{}\" from {}: {e}", s.table, s.original))?;
         }

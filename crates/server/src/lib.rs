@@ -30,6 +30,7 @@ use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use axum::body::Bytes;
 use axum::extract::{DefaultBodyLimit, Path as UrlPath, State};
+use axum::handler::Handler as _;
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post, put};
@@ -49,6 +50,11 @@ use biforge_publish::package::{self, OpenOptions};
 use biforge_publish::time::rfc3339;
 
 const MAX_UPLOAD: usize = 512 * 1024 * 1024;
+/// One round of co-editing carries a document update, never a whole data set.
+const MAX_COLLAB: usize = 64 * 1024 * 1024;
+const MAX_JSON: usize = 2 * 1024 * 1024;
+/// Attempts to redeem an invitation, successful or not, per minute for the whole server.
+const JOIN_PER_MINUTE: usize = 30;
 
 // ------------------------------------------------------------------------------------------------ storage types
 
@@ -132,6 +138,8 @@ pub struct App {
     /// The shared documents of reports opened for co-editing (see collab_api.rs), and one lock for their files.
     collab: Mutex<HashMap<String, Arc<biforge_collab::SharedDoc>>>,
     collab_io: Mutex<()>,
+    /// Times of recent attempts to redeem an invitation (the one door that needs no token).
+    join_attempts: Mutex<std::collections::VecDeque<u64>>,
 }
 
 // ------------------------------------------------------------------------------------------------ errors
@@ -436,6 +444,17 @@ struct JoinBody {
 }
 
 async fn join(State(app): St, Json(b): Json<JoinBody>) -> ApiResult<Json<JoinResponse>> {
+    {
+        let mut a = app.join_attempts.lock().unwrap();
+        let now = now_secs();
+        while a.front().map(|t| now.saturating_sub(*t) >= 60).unwrap_or(false) {
+            a.pop_front();
+        }
+        if a.len() >= JOIN_PER_MINUTE {
+            return err(StatusCode::TOO_MANY_REQUESTS, "Too many attempts to join. Wait a minute and try again.");
+        }
+        a.push_back(now);
+    }
     let h = sha(&b.invite);
     let name = b.display_name.trim().to_string();
     if name.is_empty() || name.len() > 100 {
@@ -717,23 +736,24 @@ pub fn router(app: Arc<App>) -> Router {
         .route("/api/workspaces/{w}/members/{m}", axum::routing::patch(patch_member).delete(revoke))
         .route("/api/workspaces/{w}/audit", get(audit_log))
         .route("/api/workspaces/{w}/reports", get(list_reports))
-        .route("/api/workspaces/{w}/reports/{r}", put(upload_report).delete(delete_report))
+        .route("/api/workspaces/{w}/reports/{r}", put(upload_report.layer(DefaultBodyLimit::max(MAX_UPLOAD))).delete(delete_report))
         .route("/api/workspaces/{w}/reports/{r}/roles", get(get_roles).put(set_roles))
         .route("/api/workspaces/{w}/reports/{r}/versions", get(list_versions))
-        .route("/api/workspaces/{w}/reports/{r}/collab/sync", post(collab_api::collab_sync))
+        .route("/api/workspaces/{w}/reports/{r}/collab/sync", post(collab_api::collab_sync.layer(DefaultBodyLimit::max(MAX_COLLAB))))
         .route("/api/workspaces/{w}/reports/{r}/collab/changes", get(collab_api::collab_changes))
         .route("/api/workspaces/{w}/reports/{r}/comments", get(collab_api::list_comments).post(collab_api::add_comment))
         .route("/api/workspaces/{w}/reports/{r}/comments/{c}", axum::routing::delete(collab_api::delete_comment))
         .route("/api/workspaces/{w}/reports/{r}/comments/{c}/resolve", post(collab_api::resolve_comment))
         .route("/api/workspaces/{w}/mentions", get(collab_api::my_mentions))
         .route("/api/workspaces/{w}/reports/{r}/refresh", get(refresh_api::get_refresh).put(refresh_api::put_refresh))
-        .route("/api/workspaces/{w}/reports/{r}/refresh/bundle", put(refresh_api::put_bundle).delete(refresh_api::delete_bundle))
+        .route("/api/workspaces/{w}/reports/{r}/refresh/bundle", put(refresh_api::put_bundle.layer(DefaultBodyLimit::max(MAX_UPLOAD))).delete(refresh_api::delete_bundle))
         .route("/api/workspaces/{w}/reports/{r}/refresh/run", post(refresh_api::run_now))
-        .route("/api/workspaces/{w}/reports/{r}/refresh/sources/{name}", put(refresh_api::put_source))
+        .route("/api/workspaces/{w}/reports/{r}/refresh/sources/{name}", put(refresh_api::put_source.layer(DefaultBodyLimit::max(MAX_UPLOAD))))
         .route("/api/workspaces/{w}/reports/{r}/versions/{v}/restore", post(restore_version))
         .route("/api/workspaces/{w}/reports/{r}/project", get(project))
         .route("/api/workspaces/{w}/reports/{r}/query", post(query))
-        .layer(DefaultBodyLimit::max(MAX_UPLOAD))
+        // everything else is small JSON; the routes that carry files or documents raised their own limit above
+        .layer(DefaultBodyLimit::max(MAX_JSON))
         .with_state(app)
 }
 
@@ -829,6 +849,7 @@ pub fn start(cfg: Config) -> Result<Running, String> {
         pin: fingerprint.clone(),
         collab: Mutex::new(HashMap::new()),
         collab_io: Mutex::new(()),
+        join_attempts: Mutex::new(Default::default()),
     });
     let (tx, rx) = std::sync::mpsc::channel::<Result<SocketAddr, String>>();
     let (stop_tx, stop_rx) = tokio::sync::oneshot::channel::<()>();
