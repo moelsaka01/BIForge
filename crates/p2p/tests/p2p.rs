@@ -11,7 +11,7 @@ fn opts(key: Option<SecretKey>) -> GuestOptions {
 }
 
 async fn host(expires: u64) -> HostSession {
-    HostSession::start(b"package-v1".to_vec(), 1, HostOptions { network: Network::Local, expires_in: Duration::from_secs(expires), secret_key: None }).await.unwrap()
+    HostSession::start(b"package-v1".to_vec(), 1, HostOptions { network: Network::Local, expires_in: Duration::from_secs(expires), secret_key: None, host_name: "Host".into() }).await.unwrap()
 }
 
 async fn wait_pending(h: &HostSession, n: usize) -> Vec<JoinRequest> {
@@ -147,4 +147,87 @@ async fn an_unreachable_host_gives_the_fallback_message() {
     assert!(msg.contains("Both computers must be online") && msg.contains("Use another way"), "{msg}");
     assert!(Pairing::parse("hello").is_err());
     assert!(Pairing::parse("BF1-notanid-0123456789").is_err());
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn co_editing_and_comments_over_a_direct_session() {
+    use yrs::updates::decoder::Decode;
+    use yrs::updates::encoder::Encode;
+    use yrs::{Doc, Map, ReadTxn, Transact, Update};
+    let h = host(600).await;
+    let code = h.pairing().ticket();
+    let join = |name: &'static str, role: Role| {
+        let code = code.clone();
+        async move { (name, role, Guest::connect(&code, name, opts(None)).await.unwrap()) }
+    };
+    let (_, _, ed) = join("Eda", Role::Edit).await;
+    let req = wait_pending(&h, 1).await;
+    h.approve(req[0].id, Role::Edit).unwrap();
+    assert_eq!(ed.wait_decision(Duration::from_secs(5)).await, GuestState::Approved);
+    let (_, _, ro) = join("Rob", Role::ReadOnly).await;
+    let req = wait_pending(&h, 1).await;
+    h.approve(req[0].id, Role::ReadOnly).unwrap();
+    assert_eq!(ro.wait_decision(Duration::from_secs(5)).await, GuestState::Approved);
+
+    let encode = |d: &Doc| d.transact().state_vector().encode_v1();
+    let put = |d: &Doc, k: &str, v: &str| {
+        let before = d.transact().state_vector();
+        d.get_or_insert_map("files").insert(&mut d.transact_mut(), k, v);
+        d.transact().encode_state_as_update_v1(&before)
+    };
+    // the guest with the edit role seeds; the host (also an editor) then receives it and adds its own change
+    let de = Doc::with_client_id(21);
+    let seed = put(&de, "report.json", "{}");
+    let mut blob = encode(&de);
+    let sv_len = blob.len();
+    blob.extend_from_slice(&seed);
+    let (meta, _) = ed.call("collab.sync", &serde_json::json!({"svLen": sv_len, "seed": true, "summary": "Eda started"}), &blob).await.unwrap();
+    assert_eq!(meta["seeded"], true);
+    let dh = Doc::with_client_id(22);
+    let (meta, out) = h.call("collab.sync", &serde_json::json!({"svLen": 0, "seed": false}), &[]).unwrap();
+    assert_eq!(meta["empty"], false);
+    let sv_n = meta["svLen"].as_u64().unwrap() as usize;
+    dh.transact_mut().apply_update(Update::decode_v1(&out[sv_n..]).unwrap()).unwrap();
+    assert_eq!(dh.get_or_insert_map("files").len(&dh.transact()), 1);
+    let up = put(&dh, "host.json", "x");
+    let mut b2 = encode(&dh);
+    let l2 = b2.len();
+    b2.extend_from_slice(&up);
+    h.call("collab.sync", &serde_json::json!({"svLen": l2, "seed": false, "summary": "Host added a file"}), &b2).unwrap();
+    // Eda pulls the host's change
+    let mut b3 = encode(&de);
+    let l3 = b3.len();
+    b3.truncate(l3);
+    let (m3, out3) = ed.call("collab.sync", &serde_json::json!({"svLen": l3, "seed": false}), &b3).await.unwrap();
+    let n3 = m3["svLen"].as_u64().unwrap() as usize;
+    de.transact_mut().apply_update(Update::decode_v1(&out3[n3..]).unwrap()).unwrap();
+    assert_eq!(de.get_or_insert_map("files").len(&de.transact()), 2);
+    // the read-only guest may not take part, but may comment
+    let e = ro.call("collab.sync", &serde_json::json!({"svLen": 0}), &[]).await.unwrap_err();
+    assert!(e.0.contains("read-only"), "{e}");
+    let (c, _) = ro.call("comments.add", &serde_json::json!({"text": "Nice. @host and @eda please look", "anchor": {"page": "p1"}}), &[]).await.unwrap();
+    assert_eq!(c["author"], "Rob", "the host stamps the author");
+    assert_eq!(c["mentions"].as_array().unwrap().len(), 2);
+    let (list, _) = h.call("comments.list", &serde_json::json!({}), &[]).unwrap();
+    assert_eq!(list.as_array().unwrap().len(), 1);
+    let (men, _) = h.call("comments.mentions", &serde_json::json!({}), &[]).unwrap();
+    assert_eq!(men.as_array().unwrap().len(), 1, "the host was mentioned");
+    // only the author deletes (the host may delete any)
+    assert!(ed.call("comments.delete", &serde_json::json!({"id": c["id"]}), &[]).await.is_err());
+    ro.call("comments.resolve", &serde_json::json!({"id": c["id"], "resolved": true}), &[]).await.unwrap();
+    h.call("comments.delete", &serde_json::json!({"id": c["id"]}), &[]).unwrap();
+    // the change log has the authors the host knows
+    let (log, _) = ro.call("collab.changes", &serde_json::json!({}), &[]).await.unwrap();
+    let log = log.as_array().unwrap();
+    assert_eq!(log.len(), 2);
+    assert_eq!((log[0]["actor"].as_str().unwrap(), log[1]["actor"].as_str().unwrap()), ("Host", "Eda"));
+    // after the host ends Eda's access she can no longer sync
+    let peers = h.peers();
+    let eda = peers.iter().find(|p| p.name == "Eda").unwrap();
+    h.revoke(&eda.endpoint_id).unwrap();
+    wait_for("Eda to be ended", || !matches!(ed.state(), GuestState::Approved)).await;
+    assert!(ed.call("collab.sync", &serde_json::json!({"svLen": 0}), &[]).await.is_err());
+    ed.leave().await;
+    ro.leave().await;
+    h.stop().await;
 }

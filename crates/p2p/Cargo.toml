@@ -16,7 +16,9 @@ serde_json = "1"
 base64 = "0.22"
 sha2 = "0.10"
 biforge-publish = { path = "../publish" }
+biforge-collab = { path = "../collab" }
 
 [dev-dependencies]
+yrs = "0.25"
 base64 = "0.22"
 tempfile = "3"

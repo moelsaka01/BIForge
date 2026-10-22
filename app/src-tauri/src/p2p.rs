@@ -211,7 +211,7 @@ impl P2pBridge for P2pService {
             if let Some(o) = old {
                 o.stop().await;
             }
-            HostSession::start(package, version, HostOptions { network: net, expires_in: Duration::from_secs(expires_minutes * 60), secret_key: None }).await
+            HostSession::start(package, version, HostOptions { network: net, expires_in: Duration::from_secs(expires_minutes * 60), secret_key: None, host_name: "Host".into() }).await
         })
         .map_err(|e| biforge_publish::Error::Adapter(e.0))?;
         let code = Self::code_of(&session);

@@ -17,6 +17,9 @@
 //! no uptime guarantee and see connection metadata (never content); some networks (strict firewalls, some mobile
 //! hotspots) prevent every kind of connection, and then the guest gets a message that names the other methods.
 
+mod rpc;
+pub use rpc::Change;
+
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -296,6 +299,7 @@ struct HostShared {
     expires_at: u64,
     events: broadcast::Sender<Event>,
     st: Mutex<HostState>,
+    collab: rpc::CollabState,
 }
 
 #[derive(Clone)]
@@ -319,11 +323,13 @@ pub struct HostOptions {
     pub expires_in: Duration,
     /// Keep the same identity across sessions (None: a new one each time).
     pub secret_key: Option<SecretKey>,
+    /// The name comments and changes of the host carry.
+    pub host_name: String,
 }
 
 impl Default for HostOptions {
     fn default() -> Self {
-        Self { network: Network::Internet, expires_in: Duration::from_secs(60 * 60), secret_key: None }
+        Self { network: Network::Internet, expires_in: Duration::from_secs(60 * 60), secret_key: None, host_name: "Host".into() }
     }
 }
 
@@ -344,6 +350,7 @@ impl HostSession {
             expires_at: now() + opts.expires_in.as_secs(),
             events,
             st: Mutex::new(HostState { package: Arc::new(package), version, next_id: 1, bad_codes: 0, stopped: false, pending: vec![], peers: HashMap::new(), pushes: vec![] }),
+            collab: rpc::CollabState::new(opts.host_name.clone()),
         });
         let router = Router::builder(endpoint.clone()).accept(ALPN, Handler(shared.clone())).spawn();
         if opts.network == Network::Internet {
@@ -577,6 +584,8 @@ async fn serve_guest(sh: Arc<HostShared>, conn: Connection) -> Result<(), P2pErr
         }
     }
     sh.emit(Event::Connected { endpoint_id: id.clone() });
+    // calls (co-editing, comments) arrive on streams of their own
+    tokio::spawn(rpc::serve_calls(sh.clone(), conn.clone(), id.clone()));
     // reader task: frames from the guest
     let (itx, mut irx) = mpsc::unbounded_channel::<Result<Option<(ToHost, Vec<u8>)>, P2pError>>();
     tokio::spawn(async move {
