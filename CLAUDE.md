@@ -7,7 +7,7 @@ Follow docs/MASTER_PLAN.md; work one phase per session.
 ## Scope (changed 2026-10-16)
 Target: every feature of Power BI Desktop 2.158 except cloud features. docs/INVENTORY.md is the definition of "everything"; every inventory item has a status in docs/COVERAGE.md.
 Excluded entirely (no UI, no disabled buttons, no menu entries; listed only under "Excluded (cloud)" in COVERAGE.md): sign in / accounts, Publish, Share, OneLake catalog, Dataverse, Fabric / SQL databases in Fabric, datahub, Shared with me, Copilot and "Prep data for AI", sensitivity labels, Power BI service features, cloud-only connectors, external semantic models from the service.
-Library rule: prefer a mature library (Apache-2.0/MIT/BSD/ISC/Zlib/Unicode-3.0/0BSD/Unlicense only; check and record the license) over custom code when it gives the same result: tiberius (SQL Server, M source Sql.Database), odbc-api, DuckDB extensions, reqwest + quick-xml (Web, REST, OData, XML), calamine, ECharts (maps with Natural Earth boundaries, no online tiles), Monaco, WebView2 printing via Tauri, tauri-driver/WebDriver or Playwright for real-window UI tests.
+Library rule: prefer a mature library (Apache-2.0/MIT/BSD/ISC/Zlib/Unicode-3.0/0BSD/Unlicense/CDLA-Permissive-2.0 only; check and record the license) over custom code when it gives the same result: tiberius (SQL Server, M source Sql.Database), odbc-api, DuckDB extensions, reqwest + quick-xml (Web, REST, OData, XML), calamine, ECharts (maps with Natural Earth boundaries, no online tiles), Monaco, WebView2 printing via Tauri, tauri-driver/WebDriver or Playwright for real-window UI tests.
 Never intercept system keys (Print Screen, Win+key, Alt+Tab, ...).
 
 ## Online track (added 2026-10-17)

@@ -68,7 +68,17 @@ fn run(provider: &str, make: fn(Context) -> StorageAdapter) {
         println!("SKIPPED {provider}: no client id (see the header of this file)");
         return;
     }
-    let keys: Arc<dyn KeyStore> = Arc::new(Cm(biforge_engine::SystemCredentialStore));
+    // BIFORGE_TEST_<PROVIDER>_ACCESS_TOKEN: a short-lived token from the provider console, kept only in memory.
+    let env_token = std::env::var(format!("BIFORGE_TEST_{}_ACCESS_TOKEN", provider.to_ascii_uppercase().replace('-', "_"))).ok().filter(|t| !t.trim().is_empty());
+    let keys: Arc<dyn KeyStore> = match &env_token {
+        Some(tok) => {
+            let m = biforge_publish::keys::MemoryKeyStore::default();
+            let far = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs() + 3000;
+            oauth::store_tokens(&m, provider, &oauth::Tokens { access: tok.trim().to_string(), refresh: None, expires_at: far }).unwrap();
+            Arc::new(m)
+        }
+        None => Arc::new(Cm(biforge_engine::SystemCredentialStore)),
+    };
     if oauth::load_tokens(keys.as_ref(), provider).ok().flatten().is_none() {
         println!("SKIPPED {provider}: not connected (connect it in the app first)");
         return;
