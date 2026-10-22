@@ -308,6 +308,18 @@ export function registerPublishCommands(r: CommandRegistry<Session>): void {
     },
   });
   r.register({
+    id: "package.openArg",
+    label: "Open a link or file that was handed to the running BIForge",
+    category: "File",
+    isEnabled: hasApi,
+    async run(s, args) {
+      const arg = String(((args ?? {}) as { arg?: string }).arg ?? "");
+      if (!arg) return;
+      if (arg.startsWith("biforge://")) return openLink(s, arg);
+      if (arg.toLowerCase().endsWith(".biforge")) s.shell.openDialog({ kind: "openPackage", path: arg });
+    },
+  });
+  r.register({
     id: "package.startup",
     label: "Open the file or link BIForge was started with",
     category: "File",

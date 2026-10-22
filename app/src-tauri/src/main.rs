@@ -36,7 +36,23 @@ fn main() {
     let bridge: std::sync::Arc<dyn biforge_publish::p2p::P2pBridge> = p2p_service.clone();
     let host_service = host::HostService::system();
     let collab_service = std::sync::Arc::new(collab::CollabService { host: host_service.clone(), p2p: p2p_service.clone() });
-    tauri::Builder::default()
+    let mut builder = tauri::Builder::default();
+    // One window per user: opening a biforge:// link or a .biforge file while BIForge runs hands it to that window.
+    // (BIFORGE_ALLOW_MULTIPLE=1, used by the real-window tests that run several instances at once, turns this off.)
+    if std::env::var("BIFORGE_ALLOW_MULTIPLE").is_err() {
+        builder = builder.plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
+            use tauri::{Emitter, Manager};
+            if let Some(arg) = argv.iter().skip(1).find(|a| publish::is_open_arg(a)) {
+                let _ = app.emit("biforge-open", arg.clone());
+            }
+            if let Some(w) = app.get_webview_window("main") {
+                let _ = w.unminimize();
+                let _ = w.set_focus();
+            }
+        }));
+    }
+    builder
+        .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_dialog::init())
         .manage(data::DataService::system())
         .manage(publish::PublishService::system().with_p2p(bridge))

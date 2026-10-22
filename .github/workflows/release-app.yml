@@ -1,0 +1,64 @@
+name: release-app
+# Builds the Windows installer (BIForge_<version>_x64-setup.exe), biforge-server.exe and biforge-cli.exe, signs the list
+# of their SHA-256 hashes with BIForge's release key, records a GitHub build attestation and attaches everything to a
+# release. Start it by pushing a tag like app-v0.1.0 (nothing runs on ordinary pushes).
+# The installer is not Authenticode-signed (a certificate costs money); SHA256SUMS.sig and the attestation are the proof.
+on:
+  push:
+    tags: ["app-v*"]
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - name: Frontend install
+        working-directory: app
+        run: npm ci
+      - name: Installer
+        working-directory: app
+        run: npx tauri build
+      - name: Server and command line
+        run: cargo build --release -p biforge-server -p biforge-cli
+      - name: Collect
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          $setup = Get-ChildItem target/release/bundle/nsis -Filter "*-setup.exe" | Select-Object -First 1
+          if (-not $setup) { throw "the installer was not built" }
+          Copy-Item $setup.FullName dist/
+          Copy-Item target/release/biforge-server.exe, target/release/biforge-cli.exe dist/
+      - name: Sign the list of hashes
+        shell: pwsh
+        env:
+          BIFORGE_RELEASE_SIGNING_KEY: ${{ secrets.BIFORGE_RELEASE_SIGNING_KEY }}
+        run: |
+          $files = Get-ChildItem dist -File | ForEach-Object { $_.FullName }
+          ./target/release/biforge-cli.exe sign-release --key-env BIFORGE_RELEASE_SIGNING_KEY --out-dir dist @files
+          if ($LASTEXITCODE -ne 0) { throw "signing failed" }
+      - name: Check the signature against the public key in the repository
+        shell: pwsh
+        run: |
+          ./target/release/biforge-cli.exe verify-release --public-key (Get-Content docs/release-public-key.txt -Raw).Trim() --dir dist
+          if ($LASTEXITCODE -ne 0) { throw "the signature does not match docs/release-public-key.txt" }
+      - uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: dist/*
+      - name: Attach to the release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $key = (Get-Content docs/release-public-key.txt -Raw).Trim()
+          $notes = "BIForge $env:GITHUB_REF_NAME`n`n- BIForge_*_x64-setup.exe: installs for the current user (no administrator rights), registers biforge:// links and .biforge files.`n- biforge-server.exe: the server for sharing with workspaces (see docs/ONLINE_GUIDE.md).`n- biforge-cli.exe: headless refresh and release verification.`n`nThe installer is not Authenticode-signed, so Windows SmartScreen may warn about it. Check a download with the release key:`n`n    biforge-cli verify-release --public-key $key --dir <folder with the downloaded files, SHA256SUMS and SHA256SUMS.sig>`n`nRelease key (Ed25519, base64): $key`nGitHub build attestation: gh attestation verify <file> --repo moelsaka01/BIForge"
+          gh release create "$env:GITHUB_REF_NAME" (Get-ChildItem dist -File | ForEach-Object { $_.FullName }) --title "BIForge $env:GITHUB_REF_NAME" --notes "$notes"

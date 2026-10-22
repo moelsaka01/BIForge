@@ -34,6 +34,7 @@ const child = spawn(exe, [], {
     BIFORGE_TEST_DEBUG_PORT: String(port), // the app opens its windows with this DevTools port (inert when unset)
     WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port}`,
     WEBVIEW2_USER_DATA_FOLDER: join(work, "webview"),
+    BIFORGE_ALLOW_MULTIPLE: "1",
     BIFORGE_TEST_PICKS: [parent].join("|"),
   },
   stdio: ["ignore", openSync(join(work, "app.out.log"), "w"), openSync(join(work, "app.err.log"), "w")],

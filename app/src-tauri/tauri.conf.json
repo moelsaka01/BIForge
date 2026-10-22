@@ -26,9 +26,50 @@
     }
   },
   "bundle": {
-    "active": false,
+    "active": true,
+    "targets": [
+      "nsis"
+    ],
     "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
       "icons/icon.ico"
-    ]
+    ],
+    "publisher": "BIForge contributors",
+    "copyright": "Copyright 2026 BIForge contributors. Licensed under the Apache License 2.0.",
+    "category": "Productivity",
+    "shortDescription": "Open-source desktop app for building business intelligence reports",
+    "longDescription": "BIForge builds data models and reports on your own computer. It opens and saves PBIP/TMDL projects, shares reports through folders, your own cloud storage, direct connections or a server you host, and never needs a cloud account of its own.",
+    "licenseFile": "../../LICENSE",
+    "fileAssociations": [
+      {
+        "ext": [
+          "biforge"
+        ],
+        "name": "BIForge shared report",
+        "description": "BIForge shared report package",
+        "role": "Viewer",
+        "mimeType": "application/vnd.biforge.package"
+      }
+    ],
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "displayLanguageSelector": false,
+        "languages": [
+          "English"
+        ]
+      }
+    }
+  },
+  "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": [
+          "biforge"
+        ]
+      }
+    }
   }
 }

@@ -25,6 +25,7 @@ async function launch(name, port, extraEnv = {}) {
       WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port}`,
       WEBVIEW2_USER_DATA_FOLDER: join(dir, "webview"),
       BIFORGE_APP_DIR: join(dir, "app"),
+      BIFORGE_ALLOW_MULTIPLE: "1",
       BIFORGE_TEST_PICKS: join(dir, "projects"),
       ...extraEnv,
     },

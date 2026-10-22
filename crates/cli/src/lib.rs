@@ -9,6 +9,7 @@
 //! commits the changed files.
 
 pub mod local;
+pub mod release;
 
 use std::fs;
 use std::path::{Path, PathBuf};

@@ -807,7 +807,12 @@ pub fn viewer_key(s: tauri::State<PublishService>, package_id: String) -> Result
 /// A biforge:// link or a .biforge file given on the command line when the app was started.
 #[tauri::command]
 pub fn startup_open() -> Option<String> {
-    std::env::args().skip(1).find(|a| a.starts_with("biforge://") || a.to_ascii_lowercase().ends_with(".biforge"))
+    std::env::args().skip(1).find(|a| is_open_arg(a))
+}
+
+/// A command-line argument that asks to open something: a biforge:// link or a .biforge file.
+pub fn is_open_arg(a: &str) -> bool {
+    a.starts_with("biforge://") || a.to_ascii_lowercase().ends_with(".biforge")
 }
 
 #[cfg(test)]
@@ -828,6 +833,12 @@ mod tests {
         fn delete(&self, k: &str) -> biforge_engine::Result<()> {
             Ok(self.0.delete(k).unwrap())
         }
+    }
+
+    #[test]
+    fn only_links_and_package_files_are_open_arguments() {
+        assert!(is_open_arg("biforge://open?src=file&path=x") && is_open_arg("C:\\a\\b.BIFORGE"));
+        assert!(!is_open_arg("--run-scheduled") && !is_open_arg("C:\\a\\b.pbip") && !is_open_arg("http://x/y.biforge.exe"));
     }
 
     #[test]

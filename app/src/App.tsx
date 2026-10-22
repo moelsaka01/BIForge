@@ -35,6 +35,26 @@ export function AppView({ rt, files = browserFiles, editorFactory = createMonaco
     void registry.execute("package.startup");
   }, [registry]);
 
+  // a link or file opened while BIForge is running arrives from the second start (single instance) as an event
+  useEffect(() => {
+    let off: (() => void) | null = null;
+    let gone = false;
+    void (async () => {
+      try {
+        const mod = await import("@tauri-apps/api/event");
+        const un = await mod.listen<string>("biforge-open", (e) => void registry.execute("package.openArg", { arg: e.payload }));
+        if (gone) un();
+        else off = un;
+      } catch {
+        /* not inside the app window (browser tests) */
+      }
+    })();
+    return () => {
+      gone = true;
+      off?.();
+    };
+  }, [registry]);
+
   const run = useCallback(
     async (id: string, args?: unknown) => {
       const r = await registry.execute(id, args);
