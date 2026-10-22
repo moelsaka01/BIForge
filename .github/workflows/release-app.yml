@@ -15,8 +15,6 @@ permissions:
 jobs:
   build:
     runs-on: windows-latest
-    env:
-      BIFORGE_TOOLS_DIR: ${{ github.workspace }}\target\release
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -31,6 +29,9 @@ jobs:
         run: npm ci
       - name: Server and command line (also the optional components of the installers)
         run: cargo build --release -p biforge-server -p biforge-cli
+      - name: Stage the optional components
+        shell: pwsh
+        run: ./tools/stage-installer-tools.ps1 target/release
       - name: Installers and update files
         working-directory: app
         shell: pwsh

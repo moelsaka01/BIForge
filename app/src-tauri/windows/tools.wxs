@@ -13,10 +13,10 @@
     <DirectoryRef Id="INSTALLDIR">
       <Directory Id="BiforgeToolsDir" Name="tools">
         <Component Id="BiforgeServerExe" Guid="{6B0F2C3A-5D1E-4A7B-9C21-0E8F4A1D7A01}">
-          <File Id="BiforgeServerExeFile" Source="$(env.BIFORGE_TOOLS_DIR)\biforge-server.exe" KeyPath="yes" />
+          <File Id="BiforgeServerExeFile" Source="$(sys.SOURCEFILEDIR)tools\biforge-server.exe" KeyPath="yes" />
         </Component>
         <Component Id="BiforgeCliExe" Guid="{6B0F2C3A-5D1E-4A7B-9C21-0E8F4A1D7A02}">
-          <File Id="BiforgeCliExeFile" Source="$(env.BIFORGE_TOOLS_DIR)\biforge-cli.exe" KeyPath="yes" />
+          <File Id="BiforgeCliExeFile" Source="$(sys.SOURCEFILEDIR)tools\biforge-cli.exe" KeyPath="yes" />
         </Component>
       </Directory>
     </DirectoryRef>
