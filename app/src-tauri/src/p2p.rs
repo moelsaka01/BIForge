@@ -185,6 +185,22 @@ impl P2pService {
         Ok(())
     }
 
+    /// A co-editing or comment call made by the host app itself.
+    pub fn call_host(&self, target: &str, op: &str, args: &serde_json::Value, blob: &[u8]) -> Result<(serde_json::Value, Vec<u8>), String> {
+        self.with_host(target, |s| s.call(op, args, blob))
+    }
+
+    /// A co-editing or comment call from a guest to its host.
+    pub async fn call_guest(&self, id: &str, op: &str, args: &serde_json::Value, blob: &[u8]) -> Result<(serde_json::Value, Vec<u8>), String> {
+        // the session map is not held across the await: the call runs on a clone of the connection handle
+        let fut = {
+            let g = self.0.guests.lock().unwrap();
+            let guest = g.get(id).ok_or("This direct session is closed.")?;
+            guest.caller()
+        };
+        fut.call(op, args, blob).await.map_err(msg)
+    }
+
     pub async fn stop_host(&self, target: &str) -> Result<(), String> {
         let s = self.0.hosts.lock().unwrap().remove(target);
         if let Some(s) = s {

@@ -9,6 +9,7 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 base64 = "0.22"
+biforge-collab = { path = "../../crates/collab" }
 tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
 biforge-model = { path = "../../crates/model" }

@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod collab;
 mod commands;
 mod data;
 mod dax;
@@ -27,12 +28,15 @@ fn main() {
     apply_test_debug_port(&mut context);
     let p2p_service = std::sync::Arc::new(p2p::P2pService::system());
     let bridge: std::sync::Arc<dyn biforge_publish::p2p::P2pBridge> = p2p_service.clone();
+    let host_service = host::HostService::system();
+    let collab_service = std::sync::Arc::new(collab::CollabService { host: host_service.clone(), p2p: p2p_service.clone() });
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .manage(data::DataService::system())
         .manage(publish::PublishService::system().with_p2p(bridge))
+        .manage(collab_service.clone())
         .manage(p2p_service)
-        .manage(host::HostService::system())
+        .manage(host_service)
         .setup(|app| {
             // an Alt tap must not start Windows' menu mode, which swallows the next key (Print Screen)
             #[cfg(windows)]
@@ -128,6 +132,7 @@ fn main() {
             host::host_start,
             host::host_stop,
             host::server_join,
+            collab::collab_call,
             host::server_connect_admin,
             host::server_connections,
             host::server_forget,

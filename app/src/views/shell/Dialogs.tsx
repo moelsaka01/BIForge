@@ -9,6 +9,7 @@ import { OptionsDialog } from "./OptionsDialog";
 import { DataSourcesDialog } from "./DataSourcesDialog";
 import { GuideDialog, OpenPackageDialog, PublishDialog } from "./PublishDialog";
 import { HostDialog, JoinServerDialog } from "./HostDialog";
+import { CommentsDialog } from "./CommentsDialog";
 import { resolveTheme } from "../../core/report/theme";
 import { themeToJson } from "../../core/report/theme";
 import { useDoc, useEnv, useSession, useSettings, useShellState } from "./ShellContext";
@@ -416,6 +417,8 @@ export function Dialogs() {
       return <HostDialog />;
     case "joinServer":
       return <JoinServerDialog request={dialog} />;
+    case "comments":
+      return <CommentsDialog />;
     case "openPackage":
       return <OpenPackageDialog request={dialog} />;
     case "guide":

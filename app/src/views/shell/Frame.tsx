@@ -271,7 +271,9 @@ export function Frame({ spec }: { spec: ShellSpec }) {
             : st.view === "dax"
               ? "DAX query view"
               : "TMDL view (read-only)";
-    const shown = sess.viewing ? `Viewing (read only)  ·  ${base}` : base;
+    const co = sess.coedit;
+    const coText = co ? `Editing together${co.status === "offline" ? " (offline, will retry)" : co.status === "sending" ? " (sending)" : ""}${co.received ? `, ${co.received} update${co.received === 1 ? "" : "s"} from others` : ""}` : "";
+    const shown = sess.viewing ? `Viewing (read only)  ·  ${base}` : co ? `${coText}  ·  ${base}` : base;
     return sess.lastMessage ? `${shown}  ·  ${sess.lastMessage}` : shown;
   })();
 

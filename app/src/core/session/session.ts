@@ -14,6 +14,10 @@ import type { OpenedPackage, PublishApi } from "../publish/types";
 import { PublishUi } from "../publish/publishUi";
 import { HostUi } from "../host/hostUi";
 import type { HostApi, OpenedServerReport, ServerRef } from "../host/types";
+import { CoEditSession } from "../collab/coEdit";
+import { collabTransport } from "../collab/transport";
+import { CommentsUi } from "../collab/commentsUi";
+import type { CoEditInfo, CollabApi, CollabContext } from "../collab/types";
 
 export interface ProjectIO {
   newProject(root: string, name: string): Promise<Project>;
@@ -60,6 +64,8 @@ export interface SessionSnapshot {
   root: string | null;
   /** Set while a shared report is open for viewing; null for a normal project. */
   viewing: ViewingInfo | null;
+  /** Set while the open project is edited together with others. */
+  coedit: CoEditInfo | null;
   pendingRecovery: Project | null;
   lastMessage: string | null;
   /** Names of tables that currently have data in the engine's store. */
@@ -100,7 +106,10 @@ export class Session {
   readonly publishUi = new PublishUi(this);
   /** State of the Host and collaborate and Join a server dialogs. */
   readonly hostUi = new HostUi(this);
-  private snap: SessionSnapshot = { root: null, viewing: null, pendingRecovery: null, lastMessage: null, dataTables: [], dataEpoch: 0 };
+  /** State of the Comments dialog. */
+  readonly comments = new CommentsUi(this);
+  private coEditSession: CoEditSession | null = null;
+  private snap: SessionSnapshot = { root: null, viewing: null, coedit: null, pendingRecovery: null, lastMessage: null, dataTables: [], dataEpoch: 0 };
   private listeners = new Set<() => void>();
   /** Project roots whose recovery snapshot was written by this running app (not left behind by a crash). */
   private ownRecovery = new Set<string>();
@@ -118,6 +127,8 @@ export class Session {
     readonly publish: PublishApi | null = null,
     /** Host from this PC, joining servers, and server reports (null where the app backend is not available). */
     readonly host: HostApi | null = null,
+    /** Co-editing and comments (null where the app backend is not available). */
+    readonly collab: CollabApi | null = null,
   ) {}
 
   getSnapshot = (): SessionSnapshot => this.snap;
@@ -140,7 +151,84 @@ export class Session {
     this.set({ lastMessage: message });
   }
 
+  /**
+   * Starts editing the open project together with others over `ctx` (a server report, or a direct session). The first
+   * person to start seeds the shared document; everybody else gets the shared state in place of their own copy.
+   */
+  async startCoEdit(ctx: CollabContext, label: string, server?: CoEditInfo["server"]): Promise<void> {
+    if (!this.collab) throw new Error("Editing together needs the BIForge app window.");
+    if (!this.store.project || this.store.getSnapshot().readOnly) throw new Error("Open a project that can be edited first.");
+    await this.stopCoEdit();
+    const info: CoEditInfo = { ctx, label, status: "starting", detail: null, received: 0, ...(server ? { server } : {}) };
+    this.set({ coedit: info });
+    const session = new CoEditSession(this.store, collabTransport(this.collab, ctx), {
+      onStatus: (status, detail) => {
+        if (this.coEditSession !== session || !this.snap.coedit) return;
+        this.set({ coedit: { ...this.snap.coedit, status, detail, received: session.received } });
+      },
+    });
+    this.coEditSession = session;
+    try {
+      await session.start();
+    } catch (e) {
+      this.coEditSession = null;
+      this.set({ coedit: null });
+      throw e;
+    }
+    this.set({ lastMessage: `Editing together: ${label}. Changes of others appear here by themselves; yours are sent as you make them.` });
+  }
+
+  async stopCoEdit(): Promise<void> {
+    const s = this.coEditSession;
+    if (!s) return;
+    this.coEditSession = null;
+    this.set({ coedit: null });
+    await s.stop();
+  }
+
+  /**
+   * A guest of a direct session with the edit role: the shared package is opened as an ordinary project (with its data
+   * snapshots) and edited together with the host and the other editors.
+   */
+  async openP2pCoEdit(opened: OpenedPackage, p2p: { guestId: string; role: string; hostId: string }): Promise<void> {
+    await this.stopCoEdit();
+    const project = await this.io.openProject(opened.pbipPath);
+    this.store.load(project);
+    let dataNote = "";
+    let loaded: string[] = [];
+    if (this.engine) {
+      try {
+        await this.engine.openStore(opened.root);
+        for (const [table, path] of opened.dataFiles) {
+          await this.engine.importSource(table, { kind: "parquet", path });
+          loaded = [...loaded, table];
+        }
+      } catch (e) {
+        dataNote = ` The data could not be loaded: ${errText(e)}`;
+      }
+    }
+    this.set({ root: opened.root, viewing: null, pendingRecovery: null, dataTables: loaded, dataEpoch: this.snap.dataEpoch + 1, lastMessage: dataNote.trim() || null });
+    this.shell.enterWorkspace();
+    this.shell.setView("report");
+    await this.startCoEdit({ kind: "p2pGuest", guest: p2p.guestId }, `"${opened.manifest.reportName}" with the host`);
+  }
+
+  /** Opens a report of a BIForge server for editing together with the others who have it open. */
+  async openServerCoEdit(opened: OpenedServerReport): Promise<void> {
+    await this.stopCoEdit();
+    const project = await this.io.openProject(opened.pbipPath);
+    this.store.load(project);
+    // the queries of this report go to the server from the first paint on, so the server is named in the same step
+    const server = { connectionId: opened.connectionId, workspaceId: opened.workspaceId, reportId: opened.reportId };
+    const early: CoEditInfo = { ctx: { kind: "server", connection: opened.connectionId, workspace: opened.workspaceId, report: opened.reportId }, label: `${opened.reportName} on ${opened.serverLabel}`, status: "starting", detail: null, received: 0, server };
+    this.set({ root: opened.root, viewing: null, coedit: early, pendingRecovery: null, dataTables: [], dataEpoch: this.snap.dataEpoch + 1, lastMessage: null });
+    this.shell.enterWorkspace();
+    this.shell.setView("report");
+    await this.startCoEdit({ kind: "server", connection: opened.connectionId, workspace: opened.workspaceId, report: opened.reportId }, `${opened.reportName} on ${opened.serverLabel}`, { connectionId: opened.connectionId, workspaceId: opened.workspaceId, reportId: opened.reportId });
+  }
+
   async newProject(root: string, name: string): Promise<void> {
+    await this.stopCoEdit();
     const project = await this.io.newProject(root, name);
     this.store.load(project);
     try {
@@ -156,6 +244,7 @@ export class Session {
   }
 
   async openProject(pbipPath: string): Promise<void> {
+    await this.stopCoEdit();
     const project = await this.io.openProject(pbipPath);
     const root = dirname(pbipPath);
     this.store.load(project);
@@ -191,6 +280,7 @@ export class Session {
    * or written back.
    */
   async openViewing(opened: OpenedPackage, feedUrl: string | null = null, p2p?: { guestId: string; role: string; hostId: string }): Promise<void> {
+    await this.stopCoEdit();
     const project = await this.io.openProject(opened.pbipPath);
     this.store.loadReadOnly(project);
     let dataNote = "";
@@ -235,6 +325,7 @@ export class Session {
    * the project is read-only, and every query goes to the server (it applies the member's row-level security).
    */
   async openServerViewing(opened: OpenedServerReport): Promise<void> {
+    await this.stopCoEdit();
     const project = await this.io.openProject(opened.pbipPath);
     this.store.loadReadOnly(project);
     this.set({
@@ -377,6 +468,7 @@ export class Session {
   }
 
   closeProject(): void {
+    void this.stopCoEdit();
     this.store.close();
     this.set({ root: null, viewing: null, pendingRecovery: null, lastMessage: null, dataTables: [], dataEpoch: this.snap.dataEpoch + 1 });
     this.shell.leaveWorkspace();

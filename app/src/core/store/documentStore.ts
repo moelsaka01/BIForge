@@ -21,6 +21,9 @@ export interface StoreSnapshot {
   viewChanged: boolean;
 }
 
+export type ChangeKind = "edit" | "undo" | "redo";
+export type ChangeListener = (prev: Project, next: Project, label: string, kind: ChangeKind) => void;
+
 const MAX_HISTORY = 100;
 export const READ_ONLY_MESSAGE = "This report is open for viewing only; it cannot be changed.";
 
@@ -47,6 +50,7 @@ export class DocumentStore {
   private revision = 0;
   private readOnly = false;
   private listeners = new Set<() => void>();
+  private changeListeners = new Set<ChangeListener>();
   private snapshot: StoreSnapshot = this.makeSnapshot();
 
   get project(): Project | null {
@@ -59,6 +63,25 @@ export class DocumentStore {
     this.listeners.add(fn);
     return () => this.listeners.delete(fn);
   };
+
+  /** Called after every change the person makes (an edit, undo or redo) with the project before and after it. */
+  onProjectChange(fn: ChangeListener): () => void {
+    this.changeListeners.add(fn);
+    return () => this.changeListeners.delete(fn);
+  }
+
+  /**
+   * A change made by someone else while co-editing: it becomes the current project without an undo step, and the undo
+   * history ends here (an undo of an older step would otherwise silently take the others' work away as well).
+   */
+  applyRemote(next: Project): void {
+    if (this.readOnly) throw new Error(READ_ONLY_MESSAGE);
+    if (!this.current) throw new Error("No project is open.");
+    this.current = next;
+    this.undoStack = [];
+    this.redoStack = [];
+    this.bump();
+  }
 
   /** Replaces the document and clears history. The loaded state counts as saved. */
   load(project: Project): void {
@@ -138,6 +161,7 @@ export class DocumentStore {
     this.redoStack = [];
     this.current = draft;
     this.bump();
+    this.changeListeners.forEach((l) => l(before, draft, label, "edit"));
     return true;
   }
 
@@ -146,8 +170,10 @@ export class DocumentStore {
     const e = this.undoStack.pop();
     if (!e) return false;
     this.redoStack.push(e);
+    const from = this.current;
     this.current = e.before;
     this.bump();
+    if (from) this.changeListeners.forEach((l) => l(from, e.before, e.label, "undo"));
     return true;
   }
 
@@ -156,8 +182,10 @@ export class DocumentStore {
     const e = this.redoStack.pop();
     if (!e) return false;
     this.undoStack.push(e);
+    const from = this.current;
     this.current = e.after;
     this.bump();
+    if (from) this.changeListeners.forEach((l) => l(from, e.after, e.label, "redo"));
     return true;
   }
 

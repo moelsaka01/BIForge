@@ -18,7 +18,7 @@
 //! hotspots) prevent every kind of connection, and then the guest gets a message that names the other methods.
 
 mod rpc;
-pub use rpc::Change;
+pub use rpc::{Change, GuestCaller};
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};

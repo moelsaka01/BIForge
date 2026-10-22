@@ -50,8 +50,10 @@ export class FakeHost implements HostApi {
     };
     return (answers[op] ?? {}) as T;
   }
+  /** The role the next openReport answers with. */
+  openRole: "viewer" | "editor" | "admin" = "editor";
   async openReport(connection: string, workspace: string | null, report: string): Promise<OpenedServerReport> {
-    return { root: "C:/cache/s", pbipPath: "C:/cache/s/Sales.pbip", connectionId: connection, workspaceId: workspace ?? "w_1", reportId: report, reportName: "Sales", version: 2, role: "viewer", identity: "ann@x.com", serverLabel: "Team on host" };
+    return { root: "C:/cache/s", pbipPath: "C:/cache/s/Sales.pbip", connectionId: connection, workspaceId: workspace ?? "w_1", reportId: report, reportName: "Sales", version: 2, role: this.openRole, identity: "ann@x.com", serverLabel: "Team on host" };
   }
   // ---- direct sessions ----
   p2pHost: P2pHostView = { running: true, code: "BF1-abc-0123456789", ticket: "BF1T-xyz", expiresAt: 4102444800, version: 1, pending: [{ id: 1, name: "Zoe", endpointId: "e1", requestedAt: 1 }], peers: [], pushes: [] };

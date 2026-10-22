@@ -197,6 +197,11 @@ function Workspace({ conn }: { conn: Connection }) {
                     <Button size="small" onClick={() => void env.run("server.report.open", { connection: conn.id, workspace: state.workspace, report: r.id })}>
                       Open for viewing
                     </Button>
+                    {conn.role !== "viewer" && (
+                      <Button size="small" onClick={() => void env.run("collab.server.open", { connection: conn.id, workspace: state.workspace, report: r.id })}>
+                        Edit together
+                      </Button>
+                    )}
                     <Button size="small" onClick={() => void env.run("host.versions.load", { report: r.id })}>
                       Versions
                     </Button>
@@ -372,6 +377,13 @@ export function P2pPanel({ targetId }: { targetId: string }) {
       <div style={{ fontSize: 12 }}>
         Expires {fmtTime(view.expiresAt)}. BIForge must stay open and both computers online. The code alone gives nobody access: you approve every person below.
       </div>
+      {view.peers.some((p) => p.role === "edit" && !p.revoked) && (
+        <div>
+          <Button size="small" onClick={() => void env.run("collab.p2p.host.start", { target: targetId })}>
+            Edit together with the guests who have the edit role
+          </Button>
+        </div>
+      )}
       {view.pending.length > 0 && (
         <section aria-label="Join requests">
           <strong>Waiting for your approval</strong>

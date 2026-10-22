@@ -304,6 +304,12 @@ export class HostUi {
       let pendingPath = g.pendingPath;
       if (view.newPackage) pendingPath = view.newPackage.path;
       this.set({ p2pGuest: { ...g, view, pendingPath } });
+      // a guest who edits together keeps the shared document; a package the host publishes later does not replace it
+      const editing = view.role === "edit" && this.session.getSnapshot().coedit !== null;
+      if (pendingPath && editing) {
+        pendingPath = null;
+        this.set({ p2pGuest: { ...(this.snap.p2pGuest ?? g), view, pendingPath: null } });
+      }
       if (pendingPath) {
         if (this.session.store.getSnapshot().isDirty && !this.session.getSnapshot().viewing) {
           this.set({ error: "Your open project has unsaved changes. Save or close it, and the shared report opens by itself." });
@@ -311,7 +317,10 @@ export class HostUi {
           const publish = this.session.publish;
           if (!publish) throw new Error("Opening a shared report needs the BIForge app window.");
           const opened = await publish.openPackage(pendingPath, null, g.pin);
-          await this.session.openViewing(opened, null, { guestId: g.id, role: view.role, hostId: view.hostId });
+          const p2p = { guestId: g.id, role: view.role, hostId: view.hostId };
+          // the edit role means editing together (both sides have the data); read-only means viewing
+          if (view.role === "edit" && this.session.collab) await this.session.openP2pCoEdit(opened, p2p);
+          else await this.session.openViewing(opened, null, p2p);
           this.set({ error: null, p2pGuest: { ...(this.snap.p2pGuest ?? g), view, pin: opened.manifest.publisher.publicKey, pendingPath: null } });
           this.session.shell.closeDialog();
         }
@@ -323,7 +332,7 @@ export class HostUi {
       }
       // the window moved to another document: the session is no longer in use
       const viewing = this.session.getSnapshot().viewing;
-      if (this.snap.p2pGuest && view.state === "approved" && !pendingPath && !viewing?.p2p) await this.p2pLeave();
+      if (this.snap.p2pGuest && view.state === "approved" && !pendingPath && !viewing?.p2p && !this.session.getSnapshot().coedit) await this.p2pLeave();
     } catch (e) {
       this.set({ error: errText(e) });
     } finally {

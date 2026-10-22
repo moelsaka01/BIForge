@@ -10,6 +10,7 @@ use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
+use base64::Engine as _;
 use biforge_publish::backend::*;
 use biforge_publish::deeplink::{self, Link};
 use biforge_publish::http::{Http, ReqwestHttp};
@@ -287,6 +288,24 @@ impl HostService {
             "reports" => to(c.reports(&ws(&args)?)),
             "deleteReport" => to(c.delete_report(&ws(&args)?, &s(&args, "report")?)),
             "versions" => to(c.versions(&ws(&args)?, &s(&args, "report")?)),
+            "collabSync" => {
+                let b = base64::engine::general_purpose::STANDARD;
+                let dec = |k: &str| -> Result<Vec<u8>, String> { b.decode(args.get(k).and_then(|v| v.as_str()).unwrap_or("")).map_err(msg) };
+                let seed = args.get("seed").and_then(|v| v.as_bool()).unwrap_or(false);
+                let summary = args.get("summary").and_then(|v| v.as_str()).unwrap_or("");
+                let r = c.collab_sync(&ws(&args)?, &s(&args, "report")?, &dec("stateVector")?, &dec("update")?, seed, summary).map_err(msg)?;
+                Ok(serde_json::json!({"update": b.encode(&r.update), "stateVector": b.encode(&r.state_vector), "seeded": r.seeded, "empty": r.empty}))
+            }
+            "collabChanges" => to(c.collab_changes(&ws(&args)?, &s(&args, "report")?)),
+            "comments" => to(c.comments(&ws(&args)?, &s(&args, "report")?)),
+            "addComment" => {
+                let anchor: biforge_collab::Anchor = serde_json::from_value(args.get("anchor").cloned().unwrap_or_default()).unwrap_or_default();
+                let parent = args.get("parent").and_then(|v| v.as_str()).map(str::to_string);
+                to(c.add_comment(&ws(&args)?, &s(&args, "report")?, &s(&args, "text")?, &anchor, parent.as_deref()))
+            }
+            "resolveComment" => to(c.resolve_comment(&ws(&args)?, &s(&args, "report")?, &s(&args, "id")?, args.get("resolved").and_then(|v| v.as_bool()).unwrap_or(true))),
+            "deleteComment" => to(c.delete_comment(&ws(&args)?, &s(&args, "report")?, &s(&args, "id")?)),
+            "mentions" => to(c.mentions(&ws(&args)?)),
             "restoreVersion" => {
                 let v = args.get("version").and_then(|v| v.as_u64()).ok_or("Missing version.")?;
                 to(c.restore_version(&ws(&args)?, &s(&args, "report")?, v))

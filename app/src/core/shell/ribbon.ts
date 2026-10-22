@@ -248,6 +248,8 @@ const shareGroup = (): RibbonGroup => ({
     cmd("openShared", "Open shared report", "open", "package.open", { size: "large", keytip: "OS" }),
     cmd("hostShare", "Host and collaborate", "export", "host.open", { size: "large", keytip: "HC" }),
     cmd("joinServer", "Join a server", "open", "server.join", { size: "large", keytip: "JS" }),
+    cmd("comments", "Comments", "help", "comments.open", { size: "large", keytip: "CM" }),
+    cmd("stopCoEdit", "Stop editing together", "delete", "collab.stop", { size: "large", keytip: "SC" }),
   ],
 });
 

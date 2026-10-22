@@ -8,7 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "test": "vitest run",
     "tauri": "tauri",
-    "e2e": "node e2e/o1.mjs && node e2e/o5.mjs && node e2e/o4.mjs"
+    "e2e": "node e2e/o1.mjs && node e2e/o5.mjs && node e2e/o4.mjs && node e2e/o6.mjs"
   },
   "dependencies": {
     "@fluentui/react-components": "^9.74.9",
@@ -17,7 +17,8 @@
     "echarts": "^6.1.0",
     "monaco-editor": "^0.57.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "yjs": "^13.6.27"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.12.3",

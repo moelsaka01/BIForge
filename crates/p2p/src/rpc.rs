@@ -162,10 +162,27 @@ impl HostSession {
     }
 }
 
+/// A cheap handle that can call the host without borrowing the guest (it holds only the connection).
+#[derive(Clone)]
+pub struct GuestCaller {
+    shared: Arc<Mutex<GuestShared>>,
+    conn: Connection,
+}
+
 impl Guest {
+    pub fn caller(&self) -> GuestCaller {
+        GuestCaller { shared: self.shared.clone(), conn: self.conn.clone() }
+    }
+
     /// A call to the host: `op` names it, `args` are its parameters and `blob` its binary payload.
     pub async fn call(&self, op: &str, args: &serde_json::Value, blob: &[u8]) -> Result<(serde_json::Value, Vec<u8>), P2pError> {
-        if !matches!(self.state(), GuestState::Approved) {
+        self.caller().call(op, args, blob).await
+    }
+}
+
+impl GuestCaller {
+    pub async fn call(&self, op: &str, args: &serde_json::Value, blob: &[u8]) -> Result<(serde_json::Value, Vec<u8>), P2pError> {
+        if !matches!(self.shared.lock().unwrap().state, GuestState::Approved) {
             return err("You are not connected to the host.");
         }
         let work = async {
