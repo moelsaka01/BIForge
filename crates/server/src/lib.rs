@@ -17,6 +17,7 @@
 //!   tunnel), no rate limiting on joins (tokens are 256-bit), state is kept in JSON files, one process.
 
 mod collab_api;
+mod refresh_api;
 mod tls;
 
 use std::collections::{BTreeMap, HashMap};
@@ -315,6 +316,8 @@ impl App {
         }
         let bytes = fs::read(self.report_dir(wid, rid).join("package.bin")).map_err(internal)?;
         let (l, _) = Self::build_loaded(&bytes, Some(&meta.publisher_key))?;
+        // data the server refreshed itself replaces the published snapshots
+        self.apply_overlay(wid, rid, &l.source.lock().unwrap());
         let l = Arc::new(l);
         self.loaded.lock().unwrap().insert(key, l.clone());
         Ok(l)
@@ -571,6 +574,8 @@ async fn upload_report(State(app): St, h: HeaderMap, UrlPath((wid, rid)): UrlPat
     fs::write(dir.join("meta.json"), serde_json::to_vec_pretty(&meta).map_err(internal)?).map_err(internal)?;
     app2.forget_report(&wid, &rid);
     app2.reset_collab(&wid, &rid);
+    // new data from the publisher replaces whatever the server refreshed before
+    app2.drop_overlay(&wid, &rid);
     app2.loaded.lock().unwrap().insert(format!("{wid}/{rid}"), Arc::new(loaded));
     app2.audit(&wid, &p.actor(), "report-upload", &format!("{} ({rid}) version {}", meta.name, meta.version));
     Ok(Json(app2.info_of(&wid, &meta)))
@@ -721,6 +726,10 @@ pub fn router(app: Arc<App>) -> Router {
         .route("/api/workspaces/{w}/reports/{r}/comments/{c}", axum::routing::delete(collab_api::delete_comment))
         .route("/api/workspaces/{w}/reports/{r}/comments/{c}/resolve", post(collab_api::resolve_comment))
         .route("/api/workspaces/{w}/mentions", get(collab_api::my_mentions))
+        .route("/api/workspaces/{w}/reports/{r}/refresh", get(refresh_api::get_refresh).put(refresh_api::put_refresh))
+        .route("/api/workspaces/{w}/reports/{r}/refresh/bundle", put(refresh_api::put_bundle).delete(refresh_api::delete_bundle))
+        .route("/api/workspaces/{w}/reports/{r}/refresh/run", post(refresh_api::run_now))
+        .route("/api/workspaces/{w}/reports/{r}/refresh/sources/{name}", put(refresh_api::put_source))
         .route("/api/workspaces/{w}/reports/{r}/versions/{v}/restore", post(restore_version))
         .route("/api/workspaces/{w}/reports/{r}/project", get(project))
         .route("/api/workspaces/{w}/reports/{r}/query", post(query))
@@ -841,6 +850,17 @@ pub fn start(cfg: Config) -> Result<Running, String> {
                     return;
                 }
             };
+            // scheduled refreshes: look every 20 seconds for jobs that are due
+            let ticker = app.clone();
+            tokio::spawn(async move {
+                let secs = std::env::var("BIFORGE_SERVER_TICK_SECS").ok().and_then(|v| v.parse::<u64>().ok()).filter(|n| *n >= 1).unwrap_or(20);
+                let mut iv = tokio::time::interval(std::time::Duration::from_secs(secs));
+                loop {
+                    iv.tick().await;
+                    let a = ticker.clone();
+                    let _ = tokio::task::spawn_blocking(move || a.refresh_tick(now_secs())).await;
+                }
+            });
             let addr = listener.local_addr().unwrap();
             let scheme = if acceptor.is_some() { "https" } else { "http" };
             *app.public_url.lock().unwrap() = public.unwrap_or_else(|| format!("{scheme}://{addr}"));

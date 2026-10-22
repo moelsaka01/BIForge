@@ -28,6 +28,7 @@ pub mod pin;
 pub mod package;
 pub mod publisher;
 pub mod refresh;
+pub mod schedule;
 pub mod server;
 pub mod storage;
 pub mod subscribe;

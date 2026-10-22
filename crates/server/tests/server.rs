@@ -386,3 +386,123 @@ fn co_editing_through_the_server_and_comments_with_mentions() {
     Client::new(&http, &srv2.url(), &vic.token).delete_comment(&ws, "sales", &c1.id).unwrap();
     assert_eq!(c_ann2.comments(&ws, "sales").unwrap().len(), 0, "the answers go with the thread");
 }
+
+fn refresh_bundle(signer: &Identity, sales_csv: &str, region_csv: &str) -> Vec<u8> {
+    use biforge_publish::refresh::{bundle_files, RefreshConfig, RefreshSource};
+    let included = vec![
+        IncludedTable { table: "Region".into(), columns: vec!["Id".into(), "Name".into(), "Manager".into()], data_file: "data/Region.parquet".into() },
+        IncludedTable { table: "Sales".into(), columns: vec!["Id".into(), "RegionId".into(), "Qty".into()], data_file: "data/Sales.parquet".into() },
+    ];
+    let config = RefreshConfig {
+        format_version: 1,
+        report_name: "Demo".into(),
+        publisher_name: "Host".into(),
+        package_id: "pkg1".into(),
+        access: AccessLevel::Public,
+        included,
+        sources: vec![
+            RefreshSource { table: "Region".into(), spec: serde_json::json!({"kind": "csv", "path": "data/src/r.csv", "delimiter": null, "header": null}), original: "C:/pc/r.csv".into() },
+            RefreshSource { table: "Sales".into(), spec: serde_json::json!({"kind": "csv", "path": "data/src/s.csv", "delimiter": null, "header": null}), original: "C:/pc/s.csv".into() },
+        ],
+    };
+    let files = bundle_files(&config, &[], &[PackageFile { path: "data/src/r.csv".into(), bytes: region_csv.as_bytes().to_vec() }, PackageFile { path: "data/src/s.csv".into(), bytes: sales_csv.as_bytes().to_vec() }]).unwrap();
+    package::build(
+        BuildInput { package_id: "bundle".into(), version: 1, report_name: "Demo (refresh bundle)".into(), publisher_name: "Host".into(), access: AccessLevel::Public, included: vec![], permissions: vec![], created_at: "2026-10-22T00:00:00Z".into(), files, recipients: vec![] },
+        signer,
+    )
+    .unwrap()
+}
+
+fn unix_now() -> u64 {
+    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs()
+}
+
+#[test]
+fn the_server_refreshes_a_report_on_a_schedule_with_history_retries_and_one_run_at_a_time() {
+    use biforge_publish::refresh::Schedule;
+    use biforge_publish::schedule::{Plan, RunStatus, Trigger};
+    std::env::set_var("BIFORGE_SERVER_TICK_SECS", "1");
+    let dir = tempfile::tempdir().unwrap();
+    let http = ReqwestHttp::new().unwrap();
+    let srv = host(dir.path(), Some("bfa_r".into()));
+    let admin = Client::new(&http, &srv.url(), "bfa_r");
+    let ws = admin.create_workspace("R").unwrap().id;
+    let signer = Identity::generate();
+    let ed = join(&http, &srv, &admin, &ws, WsRole::Editor, "ed@x.com", &[]);
+    let vw = join(&http, &srv, &admin, &ws, WsRole::Viewer, "v@x.com", &[]);
+    let (c_ed, c_vw) = (Client::new(&http, &srv.url(), &ed.token), Client::new(&http, &srv.url(), &vw.token));
+    c_ed.upload_report(&ws, "sales", package_bytes(1, &signer, "one")).unwrap();
+    let region = "Id,Name,Manager\n1,East,ann@x.com\n2,West,bob@x.com\n3,North,ann@x.com\n";
+    let sales = "Id,RegionId,Qty\n1,1,10\n2,2,20\n3,3,30\n4,9,1000\n";
+
+    // nothing to run without a bundle; viewers cannot touch the schedule; a bundle from another publisher is refused
+    assert!(c_ed.refresh_set(&ws, "sales", true, &Plan::default()).unwrap_err().to_string().contains("refresh bundle first"));
+    assert!(c_vw.refresh_info(&ws, "sales").is_err());
+    assert!(c_ed.refresh_put_bundle(&ws, "sales", refresh_bundle(&Identity::generate(), sales, region)).is_err());
+    let info = c_ed.refresh_put_bundle(&ws, "sales", refresh_bundle(&signer, sales, region)).unwrap();
+    assert!(info.has_bundle && !info.enabled);
+    assert!(info.runs_on.contains("BIForge server") && info.needs.contains("server must stay on"));
+    assert!(info.source_folder.replace('\\', "/").contains("/reports/sales/refresh/sources"));
+
+    // a manual run with the same data changes nothing (and the history says where it ran)
+    let first = c_ed.refresh_run(&ws, "sales").unwrap();
+    assert!(matches!(first.status, RunStatus::Unchanged | RunStatus::Refreshed), "{first:?}");
+    let second = c_ed.refresh_run(&ws, "sales").unwrap();
+    assert_eq!(second.status, RunStatus::Unchanged, "{second:?}");
+    assert_eq!(total(&c_ed, &ws).unwrap(), "1060");
+
+    // a new source file in the server's source folder is read by the next run, and the queries use the new data
+    let more = "Id,RegionId,Qty\n1,1,10\n2,2,20\n3,3,30\n4,9,1000\n5,1,500\n";
+    c_ed.refresh_put_source(&ws, "sales", "s.csv", more.as_bytes().to_vec()).unwrap();
+    assert!(c_ed.refresh_put_source(&ws, "sales", "../evil.csv", vec![1]).is_err());
+    let third = c_ed.refresh_run(&ws, "sales").unwrap();
+    assert_eq!((third.status, third.trigger), (RunStatus::Refreshed, Trigger::Manual));
+    assert_eq!(total(&c_ed, &ws).unwrap(), "1560");
+    // row-level security still applies to the refreshed data
+    c_ed.set_roles(&ws, "sales", &[RlsRole { name: "Mine".into(), filters: vec![RlsFilter { table: "Region".into(), expression: "[Manager] = USERPRINCIPALNAME()".into() }] }]).unwrap();
+    let ann = join(&http, &srv, &admin, &ws, WsRole::Viewer, "ann@x.com", &["Mine"]);
+    assert_eq!(total(&Client::new(&http, &srv.url(), &ann.token), &ws).unwrap(), "540");
+
+    // one run at a time: with a run in progress a second one does not start
+    let lock = dir.path().join("workspaces").join(&ws).join("reports").join("sales").join("refresh").join("running.lock");
+    std::fs::write(&lock, unix_now().to_string()).unwrap();
+    let skipped = c_ed.refresh_run(&ws, "sales").unwrap();
+    assert_eq!(skipped.status, RunStatus::Skipped);
+    assert!(c_ed.refresh_info(&ws, "sales").unwrap().running);
+    std::fs::remove_file(&lock).unwrap();
+
+    // a failing source: the scheduled run tries again (1 retry, 1 s apart) and every attempt is in the history
+    c_ed.refresh_put_source(&ws, "sales", "s.csv", "Id,RegionId\n1,1\n".as_bytes().to_vec()).unwrap();
+    let plan = Plan { frequency: Schedule::Hourly, at_minute: 0, retries: 1, retry_delay_secs: 1 };
+    let before = c_ed.refresh_info(&ws, "sales").unwrap().history.len();
+    c_ed.refresh_set(&ws, "sales", true, &plan).unwrap();
+    let mut scheduled = Vec::new();
+    for _ in 0..80 {
+        std::thread::sleep(std::time::Duration::from_millis(250));
+        let h = c_ed.refresh_info(&ws, "sales").unwrap().history;
+        scheduled = h.into_iter().filter(|r| r.trigger == Trigger::Scheduled).collect();
+        if scheduled.len() >= 2 {
+            break;
+        }
+    }
+    assert_eq!(scheduled.len(), 2, "the scheduler started the job and retried it once");
+    assert!(scheduled.iter().all(|r| r.status == RunStatus::Failed && r.runs_on == biforge_publish::schedule::RunsOn::Server), "{scheduled:?}");
+    assert!(scheduled.iter().any(|r| r.attempt == 2) && scheduled.iter().any(|r| r.message.contains("Trying again")));
+    assert!(c_ed.refresh_info(&ws, "sales").unwrap().history.len() >= before + 2);
+    // a failed run leaves the served data as it was
+    assert_eq!(total(&c_ed, &ws).unwrap(), "1560");
+    // the next hour has not come: no third attempt
+    std::thread::sleep(std::time::Duration::from_millis(2500));
+    assert_eq!(c_ed.refresh_info(&ws, "sales").unwrap().history.iter().filter(|r| r.trigger == Trigger::Scheduled).count(), 2);
+
+    // a new version from the publisher replaces the refreshed data; turning refresh off removes the bundle
+    c_ed.upload_report(&ws, "sales", package_bytes(2, &signer, "two")).unwrap();
+    assert_eq!(total(&c_ed, &ws).unwrap(), "1060");
+    let off = c_ed.refresh_delete_bundle(&ws, "sales").unwrap();
+    assert!(!off.has_bundle && !off.enabled);
+    // the audit log knows who did what
+    let events: Vec<String> = admin.audit(&ws).unwrap().into_iter().map(|a| a.event).collect();
+    for e in ["refresh-bundle", "refresh-run", "refresh-source", "refresh-schedule", "refresh-off"] {
+        assert!(events.iter().any(|x| x == e), "{e} in {events:?}");
+    }
+}

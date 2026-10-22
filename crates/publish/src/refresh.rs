@@ -26,6 +26,7 @@ pub const DEFAULT_CLI_URL: &str = "https://github.com/moelsaka01/BIForge/release
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Schedule {
+    Hourly,
     Daily,
     Weekly,
     /// Only when started by hand from GitHub's Actions page or from BIForge.
@@ -35,6 +36,7 @@ pub enum Schedule {
 impl Schedule {
     pub fn parse(s: &str) -> Option<Schedule> {
         match s {
+            "hourly" => Some(Schedule::Hourly),
             "daily" => Some(Schedule::Daily),
             "weekly" => Some(Schedule::Weekly),
             "manual" => Some(Schedule::Manual),
@@ -43,6 +45,7 @@ impl Schedule {
     }
     pub fn as_str(self) -> &'static str {
         match self {
+            Schedule::Hourly => "hourly",
             Schedule::Daily => "daily",
             Schedule::Weekly => "weekly",
             Schedule::Manual => "manual",
@@ -82,6 +85,7 @@ pub fn bundle_files(config: &RefreshConfig, project: &[PackageFile], sources: &[
 
 pub fn workflow_yaml(schedule: Schedule) -> String {
     let on = match schedule {
+        Schedule::Hourly => "  schedule:\n    - cron: \"17 * * * *\"\n  workflow_dispatch: {}\n",
         Schedule::Daily => "  schedule:\n    - cron: \"17 5 * * *\"\n  workflow_dispatch: {}\n",
         Schedule::Weekly => "  schedule:\n    - cron: \"17 5 * * 1\"\n  workflow_dispatch: {}\n",
         Schedule::Manual => "  workflow_dispatch: {}\n",
@@ -113,7 +117,8 @@ mod tests {
     #[test]
     fn schedules_parse() {
         assert_eq!(Schedule::parse("daily"), Some(Schedule::Daily));
-        assert_eq!(Schedule::parse("hourly"), None);
+        assert_eq!(Schedule::parse("hourly"), Some(Schedule::Hourly));
+        assert_eq!(Schedule::parse("yearly"), None);
         assert_eq!(Schedule::Weekly.as_str(), "weekly");
     }
 }

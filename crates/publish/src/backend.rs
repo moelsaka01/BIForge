@@ -92,6 +92,22 @@ pub struct ReportInfo {
     pub has_roles: bool,
 }
 
+/// The scheduled refresh of a report on a server.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RefreshInfo {
+    pub enabled: bool,
+    pub plan: crate::schedule::Plan,
+    pub runs_on: String,
+    pub needs: String,
+    pub has_bundle: bool,
+    pub running: bool,
+    pub source_folder: String,
+    pub sources: Vec<String>,
+    pub history: Vec<crate::schedule::RunRecord>,
+    pub refreshed_at: Option<String>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CollabReply {
     pub update: Vec<u8>,
@@ -272,6 +288,29 @@ impl<'a> Client<'a> {
     /// Open comments by others that mention the caller, in every report of the workspace.
     pub fn mentions(&self, workspace: &str) -> Result<Vec<Value>> {
         Self::de(self.get(&format!("/api/workspaces/{workspace}/mentions"))?)
+    }
+    pub fn refresh_info(&self, workspace: &str, report: &str) -> Result<RefreshInfo> {
+        Self::de(self.get(&format!("/api/workspaces/{workspace}/reports/{report}/refresh"))?)
+    }
+    pub fn refresh_set(&self, workspace: &str, report: &str, enabled: bool, plan: &crate::schedule::Plan) -> Result<RefreshInfo> {
+        Self::de(self.send_json("PUT", &format!("/api/workspaces/{workspace}/reports/{report}/refresh"), &json!({"enabled": enabled, "plan": plan}))?)
+    }
+    /// Sends the refresh bundle (a signed package made by the publisher) the server reloads the sources from.
+    pub fn refresh_put_bundle(&self, workspace: &str, report: &str, bundle: Vec<u8>) -> Result<RefreshInfo> {
+        let r = self.call(Request::new("PUT", &format!("{}/api/workspaces/{workspace}/reports/{report}/refresh/bundle", self.base)).bytes("application/octet-stream", bundle))?;
+        Self::de(r.json()?)
+    }
+    pub fn refresh_delete_bundle(&self, workspace: &str, report: &str) -> Result<RefreshInfo> {
+        Self::de(self.call(Request::new("DELETE", &format!("{}/api/workspaces/{workspace}/reports/{report}/refresh/bundle", self.base)))?.json()?)
+    }
+    /// Puts a source file in the report's source folder on the server (it replaces the bundle's copy of the same name).
+    pub fn refresh_put_source(&self, workspace: &str, report: &str, name: &str, bytes: Vec<u8>) -> Result<RefreshInfo> {
+        let r = self.call(Request::new("PUT", &format!("{}/api/workspaces/{workspace}/reports/{report}/refresh/sources/{}", self.base, crate::deeplink::encode(name))).bytes("application/octet-stream", bytes))?;
+        Self::de(r.json()?)
+    }
+    /// Runs one refresh now and waits for it; returns the record.
+    pub fn refresh_run(&self, workspace: &str, report: &str) -> Result<crate::schedule::RunRecord> {
+        Self::de(self.send_json("POST", &format!("/api/workspaces/{workspace}/reports/{report}/refresh/run"), &json!({}))?)
     }
     pub fn delete_report(&self, workspace: &str, report: &str) -> Result<()> {
         self.call(Request::new("DELETE", &format!("{}/api/workspaces/{workspace}/reports/{report}", self.base)))?;
