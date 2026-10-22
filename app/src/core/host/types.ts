@@ -12,11 +12,24 @@ export interface Connection {
   role: WsRole;
   identity: string;
   isHost: boolean;
+  /** SHA-256 fingerprint of the server's self-signed certificate (https servers). */
+  pin?: string | null;
+}
+
+export interface VersionInfo {
+  version: number;
+  uploadedBy: string;
+  at: string;
+  sizeBytes: number;
+  /** The version the server answers with now. */
+  current: boolean;
 }
 
 export interface HostStatus {
   running: boolean;
   url: string;
+  /** The certificate fingerprint when the host speaks https. */
+  fingerprint?: string | null;
   adminToken: string | null;
   lan: boolean;
 }
@@ -144,12 +157,14 @@ export interface P2pGuestView {
 
 export interface HostApi {
   status(): Promise<HostStatus>;
-  start(lan: boolean, port: number | null, publicUrl: string | null): Promise<HostStatus>;
+  start(lan: boolean, port: number | null, publicUrl: string | null, tls?: boolean): Promise<HostStatus>;
   stop(): Promise<void>;
-  join(linkOrUrl: string, invite: string | null, displayName: string): Promise<Connection>;
+  join(linkOrUrl: string, invite: string | null, displayName: string, pin?: string | null): Promise<Connection>;
+  /** Signs in to a standalone server as its administrator with the token it printed. */
+  connectAdmin(url: string, adminToken: string, pin: string | null): Promise<Connection>;
   connections(): Promise<Connection[]>;
   forget(id: string): Promise<void>;
-  /** One call to a server; `op` names it (workspaces, createWorkspace, invite, members, setMember, revoke, audit, reports, deleteReport, roles, setRoles, query). */
+  /** One call to a server; `op` names it (workspaces, createWorkspace, invite, members, setMember, revoke, audit, reports, deleteReport, versions, restoreVersion, roles, setRoles, query). */
   op<T = unknown>(connection: string, op: string, args: Record<string, unknown>): Promise<T>;
   openReport(connection: string, workspace: string | null, report: string): Promise<OpenedServerReport>;
   p2pHostState(target: string): Promise<P2pHostView>;

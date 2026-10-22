@@ -35,7 +35,7 @@ fn files() -> (Vec<PackageFile>, Vec<IncludedTable>) {
 #[test]
 fn publishing_to_a_server_through_the_publisher() {
     let dir = tempfile::tempdir().unwrap();
-    let srv = start(Config { data_dir: dir.path().join("srv"), bind: "127.0.0.1:0".parse().unwrap(), admin_token: Some("bfa_t".into()), public_url: None }).unwrap();
+    let srv = start(Config { data_dir: dir.path().join("srv"), bind: "127.0.0.1:0".parse().unwrap(), admin_token: Some("bfa_t".into()), public_url: None, tls: false }).unwrap();
     let http = Arc::new(ReqwestHttp::new().unwrap());
     let admin = Client::new(http.as_ref(), &srv.url(), "bfa_t");
     let ws = admin.create_workspace("W").unwrap().id;

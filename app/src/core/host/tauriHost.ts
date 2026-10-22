@@ -3,9 +3,10 @@ import type { HostApi } from "./types";
 
 export const tauriHost: HostApi = {
   status: () => invoke("host_status"),
-  start: (lan, port, publicUrl) => invoke("host_start", { lan, port, publicUrl }),
+  start: (lan, port, publicUrl, tls) => invoke("host_start", { lan, port, publicUrl, tls }),
   stop: () => invoke("host_stop"),
-  join: (linkOrUrl, invite, displayName) => invoke("server_join", { linkOrUrl, invite, displayName }),
+  join: (linkOrUrl, invite, displayName, pin) => invoke("server_join", { linkOrUrl, invite, displayName, pin: pin ?? null }),
+  connectAdmin: (url, adminToken, pin) => invoke("server_connect_admin", { url, adminToken, pin }),
   connections: () => invoke("server_connections"),
   forget: (id) => invoke("server_forget", { id }),
   op: (connection, op, args) => invoke("server_op", { connection, op, args }),

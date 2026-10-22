@@ -20,4 +20,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$env:GITHUB_REF_NAME" target/release/biforge-server.exe --title "BIForge server $env:GITHUB_REF_NAME" --notes "biforge-server.exe: run it on a computer that stays on (biforge-server --data <folder> --bind 0.0.0.0:7878 --public-url http://<address>:7878). It prints an admin token once. Plain HTTP: use a trusted network, a VPN or a tunnel."
+          gh release create "$env:GITHUB_REF_NAME" target/release/biforge-server.exe --title "BIForge server $env:GITHUB_REF_NAME" --notes "biforge-server.exe: run it on a computer that stays on (biforge-server --data <folder> --bind 0.0.0.0:7878 --public-url https://<address>:7878). It prints an admin token and the certificate fingerprint once. Traffic is TLS with a self-signed certificate; invitation links carry its fingerprint (pin). Add --no-tls only on a trusted network."

@@ -94,6 +94,17 @@ pub struct ReportInfo {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct VersionInfo {
+    pub version: u64,
+    pub uploaded_by: String,
+    pub at: String,
+    pub size_bytes: u64,
+    /// The version the server currently answers with.
+    pub current: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AuditEntry {
     pub time: String,
     pub actor: String,
@@ -116,7 +127,16 @@ pub struct RlsRole {
 }
 
 pub fn build_link(server_url: &str, invite_token: &str) -> String {
-    format!("biforge://open?src=server&url={}&invite={}", crate::deeplink::encode(server_url), crate::deeplink::encode(invite_token))
+    build_link_pinned(server_url, invite_token, None)
+}
+
+/// An invitation link; `pin` is the SHA-256 fingerprint of the server's self-signed certificate (TLS).
+pub fn build_link_pinned(server_url: &str, invite_token: &str, pin: Option<&str>) -> String {
+    let mut l = format!("biforge://open?src=server&url={}&invite={}", crate::deeplink::encode(server_url), crate::deeplink::encode(invite_token));
+    if let Some(p) = pin {
+        l.push_str(&format!("&pin={}", crate::deeplink::encode(p)));
+    }
+    l
 }
 
 fn fail(r: &Response) -> Error {
@@ -200,6 +220,13 @@ impl<'a> Client<'a> {
     pub fn upload_report(&self, workspace: &str, report: &str, package: Vec<u8>) -> Result<ReportInfo> {
         let r = self.call(Request::new("PUT", &format!("{}/api/workspaces/{workspace}/reports/{report}", self.base)).bytes("application/octet-stream", package))?;
         Self::de(r.json()?)
+    }
+    pub fn versions(&self, workspace: &str, report: &str) -> Result<Vec<VersionInfo>> {
+        Self::de(self.get(&format!("/api/workspaces/{workspace}/reports/{report}/versions"))?)
+    }
+    /// Makes an older uploaded version the one the server answers with.
+    pub fn restore_version(&self, workspace: &str, report: &str, version: u64) -> Result<ReportInfo> {
+        Self::de(self.send_json("POST", &format!("/api/workspaces/{workspace}/reports/{report}/versions/{version}/restore"), &json!({}))?)
     }
     pub fn delete_report(&self, workspace: &str, report: &str) -> Result<()> {
         self.call(Request::new("DELETE", &format!("{}/api/workspaces/{workspace}/reports/{report}", self.base)))?;

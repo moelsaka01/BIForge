@@ -86,7 +86,7 @@ try {
   await hostDlg.getByRole("button", { name: "Turn on Host from this PC" }).click();
   const status = hostDlg.getByRole("status").filter({ hasText: /Hosting is on at/ });
   await status.waitFor();
-  const serverUrl = /(http:\/\/127\.0\.0\.1:\d+)/.exec(await status.innerText())?.[1];
+  const serverUrl = /(https:\/\/127\.0\.0\.1:\d+)/.exec(await status.innerText())?.[1];
   check(!!serverUrl, `hosting is on (${serverUrl})`);
   await hostDlg.getByLabel("New workspace name").fill("Team");
   await hostDlg.getByRole("button", { name: "Create workspace" }).click();
@@ -119,6 +119,10 @@ try {
   await hostDlg.getByRole("button", { name: "Save data roles" }).click();
   await hostDlg.getByText(/has data roles/).waitFor();
   check(true, "the data role was accepted by the server");
+  await hostDlg.getByRole("button", { name: "Versions" }).first().click();
+  await hostDlg.getByRole("region", { name: "Version history" }).getByText(/\(current\)/).waitFor();
+  check(true, "the version history lists the current version");
+  check(/Encrypted with TLS/.test(await hostDlg.innerText()), "the host says it is encrypted with TLS and shows the fingerprint");
 
   let lastLink = "";
   const invite = async (identity) => {
@@ -135,6 +139,7 @@ try {
   const annLink = await invite("ann@x.com");
   const bobLink = await invite("bob@x.com");
   check(annLink.startsWith("biforge://open?src=server") && !annLink.includes("bfa_"), "invitation links are biforge:// links without the admin token");
+  check(annLink.includes("https%3A%2F%2F") && /&pin=[0-9a-f]{64}/.test(annLink), "the links are https links that carry the certificate fingerprint");
 
   // ---- the guests (two more instances with their own data) ----
   const B = await launch("ann", 9342);

@@ -34,7 +34,7 @@ impl ServerAdapter {
             name: "Host from this PC",
             limitations: vec![
                 "BIForge must stay open and this PC online for others to connect".into(),
-                "The server speaks plain HTTP: use it on a trusted network, over a VPN or through a tunnel".into(),
+                "Traffic is encrypted with a self-signed certificate that the invitation link pins; a server started without TLS speaks plain HTTP (trusted network or VPN only)".into(),
                 "The data is stored unencrypted on the host; access is controlled by invitations, roles and data roles".into(),
             ],
             free_tier: vec!["Free; uses your PC and your internet connection".into()],
@@ -48,7 +48,7 @@ impl ServerAdapter {
             name: "BIForge server (biforge-server.exe)",
             limitations: vec![
                 "Needs a computer that stays on".into(),
-                "The server speaks plain HTTP: use it on a trusted network, over a VPN or through a tunnel".into(),
+                "Traffic is encrypted with a self-signed certificate that the invitation link pins; a server started with --no-tls speaks plain HTTP (trusted network or VPN only)".into(),
                 "The data is stored unencrypted on the server; access is controlled by invitations, roles and data roles".into(),
             ],
             free_tier: vec!["Free software; you provide the computer".into()],
@@ -63,6 +63,9 @@ impl ServerAdapter {
         let url = self.setting(t, "url")?;
         let conn = self.setting(t, "connection")?;
         let token = self.ctx.keys.get(&token_key(conn))?.ok_or_else(|| Error::Adapter("You are not signed in to this server any more. Join it again with an invitation.".into()))?;
+        if let Some(pin) = t.settings.get("pin").filter(|p| !p.is_empty()) {
+            crate::pin::apply(self.ctx.http.as_ref(), url, pin);
+        }
         Ok(Client::new(self.ctx.http.as_ref(), url, &token))
     }
 

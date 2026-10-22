@@ -3,7 +3,7 @@
 
 use biforge_engine::{MemoryCredentialStore, SourceSpec};
 use biforge_publish::backend::*;
-use biforge_publish::http::ReqwestHttp;
+use biforge_publish::http::{Http, ReqwestHttp};
 use biforge_publish::keys::Identity;
 use biforge_publish::manifest::{AccessLevel, IncludedTable};
 use biforge_publish::package::{self, BuildInput, PackageFile};
@@ -58,7 +58,7 @@ fn package_bytes(version: u64, signer: &Identity, key_note: &str) -> Vec<u8> {
 }
 
 fn host(dir: &std::path::Path, token: Option<String>) -> Running {
-    start(Config { data_dir: dir.to_path_buf(), bind: "127.0.0.1:0".parse().unwrap(), admin_token: token, public_url: None }).unwrap()
+    start(Config { data_dir: dir.to_path_buf(), bind: "127.0.0.1:0".parse().unwrap(), admin_token: token, public_url: None, tls: false }).unwrap()
 }
 
 fn total(c: &Client, ws: &str) -> Result<String, String> {
@@ -211,4 +211,85 @@ fn only_the_server_admin_creates_workspaces() {
     let v = join(&http, &srv, &admin, &ws, WsRole::Viewer, "v@x.com", &[]);
     assert!(Client::new(&http, &srv.url(), &v.token).create_workspace("mine").is_err());
     assert!(Client::new(&http, &srv.url(), "bfa_wrong").create_workspace("mine").is_err());
+}
+
+fn tls_host(dir: &std::path::Path) -> Running {
+    start(Config { data_dir: dir.to_path_buf(), bind: "127.0.0.1:0".parse().unwrap(), admin_token: Some("bfa_tls".into()), public_url: None, tls: true }).unwrap()
+}
+
+#[test]
+fn tls_with_a_pinned_self_signed_certificate() {
+    let dir = tempfile::tempdir().unwrap();
+    let srv = tls_host(dir.path());
+    let fp = srv.fingerprint.clone().expect("a fingerprint");
+    assert_eq!(fp.len(), 64);
+    assert!(srv.url().starts_with("https://127.0.0.1:"));
+    let host_port = biforge_publish::pin::host_port(&srv.url()).unwrap();
+
+    // a client without the pin refuses the certificate (it is not from a public authority)
+    let plain = ReqwestHttp::new().unwrap();
+    assert!(Client::info(&plain, &srv.url()).is_err());
+    // a client with a wrong pin refuses it too
+    let wrong = ReqwestHttp::new().unwrap();
+    wrong.pin(&host_port, &"cd".repeat(32));
+    assert!(Client::info(&wrong, &srv.url()).is_err());
+    // the right pin works end to end: info says TLS, the admin works, an invitation link carries the pin
+    let ok = ReqwestHttp::new().unwrap();
+    ok.pin(&host_port, &fp);
+    let info = Client::info(&ok, &srv.url()).unwrap();
+    assert_eq!(info["tls"], true);
+    let admin = Client::new(&ok, &srv.url(), "bfa_tls");
+    let ws = admin.create_workspace("T").unwrap().id;
+    let inv = admin.invite(&ws, &InviteRequest { role: WsRole::Viewer, identity: "v@x.com".into(), rls_roles: vec![], expires_minutes: 5 }).unwrap();
+    assert!(inv.link.starts_with("biforge://open?src=server&url=https%3A%2F%2F"), "{}", inv.link);
+    assert!(inv.link.contains(&format!("&pin={fp}")), "{}", inv.link);
+    match biforge_publish::deeplink::parse(&inv.link).unwrap() {
+        biforge_publish::deeplink::Link::Server { pin, .. } => assert_eq!(pin.as_deref(), Some(fp.as_str())),
+        other => panic!("{other:?}"),
+    }
+    // a plain-HTTP request to the TLS port is not answered as HTTP
+    assert!(std::net::TcpStream::connect(srv.addr).is_ok());
+    srv.stop();
+
+    // the certificate is kept: after a restart the same pin (and the same invitation links) still works
+    let again = tls_host(dir.path());
+    assert_eq!(again.fingerprint.as_deref(), Some(fp.as_str()));
+}
+
+#[test]
+fn every_uploaded_version_is_kept_and_an_older_one_can_be_made_current() {
+    let dir = tempfile::tempdir().unwrap();
+    let http = ReqwestHttp::new().unwrap();
+    let srv = host(dir.path(), Some("bfa_v".into()));
+    let admin = Client::new(&http, &srv.url(), "bfa_v");
+    let ws = admin.create_workspace("V").unwrap().id;
+    let signer = Identity::generate();
+    let viewer = join(&http, &srv, &admin, &ws, WsRole::Viewer, "v@x.com", &[]);
+    let c_view = Client::new(&http, &srv.url(), &viewer.token);
+    admin.upload_report(&ws, "sales", package_bytes(1, &signer, "one")).unwrap();
+    admin.upload_report(&ws, "sales", package_bytes(2, &signer, "two")).unwrap();
+    admin.upload_report(&ws, "sales", package_bytes(3, &signer, "three")).unwrap();
+    let v = c_view.versions(&ws, "sales").unwrap();
+    assert_eq!(v.iter().map(|x| (x.version, x.current)).collect::<Vec<_>>(), [(3, true), (2, false), (1, false)]);
+    let note = |c: &Client| String::from_utf8(c.project(&ws, "sales").unwrap().into_iter().find(|(p, _)| p.ends_with("note.txt")).unwrap().1).unwrap();
+    assert_eq!(note(&c_view), "three");
+
+    // viewers cannot restore; an editor/admin can; the server then answers with that version
+    assert!(c_view.restore_version(&ws, "sales", 1).is_err());
+    assert!(admin.restore_version(&ws, "sales", 9).is_err());
+    let info = admin.restore_version(&ws, "sales", 2).unwrap();
+    assert_eq!(info.version, 2);
+    assert_eq!(note(&c_view), "two");
+    assert_eq!(c_view.versions(&ws, "sales").unwrap().iter().find(|x| x.current).unwrap().version, 2);
+    // new uploads must still be newer than everything ever uploaded (3), not only than the current version
+    assert!(admin.upload_report(&ws, "sales", package_bytes(3, &signer, "dup")).unwrap_err().to_string().contains("409"));
+    admin.upload_report(&ws, "sales", package_bytes(4, &signer, "four")).unwrap();
+    assert_eq!(note(&c_view), "four");
+    // the restore is in the audit log
+    assert!(admin.audit(&ws).unwrap().iter().any(|a| a.event == "report-restore"));
+    // the history survives a restart
+    srv.stop();
+    let again = host(dir.path(), Some("bfa_v".into()));
+    let a2 = Client::new(&http, &again.url(), "bfa_v");
+    assert_eq!(a2.versions(&ws, "sales").unwrap().len(), 4);
 }

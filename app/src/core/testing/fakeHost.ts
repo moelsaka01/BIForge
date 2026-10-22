@@ -7,7 +7,7 @@ export class FakeHost implements HostApi {
   running = false;
   joined: Connection[] = [];
   async status(): Promise<HostStatus> {
-    return { running: this.running, url: this.running ? hostConn.url : "", adminToken: null, lan: false };
+    return { running: this.running, url: this.running ? hostConn.url : "", fingerprint: null, adminToken: null, lan: false };
   }
   async start(): Promise<HostStatus> {
     this.running = true;
@@ -19,6 +19,12 @@ export class FakeHost implements HostApi {
   async join(_link: string, invite: string | null, name: string): Promise<Connection> {
     if (!invite && !_link.startsWith("biforge://")) throw new Error("Enter the invitation code.");
     const c: Connection = { id: "c_1", label: `Team on ${hostConn.url}`, url: hostConn.url, workspaceId: "w_1", workspaceName: "Team", role: "viewer", identity: `${name}@x.com`, isHost: false };
+    this.joined.push(c);
+    return c;
+  }
+  async connectAdmin(url: string, _token: string, pin: string | null): Promise<Connection> {
+    if (url.startsWith("https://") && !pin) throw new Error("https needs the certificate fingerprint");
+    const c: Connection = { id: "c_admin", label: `Admin of ${url}`, url, workspaceId: "", workspaceName: "", role: "admin", identity: "server admin", isHost: false, pin };
     this.joined.push(c);
     return c;
   }
@@ -36,6 +42,10 @@ export class FakeHost implements HostApi {
       members: [{ id: "m_1", name: "Ann", identity: "ann@x.com", role: "viewer", rlsRoles: ["Mine"], createdAt: "t", revoked: false }],
       audit: [{ time: "t", actor: "a", event: "join", detail: "" }],
       invite: { id: "i", token: "bfi_x", link: "biforge://open?src=server&url=u&invite=bfi_x", expiresAt: "t" },
+      versions: [
+        { version: 2, uploadedBy: "x", at: "2026-10-20T10:00:00Z", sizeBytes: 2048, current: true },
+        { version: 1, uploadedBy: "x", at: "2026-10-19T10:00:00Z", sizeBytes: 1024, current: false },
+      ],
       query: { results: [{ columns: ["[t]"], rows: [[{ t: "int", v: "40" }]], totalRows: 1, truncated: false }], elapsedMs: 1 },
     };
     return (answers[op] ?? {}) as T;

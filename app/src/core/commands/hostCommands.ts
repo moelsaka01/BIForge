@@ -29,8 +29,8 @@ export function registerHostCommands(r: CommandRegistry<Session>): void {
     category: "Share",
     isEnabled: hasHost,
     async run(s, args) {
-      const a = (args ?? {}) as { lan?: boolean; port?: number | null; publicUrl?: string | null };
-      await s.hostUi.startHosting(a.lan === true, a.port ?? null, a.publicUrl ?? null);
+      const a = (args ?? {}) as { lan?: boolean; port?: number | null; publicUrl?: string | null; tls?: boolean };
+      await s.hostUi.startHosting(a.lan === true, a.port ?? null, a.publicUrl ?? null, a.tls !== false);
     },
   });
   r.register({ id: "host.stop", label: "Turn off Host from this PC", category: "Share", isEnabled: hasHost, run: (s) => s.hostUi.stopHosting() });
@@ -68,6 +68,18 @@ export function registerHostCommands(r: CommandRegistry<Session>): void {
     },
   });
   r.register({ id: "host.member.revoke", label: "Remove a member", category: "Share", isEnabled: hasHost, run: (s, args) => s.hostUi.revoke(str((args ?? {}) as Args, "member")) });
+  r.register({ id: "host.versions.load", label: "Show the kept versions of a report", category: "Share", isEnabled: hasHost, run: (s, args) => s.hostUi.loadVersions(str((args ?? {}) as Args, "report")) });
+  r.register({
+    id: "host.version.restore",
+    label: "Make an older version of a report current",
+    category: "Share",
+    isEnabled: hasHost,
+    run: (s, args) => {
+      const a = (args ?? {}) as { report?: string; version?: number };
+      if (typeof a.version !== "number") throw new Error("Missing value: version.");
+      return s.hostUi.restoreVersion(str(a as Args, "report"), a.version);
+    },
+  });
   r.register({ id: "host.roles.load", label: "Show the data roles of a report", category: "Share", isEnabled: hasHost, run: (s, args) => s.hostUi.loadRoles(str((args ?? {}) as Args, "report")) });
   r.register({
     id: "host.roles.save",
@@ -167,14 +179,28 @@ export function registerHostCommands(r: CommandRegistry<Session>): void {
     category: "File",
     isEnabled: hasHost,
     async run(s, args) {
-      const a = (args ?? {}) as { link?: string; invite?: string; name?: string };
-      const conn = await s.hostUi.join(str(a as Args, "link"), a.invite?.trim() || null, a.name ?? "");
+      const a = (args ?? {}) as { link?: string; invite?: string; name?: string; pin?: string };
+      const conn = await s.hostUi.join(str(a as Args, "link"), a.invite?.trim() || null, a.name ?? "", a.pin?.trim() || null);
       if (conn) {
         s.setMessage(`Joined "${conn.workspaceName}" as ${conn.role}. You can open its reports from Host and collaborate.`);
         s.shell.closeDialog();
       } else {
         throw new Error(s.hostUi.getSnapshot().error ?? "Could not join.");
       }
+    },
+  });
+  r.register({
+    id: "server.connectAdmin",
+    label: "Sign in to a server as its administrator",
+    category: "File",
+    isEnabled: hasHost,
+    async run(s, args) {
+      const a = (args ?? {}) as { url?: string; token?: string; pin?: string };
+      const conn = await s.hostUi.connectAdmin(a.url ?? "", a.token ?? "", a.pin ?? null);
+      if (!conn) throw new Error(s.hostUi.getSnapshot().error ?? "Could not sign in.");
+      s.setMessage(`Signed in to ${conn.url} as its administrator.`);
+      s.shell.closeDialog();
+      s.shell.openDialog({ kind: "host" });
     },
   });
   r.register({ id: "server.forget", label: "Forget a server", category: "File", isEnabled: hasHost, run: (s, args) => s.hostUi.forget(str((args ?? {}) as Args, "id")) });

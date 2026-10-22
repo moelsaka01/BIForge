@@ -80,3 +80,26 @@ describe("host and collaborate", () => {
     expect(session.host).not.toBeNull();
   });
 });
+
+describe("version history and administrator sign-in", () => {
+  it("lists the kept versions of a report and makes an older one current", async () => {
+    const { host, registry, session } = setup();
+    await registry.execute("host.start", { lan: false });
+    expect((await registry.execute("host.versions.load", { report: "sales" })).ok).toBe(true);
+    expect(session.hostUi.getSnapshot().versions?.list.map((v) => [v.version, v.current])).toEqual([[2, true], [1, false]]);
+    expect((await registry.execute("host.version.restore", { report: "sales", version: 1 })).ok).toBe(true);
+    expect(host.calls.find((c) => c.op === "restoreVersion")?.args).toMatchObject({ workspace: "w_1", report: "sales", version: 1 });
+    expect((await registry.execute("host.version.restore", { report: "sales" })).ok).toBe(false);
+  });
+
+  it("signs in to a standalone server as its administrator, with the certificate fingerprint for https", async () => {
+    const { registry, session } = setup();
+    const fp = "ab".repeat(32);
+    const noPin = await registry.execute("server.connectAdmin", { url: "https://10.0.0.5:7878", token: "bfa_x", pin: "" });
+    expect(noPin.ok).toBe(false);
+    expect((await registry.execute("server.connectAdmin", { url: "https://10.0.0.5:7878", token: "bfa_x", pin: fp })).ok).toBe(true);
+    const c = session.hostUi.getSnapshot().connections.find((x) => x.role === "admin" && !x.isHost);
+    expect(c).toMatchObject({ workspaceId: "", pin: fp });
+    expect((await registry.execute("server.connectAdmin", { url: "", token: "" })).ok).toBe(false);
+  });
+});

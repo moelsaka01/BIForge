@@ -128,6 +128,7 @@ fn main() {
             host::host_start,
             host::host_stop,
             host::server_join,
+            host::server_connect_admin,
             host::server_connections,
             host::server_forget,
             host::server_op,

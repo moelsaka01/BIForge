@@ -29,6 +29,7 @@ function HostSwitch() {
   const env = useEnv();
   const { state } = useHostUi();
   const [lan, setLan] = useState(false);
+  const [tls, setTls] = useState(true);
   const [publicUrl, setPublicUrl] = useState("");
   return (
     <fieldset style={{ border: "1px solid var(--colorNeutralStroke2)", padding: 8, display: "flex", flexDirection: "column", gap: 6 }}>
@@ -36,6 +37,11 @@ function HostSwitch() {
       {state.status.running ? (
         <>
           <div role="status">{`Hosting is on at ${state.status.url}${state.status.lan ? " (other computers on your network can connect)" : " (only this PC can connect)"}.`}</div>
+          {state.status.fingerprint ? (
+            <div style={{ fontSize: 12 }}>{`Encrypted with TLS. Certificate fingerprint (SHA-256): ${state.status.fingerprint}. Invitation links carry it, so guests trust exactly this certificate.`}</div>
+          ) : (
+            <div style={{ fontSize: 12 }}>Not encrypted (plain HTTP): use it on a trusted network or over a VPN.</div>
+          )}
           <div>
             <Button onClick={() => void env.run("host.stop")}>Turn off hosting</Button>
           </div>
@@ -43,12 +49,13 @@ function HostSwitch() {
       ) : (
         <>
           <div style={{ fontSize: 12 }}>
-            BIForge answers requests from the people you invite while it is open. It is free and uses your own computer. The server speaks plain HTTP: use it on a trusted network, over a VPN or through a tunnel. Reports are stored unencrypted on this PC.
+            BIForge answers requests from the people you invite while it is open. It is free and uses your own computer. Traffic is encrypted with a certificate made on this PC (free; the invitation link carries its fingerprint, so there is no authority to pay). Reports are stored unencrypted on this PC.
           </div>
+          <Checkbox label="Encrypt connections (TLS, recommended)" checked={tls} onChange={(_, d) => setTls(d.checked === true)} />
           <Checkbox label="Let other computers on my network connect" checked={lan} onChange={(_, d) => setLan(d.checked === true)} />
-          {lan && <Input aria-label="Address others use" placeholder="http://192.168.1.20:7878 (goes into invite links)" value={publicUrl} onChange={(_, d) => setPublicUrl(d.value)} />}
+          {lan && <Input aria-label="Address others use" placeholder={`${tls ? "https" : "http"}://192.168.1.20:7878 (goes into invite links)`} value={publicUrl} onChange={(_, d) => setPublicUrl(d.value)} />}
           <div>
-            <Button appearance="primary" onClick={() => void env.run("host.start", { lan, publicUrl: publicUrl.trim() || null })}>
+            <Button appearance="primary" onClick={() => void env.run("host.start", { lan, tls, publicUrl: publicUrl.trim() || null })}>
               Turn on Host from this PC
             </Button>
           </div>
@@ -161,7 +168,7 @@ function Workspace({ conn }: { conn: Connection }) {
             {w.name}
           </Button>
         ))}
-        {conn.isHost && (
+        {!conn.workspaceId && isAdmin && (
           <>
             <Input aria-label="New workspace name" placeholder="New workspace" value={name} onChange={(_, d) => setName(d.value)} />
             <Button
@@ -190,6 +197,9 @@ function Workspace({ conn }: { conn: Connection }) {
                     <Button size="small" onClick={() => void env.run("server.report.open", { connection: conn.id, workspace: state.workspace, report: r.id })}>
                       Open for viewing
                     </Button>
+                    <Button size="small" onClick={() => void env.run("host.versions.load", { report: r.id })}>
+                      Versions
+                    </Button>
                     {conn.role !== "viewer" && (
                       <Button size="small" onClick={() => void env.run("host.roles.load", { report: r.id })}>
                         Data roles
@@ -205,6 +215,23 @@ function Workspace({ conn }: { conn: Connection }) {
               </ul>
             )}
           </section>
+          {state.versions && (
+            <section aria-label="Version history">
+              <strong>{`Versions of ${state.versions.report}`}</strong>
+              <ul style={{ margin: "4px 0 0 0", padding: 0, listStyle: "none" }}>
+                {state.versions.list.map((v) => (
+                  <li key={v.version} style={{ display: "flex", gap: 8, alignItems: "center", padding: "2px 0" }}>
+                    <span style={{ flex: 1 }}>{`Version ${v.version}${v.current ? " (current)" : ""}, ${v.at}, ${v.uploadedBy}, ${(v.sizeBytes / 1024).toFixed(0)} KB`}</span>
+                    {conn.role !== "viewer" && !v.current && (
+                      <Button size="small" aria-label={`Make version ${v.version} current`} onClick={() => void env.run("host.version.restore", { report: state.versions!.report, version: v.version })}>
+                        Make current
+                      </Button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
           {state.roles && <RolesEditor report={state.roles.report} />}
           {isAdmin && <Invite roleNames={roleNames.length ? roleNames : [...new Set(state.members.flatMap((m) => m.rlsRoles))]} />}
           {isAdmin && (
@@ -403,6 +430,10 @@ export function JoinServerDialog({ request }: { request: { link?: string; invite
   const [link, setLink] = useState(request.link ?? "");
   const [invite, setInvite] = useState(request.invite ?? "");
   const [name, setName] = useState("");
+  const [pin, setPin] = useState("");
+  const [adminUrl, setAdminUrl] = useState("");
+  const [adminToken, setAdminToken] = useState("");
+  const [adminPin, setAdminPin] = useState("");
   const isLink = link.trim().startsWith("biforge://");
   const isCode = /^BF1T?-/.test(link.trim());
   const guest = state.p2pGuest;
@@ -414,7 +445,7 @@ export function JoinServerDialog({ request }: { request: { link?: string; invite
       actions={
         <>
           <Button onClick={close}>Cancel</Button>
-          <Button appearance="primary" disabled={!link.trim() || !name.trim() || (!isLink && !isCode && !invite.trim()) || state.busy || guest?.view?.state === "waiting"} onClick={() => void env.run(isCode ? "p2p.join.run" : "server.join.run", isCode ? { code: link, name } : { link, invite, name })}>
+          <Button appearance="primary" disabled={!link.trim() || !name.trim() || (!isLink && !isCode && !invite.trim()) || state.busy || guest?.view?.state === "waiting"} onClick={() => void env.run(isCode ? "p2p.join.run" : "server.join.run", isCode ? { code: link, name } : { link, invite, name, pin })}>
             Join
           </Button>
         </>
@@ -432,7 +463,22 @@ export function JoinServerDialog({ request }: { request: { link?: string; invite
       )}
       {guest && guest.view?.state === "denied" && <div role="alert">{guest.view.reason}</div>}
       {!isLink && !isCode && <Input aria-label="Invitation code" placeholder="Invitation code (bfi_...)" value={invite} onChange={(_, d) => setInvite(d.value)} />}
+      {!isLink && !isCode && link.trim().startsWith("https://") && <Input aria-label="Certificate fingerprint" placeholder="Certificate fingerprint of the server (64 hex digits)" value={pin} onChange={(_, d) => setPin(d.value)} />}
       <Input aria-label="Your name" placeholder="Your name" value={name} onChange={(_, d) => setName(d.value)} />
+      <details>
+        <summary>I run this server (sign in as administrator)</summary>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 6 }}>
+          <div style={{ fontSize: 12 }}>Use the address and the admin token biforge-server.exe printed when it started (the token is kept in Windows Credential Manager). With an https server also enter the certificate fingerprint it printed.</div>
+          <Input aria-label="Server address" placeholder="https://192.168.1.20:7878" value={adminUrl} onChange={(_, d) => setAdminUrl(d.value)} />
+          <Input aria-label="Admin token" type="password" placeholder="Admin token (bfa_...)" value={adminToken} onChange={(_, d) => setAdminToken(d.value)} />
+          <Input aria-label="Admin certificate fingerprint" placeholder="Certificate fingerprint (https servers)" value={adminPin} onChange={(_, d) => setAdminPin(d.value)} />
+          <div>
+            <Button disabled={!adminUrl.trim() || !adminToken.trim() || state.busy} onClick={() => void env.run("server.connectAdmin", { url: adminUrl, token: adminToken, pin: adminPin })}>
+              Sign in as administrator
+            </Button>
+          </div>
+        </div>
+      </details>
     </Frame>
   );
 }

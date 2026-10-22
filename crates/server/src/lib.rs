@@ -16,6 +16,8 @@
 //! * Limits of this version (also in docs/COVERAGE.md): plain HTTP (no TLS; use a trusted network, a VPN or a
 //!   tunnel), no rate limiting on joins (tokens are 256-bit), state is kept in JSON files, one process.
 
+mod tls;
+
 use std::collections::{BTreeMap, HashMap};
 use std::fs;
 use std::io::Write as _;
@@ -87,6 +89,19 @@ struct ReportMeta {
     publisher_key_id: String,
     uploaded_by: String,
     updated_at: String,
+    /// The highest version ever uploaded (a restore makes an older version current; new uploads must still be newer
+    /// than everything seen).
+    #[serde(default)]
+    max_version: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct StoredVersion {
+    version: u64,
+    uploaded_by: String,
+    at: String,
+    size_bytes: u64,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -110,6 +125,8 @@ pub struct App {
     loaded: Mutex<HashMap<String, Arc<Loaded>>>,
     secured: Mutex<HashMap<String, Arc<biforge_dax::Engine>>>,
     public_url: Mutex<String>,
+    /// SHA-256 fingerprint of the TLS certificate; goes into invitation links as `pin=`.
+    pin: Option<String>,
 }
 
 // ------------------------------------------------------------------------------------------------ errors
@@ -341,7 +358,7 @@ impl App {
 type St = State<Arc<App>>;
 
 async fn info(State(app): St) -> Json<Value> {
-    Json(json!({"name": "biforge-server", "version": env!("CARGO_PKG_VERSION"), "apiVersion": API_VERSION, "url": app.public_url.lock().unwrap().clone()}))
+    Json(json!({"name": "biforge-server", "version": env!("CARGO_PKG_VERSION"), "apiVersion": API_VERSION, "url": app.public_url.lock().unwrap().clone(), "tls": app.pin.is_some()}))
 }
 
 #[derive(Deserialize)]
@@ -391,7 +408,7 @@ async fn create_invite(State(app): St, h: HeaderMap, UrlPath(wid): UrlPath<Strin
     let tok = token("bfi_");
     let expires = now_secs() + b.expires_minutes * 60;
     let inv = StoredInvite { id: new_id("i_"), token_hash: sha(&tok), role: b.role, identity: b.identity.trim().to_string(), rls_roles: b.rls_roles.clone(), expires_unix: expires, used_by: None };
-    let link = build_link(&app.public_url.lock().unwrap().clone(), &tok);
+    let link = build_link_pinned(&app.public_url.lock().unwrap().clone(), &tok, app.pin.as_deref());
     let info = InviteInfo { id: inv.id.clone(), token: tok, link, expires_at: rfc3339(expires as i64) };
     {
         let mut all = app.workspaces.lock().unwrap();
@@ -525,8 +542,9 @@ async fn upload_report(State(app): St, h: HeaderMap, UrlPath((wid, rid)): UrlPat
         return err(StatusCode::BAD_REQUEST, "The server must read the data to answer queries, so it cannot host an encrypted package. Publish this report as Public to the server (access is controlled by the invitations and the data roles).");
     }
     if let Some(m) = &existing {
-        if pkg.envelope.version <= m.version {
-            return err(StatusCode::CONFLICT, format!("The server already has version {}. Upload a newer version.", m.version));
+        let newest = m.max_version.max(m.version);
+        if pkg.envelope.version <= newest {
+            return err(StatusCode::CONFLICT, format!("The server already has version {newest}. Upload a newer version."));
         }
     }
     let meta = ReportMeta {
@@ -537,15 +555,60 @@ async fn upload_report(State(app): St, h: HeaderMap, UrlPath((wid, rid)): UrlPat
         publisher_key_id: pkg.manifest.publisher.key_id.clone(),
         uploaded_by: p.actor(),
         updated_at: rfc3339(now_secs() as i64),
+        max_version: pkg.envelope.version,
     };
     let dir = app2.report_dir(&wid, &rid);
-    fs::create_dir_all(&dir).map_err(internal)?;
+    fs::create_dir_all(dir.join("versions")).map_err(internal)?;
     fs::write(dir.join("package.bin"), body.as_ref()).map_err(internal)?;
+    // every uploaded version is kept, so an older one can be made current again
+    fs::write(dir.join("versions").join(format!("{}.bin", meta.version)), body.as_ref()).map_err(internal)?;
+    let sv = StoredVersion { version: meta.version, uploaded_by: meta.uploaded_by.clone(), at: meta.updated_at.clone(), size_bytes: body.len() as u64 };
+    fs::write(dir.join("versions").join(format!("{}.json", meta.version)), serde_json::to_vec_pretty(&sv).map_err(internal)?).map_err(internal)?;
     fs::write(dir.join("meta.json"), serde_json::to_vec_pretty(&meta).map_err(internal)?).map_err(internal)?;
     app2.forget_report(&wid, &rid);
     app2.loaded.lock().unwrap().insert(format!("{wid}/{rid}"), Arc::new(loaded));
     app2.audit(&wid, &p.actor(), "report-upload", &format!("{} ({rid}) version {}", meta.name, meta.version));
     Ok(Json(app2.info_of(&wid, &meta)))
+}
+
+async fn list_versions(State(app): St, h: HeaderMap, UrlPath((wid, rid)): UrlPath<(String, String)>) -> ApiResult<Json<Vec<VersionInfo>>> {
+    let p = app.principal(&h)?;
+    app.require(&p, &wid, WsRole::Viewer, "list versions")?;
+    let meta = app.read_meta(&wid, &rid)?;
+    let mut out = Vec::new();
+    if let Ok(rd) = fs::read_dir(app.report_dir(&wid, &rid).join("versions")) {
+        for e in rd.flatten() {
+            if e.path().extension().and_then(|x| x.to_str()) != Some("json") {
+                continue;
+            }
+            if let Some(v) = fs::read(e.path()).ok().and_then(|b| serde_json::from_slice::<StoredVersion>(&b).ok()) {
+                out.push(VersionInfo { version: v.version, uploaded_by: v.uploaded_by, at: v.at, size_bytes: v.size_bytes, current: v.version == meta.version });
+            }
+        }
+    }
+    out.sort_by(|a, b| b.version.cmp(&a.version));
+    Ok(Json(out))
+}
+
+async fn restore_version(State(app): St, h: HeaderMap, UrlPath((wid, rid, v)): UrlPath<(String, String, u64)>) -> ApiResult<Json<ReportInfo>> {
+    let p = app.principal(&h)?;
+    app.require(&p, &wid, WsRole::Editor, "restore a version")?;
+    let mut meta = app.read_meta(&wid, &rid)?;
+    let dir = app.report_dir(&wid, &rid);
+    let bytes = fs::read(dir.join("versions").join(format!("{v}.bin"))).map_err(|_| ApiError(StatusCode::NOT_FOUND, format!("The server has no version {v} of this report.")))?;
+    let pin = meta.publisher_key.clone();
+    let b2 = bytes.clone();
+    let (loaded, pkg) = tokio::task::spawn_blocking(move || App::build_loaded(&b2, Some(&pin))).await.map_err(internal)??;
+    meta.name = pkg.manifest.report_name.clone();
+    meta.version = v;
+    meta.updated_at = rfc3339(now_secs() as i64);
+    meta.max_version = meta.max_version.max(v);
+    fs::write(dir.join("package.bin"), &bytes).map_err(internal)?;
+    fs::write(dir.join("meta.json"), serde_json::to_vec_pretty(&meta).map_err(internal)?).map_err(internal)?;
+    app.forget_report(&wid, &rid);
+    app.loaded.lock().unwrap().insert(format!("{wid}/{rid}"), Arc::new(loaded));
+    app.audit(&wid, &p.actor(), "report-restore", &format!("{} ({rid}) back to version {v}", meta.name));
+    Ok(Json(app.info_of(&wid, &meta)))
 }
 
 async fn delete_report(State(app): St, h: HeaderMap, UrlPath((wid, rid)): UrlPath<(String, String)>) -> ApiResult<Json<Value>> {
@@ -645,6 +708,8 @@ pub fn router(app: Arc<App>) -> Router {
         .route("/api/workspaces/{w}/reports", get(list_reports))
         .route("/api/workspaces/{w}/reports/{r}", put(upload_report).delete(delete_report))
         .route("/api/workspaces/{w}/reports/{r}/roles", get(get_roles).put(set_roles))
+        .route("/api/workspaces/{w}/reports/{r}/versions", get(list_versions))
+        .route("/api/workspaces/{w}/reports/{r}/versions/{v}/restore", post(restore_version))
         .route("/api/workspaces/{w}/reports/{r}/project", get(project))
         .route("/api/workspaces/{w}/reports/{r}/query", post(query))
         .layer(DefaultBodyLimit::max(MAX_UPLOAD))
@@ -658,10 +723,15 @@ pub struct Config {
     pub admin_token: Option<String>,
     /// The address other computers use to reach this server (goes into invite links). Default: the bound address.
     pub public_url: Option<String>,
+    /// Serve HTTPS with a self-signed certificate (made on the first start, kept in `<data>/tls/`). Invitation links
+    /// then carry the certificate's fingerprint. Without it the server speaks plain HTTP.
+    pub tls: bool,
 }
 
 pub struct Running {
     pub addr: SocketAddr,
+    /// SHA-256 fingerprint of the certificate when TLS is on.
+    pub fingerprint: Option<String>,
     /// Set when this start created or replaced the admin token (shown once; only its hash is stored).
     pub admin_token: Option<String>,
     shutdown: Option<tokio::sync::oneshot::Sender<()>>,
@@ -670,7 +740,7 @@ pub struct Running {
 
 impl Running {
     pub fn url(&self) -> String {
-        format!("http://{}", self.addr)
+        format!("{}://{}", if self.fingerprint.is_some() { "https" } else { "http" }, self.addr)
     }
     pub fn stop(mut self) {
         self.halt();
@@ -717,6 +787,17 @@ pub fn start(cfg: Config) -> Result<Running, String> {
         }
     };
     fs::write(&file_path, serde_json::to_vec_pretty(&ServerFile { admin_token_hash: admin_hash.clone() }).map_err(|e| e.to_string())?).map_err(|e| e.to_string())?;
+    let identity = if cfg.tls {
+        let host = cfg.public_url.as_deref().and_then(|u| u.split("//").nth(1)).and_then(|r| r.split('/').next()).map(|h| h.rsplit_once(':').map(|(a, _)| a).unwrap_or(h).to_string()).unwrap_or_default();
+        Some(tls::load_or_create(&cfg.data_dir, &[host])?)
+    } else {
+        None
+    };
+    let acceptor = match &identity {
+        Some(i) => Some(tls::acceptor(i)?),
+        None => None,
+    };
+    let fingerprint = identity.as_ref().map(|i| i.fingerprint.clone());
     let app = Arc::new(App {
         dir: cfg.data_dir.clone(),
         admin_hash,
@@ -724,6 +805,7 @@ pub fn start(cfg: Config) -> Result<Running, String> {
         loaded: Mutex::new(HashMap::new()),
         secured: Mutex::new(HashMap::new()),
         public_url: Mutex::new(String::new()),
+        pin: fingerprint.clone(),
     });
     let (tx, rx) = std::sync::mpsc::channel::<Result<SocketAddr, String>>();
     let (stop_tx, stop_rx) = tokio::sync::oneshot::channel::<()>();
@@ -746,14 +828,25 @@ pub fn start(cfg: Config) -> Result<Running, String> {
                 }
             };
             let addr = listener.local_addr().unwrap();
-            *app.public_url.lock().unwrap() = public.unwrap_or_else(|| format!("http://{addr}"));
+            let scheme = if acceptor.is_some() { "https" } else { "http" };
+            *app.public_url.lock().unwrap() = public.unwrap_or_else(|| format!("{scheme}://{addr}"));
             let _ = tx.send(Ok(addr));
-            let _ = axum::serve(listener, router(app)).with_graceful_shutdown(async move {
+            let stop = async move {
                 let _ = stop_rx.await;
-            })
-            .await;
+            };
+            match acceptor {
+                Some(a) => match tls::TlsListener::new(listener, a) {
+                    Ok(l) => {
+                        let _ = axum::serve(l, router(app)).with_graceful_shutdown(stop).await;
+                    }
+                    Err(e) => eprintln!("TLS listener failed: {e}"),
+                },
+                None => {
+                    let _ = axum::serve(listener, router(app)).with_graceful_shutdown(stop).await;
+                }
+            }
         });
     });
     let addr = rx.recv().map_err(|e| e.to_string())??;
-    Ok(Running { addr, admin_token: new_token, shutdown: Some(stop_tx), thread: Some(thread) })
+    Ok(Running { addr, fingerprint, admin_token: new_token, shutdown: Some(stop_tx), thread: Some(thread) })
 }

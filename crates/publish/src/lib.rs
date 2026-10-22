@@ -24,6 +24,7 @@ pub mod gdrive;
 pub mod oauth;
 pub mod onedrive;
 pub mod p2p;
+pub mod pin;
 pub mod package;
 pub mod publisher;
 pub mod refresh;

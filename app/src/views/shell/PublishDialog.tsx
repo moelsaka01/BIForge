@@ -375,7 +375,7 @@ function AddDestination({ onAdded }: { onAdded(): void }) {
   const add = async () => {
     const settings: Record<string, string> =
       isServer
-        ? { url: chosenConn?.url ?? "", connection: chosenConn?.id ?? "", workspace: chosenWs, report: reportId.trim() || projectSlug }
+        ? { url: chosenConn?.url ?? "", connection: chosenConn?.id ?? "", workspace: chosenWs, report: reportId.trim() || projectSlug, pin: chosenConn?.pin ?? "" }
         : adapterId === "local-folder" ? { folder } : adapterId === "github-pages" ? { repo: repo.trim() || `biforge-${projectSlug}` } : adapterId === "cloudflare-pages" ? { accountId: accountId.trim(), name: siteName.trim() || `biforge-${projectSlug}` } : {};
     const ok = await env.run("publish.addTarget", { adapterId, label, access, settings });
     if (ok) onAdded();

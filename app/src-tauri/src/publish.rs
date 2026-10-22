@@ -384,10 +384,10 @@ impl PublishService {
 
     pub fn parse_link(&self, link: &str) -> Result<LinkDto, String> {
         Ok(match deeplink::parse(link).map_err(msg)? {
-            Link::File { path } => LinkDto { src: "file".into(), path: Some(path), url: None, supported: true, invite: None },
-            Link::Url { url } => LinkDto { src: "url".into(), path: None, url: Some(url), supported: true, invite: None },
-            Link::Server { url, invite } => LinkDto { src: "server".into(), path: None, url: Some(url), supported: true, invite: Some(invite) },
-            Link::Unsupported { src } => LinkDto { src, path: None, url: None, supported: false, invite: None },
+            Link::File { path } => LinkDto { src: "file".into(), path: Some(path), url: None, supported: true, invite: None, pin: None },
+            Link::Url { url } => LinkDto { src: "url".into(), path: None, url: Some(url), supported: true, invite: None, pin: None },
+            Link::Server { url, invite, pin } => LinkDto { src: "server".into(), path: None, url: Some(url), supported: true, invite: Some(invite), pin },
+            Link::Unsupported { src } => LinkDto { src, path: None, url: None, supported: false, invite: None, pin: None },
         })
     }
 
@@ -616,6 +616,7 @@ pub struct LinkDto {
     pub supported: bool,
     /// Invitation code of a server link.
     pub invite: Option<String>,
+    pub pin: Option<String>,
 }
 
 /// Viewing opens are recorded next to the cache, not in any project (a viewer has no project).

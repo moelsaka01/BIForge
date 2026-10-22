@@ -1,7 +1,7 @@
 // State and logic of the "Host & Collaborate" and "Join a server" dialogs. Components render this and dispatch
 // commands (core/commands/hostCommands.ts); the commands call these methods.
 import type { Session } from "../session/session";
-import type { AuditEntry, Connection, HostApi, HostStatus, InviteInfo, InviteRequest, Member, P2pGuestView, P2pHostView, P2pRole, RlsRole, ServerReport, Workspace, WsRole } from "./types";
+import type { AuditEntry, Connection, HostApi, HostStatus, InviteInfo, InviteRequest, Member, P2pGuestView, P2pHostView, P2pRole, RlsRole, ServerReport, VersionInfo, Workspace, WsRole } from "./types";
 
 /** A direct (peer to peer) session this window joined as a guest. */
 export interface P2pGuest {
@@ -26,6 +26,8 @@ export interface HostState {
   reports: ServerReport[];
   audit: AuditEntry[];
   roles: { report: string; roles: RlsRole[] } | null;
+  /** The kept versions of one report (version history). */
+  versions: { report: string; list: VersionInfo[] } | null;
   /** The invite just made (shown once; the link is what to send). */
   invite: InviteInfo | null;
   /** Direct sessions: host side per publication target, and the one this window joined. */
@@ -35,8 +37,8 @@ export interface HostState {
   error: string | null;
 }
 
-const NO_HOST: HostStatus = { running: false, url: "", adminToken: null, lan: false };
-const EMPTY: HostState = { loaded: false, status: NO_HOST, connections: [], selected: null, workspaces: [], workspace: null, members: [], reports: [], audit: [], roles: null, invite: null, p2pHosts: {}, p2pGuest: null, busy: false, error: null };
+const NO_HOST: HostStatus = { running: false, url: "", fingerprint: null, adminToken: null, lan: false };
+const EMPTY: HostState = { loaded: false, status: NO_HOST, connections: [], selected: null, workspaces: [], workspace: null, members: [], reports: [], audit: [], roles: null, versions: null, invite: null, p2pHosts: {}, p2pGuest: null, busy: false, error: null };
 const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 export class HostUi {
@@ -90,7 +92,7 @@ export class HostUi {
     const workspaces = await this.api.op<Workspace[]>(connection, "workspaces", {});
     const want = conn?.workspaceId || this.snap.workspace;
     const workspace = workspaces.find((w) => w.id === want)?.id ?? workspaces[0]?.id ?? null;
-    this.set({ selected: connection, workspaces, workspace, members: [], reports: [], audit: [], roles: null });
+    this.set({ selected: connection, workspaces, workspace, members: [], reports: [], audit: [], roles: null, versions: null });
     if (workspace) await this.loadWorkspace(connection, workspace);
   }
 
@@ -114,9 +116,9 @@ export class HostUi {
     });
   }
 
-  async startHosting(lan: boolean, port: number | null, publicUrl: string | null): Promise<void> {
+  async startHosting(lan: boolean, port: number | null, publicUrl: string | null, tls = true): Promise<void> {
     await this.guard(async () => {
-      const status = await this.api.start(lan, port, publicUrl);
+      const status = await this.api.start(lan, port, publicUrl, tls);
       this.set({ status });
       await this.reload();
     });
@@ -179,6 +181,23 @@ export class HostUi {
     });
   }
 
+  async loadVersions(report: string): Promise<void> {
+    await this.guard(async () => {
+      const list = await this.api.op<VersionInfo[]>(this.requireConn(), "versions", { workspace: this.requireWs(), report });
+      this.set({ versions: { report, list } });
+    });
+  }
+
+  async restoreVersion(report: string, version: number): Promise<void> {
+    await this.guard(async () => {
+      const conn = this.requireConn();
+      await this.api.op(conn, "restoreVersion", { workspace: this.requireWs(), report, version });
+      const list = await this.api.op<VersionInfo[]>(conn, "versions", { workspace: this.requireWs(), report });
+      await this.loadWorkspace(conn, this.requireWs());
+      this.set({ versions: { report, list } });
+    });
+  }
+
   async deleteReport(report: string): Promise<void> {
     await this.guard(async () => {
       const conn = this.requireConn();
@@ -188,10 +207,21 @@ export class HostUi {
     });
   }
 
-  async join(linkOrUrl: string, invite: string | null, displayName: string): Promise<Connection | undefined> {
+  async connectAdmin(url: string, adminToken: string, pin: string | null): Promise<Connection | undefined> {
+    return this.guard(async () => {
+      if (!url.trim() || !adminToken.trim()) throw new Error("Enter the server address and its admin token.");
+      const conn = await this.api.connectAdmin(url.trim(), adminToken.trim(), pin?.trim() || null);
+      const connections = await this.api.connections();
+      this.set({ connections, selected: conn.id });
+      await this.loadServer(conn.id);
+      return conn;
+    });
+  }
+
+  async join(linkOrUrl: string, invite: string | null, displayName: string, pin: string | null = null): Promise<Connection | undefined> {
     return this.guard(async () => {
       if (!displayName.trim()) throw new Error("Enter your name.");
-      const conn = await this.api.join(linkOrUrl, invite, displayName.trim());
+      const conn = await this.api.join(linkOrUrl, invite, displayName.trim(), pin);
       const connections = await this.api.connections();
       this.set({ connections, selected: conn.id });
       return conn;
