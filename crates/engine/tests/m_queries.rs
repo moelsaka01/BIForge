@@ -321,7 +321,7 @@ fn step_references_functions_and_errors() {
 #[test]
 fn unsupported_things_say_so() {
     assert!(fails("let S = Web.Contents(\"http://x\") in S").contains("not supported"));
-    assert!(fails(&people("  S = Table.Transpose(Source)", "S")).contains("not supported"));
+    assert!(fails(&people("  S = Table.Profile(Source)", "S")).contains("not supported"));
     assert!(fails(&people("  S = Table.RemoveRowsWithErrors(Source)", "S")).contains("not supported"));
     assert!(fails(&people("  S = Table.Group(Source, {\"City\"}, {{\"N\", each Table.RowCount(_)}}, GroupKind.Local)", "S")).contains("GroupKind.Local"));
 }

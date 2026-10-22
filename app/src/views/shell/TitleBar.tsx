@@ -113,6 +113,7 @@ export function TitleBar({ variant, tabs, ctx, ui }: TitleBarProps) {
   );
   return (
     <header className={`titlebar ${variant}`} data-tauri-drag-region role="banner">
+      <img src="logo.png" alt="" width={20} height={20} data-tauri-drag-region style={{ margin: "0 6px", borderRadius: 10 }} />
       {btn("file.save", "Save", SaveIcon)}
       {btn("edit.undo", env.registry.get("edit.undo")?.label ?? "Undo", UndoIcon)}
       {btn("edit.redo", env.registry.get("edit.redo")?.label ?? "Redo", RedoIcon)}
