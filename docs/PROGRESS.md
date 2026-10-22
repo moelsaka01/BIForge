@@ -335,3 +335,46 @@ BIForge uses the authorization-code flow with PKCE and a loopback redirect. The 
 2. Test the iroh public-relay path with two computers (or one behind a phone hotspot); test Analysis Services against a running Power BI Desktop instance; install Python/R and run the script wrappers.
 3. O6 collaboration on top of the server and P2P (yrs), TLS for the server, then O8.
 4. More "(not drawn yet)" properties from the list above; make the two load-flaky UI tests robust.
+
+## 2026-10-22 (session 5): online track O5 to O8, then desktop
+### Answers applied
+- CDLA-Permissive-2.0 added to the allowed licenses (CLAUDE.md, ONLINE_PLAN.md). Google client id and Dropbox app key recorded in `%LOCALAPPDATA%\BIForge\oauth-clients.json` (public values). The Google secret and the Dropbox secret and token were pasted in chat: none was written to a file or committed; **rotate them** (the Dropbox token expires by itself).
+- **O3 live:** Dropbox passed against the real service (`storage_live.rs`; a token in `BIFORGE_TEST_DROPBOX_ACCESS_TOKEN` is kept in memory only). Google Drive was not run: it needs your sign-in in the app (I do not enter credentials). OneDrive was not live-tested (tenant restrictions), as agreed; its tests use fakes and the documented Graph contracts.
+- Python 3.12 (with pandas) and R 4.6.1 installed with winget; the Python and R source wrappers ran for real and pass (`crates/engine/tests/scripts_live.rs`, which skips where an interpreter is missing).
+- **Analysis Services was not tested live:** Power BI Desktop was not running when I looked (no `msmdsrv`, no port file). Open the report and run `cargo test -p biforge-engine --test oledb` or tell me and I will run the connector against it.
+
+### What was built
+- **O5:** TLS with a self-signed certificate pinned by the invitation link; version history with restore; administrator sign-in for a standalone server in the Join dialog; rate limit on joins; per-route body limits. `release-server.yml` ran (server-v0.1.0, success); the downloaded exe serves HTTPS.
+- **O6:** `crates/collab` (yrs relay, comment store); server endpoints for `collab/sync`, changes, comments, mentions; direct-session calls on their own QUIC streams; Yjs mirror of the project in the app (`core/collab`), Comments dialog, "Edit together". Two real instances over the server and two over a direct session add pages and comment (`app/e2e/o6.mjs`).
+- **O7:** `schedule.rs` (due times, retries, lock, history), server refresh (scheduler thread, source folder, data overlay), this-PC refresh (Task Scheduler, headless `--run-scheduled`), a chooser that names where it runs. `app/e2e/o7.mjs`.
+- **O8:** NSIS installer (current user), `biforge://` and `.biforge` registration, single instance, `release-app.yml`, `biforge-cli sign-release` / `verify-release`, release key (public half in `docs/release-public-key.txt`, private half only in the GitHub secret `BIFORGE_RELEASE_SIGNING_KEY`), `docs/SECURITY_REVIEW.md`, `docs/ONLINE_GUIDE.md`.
+- **Security findings fixed:** a refresh bundle could make the server read any file or connect anywhere (High); `biforge://` links to network paths leaked Windows credentials (High); no join limit; one body limit for every route.
+- **Desktop:** Python/R live tests; format properties drawn: reference-line shading, trend dash and cap, column gap from the layout card, alternate row colors in tables (the measurement can only show 3 of them; shading is tested at option level, not looked at in the window); Phase 9 first batch (Reverse Rows, Transpose, Remove Alternate Rows, Merge Columns, Extract, Date/Time and Number functions) with M functions and tests.
+
+### Things that went wrong on the way
+- The installer test left an empty `HKCU\Software\Classes\.biforge` key after uninstall (Tauri's NSIS template); I removed it by hand.
+- CI failed twice in `o7.mjs`: on the runner the sample CSV has no trailing newline, so my test's appended row made the file unreadable. Fixed in the test (`addRow`). The app behaved correctly (it reported the read error in the history).
+- The first release-mode build took about 35 minutes on this machine and about 25+ on the runner.
+
+### Numbers
+- **Inventory: 913 Done-tested / 343 Partial / 1752 Not started of 3008** (last: 885 / 339 / 1784). Part of the change is the measurement and the honest downgrade of one row ("Keep rows ... duplicates, errors" was claimed done).
+- Tests: frontend 862, all Rust crates pass locally, real-window e2e = o1 + o5 + o4 + o6 + o7 + o8.
+
+### Online-track status per phase
+| Phase | Status |
+| --- | --- |
+| O0 research | done |
+| O1 packages, folder adapter, viewing mode, deep links | done; links to network paths refused |
+| O2 static hosting | GitHub Pages live-tested; Cloudflare fakes only (needs your API token) |
+| O3 personal storage | Dropbox live-tested; Google Drive waits for your sign-in; OneDrive fakes only (not live-tested by decision) |
+| O4 peer to peer | direct addresses done; the public relay path is not tested; the edit role is now real co-editing |
+| O5 backend | done: TLS, history, admin sign-in, release run |
+| O6 collaboration | done for the server and direct sessions |
+| O7 scheduled refresh | done in three places (GitHub, this PC, server) |
+| O8 integration | installer, registration, signed release files, review, guide done; release run result below |
+
+### Next steps
+1. Read the result of the `app-v0.1.0` release run and of CI on the last push; fix what they show.
+2. You: rotate the pasted secrets; connect Google Drive in the app and run `cargo test -p biforge-publish --test storage_live`; open the Power BI report so I can run the Analysis Services connector; give the Cloudflare token for its live test.
+3. Phase 9 remainder (Count Rows, Detect Data Type, errors, Keep Duplicates, Parse, Statistics, Column From Examples, parameters, query groups, profiling, function queries) and checking the assumed M semantics against Desktop.
+4. More "(not drawn yet)" format properties: error bars, small multiples layout, secondary axis on combo charts, visual header buttons, x-axis reference lines, data label parts.
