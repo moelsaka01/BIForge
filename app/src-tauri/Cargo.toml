@@ -16,6 +16,8 @@ tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
 tauri-plugin-single-instance = "2"
 tauri-plugin-deep-link = "2"
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
 biforge-model = { path = "../../crates/model" }
 biforge-engine = { path = "../../crates/engine" }
 biforge-dax = { path = "../../crates/dax" }

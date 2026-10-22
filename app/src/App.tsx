@@ -55,6 +55,15 @@ export function AppView({ rt, files = browserFiles, editorFactory = createMonaco
     };
   }, [registry]);
 
+  // a quiet check for a newer version a few seconds after start (switch it off in About)
+  useEffect(() => {
+    if (settings.options["updates.checkAtStart"] === false) return;
+    const t = setTimeout(() => void registry.execute("app.update.check", { silent: true }), 6000);
+    return () => clearTimeout(t);
+    // only at start: later changes of the option apply to the next start
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [registry]);
+
   const run = useCallback(
     async (id: string, args?: unknown) => {
       const r = await registry.execute(id, args);

@@ -1,11 +1,13 @@
 name: release-app
-# Builds the Windows installer (BIForge_<version>_x64-setup.exe), biforge-server.exe and biforge-cli.exe, signs the list
-# of their SHA-256 hashes with BIForge's release key, records a GitHub build attestation and attaches everything to a
-# release. Start it by pushing a tag like app-v0.1.0 (nothing runs on ordinary pushes).
-# The installer is not Authenticode-signed (a certificate costs money); SHA256SUMS.sig and the attestation are the proof.
+# Builds the Windows installers (NSIS setup program and WiX MSI, both with the optional server and command line), the signed
+# update files for the in-app updater (latest.json), biforge-server.exe and biforge-cli.exe; signs the list of their SHA-256
+# hashes with BIForge's release key; records a GitHub build attestation; writes release notes from docs/COVERAGE.md and the
+# winget manifest; and attaches everything to a release. Start it by pushing a tag like v0.1.0 (nothing runs on ordinary pushes).
+# Secrets (never committed): BIFORGE_RELEASE_SIGNING_KEY (release key), TAURI_SIGNING_PRIVATE_KEY and
+# TAURI_SIGNING_PRIVATE_KEY_PASSWORD (updater key). Optional code signing with SignPath: see docs/SIGNING.md.
 on:
   push:
-    tags: ["app-v*"]
+    tags: ["v*"]
 permissions:
   contents: write
   id-token: write
@@ -13,6 +15,8 @@ permissions:
 jobs:
   build:
     runs-on: windows-latest
+    env:
+      BIFORGE_TOOLS_DIR: ${{ github.workspace }}\target\release
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -25,25 +29,72 @@ jobs:
       - name: Frontend install
         working-directory: app
         run: npm ci
-      - name: Installer
-        working-directory: app
-        run: npx tauri build
-      - name: Server and command line
+      - name: Server and command line (also the optional components of the installers)
         run: cargo build --release -p biforge-server -p biforge-cli
+      - name: Installers and update files
+        working-directory: app
+        shell: pwsh
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: npx tauri build --bundles nsis,msi --config src-tauri/tauri.updater.conf.json
       - name: Collect
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force dist | Out-Null
-          $setup = Get-ChildItem target/release/bundle/nsis -Filter "*-setup.exe" | Select-Object -First 1
-          if (-not $setup) { throw "the installer was not built" }
-          Copy-Item $setup.FullName dist/
+          $b = "target/release/bundle"
+          $setup = Get-ChildItem "$b/nsis" -Filter "*-setup.exe" | Select-Object -First 1
+          $msi = Get-ChildItem "$b/msi" -Filter "*.msi" | Select-Object -First 1
+          if (-not $setup -or -not $msi) { throw "an installer was not built" }
+          Copy-Item $setup.FullName, "$($setup.FullName).sig", $msi.FullName dist/
           Copy-Item target/release/biforge-server.exe, target/release/biforge-cli.exe dist/
+      # Code signing with SignPath Foundation: only when the project has been accepted and configured (docs/SIGNING.md).
+      # Prepared, not yet exercised: it needs the owner's SignPath organization.
+      - name: Upload unsigned files for SignPath
+        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        id: unsigned
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned
+          path: dist/*
+      - name: Sign with SignPath
+        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: release-signing
+          github-artifact-id: ${{ steps.unsigned.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: dist-signed
+      - name: Use the signed files and sign them again for the updater
+        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        shell: pwsh
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          Copy-Item dist-signed/* dist/ -Force
+          $setup = Get-ChildItem dist -Filter "*-setup.exe" | Select-Object -First 1
+          Push-Location app
+          npx tauri signer sign "$($setup.FullName)"
+          Pop-Location
+      - name: latest.json for the in-app updater
+        shell: pwsh
+        run: |
+          $setup = Get-ChildItem dist -Filter "*-setup.exe" | Select-Object -First 1
+          $ver = "${{ github.ref_name }}".TrimStart("v")
+          $sig = (Get-Content "$($setup.FullName).sig" -Raw).Trim()
+          $url = "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/$($setup.Name)"
+          $json = @{ version = $ver; notes = "See the release notes."; pub_date = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ"); platforms = @{ "windows-x86_64" = @{ signature = $sig; url = $url } } } | ConvertTo-Json -Depth 5
+          Set-Content -Path dist/latest.json -Value $json -Encoding utf8
       - name: Sign the list of hashes
         shell: pwsh
         env:
           BIFORGE_RELEASE_SIGNING_KEY: ${{ secrets.BIFORGE_RELEASE_SIGNING_KEY }}
         run: |
-          $files = Get-ChildItem dist -File | ForEach-Object { $_.FullName }
+          $files = Get-ChildItem dist -File | Where-Object { $_.Name -notin @("latest.json") } | ForEach-Object { $_.FullName }
           ./target/release/biforge-cli.exe sign-release --key-env BIFORGE_RELEASE_SIGNING_KEY --out-dir dist @files
           if ($LASTEXITCODE -ne 0) { throw "signing failed" }
       - name: Check the signature against the public key in the repository
@@ -51,6 +102,13 @@ jobs:
         run: |
           ./target/release/biforge-cli.exe verify-release --public-key (Get-Content docs/release-public-key.txt -Raw).Trim() --dir dist
           if ($LASTEXITCODE -ne 0) { throw "the signature does not match docs/release-public-key.txt" }
+      - name: Release notes and winget manifest
+        shell: pwsh
+        run: |
+          $ver = "${{ github.ref_name }}".TrimStart("v")
+          node tools/release-notes.mjs $ver docs/release-public-key.txt | Set-Content -Path notes.md -Encoding utf8
+          node tools/winget-manifest.mjs $ver dist winget-manifest
+          Compress-Archive -Path winget-manifest/* -DestinationPath dist/winget-manifest.zip
       - uses: actions/attest-build-provenance@v2
         with:
           subject-path: dist/*
@@ -59,6 +117,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $key = (Get-Content docs/release-public-key.txt -Raw).Trim()
-          $notes = "BIForge $env:GITHUB_REF_NAME`n`n- BIForge_*_x64-setup.exe: installs for the current user (no administrator rights), registers biforge:// links and .biforge files.`n- biforge-server.exe: the server for sharing with workspaces (see docs/ONLINE_GUIDE.md).`n- biforge-cli.exe: headless refresh and release verification.`n`nThe installer is not Authenticode-signed, so Windows SmartScreen may warn about it. Check a download with the release key:`n`n    biforge-cli verify-release --public-key $key --dir <folder with the downloaded files, SHA256SUMS and SHA256SUMS.sig>`n`nRelease key (Ed25519, base64): $key`nGitHub build attestation: gh attestation verify <file> --repo moelsaka01/BIForge"
-          gh release create "$env:GITHUB_REF_NAME" (Get-ChildItem dist -File | ForEach-Object { $_.FullName }) --title "BIForge $env:GITHUB_REF_NAME" --notes "$notes"
+          gh release create "${{ github.ref_name }}" (Get-ChildItem dist -File | ForEach-Object { $_.FullName }) --title "BIForge ${{ github.ref_name }}" --notes-file notes.md

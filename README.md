@@ -1,8 +1,22 @@
+<p align="center"><img src="app/src-tauri/icons/128x128@2x.png" alt="BIForge" width="128"></p>
+
 # BIForge
 
 An open-source Windows desktop application for building data models and interactive reports, with workflows inspired by Power BI Desktop (both a "Classic" and a "Modern" authoring shell), under original branding.
 
-> **Status: early development.** Nothing here is usable yet. See [docs/COVERAGE.md](docs/COVERAGE.md) for the honest, per-feature status and [docs/PROGRESS.md](docs/PROGRESS.md) for the dated log.
+> **Status: early software (v0.1.0).** Parts work and are tested; many do not exist yet. See [docs/COVERAGE.md](docs/COVERAGE.md) for the honest, per-feature status and [docs/PROGRESS.md](docs/PROGRESS.md) for the dated log.
+
+## Install
+
+Download **BIForge_0.1.0_x64-setup.exe** (installs for the current user, no administrator rights) or **BIForge_0.1.0_x64_en-US.msi** (all users) from the [latest release](https://github.com/moelsaka01/BIForge/releases/latest). Or: `winget install moelsaka01.BIForge` once the package is accepted (see docs/SIGNING.md). The server (`biforge-server.exe`) and the command line (`biforge-cli.exe`) are optional components of both installers (setup: answer Yes at the end or run `/S /TOOLS=1`; MSI: `msiexec /i BIForge.msi ADDLOCAL=ALL`) and are also separate downloads. BIForge looks for newer versions when it starts and verifies them with its update key before installing (About > switch off).
+
+### Windows warns about the download (SmartScreen, Smart App Control)
+
+The installers are **not code-signed yet**; a free certificate for open-source projects (SignPath Foundation) is being applied for, see [docs/SIGNING.md](docs/SIGNING.md) and the [code signing policy](docs/CODE_SIGNING_POLICY.md). Until then:
+
+- **SmartScreen** ("Windows protected your PC"): choose *More info*, then *Run anyway*.
+- **Smart App Control** (Windows 11, *Enforcement* mode) blocks unsigned programs without a *Run anyway* button. Turn it off in Settings > Privacy & security > Windows Security > App & browser control > Smart App Control (Windows cannot turn it back on without a reset), or wait for the signed release. If you are unsure, do not turn it off.
+- Check the download: every release has `SHA256SUMS` and `SHA256SUMS.sig`; `biforge-cli verify-release --public-key <contents of docs/release-public-key.txt> --dir <folder>` checks the signature and every hash, and `gh attestation verify <file> --repo moelsaka01/BIForge` checks GitHub's build attestation.
 
 ## Mission
 

@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "BIForge",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "identifier": "org.biforge.app",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -28,7 +28,8 @@
   "bundle": {
     "active": true,
     "targets": [
-      "nsis"
+      "nsis",
+      "msi"
     ],
     "icon": [
       "icons/32x32.png",
@@ -59,6 +60,16 @@
         "displayLanguageSelector": false,
         "languages": [
           "English"
+        ],
+        "installerHooks": "windows/hooks.nsh"
+      },
+      "wix": {
+        "language": "en-US",
+        "fragmentPaths": [
+          "windows/tools.wxs"
+        ],
+        "featureRefs": [
+          "ToolsFeature"
         ]
       }
     }
@@ -69,6 +80,15 @@
         "schemes": [
           "biforge"
         ]
+      }
+    },
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDJFN0VDQTYxN0VGNTU5REUKUldUZVdmVitZY3ArTGhiWWFGZ3hFOHFZNjRTak45RnMweDZ4NWFSaFVUYkpoY3JZbU1kRkVMVUUK",
+      "endpoints": [
+        "https://github.com/moelsaka01/BIForge/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
       }
     }
   }

@@ -3,7 +3,7 @@ resolver = "2"
 members = ["crates/engine", "crates/dax", "crates/m", "crates/model", "crates/publish", "crates/server", "crates/p2p", "crates/collab", "crates/cli", "app/src-tauri"]
 
 [workspace.package]
-version = "0.0.1"
+version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
 

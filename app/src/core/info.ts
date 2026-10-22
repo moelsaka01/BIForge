@@ -1,5 +1,5 @@
 export const APP_NAME = "BIForge";
-export const APP_VERSION = "0.0.1";
+export const APP_VERSION = "0.1.0";
 
 /** What the app can do today. Keep in step with docs/COVERAGE.md (Done-tested rows only). Shown in the About dialog. */
 export const WORKING_FEATURES = [

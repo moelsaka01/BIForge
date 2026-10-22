@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Optional feature of the BIForge MSI: the server and the command line. Level 1000 means "not installed by default":
+     msiexec /i BIForge.msi ADDLOCAL=ALL (or ADDLOCAL=ToolsFeature with the main feature) installs them too.
+     The files come from the folder named by the environment variable BIFORGE_TOOLS_DIR at build time. -->
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Fragment>
+    <Feature Id="ToolsFeature" Title="Server and command line" Description="biforge-server.exe (shared workspaces) and biforge-cli.exe (refresh and release verification) in the tools folder" Level="1000" AllowAdvertise="no">
+      <ComponentRef Id="BiforgeServerExe" />
+      <ComponentRef Id="BiforgeCliExe" />
+    </Feature>
+  </Fragment>
+  <Fragment>
+    <DirectoryRef Id="INSTALLDIR">
+      <Directory Id="BiforgeToolsDir" Name="tools">
+        <Component Id="BiforgeServerExe" Guid="{6B0F2C3A-5D1E-4A7B-9C21-0E8F4A1D7A01}">
+          <File Id="BiforgeServerExeFile" Source="$(env.BIFORGE_TOOLS_DIR)\biforge-server.exe" KeyPath="yes" />
+        </Component>
+        <Component Id="BiforgeCliExe" Guid="{6B0F2C3A-5D1E-4A7B-9C21-0E8F4A1D7A02}">
+          <File Id="BiforgeCliExeFile" Source="$(env.BIFORGE_TOOLS_DIR)\biforge-cli.exe" KeyPath="yes" />
+        </Component>
+      </Directory>
+    </DirectoryRef>
+  </Fragment>
+</Wix>

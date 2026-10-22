@@ -10,6 +10,7 @@ import { DataSourcesDialog } from "./DataSourcesDialog";
 import { GuideDialog, OpenPackageDialog, PublishDialog } from "./PublishDialog";
 import { HostDialog, JoinServerDialog } from "./HostDialog";
 import { CommentsDialog } from "./CommentsDialog";
+import { UPDATE_OPTION } from "../../core/commands/updateCommands";
 import { resolveTheme } from "../../core/report/theme";
 import { themeToJson } from "../../core/report/theme";
 import { useDoc, useEnv, useSession, useSettings, useShellState } from "./ShellContext";
@@ -311,11 +312,58 @@ function UnsavedDialog({ request }: { request: Extract<DialogRequest, { kind: "u
   );
 }
 
-function AboutDialog() {
+function UpdateDialog({ version, notes }: { version: string; notes: string }) {
   const env = useEnv();
   const close = () => env.session.shell.closeDialog();
   return (
-    <Shell title={`About ${APP_NAME}`} label="About" onClose={close} actions={<Button appearance="primary" onClick={close}>Close</Button>}>
+    <Shell
+      title="Update available"
+      label="Update available"
+      onClose={close}
+      actions={
+        <>
+          <Button onClick={close}>Not now</Button>
+          <Button
+            appearance="primary"
+            onClick={async () => {
+              close();
+              await env.run("app.update.install");
+            }}
+          >
+            Install and restart
+          </Button>
+        </>
+      }
+    >
+      <div>{`BIForge ${version} is available (you have ${APP_VERSION}). Save your work first: BIForge restarts to finish the update.`}</div>
+      {notes && <pre style={{ whiteSpace: "pre-wrap", fontSize: 12, maxHeight: 240, overflow: "auto" }}>{notes}</pre>}
+    </Shell>
+  );
+}
+
+function AboutDialog() {
+  const env = useEnv();
+  const close = () => env.session.shell.closeDialog();
+  const settings = useSettings();
+  const atStart = settings.options[UPDATE_OPTION] !== false;
+  return (
+    <Shell
+      title={`About ${APP_NAME}`}
+      label="About"
+      onClose={close}
+      actions={
+        <>
+          <Button onClick={() => void env.run("app.update.check")}>Check for updates</Button>
+          <Button appearance="primary" onClick={close}>
+            Close
+          </Button>
+        </>
+      }
+    >
+      <label style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 12 }}>
+        <input type="checkbox" aria-label="Check for updates when BIForge starts" checked={atStart} onChange={(e) => env.session.shell.settings.setOption(UPDATE_OPTION, e.target.checked)} />
+        Check for updates when BIForge starts (asks GitHub Releases; nothing else is sent; updates are verified with BIForge's update key before they are installed)
+      </label>
       <div>
         {APP_NAME} {APP_VERSION}: an open-source (Apache-2.0) desktop app for building semantic models and reports. Early development. It is not made by or affiliated with Microsoft.
       </div>
@@ -419,6 +467,8 @@ export function Dialogs() {
       return <JoinServerDialog request={dialog} />;
     case "comments":
       return <CommentsDialog />;
+    case "update":
+      return <UpdateDialog version={dialog.version} notes={dialog.notes} />;
     case "openPackage":
       return <OpenPackageDialog request={dialog} />;
     case "guide":

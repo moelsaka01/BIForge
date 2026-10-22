@@ -53,6 +53,8 @@ fn main() {
     }
     builder
         .plugin(tauri_plugin_deep_link::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_dialog::init())
         .manage(data::DataService::system())
         .manage(publish::PublishService::system().with_p2p(bridge))

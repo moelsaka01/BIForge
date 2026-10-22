@@ -11,6 +11,7 @@ import { registerShellCommands } from "./shellCommands";
 import { registerPublishCommands } from "./publishCommands";
 import { registerHostCommands } from "./hostCommands";
 import { registerCollabCommands } from "./collabCommands";
+import { registerUpdateCommands } from "./updateCommands";
 import { createSampleProject } from "../session/sample";
 
 function argsOf<T extends object>(args: unknown, required: (keyof T & string)[]): T {
@@ -302,6 +303,7 @@ export function createRegistry(session: Session): CommandRegistry<Session> {
   registerPublishCommands(r);
   registerHostCommands(r);
   registerCollabCommands(r);
+  registerUpdateCommands(r);
 
   return r;
 }
