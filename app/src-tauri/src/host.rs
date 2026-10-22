@@ -288,6 +288,19 @@ impl HostService {
             "reports" => to(c.reports(&ws(&args)?)),
             "deleteReport" => to(c.delete_report(&ws(&args)?, &s(&args, "report")?)),
             "versions" => to(c.versions(&ws(&args)?, &s(&args, "report")?)),
+            "refreshInfo" => to(c.refresh_info(&ws(&args)?, &s(&args, "report")?)),
+            "refreshSet" => {
+                let plan: biforge_publish::schedule::Plan = serde_json::from_value(args.get("plan").cloned().unwrap_or(Value::Null)).map_err(msg)?;
+                let enabled = args.get("enabled").and_then(|v| v.as_bool()).unwrap_or(true);
+                to(c.refresh_set(&ws(&args)?, &s(&args, "report")?, enabled, &plan))
+            }
+            "refreshRun" => to(c.refresh_run(&ws(&args)?, &s(&args, "report")?)),
+            "refreshSource" => {
+                let path = s(&args, "path")?;
+                let name = Path::new(&path).file_name().map(|n| n.to_string_lossy().to_string()).ok_or("Choose a file.")?;
+                let bytes = fs::read(&path).map_err(|e| format!("Cannot read {path}: {e}"))?;
+                to(c.refresh_put_source(&ws(&args)?, &s(&args, "report")?, &name, bytes))
+            }
             "collabSync" => {
                 let b = base64::engine::general_purpose::STANDARD;
                 let dec = |k: &str| -> Result<Vec<u8>, String> { b.decode(args.get(k).and_then(|v| v.as_str()).unwrap_or("")).map_err(msg) };

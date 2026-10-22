@@ -96,7 +96,7 @@ impl Adapter for ServerAdapter {
                 unpublish: true,
                 key_rotation: false,
                 version_history: false,
-                scheduled_refresh: false,
+                scheduled_refresh: true,
                 row_level_security: true,
                 live_session: false,
                 comments: false,
@@ -106,6 +106,33 @@ impl Adapter for ServerAdapter {
             limitations: self.limitations.clone(),
             free_tier: self.free_tier.clone(),
         }
+    }
+
+    fn refresh_runs_on(&self) -> crate::schedule::RunsOn {
+        crate::schedule::RunsOn::Server
+    }
+
+    fn configure_refresh(&self, t: &Target, files: &[(String, Vec<u8>)], _secrets: &[(String, String)]) -> Result<()> {
+        let c = self.client(t)?;
+        let (ws, report) = (self.setting(t, "workspace")?, self.setting(t, "report")?);
+        let bundle = files.iter().find(|(n, _)| n == crate::refresh::BUNDLE_FILE).ok_or_else(|| Error::Adapter("no refresh bundle to send".into()))?;
+        let plan: crate::schedule::Plan = match files.iter().find(|(n, _)| n == crate::refresh::PLAN_FILE) {
+            Some((_, b)) => serde_json::from_slice(b)?,
+            None => crate::schedule::Plan::default(),
+        };
+        c.refresh_put_bundle(ws, report, bundle.1.clone())?;
+        c.refresh_set(ws, report, true, &plan)?;
+        Ok(())
+    }
+
+    fn disable_refresh(&self, t: &Target) -> Result<()> {
+        self.client(t)?.refresh_delete_bundle(self.setting(t, "workspace")?, self.setting(t, "report")?)?;
+        Ok(())
+    }
+
+    fn trigger_refresh(&self, t: &Target) -> Result<String> {
+        let rec = self.client(t)?.refresh_run(self.setting(t, "workspace")?, self.setting(t, "report")?)?;
+        Ok(format!("{:?}: {}", rec.status, rec.message))
     }
 
     fn validate(&self, t: &Target) -> Vec<Issue> {

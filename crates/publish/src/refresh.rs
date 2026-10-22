@@ -15,6 +15,8 @@ use crate::package::PackageFile;
 
 pub const WORKFLOW_PATH: &str = ".github/workflows/biforge-refresh.yml";
 pub const BUNDLE_FILE: &str = "refresh.bundle";
+/// The schedule a server runs (JSON of `schedule::Plan`), sent next to the bundle.
+pub const PLAN_FILE: &str = "refresh.plan";
 pub const CONFIG_PATH: &str = "data/refresh.json";
 pub const SECRET_SIGNING: &str = "BIFORGE_SIGNING_KEY";
 pub const SECRET_ACCESS: &str = "BIFORGE_ACCESS_KEY";

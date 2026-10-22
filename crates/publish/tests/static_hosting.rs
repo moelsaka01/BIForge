@@ -279,6 +279,7 @@ fn refresh_request(schedule: Schedule, project_files: Vec<PackageFile>) -> Refre
         publisher_name: "Ann".into(),
         included: tables(),
         schedule,
+        plan: None,
         sources: vec![RefreshSource { table: "Sales".into(), spec: json!({"kind": "csv", "path": "data/src/sales.csv"}), original: "C:\\data\\sales.csv".into() }],
         confirmed_sources: vec!["C:\\data\\sales.csv".into()],
         project_files,

@@ -80,7 +80,64 @@ export interface RunArgs {
   rotate?: boolean;
 }
 
-export type RefreshSchedule = "daily" | "weekly" | "manual";
+export type RefreshSchedule = "hourly" | "daily" | "weekly" | "manual";
+
+/** When and how a scheduled refresh runs. The time of day is UTC on a server and local time on this PC. */
+export interface RefreshPlan {
+  frequency: RefreshSchedule;
+  /** Minute of the day, 0 to 1439. */
+  atMinute: number;
+  /** Extra attempts after a failure. */
+  retries: number;
+  retryDelaySecs: number;
+}
+
+export type RunsOn = "githubActions" | "thisPc" | "server";
+
+/** One attempt of a scheduled refresh, with where it ran. */
+export interface RunRecord {
+  runsOn: RunsOn;
+  trigger: "scheduled" | "manual";
+  attempt: number;
+  startedAt: number;
+  finishedAt: number;
+  status: "refreshed" | "unchanged" | "failed" | "skipped";
+  message: string;
+  version: number | null;
+}
+
+/** Scheduled refresh on this PC (Windows Task Scheduler). */
+export interface LocalRefreshInfo {
+  enabled: boolean;
+  plan: RefreshPlan | null;
+  runsOn: string;
+  needs: string;
+  running: boolean;
+  history: RunRecord[];
+  task: { name: string; exists: boolean; status: string; nextRun: string } | null;
+}
+
+/** Scheduled refresh of a report on a BIForge server. */
+export interface ServerRefreshInfo {
+  enabled: boolean;
+  plan: RefreshPlan;
+  runsOn: string;
+  needs: string;
+  hasBundle: boolean;
+  running: boolean;
+  sourceFolder: string;
+  sources: string[];
+  history: RunRecord[];
+  refreshedAt: string | null;
+}
+
+export interface LocalRefreshArgs {
+  targetId: string;
+  reportName: string;
+  publisherName: string;
+  included: IncludedTable[];
+  plan: RefreshPlan;
+}
 
 export interface RefreshArgs {
   targetId: string;
@@ -88,6 +145,9 @@ export interface RefreshArgs {
   publisherName: string;
   included: IncludedTable[];
   schedule: RefreshSchedule;
+  /** Retries and time of day (UTC minutes) for a runner that honors them (a server). */
+  retries?: number;
+  atMinute?: number;
   /** The tables whose source file the runner reloads, with the engine's description of the source (paths on this PC). */
   sources: { table: string; spec: unknown }[];
   /** The file names the user confirmed on screen; must equal the names of the sources. */
@@ -192,6 +252,12 @@ export interface PublishApi {
   unpublish(root: string, targetId: string): Promise<void>;
   enableRefresh(root: string, project: unknown, args: RefreshArgs): Promise<void>;
   disableRefresh(root: string, targetId: string): Promise<void>;
+  /** Scheduled refresh on this PC through Windows Task Scheduler. */
+  localRefreshInfo(root: string, targetId: string): Promise<LocalRefreshInfo>;
+  localRefreshEnable(root: string, project: unknown, args: LocalRefreshArgs): Promise<LocalRefreshInfo>;
+  localRefreshDisable(root: string, targetId: string): Promise<LocalRefreshInfo>;
+  /** Runs one refresh now and waits for it. */
+  localRefreshRun(root: string, targetId: string): Promise<RunRecord>;
   /** Starts one refresh on the runner; returns the address where it can be watched. */
   refreshNow(root: string, targetId: string): Promise<string>;
   shareLink(root: string, targetId: string): Promise<string>;

@@ -1,7 +1,7 @@
 // Publish & Share and viewing mode. The dialog only dispatches these ids.
 import type { CommandRegistry } from "./registry";
 import type { Session } from "../session/session";
-import type { AccessLevel, Provider, RefreshSchedule } from "../publish/types";
+import type { AccessLevel, Provider, RefreshPlan, RefreshSchedule } from "../publish/types";
 import { isStorageProvider } from "../publish/publishUi";
 
 const hasProject = (s: Session) => s.store.project !== null && s.getSnapshot().viewing === null;
@@ -173,10 +173,48 @@ export function registerPublishCommands(r: CommandRegistry<Session>): void {
     category: "Share",
     isEnabled: (s) => hasProject(s) && hasApi(s),
     async run(s, args) {
-      const a = (args ?? {}) as { publisherName?: string; schedule?: RefreshSchedule; tables?: string[]; confirmed?: string[] };
-      await s.publishUi.enableRefresh(a.publisherName ?? "", a.schedule ?? "daily", a.tables ?? [], a.confirmed ?? []);
+      const a = (args ?? {}) as { publisherName?: string; schedule?: RefreshSchedule; tables?: string[]; confirmed?: string[]; atMinute?: number; retries?: number };
+      await s.publishUi.enableRefresh(a.publisherName ?? "", a.schedule ?? "daily", a.tables ?? [], a.confirmed ?? [], { atMinute: a.atMinute, retries: a.retries });
     },
   });
+  r.register({
+    id: "publish.localRefresh.enable",
+    label: "Turn on scheduled refresh on this PC",
+    category: "Share",
+    isEnabled: (s) => hasProject(s) && hasApi(s),
+    async run(s, args) {
+      const a = (args ?? {}) as { publisherName?: string; plan?: RefreshPlan };
+      if (!a.plan) throw new Error("Missing value: plan.");
+      await s.publishUi.enableLocalRefresh(a.publisherName ?? "", a.plan);
+    },
+  });
+  r.register({ id: "publish.localRefresh.disable", label: "Turn off scheduled refresh on this PC", category: "Share", isEnabled: (s) => hasProject(s) && hasApi(s), run: (s) => s.publishUi.disableLocalRefresh() });
+  r.register({ id: "publish.localRefresh.run", label: "Refresh now on this PC", category: "Share", isEnabled: (s) => hasProject(s) && hasApi(s), run: (s) => s.publishUi.runLocalRefresh() });
+  r.register({ id: "publish.serverRefresh.run", label: "Refresh now on the server", category: "Share", isEnabled: (s) => hasProject(s) && hasApi(s), run: (s) => s.publishUi.runServerRefresh() });
+  r.register({
+    id: "publish.serverRefresh.source",
+    label: "Put a source file into the server's source folder",
+    category: "Share",
+    isEnabled: (s) => hasProject(s) && hasApi(s),
+    async run(s, args) {
+      const a = (args ?? {}) as { path?: string };
+      const path = a.path ?? (await s.dialogs.pickFile("Source file", ["csv", "xlsx", "xls", "json", "parquet", "txt"]));
+      if (path) await s.publishUi.uploadServerSource(path);
+    },
+  });
+  r.register({
+    id: "host.refresh.schedule",
+    label: "Change the schedule of the refresh on the server",
+    category: "Share",
+    isEnabled: (s) => hasApi(s) && s.host !== null,
+    async run(s, args) {
+      const a = (args ?? {}) as { connection?: string; workspace?: string; report?: string; enabled?: boolean; plan?: RefreshPlan };
+      if (!a.connection || !a.workspace || !a.report || !a.plan) throw new Error("Missing value: connection, workspace, report or plan.");
+      await s.host!.op(a.connection, "refreshSet", { workspace: a.workspace, report: a.report, enabled: a.enabled !== false, plan: a.plan });
+      await s.publishUi.loadRefresh();
+    },
+  });
+  r.register({ id: "publish.refresh.load", label: "Refresh the scheduled refresh status", category: "Share", isEnabled: (s) => hasProject(s) && hasApi(s), run: (s) => s.publishUi.loadRefresh() });
   r.register({
     id: "publish.refresh.disable",
     label: "Turn off scheduled refresh",

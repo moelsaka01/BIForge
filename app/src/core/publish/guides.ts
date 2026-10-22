@@ -173,8 +173,9 @@ const GUIDES: Guide[] = [
     title: "Scheduled refresh",
     paragraphs: [
       "A refresh needs a computer that runs it. GitHub Actions (available for reports published with GitHub Pages) is a free robot in your public GitHub repository that reloads files copied into that repository: nothing on this PC has to stay on, but the whole source files go to GitHub.",
-      "Running the refresh on this PC (Windows Task Scheduler) or on a server you host comes later (phases O7 and O5).",
-      "BIForge always tells you where the refresh will run and what must stay on.",
+      "This PC: Windows Task Scheduler starts BIForge without a window at the time you choose. This PC must be on and you must be signed in; the sources are read where they are, with the credentials stored on this PC.",
+      "A server you host (Host from this PC or biforge-server.exe): the server computer runs the refresh and must stay on. It reloads the source files copied to it, or files you put in the report's source folder on the server.",
+      "Every refresh is retried after a failure, only one refresh of a report runs at a time, and the history says where each one ran. BIForge always tells you where the refresh will run and what must stay on.",
     ],
     listsData: false,
     buttons: [{ id: "setup", label: "Set up scheduled refresh", primary: true, action: { kind: "continue" } }],

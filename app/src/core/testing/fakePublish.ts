@@ -1,5 +1,5 @@
 // Test double for PublishApi: adapters are programmable, nothing touches a disk or the network.
-import type { ConnectStatus, StorageProvider, VersionInfo, AdapterInfo, AuditEvent, Capabilities, DeepLink, Envelope, Issue, Linked, OpenedPackage, Outcome, Provider, PublishApi, RefreshArgs, RemoteState, RunArgs, Subscription, Target } from "../publish/types";
+import type { LocalRefreshArgs, LocalRefreshInfo, RunRecord, ConnectStatus, StorageProvider, VersionInfo, AdapterInfo, AuditEvent, Capabilities, DeepLink, Envelope, Issue, Linked, OpenedPackage, Outcome, Provider, PublishApi, RefreshArgs, RemoteState, RunArgs, Subscription, Target } from "../publish/types";
 
 const NONE: Capabilities = {
   implemented: false, publicAccess: false, privateAccess: false, update: false, sync: false, shareLink: false, unpublish: false, keyRotation: false,
@@ -114,6 +114,34 @@ export class FakePublish implements PublishApi {
   async refreshNow(_root: string, id: string) {
     this.calls.push(`refresh-now:${id}`);
     return "https://github.com/ann/site/actions";
+  }
+  localInfos = new Map<string, LocalRefreshInfo>();
+  localArgs: LocalRefreshArgs[] = [];
+  private localDefault(): LocalRefreshInfo {
+    return { enabled: false, plan: null, runsOn: "This PC (Windows Task Scheduler)", needs: "This PC must be on and you must be signed in at the scheduled time. The sources are read where they are.", running: false, history: [], task: null };
+  }
+  async localRefreshInfo(_root: string, id: string) {
+    return structuredClone(this.localInfos.get(id) ?? this.localDefault());
+  }
+  async localRefreshEnable(_root: string, _project: unknown, args: LocalRefreshArgs) {
+    this.calls.push(`local-on:${args.targetId}:${args.plan.frequency}`);
+    this.localArgs.push(args);
+    if (this.fail) throw new Error(this.fail);
+    const info: LocalRefreshInfo = { ...this.localDefault(), enabled: true, plan: args.plan, task: { name: `BIForge\\abc-${args.targetId}`, exists: args.plan.frequency !== "manual", status: "Ready", nextRun: "10/23/2026 3:00:00 AM" } };
+    this.localInfos.set(args.targetId, info);
+    return structuredClone(info);
+  }
+  async localRefreshDisable(_root: string, id: string) {
+    this.calls.push(`local-off:${id}`);
+    this.localInfos.delete(id);
+    return this.localDefault();
+  }
+  async localRefreshRun(_root: string, id: string) {
+    this.calls.push(`local-run:${id}`);
+    const rec: RunRecord = { runsOn: "thisPc", trigger: "manual", attempt: 1, startedAt: 1_800_000_000, finishedAt: 1_800_000_005, status: "refreshed", message: "Reloaded 1 tables and published version 2.", version: 2 };
+    const info = this.localInfos.get(id) ?? this.localDefault();
+    this.localInfos.set(id, { ...info, history: [rec, ...info.history] });
+    return rec;
   }
   async shareLink(_root: string, id: string) {
     this.calls.push(`link:${id}`);

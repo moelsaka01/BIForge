@@ -72,8 +72,13 @@ pub struct RefreshArgs {
     pub report_name: String,
     pub publisher_name: String,
     pub included: Vec<IncludedTable>,
-    /// daily, weekly or manual
+    /// hourly, daily, weekly or manual
     pub schedule: String,
+    /// Retries after a failure and the time of day (UTC minutes) for runners that honor them (a server).
+    #[serde(default)]
+    pub retries: Option<u32>,
+    #[serde(default)]
+    pub at_minute: Option<u32>,
     /// Tables whose source file the runner reloads, with the engine's source description (paths on this PC).
     pub sources: Vec<RefreshSourceArg>,
     pub confirmed_sources: Vec<String>,
@@ -295,7 +300,8 @@ impl PublishService {
     /// Turns on scheduled refresh. The whole source files named in `args.sources` are put into the refresh bundle
     /// (file sources only: a runner on the internet cannot reach anything else).
     pub fn enable_refresh(&self, root: &str, project: &Project, args: RefreshArgs, data: &DataService) -> Result<(), String> {
-        let schedule = Schedule::parse(&args.schedule).ok_or("Choose daily, weekly or manual.")?;
+        let schedule = Schedule::parse(&args.schedule).ok_or("Choose hourly, daily, weekly or manual.")?;
+        let plan = biforge_publish::schedule::Plan { frequency: schedule, at_minute: args.at_minute.unwrap_or(180), retries: args.retries.unwrap_or(2), retry_delay_secs: 300 }.clamped();
         let mut included = args.included.clone();
         // the project exactly as it would be published
         let project_files: Vec<PackageFile> = data.with_store(|e| self.collect_files(project, &mut included, e))?.into_iter().filter(|f| f.path.starts_with("project/")).collect();
@@ -329,6 +335,7 @@ impl PublishService {
             publisher_name: args.publisher_name,
             included,
             schedule,
+            plan: Some(plan),
             sources,
             confirmed_sources: args.confirmed_sources,
             project_files,

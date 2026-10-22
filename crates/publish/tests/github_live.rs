@@ -190,6 +190,7 @@ fn scheduled_refresh_runs_on_a_real_runner() {
             publisher_name: "BIForge test".into(),
             included,
             schedule: Schedule::Manual,
+            plan: None,
             sources: vec![RefreshSource { table: "Sales".into(), spec: json!({"kind": "csv", "path": "data/src/sales.csv"}), original: "sales.csv".into() }],
             confirmed_sources: vec!["sales.csv".into()],
             project_files: project,

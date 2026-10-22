@@ -39,6 +39,8 @@ pub struct RefreshRequest {
     pub publisher_name: String,
     pub included: Vec<IncludedTable>,
     pub schedule: Schedule,
+    /// Retries and time of day for runners that honor them (a server); None: the defaults for `schedule`.
+    pub plan: Option<crate::schedule::Plan>,
     /// What the runner reloads: the table, the engine's source description (paths inside the bundle) and the file's
     /// name on this PC.
     pub sources: Vec<refresh::RefreshSource>,
@@ -259,17 +261,26 @@ impl<'a> Publisher<'a> {
             },
             &signer,
         )?;
-        let site_files = vec![
-            (refresh::WORKFLOW_PATH.to_string(), refresh::workflow_yaml(req.schedule).into_bytes()),
-            (refresh::BUNDLE_FILE.to_string(), bundle),
-            (".gitignore".to_string(), refresh::GITIGNORE.as_bytes().to_vec()),
-        ];
-        let mut secrets = vec![(refresh::SECRET_SIGNING.to_string(), signer.secret())];
-        if let Some(s) = access_secret {
-            secrets.push((refresh::SECRET_ACCESS.to_string(), s));
-        }
+        let runs_on = adapter.refresh_runs_on();
+        let (site_files, secrets) = if runs_on == crate::schedule::RunsOn::GithubActions {
+            let site_files = vec![
+                (refresh::WORKFLOW_PATH.to_string(), refresh::workflow_yaml(req.schedule).into_bytes()),
+                (refresh::BUNDLE_FILE.to_string(), bundle),
+                (".gitignore".to_string(), refresh::GITIGNORE.as_bytes().to_vec()),
+            ];
+            let mut secrets = vec![(refresh::SECRET_SIGNING.to_string(), signer.secret())];
+            if let Some(s) = access_secret {
+                secrets.push((refresh::SECRET_ACCESS.to_string(), s));
+            }
+            (site_files, secrets)
+        } else {
+            // a server runs the refresh itself: it gets the bundle and the plan, never the signing key
+            let plan = req.plan.unwrap_or(crate::schedule::Plan { frequency: req.schedule, ..Default::default() }).clamped();
+            (vec![(refresh::BUNDLE_FILE.to_string(), bundle), (refresh::PLAN_FILE.to_string(), serde_json::to_vec(&plan)?)], vec![])
+        };
         adapter.configure_refresh(&target, &site_files, &secrets)?;
         target.settings.insert("refresh".into(), req.schedule.as_str().into());
+        target.settings.insert("refreshOn".into(), match runs_on { crate::schedule::RunsOn::GithubActions => "github", crate::schedule::RunsOn::Server => "server", crate::schedule::RunsOn::ThisPc => "thispc" }.into());
         self.store.put(target.clone())?;
         self.event(&target, "enable-refresh", format!("{}, sources: {}", req.schedule.as_str(), req.sources.iter().map(|s| s.original.clone()).collect::<Vec<_>>().join(", ")));
         Ok(())
@@ -283,8 +294,9 @@ impl<'a> Publisher<'a> {
         }
         adapter.disable_refresh(&target)?;
         target.settings.remove("refresh");
+        target.settings.remove("refreshOn");
         self.store.put(target.clone())?;
-        self.event(&target, "disable-refresh", "workflow, bundle and secrets removed from the site".into());
+        self.event(&target, "disable-refresh", "scheduled refresh turned off and its files and secrets removed".into());
         Ok(())
     }
 

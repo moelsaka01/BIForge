@@ -630,7 +630,7 @@ describe("scheduled refresh on GitHub", () => {
     const a = makeApp();
     const dlg = await published(a);
     const sec = within(dlg).getByRole("group", { name: "Scheduled refresh" });
-    expect(sec.textContent).toMatch(/on GitHub's servers/);
+    expect(sec.textContent).toMatch(/GitHub Actions \(on GitHub's computers\)/);
     expect(sec.textContent).toMatch(/Nothing on this PC has to stay on/);
     expect(sec.textContent).toMatch(/Customer: cannot be refreshed there.*database server/);
     expect(within(sec).getByRole("checkbox", { name: "Sales: C:\data\sales.csv" })).toBeTruthy();
@@ -663,6 +663,42 @@ describe("scheduled refresh on GitHub", () => {
     fireEvent.change(within(dlg).getByLabelText("Publisher name"), { target: { value: "Ann" } });
     fireEvent.click(within(dlg).getByRole("button", { name: "Publish" }));
     await within(dlg).findByRole("button", { name: "Publish update" });
-    expect(within(dlg).queryByRole("group", { name: "Scheduled refresh" })).toBeNull();
+    // a folder cannot run a refresh itself: the only place is this PC
+    const sec = within(dlg).getByRole("group", { name: "Scheduled refresh" });
+    expect(within(sec).queryByRole("radio", { name: /GitHub Actions/ })).toBeNull();
+    expect(within(sec).queryByRole("radio", { name: /BIForge server/ })).toBeNull();
+    expect(within(sec).getByRole("radio", { name: /This PC \(Windows Task Scheduler\)/ })).toBeTruthy();
+  });
+
+  it("on this PC names the place, registers a schedule, runs now with a history that says where it ran, and turns off", async () => {
+    const a = makeApp();
+    withData(a);
+    render(a.element);
+    await openProject(a);
+    const dlg = await openPublish(a);
+    await addFolderTarget(a, dlg);
+    fireEvent.click(await within(dlg).findByRole("checkbox", { name: /I have checked this list/ }));
+    fireEvent.change(within(dlg).getByLabelText("Publisher name"), { target: { value: "Ann" } });
+    fireEvent.click(within(dlg).getByRole("button", { name: "Publish" }));
+    await within(dlg).findByRole("button", { name: "Publish update" });
+    const sec = within(dlg).getByRole("region", { name: "Refresh on this PC" });
+    expect(sec.textContent).toMatch(/Where it runs: This PC \(Windows Task Scheduler\)/);
+    expect(sec.textContent).toMatch(/must be on and you must be signed in/);
+    fireEvent.click(within(sec).getByRole("radio", { name: "Every week (Monday)" }));
+    fireEvent.change(within(sec).getByLabelText("Time of day"), { target: { value: "06:30" } });
+    fireEvent.change(within(sec).getByLabelText("Retries"), { target: { value: "3" } });
+    fireEvent.click(within(sec).getByRole("button", { name: "Turn on scheduled refresh on this PC" }));
+    await within(sec).findByText(/Scheduled refresh on this PC is on \(weekly at 06:30 local time, 3 retries\)/);
+    expect(a.publish.localArgs[0].plan).toMatchObject({ frequency: "weekly", atMinute: 6 * 60 + 30, retries: 3 });
+    expect(a.publish.localArgs[0].publisherName).toBe("Ann");
+    expect(sec.textContent).toMatch(/Task Scheduler: Ready, next run/);
+    fireEvent.click(within(sec).getByRole("button", { name: "Refresh now on this PC" }));
+    const history = await within(sec).findByRole("list", { name: "Refresh history" });
+    expect(history.textContent).toMatch(/New data/);
+    expect(history.textContent).toMatch(/ran on: This PC \(Windows Task Scheduler\)/);
+    expect(history.textContent).toMatch(/published version 2/);
+    fireEvent.click(within(sec).getByRole("button", { name: "Turn off on this PC" }));
+    await within(sec).findByRole("button", { name: "Turn on scheduled refresh on this PC" });
+    expect(a.publish.calls.some((c) => c.startsWith("local-off:"))).toBe(true);
   });
 });

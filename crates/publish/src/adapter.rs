@@ -151,6 +151,10 @@ pub trait Adapter: Send + Sync {
     fn unpublish(&self, _target: &Target) -> Result<()> {
         Err(self.unsupported("unpublish"))
     }
+    /// Where this destination's scheduled refresh runs (GitHub Actions unless the adapter says otherwise).
+    fn refresh_runs_on(&self) -> crate::schedule::RunsOn {
+        crate::schedule::RunsOn::GithubActions
+    }
     /// Puts the scheduled-refresh files into the destination and stores the secrets the runner needs
     /// (secrets are passed in by the publisher; the adapter never reads the credential store for them).
     fn configure_refresh(&self, _target: &Target, _files: &[(String, Vec<u8>)], _secrets: &[(String, String)]) -> Result<()> {

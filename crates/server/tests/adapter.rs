@@ -74,3 +74,64 @@ fn publishing_to_a_server_through_the_publisher() {
     p.disconnect("t1").unwrap();
     assert!(keys.get(&token_key("c1")).unwrap().is_none());
 }
+
+#[test]
+fn scheduled_refresh_on_a_server_is_turned_on_run_and_off_through_the_publisher() {
+    use biforge_publish::publisher::RefreshRequest;
+    use biforge_publish::refresh::{RefreshSource, Schedule};
+    let dir = tempfile::tempdir().unwrap();
+    let srv = start(Config { data_dir: dir.path().join("srv"), bind: "127.0.0.1:0".parse().unwrap(), admin_token: Some("bfa_t".into()), public_url: None, tls: false }).unwrap();
+    let http = Arc::new(ReqwestHttp::new().unwrap());
+    let admin = Client::new(http.as_ref(), &srv.url(), "bfa_t");
+    let ws = admin.create_workspace("W").unwrap().id;
+    let keys = Arc::new(MemoryKeyStore::default());
+    keys.set(&token_key("c1"), "bfa_t").unwrap();
+    let reg = Registry::standard_with(Context { keys: keys.clone(), http: http.clone() });
+    let proj = dir.path().join("proj");
+    let store = TargetStore::for_project(&proj);
+    let mut t = Target::new("t1", HOST_ID, "My PC", AccessLevel::Public);
+    for (k, v) in [("url", srv.url()), ("workspace", ws.clone()), ("report", "demo".into()), ("connection", "c1".into())] {
+        t.settings.insert(k.into(), v);
+    }
+    store.put(t).unwrap();
+    let p = Publisher { registry: &reg, keys: keys.as_ref(), store: &store };
+    let (f, inc) = files();
+    let project_files: Vec<PackageFile> = f.iter().filter(|x| x.path.starts_with("project/")).cloned().collect();
+    // refresh needs a published report first
+    let req = |schedule| RefreshRequest {
+        target_id: "t1".into(),
+        report_name: "Demo".into(),
+        publisher_name: "Me".into(),
+        included: inc.clone(),
+        schedule,
+        plan: Some(biforge_publish::schedule::Plan { frequency: schedule, at_minute: 120, retries: 1, retry_delay_secs: 1 }),
+        sources: vec![RefreshSource { table: "T".into(), spec: serde_json::json!({"kind": "csv", "path": "data/src/t.csv", "delimiter": null, "header": null}), original: "C:\\pc\\t.csv".into() }],
+        confirmed_sources: vec!["C:\\pc\\t.csv".into()],
+        project_files: project_files.clone(),
+        source_files: vec![PackageFile { path: "data/src/t.csv".into(), bytes: b"Id,Qty\n1,5\n2,7\n3,100\n".to_vec() }],
+    };
+    assert!(p.enable_refresh(&req(Schedule::Daily)).unwrap_err().to_string().contains("Publish the report first"));
+    let publish = PublishRequest { target_id: "t1".into(), report_name: "Demo".into(), publisher_name: "Me".into(), included: inc.clone(), confirmed: inc.clone(), permissions: vec![], files: f };
+    p.publish(&publish).unwrap();
+    assert_eq!(admin.query(&ws, "demo", "EVALUATE ROW(\"t\", [Total])").unwrap()["results"][0]["rows"][0][0]["v"], "12");
+
+    p.enable_refresh(&req(Schedule::Daily)).unwrap();
+    let t = store.get("t1").unwrap();
+    assert_eq!((t.settings.get("refresh").map(String::as_str), t.settings.get("refreshOn").map(String::as_str)), (Some("daily"), Some("server")));
+    let info = admin.refresh_info(&ws, "demo").unwrap();
+    assert!(info.enabled && info.has_bundle && info.plan.retries == 1 && info.plan.at_minute == 120);
+    // the signing key never leaves this PC
+    assert!(!std::fs::read_dir(dir.path().join("srv")).unwrap().flatten().any(|e| e.file_name().to_string_lossy().contains("signing")));
+
+    // Refresh now runs on the server and the report answers with the bundle's data (the source file had a new row)
+    let msg = p.refresh_now("t1").unwrap();
+    assert!(msg.contains("Refreshed"), "{msg}");
+    assert_eq!(admin.query(&ws, "demo", "EVALUATE ROW(\"t\", [Total])").unwrap()["results"][0]["rows"][0][0]["v"], "112");
+    assert!(admin.refresh_info(&ws, "demo").unwrap().history[0].message.contains("Reloaded"));
+
+    p.disable_refresh("t1").unwrap();
+    let t = store.get("t1").unwrap();
+    assert!(!t.settings.contains_key("refresh") && !t.settings.contains_key("refreshOn"));
+    assert!(!admin.refresh_info(&ws, "demo").unwrap().has_bundle);
+    assert!(p.refresh_now("t1").is_err());
+}

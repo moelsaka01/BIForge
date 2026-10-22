@@ -5,6 +5,7 @@ import { isStorageProvider, PROVIDER_OF } from "../../core/publish/publishUi";
 import type { AccessLevel, AdapterInfo, Envelope, IncludedTable, Provider, RefreshSchedule, Target } from "../../core/publish/types";
 import { useEnv, useSettings } from "./ShellContext";
 import { P2pPanel } from "./HostDialog";
+import { ServerRefresh, ThisPcRefresh } from "./RefreshPanels";
 
 const STATUS_TEXT: Record<Target["status"], string> = {
   neverPublished: "Not published yet",
@@ -479,7 +480,7 @@ function AddDestination({ onAdded }: { onAdded(): void }) {
   );
 }
 
-function RefreshSection({ target, publisherName }: { target: Target; publisherName: string }) {
+function GithubRefresh({ target, publisherName }: { target: Target; publisherName: string }) {
   const env = useEnv();
   const { ui, state } = usePublishUi();
   const on = target.settings.refresh;
@@ -491,10 +492,9 @@ function RefreshSection({ target, publisherName }: { target: Target; publisherNa
   const chosen = files.filter((f) => tables.includes(f.table));
   const names = chosen.map((f) => f.path);
   return (
-    <fieldset style={{ border: "1px solid var(--colorNeutralStroke2)", padding: 8, display: "flex", flexDirection: "column", gap: 6 }}>
-      <legend>Scheduled refresh</legend>
+    <section aria-label="Refresh on GitHub" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
       <div>
-        Where it runs: on GitHub's servers (GitHub Actions), in the public repository of this site. Nothing on this PC has to stay on. It reloads whole source files that BIForge copies into the repository, so only file sources work (CSV, Excel, JSON, Parquet, SQLite).
+        <strong>Where it runs: GitHub Actions (on GitHub's computers)</strong>, in the public repository of this site. Nothing on this PC has to stay on. It reloads whole source files that BIForge copies into the repository, so only file sources work (CSV, Excel, JSON, Parquet, SQLite).
       </div>
       <div style={{ fontSize: 12, opacity: 0.8 }}>
         Free for public repositories. GitHub may switch off scheduled workflows in a repository with no activity for 60 days. The runner downloads the BIForge command line from BIForge's releases page (or from the address in the repository variable BIFORGE_CLI_URL); until BIForge has published a release there, a run fails with a download error.
@@ -551,6 +551,29 @@ function RefreshSection({ target, publisherName }: { target: Target; publisherNa
           )}
         </>
       )}
+    </section>
+  );
+}
+
+/** Scheduled refresh: the person chooses where it runs; each place says what must stay on and keeps its own history. */
+function RefreshChooser({ target, info, publisherName }: { target: Target; info: AdapterInfo; publisherName: string }) {
+  const options: { id: "github" | "server" | "thispc"; label: string }[] = [];
+  if (info.capabilities.scheduledRefresh && target.adapterId === "github-pages") options.push({ id: "github", label: "GitHub Actions (GitHub's computers)" });
+  if (info.capabilities.scheduledRefresh && (target.adapterId === "host-from-pc" || target.adapterId === "biforge-server")) options.push({ id: "server", label: "BIForge server (the server computer)" });
+  options.push({ id: "thispc", label: "This PC (Windows Task Scheduler)" });
+  const on = target.settings.refreshOn;
+  const [where, setWhere] = useState<string>(on && options.some((o) => o.id === on) ? on : options[0].id);
+  return (
+    <fieldset style={{ border: "1px solid var(--colorNeutralStroke2)", padding: 8, display: "flex", flexDirection: "column", gap: 8 }}>
+      <legend>Scheduled refresh</legend>
+      <RadioGroup layout="horizontal" value={where} onChange={(_, d) => setWhere(d.value)} aria-label="Where the refresh runs">
+        {options.map((o) => (
+          <Radio key={o.id} value={o.id} label={o.label} />
+        ))}
+      </RadioGroup>
+      {where === "github" && <GithubRefresh target={target} publisherName={publisherName} />}
+      {where === "server" && <ServerRefresh target={target} publisherName={publisherName} />}
+      {where === "thispc" && <ThisPcRefresh target={target} publisherName={publisherName} />}
     </fieldset>
   );
 }
@@ -650,7 +673,7 @@ function TargetDetails({ target, info }: { target: Target; info: AdapterInfo }) 
           </div>
         </>
       )}
-      {c.scheduledRefresh && published && <RefreshSection target={target} publisherName={name} />}
+      {published && <RefreshChooser target={target} info={info} publisherName={name} />}
       {state.outcome && state.outcome.targetId === target.id && (
         <div role="status" style={{ border: "1px solid var(--colorNeutralStroke2)", padding: 8 }}>
           {state.outcome.rotated ? "Access revoked: version " : "Published version "}

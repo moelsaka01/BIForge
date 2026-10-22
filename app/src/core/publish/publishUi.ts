@@ -4,7 +4,7 @@ import type { Session } from "../session/session";
 import { toStored } from "../report/storage";
 import { getTableSource } from "../model/tables";
 import { pruneForPublishing, sameSelection } from "./prune";
-import type { AccessLevel, AdapterInfo, AuditEvent, IncludedTable, Issue, Outcome, Provider, PublishApi, RefreshSchedule, StorageProvider, Target, VersionInfo } from "./types";
+import type { AccessLevel, AdapterInfo, AuditEvent, IncludedTable, Issue, LocalRefreshInfo, Outcome, Provider, PublishApi, RefreshPlan, RefreshSchedule, ServerRefreshInfo, StorageProvider, Target, VersionInfo } from "./types";
 
 export const STORAGE_PROVIDERS: StorageProvider[] = ["google-drive", "onedrive", "dropbox"];
 export const isStorageProvider = (id: string): id is StorageProvider => (STORAGE_PROVIDERS as string[]).includes(id);
@@ -49,9 +49,12 @@ export interface PublishState {
   versions: VersionInfo[] | null;
   /** The last publish found that someone else changed the stored file; Overwrite is offered. */
   conflict: boolean;
+  /** Scheduled refresh of the selected destination on this PC, and on the server when the destination is one. */
+  localRefresh: LocalRefreshInfo | null;
+  serverRefresh: ServerRefreshInfo | null;
 }
 
-const EMPTY: PublishState = { loaded: false, adapters: [], targets: [], selected: null, issues: [], available: [], chosen: [], warnings: [], busy: false, error: null, outcome: null, link: null, audit: [], connected: {}, storage: {}, versions: null, conflict: false };
+const EMPTY: PublishState = { loaded: false, adapters: [], targets: [], selected: null, issues: [], available: [], chosen: [], warnings: [], busy: false, error: null, outcome: null, link: null, audit: [], connected: {}, storage: {}, versions: null, conflict: false, localRefresh: null, serverRefresh: null };
 
 const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
@@ -185,6 +188,7 @@ export class PublishUi {
       const selected = this.snap.selected && targets.some((t) => t.id === this.snap.selected) ? this.snap.selected : (targets[0]?.id ?? null);
       this.set({ loaded: true, connected, adapters, targets, audit, available, chosen: available.map((t) => ({ ...t, columns: [...t.columns] })), selected, busy: false });
       await this.checkSelected();
+      await this.loadRefresh();
       this.recomputeWarnings();
     } catch (e) {
       this.set({ busy: false, error: errText(e) });
@@ -225,8 +229,9 @@ export class PublishUi {
   }
 
   async select(id: string | null): Promise<void> {
-    this.set({ selected: id, outcome: null, link: null, error: null });
+    this.set({ selected: id, outcome: null, link: null, error: null, localRefresh: null, serverRefresh: null });
     await this.checkSelected();
+    await this.loadRefresh();
   }
 
   private async checkSelected(): Promise<void> {
@@ -341,7 +346,7 @@ export class PublishUi {
   }
 
   /** Turns on scheduled refresh for the selected destination. `confirmed` is the list of whole files the user agreed to put into the repository. */
-  async enableRefresh(publisherName: string, schedule: RefreshSchedule, tables: string[], confirmed: string[]): Promise<void> {
+  async enableRefresh(publisherName: string, schedule: RefreshSchedule, tables: string[], confirmed: string[], opts: { atMinute?: number; retries?: number } = {}): Promise<void> {
     const id = this.snap.selected;
     const project = this.session.store.project;
     if (!id || !project) throw new Error("Choose a destination first.");
@@ -351,8 +356,9 @@ export class PublishUi {
     const sources = cands.map((c) => ({ table: c.table, spec: getTableSource(project, c.table) }));
     this.set({ busy: true, error: null });
     try {
-      await this.api.enableRefresh(this.root, toStored(this.session.store.project), { targetId: id, reportName: project.name, publisherName: publisherName.trim(), included: this.selection(), schedule, sources, confirmedSources: confirmed });
+      await this.api.enableRefresh(this.root, toStored(this.session.store.project), { targetId: id, reportName: project.name, publisherName: publisherName.trim(), included: this.selection(), schedule, ...opts, sources, confirmedSources: confirmed });
       this.set({ busy: false, targets: await this.api.targets(this.root), audit: await this.api.audit(this.root) });
+      await this.loadRefresh();
       this.session.setMessage(`Scheduled refresh is on (${schedule}).`);
     } catch (e) {
       this.set({ busy: false, error: errText(e) });
@@ -360,11 +366,109 @@ export class PublishUi {
     }
   }
 
+  /** Reads the scheduled refresh state of the selected destination: on this PC and, for a server, on the server. */
+  async loadRefresh(): Promise<void> {
+    const id = this.snap.selected;
+    if (!id) return this.set({ localRefresh: null, serverRefresh: null });
+    const target = this.snap.targets.find((t) => t.id === id);
+    let local: LocalRefreshInfo | null = null;
+    let server: ServerRefreshInfo | null = null;
+    try {
+      local = await this.api.localRefreshInfo(this.root, id);
+    } catch {
+      /* the window has no backend */
+    }
+    if (target && (target.adapterId === "host-from-pc" || target.adapterId === "biforge-server") && this.session.host && target.settings.connection && target.settings.workspace && target.settings.report) {
+      try {
+        server = await this.session.host.op<ServerRefreshInfo>(target.settings.connection, "refreshInfo", { workspace: target.settings.workspace, report: target.settings.report });
+      } catch {
+        server = null; // not an editor of this workspace, or the server is not reachable
+      }
+    }
+    this.set({ localRefresh: local, serverRefresh: server });
+  }
+
+  /** Turns on scheduled refresh on this PC (Windows Task Scheduler) for the selected destination. */
+  async enableLocalRefresh(publisherName: string, plan: RefreshPlan): Promise<void> {
+    const id = this.snap.selected;
+    const project = this.session.store.project;
+    if (!id || !project) throw new Error("Choose a destination first.");
+    if (!publisherName.trim()) throw new Error("Enter the name viewers will see as the publisher.");
+    const included = this.selection();
+    if (included.length === 0) throw new Error("Choose at least one column to publish.");
+    this.set({ busy: true, error: null });
+    try {
+      // the schedule publishes the report as it is now (pruned to what is published), like a click on Publish would
+      const pruned = pruneForPublishing(project, included);
+      const info = await this.api.localRefreshEnable(this.root, toStored(pruned.project), { targetId: id, reportName: project.name, publisherName: publisherName.trim(), included, plan });
+      this.set({ busy: false, localRefresh: info, audit: await this.api.audit(this.root) });
+      this.session.setMessage(`Scheduled refresh on this PC is on (${plan.frequency}).`);
+    } catch (e) {
+      this.set({ busy: false, error: errText(e) });
+      throw e;
+    }
+  }
+
+  async disableLocalRefresh(): Promise<void> {
+    const id = this.snap.selected;
+    if (!id) return;
+    this.set({ localRefresh: await this.api.localRefreshDisable(this.root, id) });
+    this.session.setMessage("Scheduled refresh on this PC is off.");
+  }
+
+  /** Runs the refresh on this PC now (it waits for the result and shows it in the history). */
+  async runLocalRefresh(): Promise<void> {
+    const id = this.snap.selected;
+    if (!id) return;
+    this.set({ busy: true, error: null });
+    try {
+      const rec = await this.api.localRefreshRun(this.root, id);
+      this.set({ busy: false, localRefresh: await this.api.localRefreshInfo(this.root, id), targets: await this.api.targets(this.root) });
+      this.session.setMessage(`Refresh on this PC: ${rec.status}. ${rec.message}`);
+    } catch (e) {
+      this.set({ busy: false, error: errText(e) });
+      throw e;
+    }
+  }
+
+  private serverTarget(): { connection: string; workspace: string; report: string } {
+    const t = this.snap.targets.find((x) => x.id === this.snap.selected);
+    const s = t?.settings ?? {};
+    if (!t || !s.connection || !s.workspace || !s.report) throw new Error("Choose a destination on a BIForge server first.");
+    return { connection: s.connection, workspace: s.workspace, report: s.report };
+  }
+
+  /** Runs the refresh on the server now. */
+  async runServerRefresh(): Promise<void> {
+    const t = this.serverTarget();
+    if (!this.session.host) throw new Error("Hosting is not available in this window.");
+    this.set({ busy: true, error: null });
+    try {
+      const rec = await this.session.host.op<{ status: string; message: string }>(t.connection, "refreshRun", { workspace: t.workspace, report: t.report });
+      await this.loadRefresh();
+      this.set({ busy: false });
+      this.session.setMessage(`Refresh on the server: ${rec.status}. ${rec.message}`);
+    } catch (e) {
+      this.set({ busy: false, error: errText(e) });
+      throw e;
+    }
+  }
+
+  /** Puts a file from this PC into the report's source folder on the server (it replaces the copy of the same name). */
+  async uploadServerSource(path: string): Promise<void> {
+    const t = this.serverTarget();
+    if (!this.session.host) throw new Error("Hosting is not available in this window.");
+    await this.session.host.op(t.connection, "refreshSource", { workspace: t.workspace, report: t.report, path });
+    await this.loadRefresh();
+    this.session.setMessage("The file is in the server's source folder; the next refresh reads it.");
+  }
+
   async disableRefresh(): Promise<void> {
     const id = this.snap.selected;
     if (!id) return;
     await this.api.disableRefresh(this.root, id);
     this.set({ targets: await this.api.targets(this.root), audit: await this.api.audit(this.root) });
+    await this.loadRefresh();
     this.session.setMessage("Scheduled refresh is off.");
   }
 
