@@ -93,7 +93,7 @@ try {
 
   appendFileSync(salesCsv, readFileSync(salesCsv, "utf8").trim().split(/\r?\n/).pop() + "\n");
   await sec.getByRole("button", { name: "Refresh now on this PC" }).click();
-  await sec.getByText(/published version 2/).waitFor({ timeout: 120000 });
+  try { await sec.getByText(/published version 2/).waitFor({ timeout: 90000 }); } catch (e) { console.log("SECTION", await sec.innerText()); throw e; }
   let hist = await sec.getByRole("list", { name: "Refresh history" }).innerText();
   check(/New data/.test(hist) && /ran on: This PC \(Windows Task Scheduler\)/.test(hist), "the history shows the run, where it ran, and the new version");
   await sec.getByRole("button", { name: "Refresh now on this PC" }).click();
