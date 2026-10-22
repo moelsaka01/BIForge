@@ -8,6 +8,7 @@ mod host;
 mod p2p;
 mod pq;
 mod publish;
+mod scheduled;
 mod syskeys;
 
 /// The real-window test (app/e2e) drives the app over the DevTools protocol. WebView2 reads the port from an environment
@@ -24,6 +25,11 @@ fn apply_test_debug_port(context: &mut tauri::Context) {
 }
 
 fn main() {
+    // Task Scheduler starts the app without a window for a scheduled refresh on this PC
+    let args: Vec<String> = std::env::args().collect();
+    if args.len() >= 4 && args[1] == "--run-scheduled" {
+        std::process::exit(scheduled::headless(&args[2], &args[3]));
+    }
     let mut context = tauri::generate_context!();
     apply_test_debug_port(&mut context);
     let p2p_service = std::sync::Arc::new(p2p::P2pService::system());
@@ -133,6 +139,10 @@ fn main() {
             host::host_stop,
             host::server_join,
             collab::collab_call,
+            scheduled::local_refresh_info,
+            scheduled::local_refresh_enable,
+            scheduled::local_refresh_disable,
+            scheduled::local_refresh_run,
             host::server_connect_admin,
             host::server_connections,
             host::server_forget,

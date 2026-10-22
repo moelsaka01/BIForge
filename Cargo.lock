@@ -640,6 +640,7 @@ name = "biforge-app"
 version = "0.0.1"
 dependencies = [
  "base64 0.22.1",
+ "biforge-cli",
  "biforge-collab",
  "biforge-dax",
  "biforge-engine",
@@ -650,6 +651,7 @@ dependencies = [
  "biforge-server",
  "serde",
  "serde_json",
+ "sha2 0.10.9",
  "tauri",
  "tauri-build",
  "tauri-plugin-dialog",

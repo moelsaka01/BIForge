@@ -271,6 +271,11 @@ impl PublishService {
     pub fn run(&self, root: &str, project: &Project, args: RunArgs, data: &DataService) -> Result<Outcome, String> {
         let mut included = args.included.clone();
         let files = data.with_store(|e| self.collect_files(project, &mut included, e))?;
+        self.run_with(root, args, included, files)
+    }
+
+    /// Publishes files that were collected already (a scheduled refresh on this PC reads its own copy of the data).
+    pub fn run_with(&self, root: &str, args: RunArgs, included: Vec<IncludedTable>, files: Vec<PackageFile>) -> Result<Outcome, String> {
         let store = TargetStore::for_project(Path::new(root));
         let reg = self.reg();
         let p = Publisher { registry: &reg, keys: self.keys.as_ref(), store: &store };

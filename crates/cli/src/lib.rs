@@ -8,6 +8,8 @@
 //! changed, writes the next version of the package and the feed. It never publishes anything itself: the workflow
 //! commits the changed files.
 
+pub mod local;
+
 use std::fs;
 use std::path::{Path, PathBuf};
 
