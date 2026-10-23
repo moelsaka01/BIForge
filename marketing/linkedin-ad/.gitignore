@@ -1,0 +1,6 @@
+capture/frames/
+out/frames/
+out/*.wav
+*.log
+node_modules/
+out/stills/

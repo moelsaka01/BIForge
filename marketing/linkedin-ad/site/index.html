@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>BIForge LinkedIn ad</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  /* Deterministic: nothing runs on its own. render.mjs calls window.__setTime(t) for every frame. */
+  *, *::before, *::after { transition: none !important; animation: none !important; box-sizing: border-box; }
+  :root {
+    --bg: #f6f4ef;
+    --ink: #1c1c1a;
+    --muted: #77756e;
+    --card: #ffffff;
+    --gold: #f2b01e;
+    --gold-soft: #fbe3a1;
+    --line: rgba(28, 28, 26, 0.08);
+    --font: "Segoe UI Variable Display", "Segoe UI Variable Text", "Segoe UI", Inter, system-ui, -apple-system, sans-serif;
+    --mono: "Cascadia Mono", "Cascadia Code", Consolas, "Courier New", monospace;
+  }
+  html, body { margin: 0; padding: 0; background: var(--bg); overflow: hidden; }
+  #stage { position: relative; overflow: hidden; background: var(--bg); font-family: var(--font); color: var(--ink); -webkit-font-smoothing: antialiased; }
+  #stage.landscape { width: 1920px; height: 1080px; }
+  #stage.portrait { width: 1080px; height: 1350px; }
+  .abs { position: absolute; left: 0; top: 0; }
+  #glow { position: absolute; border-radius: 50%; filter: blur(90px); background: radial-gradient(circle, rgba(242,176,30,0.55), rgba(242,176,30,0) 70%); opacity: 0; will-change: opacity, transform; }
+  #card { position: absolute; border-radius: 30px; background: var(--card); overflow: hidden; will-change: transform; box-shadow: 0 40px 90px rgba(40, 32, 10, 0.12), 0 6px 18px rgba(40, 32, 10, 0.07), 0 0 0 1px var(--line); transform-origin: 50% 50%; }
+  .layer { position: absolute; inset: 0; }
+  #csv { padding: 34px 40px; font-family: var(--mono); color: #2a2a27; white-space: pre; }
+  #csv .bar { display: flex; align-items: center; gap: 14px; font-family: var(--font); color: var(--muted); font-size: 22px; margin-bottom: 18px; letter-spacing: 0.01em; }
+  #csv .dot { width: 14px; height: 14px; border-radius: 50%; background: #e9e5da; display: inline-block; }
+  #csv .ln { display: flex; gap: 22px; line-height: 1.52; }
+  #csv .no { color: #bdb9ac; width: 2ch; text-align: right; flex: none; }
+  #csv .tx { position: relative; }
+  #csv .hl { position: relative; border-radius: 6px; padding: 0 3px; margin: 0 -3px; }
+  #clip, #clip2 { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; display: block; transform-origin: 50% 50%; background: #fff; }
+  #label { position: absolute; font-weight: 650; color: var(--ink); background: #fff; border-radius: 999px; padding: 0.28em 0.8em 0.3em 0.62em; display: flex; align-items: center; gap: 0.5em; box-shadow: 0 18px 44px rgba(40, 32, 10, 0.16), 0 0 0 1px var(--line); white-space: nowrap; letter-spacing: -0.01em; }
+  #label i { width: 0.62em; height: 0.62em; border-radius: 50%; background: var(--gold); box-shadow: 0 0 0 0.2em rgba(242, 176, 30, 0.25); flex: none; }
+  #badge { position: absolute; border-radius: 999px; background: #fff; font-weight: 650; display: flex; align-items: center; gap: 0.5em; padding: 0.34em 0.95em 0.36em 0.7em; white-space: nowrap; letter-spacing: -0.01em; }
+  #badge .spark { width: 0.9em; height: 0.9em; flex: none; }
+  .cap { position: absolute; left: 0; width: 100%; text-align: center; font-weight: 600; letter-spacing: -0.025em; line-height: 1.08; will-change: opacity, transform; }
+  .caret { display: inline-block; width: 0.07em; height: 0.92em; background: var(--gold); margin-left: 0.06em; vertical-align: -0.1em; border-radius: 2px; }
+  #brandLogo { position: absolute; border-radius: 50%; box-shadow: 0 10px 30px rgba(40,32,10,0.12); will-change: transform; }
+  #brandText { position: absolute; font-weight: 700; letter-spacing: -0.035em; white-space: nowrap; transform-origin: 0 0; }
+  .end { position: absolute; left: 0; width: 100%; text-align: center; }
+  #tagline { font-weight: 600; letter-spacing: -0.025em; }
+  #facts { color: var(--muted); font-weight: 500; }
+  #link { font-weight: 650; }
+  #small { color: #9a978d; font-weight: 450; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="glow"></div>
+  <div id="brandLogo"><img id="logoImg" src="logo.png" style="width:100%;height:100%;display:block;border-radius:50%" alt=""></div>
+  <div id="brandText"></div>
+  <div id="card">
+    <div id="csv" class="layer"></div>
+    <img id="clip" class="layer" alt="">
+  </div>
+  <div id="caps"></div>
+  <div id="label"></div>
+  <div id="badge"></div>
+  <div id="tagline" class="end"></div>
+  <div id="facts" class="end"></div>
+  <div id="link" class="end"></div>
+  <div id="small" class="end"></div>
+</div>
+<script>
+const qs = new URLSearchParams(location.search);
+const FMT = qs.get("fmt") === "portrait" ? "portrait" : "landscape";
+const P = FMT === "portrait";
+const stage = document.getElementById("stage");
+stage.className = FMT;
+const SW = P ? 1080 : 1920, SH = P ? 1350 : 1080;
+const $ = (id) => document.getElementById(id);
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, t) => a + (b - a) * t;
+const prog = (t, a, b) => clamp((t - a) / (b - a));
+const eInOut = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+const eOut = (x) => 1 - Math.pow(1 - x, 3);
+const eOutBack = (x, s = 1.55) => 1 + (s + 1) * Math.pow(x - 1, 3) + s * Math.pow(x - 1, 2);
+const eOutExpo = (x) => (x >= 1 ? 1 : 1 - Math.pow(2, -10 * x));
+
+let TL, CLIPS, CSV;
+// ---- layout per format -------------------------------------------------------------------------------------------
+const L = P
+  ? { cardClip: { x: 60, y: 330, w: 960, h: 600 }, cardCsv: { x: 80, y: 300, w: 920, h: 660 }, capTop: 1010, capSize: 92, capMax: 940,
+      brand: { logo: 72, lx: 60, ly: 56, tx: 150, ty: 62, ts: 0.42 }, big: { logo: 300, cy: 330, ty: 480, ts: 0.82 },
+      label: 54, badge: 50, badgeY: 1170, csvFont: 20,
+      tag: { y: 760, size: 64 }, facts: { y: 880, size: 38 }, link: { y: 960, size: 38 }, small: { y: 1240, size: 28 }, montage: { x: 60, y: 330, w: 960, h: 620 } }
+  : { cardClip: { x: 380, y: 112, w: 1160, h: 725 }, cardCsv: { x: 440, y: 150, w: 1040, h: 640 }, capTop: 884, capSize: 80, capMax: 1500,
+      brand: { logo: 64, lx: 64, ly: 48, tx: 142, ty: 52, ts: 0.36 }, big: { logo: 270, cy: 300, ty: 450, ts: 1.0 },
+      label: 44, badge: 44, badgeY: 930, csvFont: 23.2,
+      tag: { y: 650, size: 64 }, facts: { y: 760, size: 38 }, link: { y: 828, size: 38 }, small: { y: 986, size: 28 }, montage: { x: 380, y: 112, w: 1160, h: 725 } };
+
+// ---- typing ------------------------------------------------------------------------------------------------------
+function typedCount(tp, t) { return clamp(Math.floor((t - tp.start) * tp.cps), 0, tp.text.length); }
+function typedHtml(tp, t, caretAlways) {
+  const n = typedCount(tp, t);
+  const done = n >= tp.text.length;
+  const typing = t >= tp.start && !done;
+  const showCaret = t >= tp.start && (typing || (done && t - (tp.start + tp.text.length / tp.cps) < 0.9 && Math.floor(t * 1.9) % 2 === 0) || caretAlways);
+  return esc(tp.text.slice(0, n)) + (showCaret ? '<span class="caret"></span>' : "");
+}
+const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+const typing = (id) => TL.typing.find((x) => x.id === id);
+
+// ---- build static DOM ---------------------------------------------------------------------------------------------
+function buildCsv() {
+  const lines = CSV.replace(/\r/g, "").split("\n").filter((l, i, a) => !(i === a.length - 1 && l === ""));
+  const el = $("csv");
+  el.style.fontSize = L.csvFont + "px";
+  let html = '<div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span style="margin-left:6px">messy-orders.csv</span><span style="margin-left:auto;font-size:0.9em">12 rows · 8 columns</span></div>';
+  lines.forEach((l, i) => {
+    let tx = esc(l);
+    let cls = "";
+    if (/^,+$/.test(l)) { tx = '<span class="hl" data-mark="blank">' + tx + "</span>"; }
+    else if (/n\/a/.test(l)) { tx = tx.replace("n/a", '<span class="hl" data-mark="na">n/a</span>'); }
+    if (i === 4) tx = '<span class="hl" data-mark="dup">' + tx + "</span>";
+    html += `<div class="ln" data-i="${i}"><span class="no">${i === 0 ? "" : i}</span><span class="tx">${tx}</span></div>`;
+  });
+  el.innerHTML = html;
+}
+function buildCaps() {
+  const host = $("caps");
+  TL.typing.filter((x) => x.id.startsWith("cap-")).forEach((tp) => {
+    const d = document.createElement("div");
+    d.className = "cap";
+    d.id = tp.id;
+    d.style.top = L.capTop + "px";
+    d.style.fontSize = L.capSize + "px";
+    d.style.padding = "0 " + (SW - L.capMax) / 2 + "px";
+    host.appendChild(d);
+  });
+}
+
+// ---- brand mark (logo + wordmark) ---------------------------------------------------------------------------------
+const BRAND_W = 0; // measured at ready
+let brandTextW = 600;
+function brandState(t) {
+  // p: 0 = big in the middle (opening, end card), 1 = small in the corner
+  const p = t < 3.0 ? eInOut(prog(t, 2.5, 3.3)) : t < 23.0 ? 1 : 1 - eInOut(prog(t, 23.0, 23.9));
+  const bigLogoY = L.big.cy - L.big.logo / 2;
+  const logo = lerp(L.big.logo, L.brand.logo, p);
+  const lx = lerp(SW / 2 - L.big.logo / 2, L.brand.lx, p);
+  const ly = lerp(bigLogoY, L.brand.ly, p);
+  const ts = lerp(L.big.ts, L.brand.ts, p);
+  const tx = lerp(SW / 2 - (brandTextW * L.big.ts) / 2, L.brand.tx, p);
+  const ty = lerp(L.big.ty, L.brand.ty, p);
+  return { logo, lx, ly, ts, tx, ty, p };
+}
+
+// ---- card geometry ------------------------------------------------------------------------------------------------
+function cardState(t) {
+  const A = L.cardCsv, B = L.cardClip, M = L.montage;
+  let g = { x: A.x, y: A.y, w: A.w, h: A.h };
+  let scale = 1, op = 1, y0 = 0;
+  const mix = (a, b, p) => ({ x: lerp(a.x, b.x, p), y: lerp(a.y, b.y, p), w: lerp(a.w, b.w, p), h: lerp(a.h, b.h, p) });
+  if (t < 3.0) { op = 0; }
+  else if (t < 6.0) {
+    const p = eOutBack(prog(t, 3.0, 3.65));
+    scale = lerp(0.82, 1, p); op = eOut(prog(t, 3.0, 3.4)); y0 = (1 - p) * 40;
+  } else if (t < 17.0) {
+    g = mix(A, B, eInOut(prog(t, 6.0, 6.7)));
+    // a quick "snap" when the clip changes
+    for (const c of [6.0, 10.0, 13.0]) { const q = prog(t, c, c + 0.5); if (q > 0 && q < 1) scale *= 1 - 0.03 * Math.sin(Math.PI * q) ; }
+  } else if (t < 23.0) {
+    g = mix(B, M, 1);
+    for (const c of TL.montage.map((m) => m.start)) { const q = prog(t, c, c + 0.5); if (q > 0 && q < 1) scale *= 0.955 + 0.045 * eOutBack(q, 1.3); }
+    if (t < 17.0 + 0.5) scale *= 1;
+    const out = prog(t, 22.55, 23.05);
+    scale *= lerp(1, 0.9, eInOut(out)); op = 1 - eInOut(out);
+  } else { op = 0; }
+  return { g, scale, op, y0 };
+}
+
+function clipFrameUrl(name, srcTime) {
+  const c = CLIPS[name];
+  const n = clamp(Math.floor(srcTime * 30) + 1, 1, c.frames);
+  return `../capture/frames/${name}/${String(n).padStart(4, "0")}.jpg`;
+}
+// source time of a clip at scene-relative time r: piecewise-linear "map" [[r, src], ...] (speed ramps) or src + r * rate
+function srcAt(k, r) {
+  if (k.map) {
+    const m = k.map;
+    if (r <= m[0][0]) return m[0][1];
+    for (let i = 1; i < m.length; i++) if (r <= m[i][0]) return lerp(m[i - 1][1], m[i][1], (r - m[i - 1][0]) / (m[i][0] - m[i - 1][0]));
+    return m[m.length - 1][1];
+  }
+  return k.src + r * k.rate;
+}
+const imgCache = new Map();
+function loadImg(url) {
+  if (!imgCache.has(url)) { const im = new Image(); im.src = url; imgCache.set(url, im.decode().catch(() => {}).then(() => im)); }
+  return imgCache.get(url);
+}
+
+// ---- the frame ----------------------------------------------------------------------------------------------------
+async function setTime(t) {
+  // background glow: grows through the sharing montage
+  const glow = $("glow");
+  const gI = prog(t, 16.6, 18.5) * (1 - prog(t, 22.6, 23.3));
+  const gs = P ? 900 : 1300;
+  glow.style.width = glow.style.height = gs + "px";
+  glow.style.left = (SW / 2 - gs / 2) + "px";
+  glow.style.top = (P ? 760 : 560) - gs / 2 + "px";
+  glow.style.opacity = (0.55 * gI * (0.85 + 0.15 * Math.sin(t * 5))).toFixed(3);
+
+  // brand
+  const b = brandState(t);
+  const logoA = t < 0.2 ? 0 : t < 1.2 ? eOut(prog(t, 0.2, 0.9)) : 1;
+  const logoS = t < 1.2 ? lerp(0.72, 1, eOutBack(prog(t, 0.2, 1.1), 1.2)) : 1;
+  const bl = $("brandLogo");
+  bl.style.width = bl.style.height = b.logo + "px";
+  bl.style.left = b.lx + "px"; bl.style.top = b.ly + "px";
+  bl.style.opacity = logoA;
+  bl.style.transform = `scale(${logoS})`;
+  const bt = $("brandText");
+  const brandTp = typing("brand");
+  bt.style.left = b.tx + "px"; bt.style.top = b.ty + "px";
+  bt.style.transform = `scale(${b.ts})`;
+  bt.style.fontSize = "112px";
+  bt.style.width = brandTextW + "px";
+  bt.innerHTML = t >= 3.0 && t < 23.0 ? esc(brandTp.text) : typedHtml(brandTp, t, false);
+  bt.style.opacity = t < brandTp.start ? 0 : 1;
+  if (t >= 23.0) bt.innerHTML = esc(brandTp.text);
+
+  // card
+  const cs = cardState(t);
+  const card = $("card");
+  card.style.left = cs.g.x + "px"; card.style.top = cs.g.y + "px";
+  card.style.width = cs.g.w + "px"; card.style.height = cs.g.h + "px";
+  card.style.opacity = cs.op.toFixed(3);
+  card.style.transform = `translateY(${cs.y0}px) scale(${cs.scale})`;
+  card.style.display = cs.op <= 0.001 ? "none" : "block";
+
+  // csv content
+  const csvEl = $("csv");
+  const csvFade = t < 6.0 ? 1 : 1 - prog(t, 6.0, 6.35);
+  csvEl.style.opacity = csvFade;
+  if (t >= 3.0 && t < 6.5) {
+    csvEl.querySelectorAll(".ln").forEach((ln) => {
+      const i = +ln.dataset.i;
+      const q = eOut(prog(t, 3.2 + i * 0.055, 3.55 + i * 0.055));
+      ln.style.opacity = q; ln.style.transform = `translateY(${(1 - q) * 14}px)`;
+    });
+    const marks = { na: 4.55, blank: 4.75, dup: 4.95 };
+    csvEl.querySelectorAll(".hl").forEach((h) => {
+      const q = eOut(prog(t, marks[h.dataset.mark], marks[h.dataset.mark] + 0.35));
+      const col = h.dataset.mark === "na" ? "255,193,7" : "235,87,87";
+      h.style.background = `rgba(${col},${(0.26 * q).toFixed(3)})`;
+      h.style.boxShadow = `0 0 0 ${(2 * q).toFixed(1)}px rgba(${col},${(0.35 * q).toFixed(3)})`;
+    });
+  }
+
+  // clip content
+  const clip = $("clip");
+  let url = null, zoom = 1, cx = 50, cy = 50, clipA = 0;
+  const sceneOf = (t) => TL.scenes.find((s) => t >= s.start && t < s.end);
+  const sc = sceneOf(t);
+  if (sc && ["pq", "dax", "report"].includes(sc.id)) {
+    const k = TL.clips[sc.id];
+    url = clipFrameUrl(k.clip, srcAt(k, t - sc.start));
+    clipA = eOut(prog(t, sc.start + 0.08, sc.start + 0.4));
+    if (sc.id === "report" && t > 16.6) clipA = 1;
+    zoom = (k.zoom || 1.0) + 0.04 * prog(t, sc.start, sc.end); cx = k.cx ?? 50; cy = k.cy ?? 50;
+  } else if (sc && sc.id === "montage") {
+    const m = TL.montage.find((x) => t >= x.start && t < x.end) || TL.montage[TL.montage.length - 1];
+    const k = TL.clips[m.clip] || { src: 0.25, rate: 1.5 };
+    url = clipFrameUrl(m.clip, srcAt(k, t - m.start));
+    clipA = 1;
+    const pz = prog(t, m.start, m.end);
+    zoom = (k.zoom || 1.5) + 0.12 * pz;
+    cx = k.cx ?? 50; cy = k.cy ?? 50;
+  }
+  if (url) {
+    const im = await loadImg(url);
+    if (clip.getAttribute("src") !== url) clip.src = url;
+    // wait until the browser has the new frame ready
+    if (!clip.complete) await clip.decode().catch(() => {});
+  }
+  clip.style.opacity = url ? clipA : 0;
+  clip.style.transformOrigin = `${cx}% ${cy}%`;
+  clip.style.transform = `scale(${zoom})`;
+
+  // captions
+  document.querySelectorAll(".cap").forEach((d) => {
+    const tp = typing(d.id);
+    const idx = TL.typing.filter((x) => x.id.startsWith("cap-")).findIndex((x) => x.id === d.id);
+    const nextStart = [6.0, 10.0, 13.0, 17.0][idx];
+    const fadeQ = prog(t, nextStart - 0.05, nextStart + 0.25);
+    d.style.opacity = t < tp.start ? 0 : 1 - eInOut(fadeQ);
+    d.style.transform = `translateY(${-14 * eInOut(fadeQ)}px)`;
+    d.style.filter = `blur(${(6 * eInOut(fadeQ)).toFixed(2)}px)`;
+    d.innerHTML = t < tp.start || fadeQ >= 1 ? "" : typedHtml(tp, t, false).replace(/<span class="caret"><\/span>$/, fadeQ > 0 ? "" : '<span class="caret"></span>');
+  });
+
+  // montage label (corner chip)
+  const lab = $("label");
+  const m = TL.montage.find((x) => t >= x.start && t < x.end);
+  if (m) {
+    const q = eOutBack(prog(t, m.start + 0.04, m.start + 0.42), 1.8);
+    const out = prog(t, m.end - 0.12, m.end);
+    const M = L.montage;
+    const idx = TL.montage.indexOf(m);
+    lab.style.fontSize = L.label + "px";
+    lab.innerHTML = `<i></i>${esc(m.label)}`;
+    lab.style.display = "flex";
+    // corners of the card, alternating top-left and top-right
+    const wlab = lab.offsetWidth;
+    const left = idx % 2 === 0 ? M.x - (P ? 0 : 36) : M.x + M.w - wlab + (P ? 0 : 36);
+    lab.style.left = left + "px";
+    lab.style.top = M.y - (P ? 74 : 40) + "px";
+    lab.style.opacity = clamp(q, 0, 1) * (1 - out);
+    lab.style.transform = `translateY(${(1 - clamp(q, 0, 1.2)) * 18}px) scale(${lerp(0.7, 1, clamp(q, 0, 1.15))})`;
+    lab.style.transformOrigin = idx % 2 === 0 ? "0 50%" : "100% 50%";
+  } else lab.style.display = "none";
+
+  // badge
+  const bd = $("badge");
+  const btp = typing("badge");
+  const bq = t < 17.7 ? 0 : eOutBack(prog(t, 17.7, 18.25), 1.6);
+  const bout = prog(t, 22.55, 23.0);
+  if (bq > 0 && bout < 1) {
+    bd.style.display = "flex";
+    bd.style.fontSize = L.badge + "px";
+    const pulse = 0.5 + 0.5 * Math.sin((t - 18.2) * 6.3);
+    const gl = 0.55 + 0.45 * pulse;
+    bd.style.boxShadow = `0 0 0 ${(2 + 2 * pulse).toFixed(1)}px rgba(242,176,30,${(0.55 + 0.3 * pulse).toFixed(2)}), 0 0 ${(30 + 40 * gl).toFixed(0)}px ${(6 + 8 * gl).toFixed(0)}px rgba(242,176,30,${(0.30 * gl).toFixed(2)}), 0 18px 40px rgba(40,32,10,0.12)`;
+    bd.innerHTML = '<svg class="spark" viewBox="0 0 24 24"><path d="M12 1.5l2.6 7.1 7.4 2.6-7.4 2.6L12 21l-2.6-7.2L2 11.2l7.4-2.6z" fill="#f2b01e"/></svg><span style="display:inline-block;min-width:' + 0 + 'px">' + typedHtml(btp, t, false) + "</span>";
+    // keep the pill at its final width while typing (the text is revealed inside it)
+    if (!bd.dataset.w) { bd.dataset.w = "1"; }
+    const wFull = bd._fw || (bd._fw = measureBadge());
+    bd.style.width = wFull + "px";
+    bd.style.justifyContent = "flex-start";
+    bd.style.left = (SW - wFull) / 2 + "px";
+    bd.style.top = L.badgeY + "px";
+    bd.style.opacity = clamp(bq, 0, 1) * (1 - eInOut(bout));
+    bd.style.transform = `scale(${lerp(0.8, 1, clamp(bq, 0, 1.1))}) translateY(${(1 - clamp(bq, 0, 1)) * 20}px)`;
+  } else bd.style.display = "none";
+
+  // end card
+  const endT = (el, y, size, tp, start, weight) => {
+    el.style.top = y + "px"; el.style.fontSize = size + "px";
+  };
+  const tg = $("tagline"), fc = $("facts"), lk = $("link"), sm = $("small");
+  const ttp = typing("tagline");
+  tg.style.top = L.tag.y + "px"; tg.style.fontSize = L.tag.size + "px";
+  tg.innerHTML = t >= 23.0 ? typedHtml(ttp, t, false) : "";
+  tg.style.opacity = t >= ttp.start ? 1 : 0;
+  const fadeIn = (el, y, size, text, t0, rise = 22) => {
+    const q = eOut(prog(t, t0, t0 + 0.55));
+    el.style.top = y + "px"; el.style.fontSize = size + "px";
+    el.style.opacity = q; el.style.transform = `translateY(${(1 - q) * rise}px)`;
+    if (!el.dataset.set) { el.innerHTML = text; el.dataset.set = "1"; }
+  };
+  fadeIn(fc, L.facts.y, L.facts.size, "Free and open source &nbsp;·&nbsp; Opens Power BI projects", 25.45);
+  fadeIn(lk, L.link.y, L.link.size, "github.com/moelsaka01/BIForge/releases", 25.85);
+  fadeIn(sm, L.small.y, L.small.size, "Not affiliated with Microsoft", 26.2, 10);
+  if (t < 23.0) { fc.style.opacity = lk.style.opacity = sm.style.opacity = 0; }
+}
+
+function measureBadge() {
+  const probe = document.createElement("div");
+  probe.id = "badge";
+  probe.style.cssText = "position:absolute;visibility:hidden;display:flex;font-size:" + L.badge + "px;left:0;top:0";
+  probe.innerHTML = '<svg class="spark" viewBox="0 0 24 24"></svg><span>' + esc(typing("badge").text) + "</span><span class='caret'></span>";
+  stage.appendChild(probe);
+  const w = Math.ceil(probe.getBoundingClientRect().width) + 4;
+  probe.remove();
+  return w;
+}
+
+async function init() {
+  TL = await (await fetch("timeline.json")).json();
+  CLIPS = await (await fetch("../capture/frames/clips.json")).json();
+  CSV = await (await fetch("../capture/messy-orders.csv")).text();
+  await document.fonts.ready;
+  buildCsv();
+  buildCaps();
+  const probe = document.createElement("div");
+  probe.style.cssText = "position:absolute;visibility:hidden;font-weight:700;letter-spacing:-0.035em;white-space:nowrap;font-size:112px";
+  probe.textContent = "BIForge";
+  stage.appendChild(probe);
+  brandTextW = Math.ceil(probe.getBoundingClientRect().width) + 12;
+  probe.remove();
+  // the intro and end layout read the badge/pill widths lazily
+  await setTime(0);
+  window.__ready = true;
+}
+window.__setTime = setTime;
+// live preview: ?play=1 plays in real time
+if (qs.get("play")) {
+  init().then(() => { const t0 = performance.now(); const tick = async () => { await setTime(Math.min(26.99, (performance.now() - t0) / 1000)); requestAnimationFrame(tick); }; tick(); });
+} else init();
+</script>
+</body>
+</html>

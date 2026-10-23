@@ -1,0 +1,288 @@
+{
+  "duration": 27.0,
+  "fps": 30,
+  "scenes": [
+    {
+      "id": "logo",
+      "start": 0.0,
+      "end": 3.0
+    },
+    {
+      "id": "csv",
+      "start": 3.0,
+      "end": 6.0
+    },
+    {
+      "id": "pq",
+      "start": 6.0,
+      "end": 10.0
+    },
+    {
+      "id": "dax",
+      "start": 10.0,
+      "end": 13.0
+    },
+    {
+      "id": "report",
+      "start": 13.0,
+      "end": 17.0
+    },
+    {
+      "id": "montage",
+      "start": 17.0,
+      "end": 23.0
+    },
+    {
+      "id": "end",
+      "start": 23.0,
+      "end": 27.0
+    }
+  ],
+  "typing": [
+    {
+      "id": "brand",
+      "text": "BIForge",
+      "start": 1.55,
+      "cps": 11,
+      "sound": true
+    },
+    {
+      "id": "cap-csv",
+      "text": "Start with messy data.",
+      "start": 3.55,
+      "cps": 14,
+      "sound": true
+    },
+    {
+      "id": "cap-pq",
+      "text": "Shape it.",
+      "start": 6.35,
+      "cps": 11,
+      "sound": true
+    },
+    {
+      "id": "cap-dax",
+      "text": "Model it.",
+      "start": 10.35,
+      "cps": 11,
+      "sound": true
+    },
+    {
+      "id": "cap-report",
+      "text": "See it.",
+      "start": 13.35,
+      "cps": 10,
+      "sound": true
+    },
+    {
+      "id": "badge",
+      "text": "Share and collaborate. Free.",
+      "start": 18.2,
+      "cps": 22,
+      "sound": true
+    },
+    {
+      "id": "tagline",
+      "text": "Business intelligence, set free.",
+      "start": 24.0,
+      "cps": 20,
+      "sound": false
+    }
+  ],
+  "montage": [
+    {
+      "id": "hosting",
+      "label": "Free hosting",
+      "clip": "share-hosting",
+      "start": 17.0,
+      "end": 18.5
+    },
+    {
+      "id": "p2p",
+      "label": "Peer-to-peer",
+      "clip": "share-p2p",
+      "start": 18.5,
+      "end": 20.0
+    },
+    {
+      "id": "server",
+      "label": "Your own server",
+      "clip": "share-server",
+      "start": 20.0,
+      "end": 21.5
+    },
+    {
+      "id": "cloud",
+      "label": "Your own cloud storage",
+      "clip": "share-cloud",
+      "start": 21.5,
+      "end": 23.0
+    }
+  ],
+  "snaps": [
+    3.0,
+    6.0,
+    10.0,
+    13.0,
+    17.0,
+    18.5,
+    20.0,
+    21.5
+  ],
+  "clips": {
+    "pq": {
+      "clip": "pq",
+      "map": [
+        [
+          0,
+          0.5
+        ],
+        [
+          0.9,
+          4.6
+        ],
+        [
+          1.7,
+          9.0
+        ],
+        [
+          2.6,
+          15.5
+        ],
+        [
+          3.4,
+          20.0
+        ],
+        [
+          4.0,
+          23.0
+        ]
+      ]
+    },
+    "dax": {
+      "clip": "dax",
+      "map": [
+        [
+          0,
+          2.2
+        ],
+        [
+          0.4,
+          4.4
+        ],
+        [
+          0.55,
+          5.0
+        ],
+        [
+          1.9,
+          9.6
+        ],
+        [
+          2.3,
+          11.6
+        ],
+        [
+          3.0,
+          13.2
+        ]
+      ],
+      "zoom": 1.25,
+      "cx": 38,
+      "cy": 38
+    },
+    "report": {
+      "clip": "report",
+      "map": [
+        [
+          0,
+          0.8
+        ],
+        [
+          0.25,
+          1.5
+        ],
+        [
+          2.6,
+          35.5
+        ],
+        [
+          2.75,
+          36.5
+        ],
+        [
+          4.0,
+          44.5
+        ]
+      ],
+      "zoom": 1.15,
+      "cx": 40,
+      "cy": 45
+    },
+    "share-hosting": {
+      "clip": "share-hosting",
+      "map": [
+        [
+          0,
+          2.0
+        ],
+        [
+          1.5,
+          6.0
+        ]
+      ],
+      "zoom": 1.5,
+      "cx": 50,
+      "cy": 50
+    },
+    "share-p2p": {
+      "clip": "share-p2p",
+      "map": [
+        [
+          0,
+          0.5
+        ],
+        [
+          1.5,
+          3.0
+        ]
+      ],
+      "zoom": 1.5,
+      "cx": 50,
+      "cy": 50
+    },
+    "share-server": {
+      "clip": "share-server",
+      "map": [
+        [
+          0,
+          2.0
+        ],
+        [
+          1.5,
+          6.0
+        ]
+      ],
+      "zoom": 1.5,
+      "cx": 50,
+      "cy": 50
+    },
+    "share-cloud": {
+      "clip": "share-cloud",
+      "map": [
+        [
+          0,
+          3.2
+        ],
+        [
+          1.5,
+          8.5
+        ]
+      ],
+      "zoom": 1.5,
+      "cx": 50,
+      "cy": 50
+    }
+  },
+  "chime": 23.0
+}

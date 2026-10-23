@@ -1,0 +1,13 @@
+order_id,Order Date,customer,region,product,qty,unit price,notes
+1001,2024-01-03,  alice  ,north,Pen,12,1.50,
+1002,2024-01-05,BOB,SOUTH ,Ink,3,8.25,rush
+1003,2024-01-05,carol,North,Pad,n/a,4.10,
+1003,2024-01-05,carol,North,Pad,n/a,4.10,
+1004,2024-01-09, dave,east,Pen,7,1.50,
+,,,,,,,
+1005,2024-01-12,Erin ,WEST,Ink,5,8.25,gift
+1006,2024-01-14,frank,south,Pad,20,4.10,
+1007,2024-01-18,  GRACE,East,Pen,n/a,1.50,
+1008,2024-01-21,heidi,north ,Ink,9,8.25,
+1009,2024-01-25,Ivan,WEST,Pad,4,4.10,rush
+1010,2024-01-28,judy ,East,Pen,15,1.50,
