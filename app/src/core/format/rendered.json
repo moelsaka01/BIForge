@@ -118,6 +118,21 @@
    "showOptionsMenu",
    "showPersonalizeVisualButton"
   ],
+  "visualHeaderTooltip": [
+   "background",
+   "bold",
+   "fontFamily",
+   "fontSize",
+   "italic",
+   "section",
+   "text",
+   "themedBackground",
+   "themedTitleFontColor",
+   "titleFontColor",
+   "transparency",
+   "type",
+   "underline"
+  ],
   "general": [
    "altText"
   ]

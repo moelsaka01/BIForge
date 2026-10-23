@@ -332,7 +332,7 @@ function computeAll(): Coverage {
   let common: Record<string, string[]> | null = null;
   for (const vt of VISUAL_TYPES) {
     if (!visualObjects(vt.id)) continue;
-    const m = measure(containerScenario, vt.id, containerNames.filter((o) => o !== "stylePreset" && o !== "visualHeaderTooltip"));
+    const m = measure(containerScenario, vt.id, containerNames.filter((o) => o !== "stylePreset"));
     if (!common) common = m;
     else for (const o of Object.keys(common)) common[o] = (common[o] ?? []).filter((p) => m[o]?.includes(p));
     if (vt.id === "clusteredColumnChart") break; // the container model does not depend on the type

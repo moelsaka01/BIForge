@@ -69,6 +69,7 @@ export function VisualFrame(p: FrameProps) {
   const c = useReport();
   const { visual, page, position: pos } = p;
   const [hover, setHover] = useState(false);
+  const [headerTip, setHeaderTip] = useState(false);
   const [personalizing, setPersonalizing] = useState(false);
   const f = new FormatReader(visual.json, c.theme, visual.visualType);
   const type = visualType(visual.visualType);
@@ -81,6 +82,18 @@ export function VisualFrame(p: FrameProps) {
   const linked = action.type !== "None" && visual.visualType !== "actionButton";
   const linkProblem = linked ? actionProblem(action, c.pages.map((x) => x.name), listBookmarks(c.project).map((b) => b.id)) : null;
   const linkTitle = linked ? linkTooltip(model.link, linkProblem) : "";
+  // the Header tooltip card: an information icon with a text tooltip (null) or a tooltip page; undefined = no icon
+  const ht = model.headerTooltip;
+  const headerTipPage = ht.type === "Canvas" ? (c.pages.find((x) => x.name === ht.section && x.type === "Tooltip") ?? undefined) : ht.text !== "" ? null : undefined;
+  const headerTipStyle: CSSProperties = {
+    background: `color-mix(in srgb, ${ht.background ?? "#ffffff"} ${Math.round(ht.opacity * 100)}%, transparent)`,
+    color: ht.titleColor ?? "#222222",
+    ...(ht.fontFamily ? { fontFamily: ht.fontFamily } : {}),
+    ...(ht.fontSize !== null ? { fontSize: ht.fontSize } : {}),
+    fontWeight: ht.bold ? "bold" : undefined,
+    fontStyle: ht.italic ? "italic" : undefined,
+    textDecoration: ht.underline ? "underline" : undefined,
+  };
   const showTitle = model.title !== null;
   const cats = (visual.roles.Category ?? []).map((x) => x.field);
   const drill = c.snap.drill[visual.name];
@@ -194,6 +207,32 @@ export function VisualFrame(p: FrameProps) {
         <div style={{ ...model.subTitle.style, position: "absolute", left: 0, right: 0, top: model.title ? model.title.height : 0, height: model.subTitle.height }} role={model.subTitle.level ? "heading" : undefined} aria-level={model.subTitle.level ?? undefined}>
           {model.subTitle.text}
         </div>
+      )}
+      {headerTipPage !== undefined && (
+        <>
+          <span
+            role="img"
+            aria-label="Information"
+            data-testid="header-tooltip-icon"
+            onPointerEnter={(e) => {
+              setHeaderTip(true);
+              if (headerTipPage) c.onTooltip(headerTipPage, visual.name, { fields: [], values: [] }, e.clientX, e.clientY);
+            }}
+            onPointerLeave={() => {
+              setHeaderTip(false);
+              if (headerTipPage) c.onTooltip(headerTipPage, visual.name, null, 0, 0);
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+            style={{ position: "absolute", right: 30, top: 3, width: 16, height: 16, lineHeight: "16px", textAlign: "center", fontSize: 12, borderRadius: "50%", border: "1px solid currentColor", cursor: "help", zIndex: 5, color: "#555", background: "#ffffffd9" }}
+          >
+            i
+          </span>
+          {headerTip && headerTipPage === null && (
+            <div role="tooltip" data-testid="header-tooltip" style={{ position: "absolute", right: 6, top: 24, maxWidth: 260, padding: "6px 10px", borderRadius: 3, boxShadow: "0 2px 8px #0003", zIndex: 9, fontSize: 12, ...headerTipStyle }}>
+              {model.headerTooltip.text}
+            </div>
+          )}
+        </>
       )}
       {model.divider && <div data-testid="divider" style={{ position: "absolute", left: model.divider.inset, right: model.divider.inset, top: model.divider.top, ...model.divider.style }} />}
       <div style={{ position: "absolute", left: model.body.left, right: model.body.right, top: model.body.top, bottom: model.body.bottom, overflow: "hidden" }}>

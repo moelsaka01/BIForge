@@ -6,7 +6,7 @@ import { cssFont, opacityOf, readFont } from "../format/styles";
 import type { FormatReader } from "./formatReader";
 import type { Theme } from "./theme";
 import { linkModel, type LinkModel } from "./linkModel";
-import { tooltipLook, type TooltipLook } from "./tooltipLook";
+import { headerTooltip, tooltipLook, type HeaderTooltip, type TooltipLook } from "./tooltipLook";
 
 export interface TextBlock {
   text: string;
@@ -34,6 +34,8 @@ export interface ContainerModel {
   /** type: "Default" or "Canvas" (a report page is the tooltip). */
   tooltip: { show: boolean; type: string; section: string; look: TooltipLook };
   lockAspect: boolean;
+  /** The Header tooltip card: an information icon next to the title with its own tooltip. */
+  headerTooltip: HeaderTooltip;
   /** The Action card: what Ctrl+click on the visual does, and its tooltips. */
   link: LinkModel;
 }
@@ -158,5 +160,6 @@ export function buildContainer(inp: ContainerInput): ContainerModel {
     tooltip: { show: f.bool("visualTooltip", "show", true), type: f.str("visualTooltip", "type", "Default"), section: f.str("visualTooltip", "section", ""), look: tooltipLook(f) },
     lockAspect: f.bool("lockAspect", "show", false),
     link: linkModel(f),
+    headerTooltip: headerTooltip(f),
   };
 }

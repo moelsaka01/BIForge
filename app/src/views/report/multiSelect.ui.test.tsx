@@ -192,6 +192,27 @@ describe("selecting several visuals on the canvas", () => {
     await waitFor(() => expect(t.session.report.getSnapshot().page).toBe(second));
   });
 
+  it("the Header tooltip card puts an information icon on the visual; hovering it shows the text in the chosen look", async () => {
+    const t = setup();
+    const a = await t.add(10, 10);
+    render(<t.Host />);
+    await waitFor(() => expect(t.frame(a)).toBeTruthy());
+    expect(screen.queryByTestId("header-tooltip-icon")).toBeNull();
+    const fmt = (prop: string, v: unknown) => t.run("report.format.set", { page: "page1", visual: a, object: "visualHeaderTooltip", prop, value: v });
+    await fmt("text", { t: "string", v: "Revenue after returns" });
+    await fmt("bold", { t: "bool", v: true });
+    await fmt("titleFontColor", { t: "string", v: "#123456" });
+    const icon = await screen.findByTestId("header-tooltip-icon");
+    expect(screen.queryByTestId("header-tooltip")).toBeNull();
+    fireEvent.pointerEnter(icon);
+    const tip = await screen.findByTestId("header-tooltip");
+    expect(tip.textContent).toBe("Revenue after returns");
+    expect(tip.style.fontWeight).toBe("bold");
+    expect(tip.style.color).toBe("rgb(18, 52, 86)");
+    fireEvent.pointerLeave(icon);
+    await waitFor(() => expect(screen.queryByTestId("header-tooltip")).toBeNull());
+  });
+
   it("a rubber band over empty canvas selects the visuals it touches; Shift adds to the selection", async () => {
     const t = setup();
     const a = await t.add(0, 0);
