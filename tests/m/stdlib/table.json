@@ -214,5 +214,95 @@
   "m": "Table.RowCount(List.Last(Table.SplitAt(#table({\"a\", \"b\"}, {{1, \"x\"}, {2, \"y\"}, {3, \"z\"}}), 1)))",
   "expect": "2",
   "mode": "value"
+ },
+ {
+  "fn": "Table.MatchesAllRows",
+  "m": "Table.MatchesAllRows(#table({\"a\", \"b\"}, {{1, \"x\"}, {2, \"y\"}, {3, \"z\"}}), each [a] > 0)",
+  "expect": "true",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.MatchesAllRows",
+  "m": "Table.MatchesAllRows(#table({\"a\", \"b\"}, {{1, \"x\"}, {2, \"y\"}, {3, \"z\"}}), each [a] > 1)",
+  "expect": "false",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.MatchesAnyRows",
+  "m": "Table.MatchesAnyRows(#table({\"a\", \"b\"}, {{1, \"x\"}, {2, \"y\"}, {3, \"z\"}}), each [a] > 2)",
+  "expect": "true",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.MatchesAnyRows",
+  "m": "Table.MatchesAnyRows(#table({\"a\", \"b\"}, {{1, \"x\"}, {2, \"y\"}, {3, \"z\"}}), each [a] > 5)",
+  "expect": "false",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.TransformRows",
+  "m": "Table.TransformRows(#table({\"a\", \"b\"}, {{1, \"x\"}, {2, \"y\"}, {3, \"z\"}}), each [a] * 10)",
+  "expect": "{10,20,30}",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.TransformRows",
+  "m": "List.Sum(Table.TransformRows(#table({\"a\", \"b\"}, {{1, \"x\"}, {2, \"y\"}, {3, \"z\"}}), each [a] * 10))",
+  "expect": "60",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.RemoveMatchingRows",
+  "m": "Table.RowCount(Table.RemoveMatchingRows(#table({\"a\", \"b\"}, {{1, \"x\"}, {2, \"y\"}, {3, \"z\"}}), {[a = 2]}))",
+  "expect": "2",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.RemoveMatchingRows",
+  "m": "Table.Column(Table.RemoveMatchingRows(#table({\"a\", \"b\"}, {{1, \"x\"}, {2, \"y\"}, {3, \"z\"}}), {[a = 1], [a = 3]}), \"b\")",
+  "expect": "{y}",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.MaxN",
+  "m": "Table.Column(Table.MaxN(#table({\"a\", \"b\"}, {{1, \"x\"}, {2, \"y\"}, {3, \"z\"}}), \"a\", 2), \"a\")",
+  "expect": "{3,2}",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.MinN",
+  "m": "Table.Column(Table.MinN(#table({\"a\", \"b\"}, {{1, \"x\"}, {2, \"y\"}, {3, \"z\"}}), \"a\", 2), \"a\")",
+  "expect": "{1,2}",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.PositionOfAny",
+  "m": "Table.PositionOfAny(#table({\"a\", \"b\"}, {{1, \"x\"}, {2, \"y\"}, {3, \"z\"}}), {[a = 9], [a = 3], [a = 2]})",
+  "expect": "1",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.PositionOfAny",
+  "m": "Table.PositionOfAny(#table({\"a\", \"b\"}, {{1, \"x\"}, {2, \"y\"}, {3, \"z\"}}), {[a = 9]})",
+  "expect": "-1",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.ReplaceRows",
+  "m": "Table.Column(Table.ReplaceRows(#table({\"a\", \"b\"}, {{1, \"x\"}, {2, \"y\"}, {3, \"z\"}}), 1, 1, {[a = 20, b = \"q\"]}), \"a\")",
+  "expect": "{1,20,3}",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.ColumnsOfType",
+  "m": "Table.ColumnsOfType(#table({\"a\", \"b\"}, {{1, \"x\"}, {2, \"y\"}, {3, \"z\"}}), {type number})",
+  "expect": "{a}",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.ColumnsOfType",
+  "m": "Table.ColumnsOfType(#table({\"a\", \"b\"}, {{1, \"x\"}, {2, \"y\"}, {3, \"z\"}}), {type text})",
+  "expect": "{b}",
+  "mode": "value"
  }
 ]

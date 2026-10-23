@@ -482,7 +482,7 @@ impl<'a> Ev<'a> {
                 self.eval(&c.body, &child)
             }
             Value::Builtin(name) => stdlib::call(self, name, args),
-            Value::Native(name, _) => Err(MError::unsupported(format!("{name}(...) cannot be called directly here."))),
+            Value::Native(name, ctor) => crate::stdlib_native::apply(name, ctor, &args),
             other => Err(MError::expr(format!("Cannot call {} as a function.", other.type_name()))),
         }
     }

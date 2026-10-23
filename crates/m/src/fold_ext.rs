@@ -8,7 +8,8 @@ pub const TABLE_EXT_FNS: &[&str] = &[
     "Table.ColumnCount", "Table.First", "Table.Last", "Table.Row", "Table.FirstValue", "Table.ToRecords", "Table.ToRows", "Table.ToColumns",
     "Table.Max", "Table.Min", "Table.Contains", "Table.ContainsAll", "Table.ContainsAny", "Table.HasColumns", "Table.IsDistinct",
     "Table.PositionOf", "Table.FromColumns", "Table.FromList", "Table.FromValue", "Table.PrefixColumns", "Table.Repeat",
-    "Table.InsertRows", "Table.SplitAt",
+    "Table.InsertRows", "Table.SplitAt", "Table.MatchesAllRows", "Table.MatchesAnyRows", "Table.TransformRows", "Table.RemoveMatchingRows",
+    "Table.MaxN", "Table.MinN", "Table.PositionOfAny", "Table.ReplaceRows", "Table.ColumnsOfType",
 ];
 
 fn cmp(x: &Value, y: &Value) -> std::cmp::Ordering {
@@ -36,6 +37,20 @@ impl<'a> Ev<'a> {
             return Err(MError::expr("A row must be a record."));
         };
         Ok(w.iter().all(|(k, v)| row.iter().any(|(k2, v2)| k2 == k && values_equal(v2, v))))
+    }
+
+    /// The rows of `t` whose 1-based position is in `keep`, in their order.
+    fn keep_row_numbers(&self, t: &Rel, keep: &[usize]) -> R<Value> {
+        let list = if keep.is_empty() { "NULL".to_string() } else { keep.iter().map(|i| i.to_string()).collect::<Vec<_>>().join(", ") };
+        let body = format!(
+            "SELECT {}, {} FROM (SELECT *, row_number() OVER (ORDER BY {}) AS \"__rn\" FROM {}) AS w WHERE \"__rn\" IN ({})",
+            qi(ORD),
+            Self::col_list_keep(t),
+            qi(ORD),
+            qi(&t.name),
+            list
+        );
+        Ok(Value::Table(self.derive(&[t], body)?))
     }
 
     pub(crate) fn table_ext(&self, name: &str, a: &[Value]) -> R<Option<Value>> {
@@ -226,6 +241,129 @@ impl<'a> Ev<'a> {
                 let head = self.row_window("Table.FirstN", &[Value::Table(t.clone()), Value::Num(off)])?;
                 let tail = self.row_window("Table.Skip", &[Value::Table(t), Value::Num(off)])?;
                 self.combine(&[Value::List(vec![head, new, tail])])?
+            }
+            "Table.MatchesAllRows" | "Table.MatchesAnyRows" => {
+                let f = arg(a, 1, name)?;
+                let mut all = true;
+                let mut any = false;
+                for r in self.all_records(&table_arg(a, 0, name)?)? {
+                    match self.apply(f, vec![Value::Record(r)])? {
+                        Value::Bool(b) => {
+                            all &= b;
+                            any |= b;
+                        }
+                        other => return Err(MError::expr(format!("The condition must be logical, found {}.", other.type_name()))),
+                    }
+                }
+                Value::Bool(if name == "Table.MatchesAllRows" { all } else { any })
+            }
+            "Table.TransformRows" => {
+                let f = arg(a, 1, name)?;
+                let mut out = Vec::new();
+                for r in self.all_records(&table_arg(a, 0, name)?)? {
+                    out.push(self.apply(f, vec![Value::Record(r)])?);
+                }
+                Value::List(out)
+            }
+            "Table.RemoveMatchingRows" => {
+                let t = table_arg(a, 0, name)?;
+                let Value::List(drop) = arg(a, 1, name)? else {
+                    return Err(MError::expr("A list of rows was expected."));
+                };
+                let mut keep = Vec::new();
+                for (i, r) in self.all_records(&t)?.iter().enumerate() {
+                    let mut hit = false;
+                    for d in drop {
+                        if Self::row_matches(r, d)? {
+                            hit = true;
+                            break;
+                        }
+                    }
+                    if !hit {
+                        keep.push(i + 1);
+                    }
+                }
+                self.keep_row_numbers(&t, &keep)?
+            }
+            "Table.MaxN" | "Table.MinN" => {
+                let t = table_arg(a, 0, name)?;
+                let Value::Text(col) = arg(a, 1, name)? else {
+                    return Err(MError::expr("The comparison criteria must name a column."));
+                };
+                let n = arg(a, 2, name)?.clone();
+                let order = Value::List(vec![Value::Text(col.clone()), Value::Num(if name == "Table.MaxN" { 1.0 } else { 0.0 })]);
+                let sorted = self.sort(&[Value::Table(t), order])?;
+                self.row_window("Table.FirstN", &[sorted, n])?
+            }
+            "Table.PositionOfAny" => {
+                let rows = self.all_records(&table_arg(a, 0, name)?)?;
+                let Value::List(wanted) = arg(a, 1, name)? else {
+                    return Err(MError::expr("A list of rows was expected."));
+                };
+                let mut found = Vec::new();
+                for (i, r) in rows.iter().enumerate() {
+                    for w in wanted {
+                        if Self::row_matches(r, w)? {
+                            found.push(i);
+                            break;
+                        }
+                    }
+                }
+                match a.get(2) {
+                    Some(Value::Num(o)) if *o == 2.0 => Value::List(found.into_iter().map(|i| Value::Num(i as f64)).collect()),
+                    Some(Value::Num(o)) if *o == 1.0 => Value::Num(found.last().map(|i| *i as f64).unwrap_or(-1.0)),
+                    _ => Value::Num(found.first().map(|i| *i as f64).unwrap_or(-1.0)),
+                }
+            }
+            "Table.ReplaceRows" => {
+                let t = table_arg(a, 0, name)?;
+                let off = num_arg(arg(a, 1, name)?, "The offset")?;
+                let count = num_arg(arg(a, 2, name)?, "The count")?;
+                let Value::List(records) = arg(a, 3, name)? else {
+                    return Err(MError::expr("Table.ReplaceRows needs a list of records."));
+                };
+                let names: Vec<String> = t.plain_cols().map(|c| c.name.clone()).collect();
+                let rows: Vec<Value> = records
+                    .iter()
+                    .map(|r| match r {
+                        Value::Record(f) => Ok(Value::List(names.iter().map(|n| f.iter().find(|(k, _)| k == n).map(|(_, v)| v.clone()).unwrap_or(Value::Null)).collect())),
+                        _ => Err(MError::expr("Table.ReplaceRows needs a list of records.")),
+                    })
+                    .collect::<R<_>>()?;
+                let new = self.table_literal("#table", &[Value::List(names.iter().cloned().map(Value::Text).collect()), Value::List(rows)])?;
+                let head = self.row_window("Table.FirstN", &[Value::Table(t.clone()), Value::Num(off)])?;
+                let tail = self.row_window("Table.Skip", &[Value::Table(t), Value::Num(off + count)])?;
+                self.combine(&[Value::List(vec![head, new, tail])])?
+            }
+            "Table.ColumnsOfType" => {
+                let t = table_arg(a, 0, name)?;
+                let Value::List(types) = arg(a, 1, name)? else {
+                    return Err(MError::expr("Table.ColumnsOfType needs a list of types."));
+                };
+                let wanted: Vec<String> = types
+                    .iter()
+                    .map(|v| match v {
+                        Value::Type(crate::ast::TypeExpr::Named(n)) => Ok(match n.as_str() {
+                            "Int64.Type" | "Int32.Type" | "Int16.Type" | "Int8.Type" | "Double.Type" | "Decimal.Type" | "Currency.Type" => "number".to_string(),
+                            other => other.to_string(),
+                        }),
+                        _ => Err(MError::expr("Table.ColumnsOfType needs a list of simple types.")),
+                    })
+                    .collect::<R<_>>()?;
+                let kind = |ty: &str| -> &'static str {
+                    if is_int_ty(ty) || is_float_ty(ty) {
+                        "number"
+                    } else {
+                        match ty.to_ascii_uppercase().as_str() {
+                            "BOOLEAN" => "logical",
+                            "DATE" => "date",
+                            "TIMESTAMP" => "datetime",
+                            "TIME" => "time",
+                            _ => "text",
+                        }
+                    }
+                };
+                Value::List(t.plain_cols().filter(|c| wanted.iter().any(|w| w == kind(&c.ty) || w == "any")).map(|c| Value::Text(c.name.clone())).collect())
             }
             "Table.SplitAt" => {
                 let t = table_arg(a, 0, name)?;
