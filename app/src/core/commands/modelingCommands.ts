@@ -71,6 +71,13 @@ export function registerModelingCommands(r: CommandRegistry<Session>): void {
     return s.setCalculationGroup(name, column, items);
   });
   reg("model.calculationGroupDialog", "Calculation group", (s) => s.shell.openDialog({ kind: "modelDialog", id: "calculationGroup" }));
+  reg("model.addFieldParameter", "New field parameter", async (s, a) => {
+    const { name, fields } = need<{ name: string; fields: { label: string; table: string; name: string }[] }>(a, ["name", "fields"]);
+    if (!fields.length) throw new Error("Choose at least one field.");
+    await s.setCalculatedTable(name, mod.fieldParameterExpression(name, fields));
+    s.store.transact(`Field parameter "${name}"`, (p) => mod.markFieldParameter(p, name));
+  });
+  reg("model.fieldParameterDialog", "Field parameter", (s) => s.shell.openDialog({ kind: "modelDialog", id: "fieldParameter" }));
   reg("model.manageRolesDialog", "Manage roles", (s) => s.shell.openDialog({ kind: "roles" }));
   reg("model.viewAsDialog", "View as", (s) => s.shell.openDialog({ kind: "viewAs" }));
   reg("model.setRole", "Save role", (s, a) => {

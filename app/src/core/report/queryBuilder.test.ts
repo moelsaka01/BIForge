@@ -248,3 +248,21 @@ describe("visual queries (checked against values computed from the fixture CSV f
 });
 
 void (null as unknown as Lit);
+
+describe("field parameters in a visual", () => {
+  const fp = { table: "Pick", column: "Pick", entries: [{ label: "Quantity", table: "Sales", name: "Quantity", order: 0 }, { label: "Total", table: "Sales", name: "Total", order: 1 }, { label: "Category", table: "Product", name: "Category", order: 2 }] };
+  const m = fixtureModel({ measures: { Sales: ["Total"] }, fieldParameters: [fp] });
+  const sel = (...labels: string[]) => ({ name: "f", field: column("Pick", "Pick"), cond: { kind: "in" as const, values: labels.map((l) => lit.str(l)) } });
+
+  it("stands for the fields chosen in its slicer, as columns in a group and as values in a value role", () => {
+    const v = visualOf("clusteredColumnChart", { Category: [column("Product", "Subcategory")], Y: [column("Pick", "Pick")] });
+    const all = buildVisualQuery(v, m, { filters: [] })!;
+    expect(all.dax).toContain("\"m0\"");
+    expect(all.columns.filter((c) => c.kind === "value").map((c) => c.label)).toEqual(["Sum of Quantity", "Total", "Sum of Category"]);
+    const one = buildVisualQuery(v, m, { filters: [sel("Total")] })!;
+    expect(one.columns.filter((c) => c.kind === "value").map((c) => c.label)).toEqual(["Total"]);
+    expect(one.dax).not.toContain("Pick");
+    const g = buildVisualQuery(visualOf("tableEx", { Values: [column("Pick", "Pick")] }), m, { filters: [sel("Category", "Quantity")] })!;
+    expect(g.columns.filter((c) => c.kind === "group").map((c) => c.label)).toEqual(["Quantity", "Category"]);
+  });
+});

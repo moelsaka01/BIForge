@@ -431,7 +431,7 @@ function reportTabs(shell: ShellKind): RibbonTab[] {
     id: "modeling",
     label: "Modeling",
     keytip: "M",
-    groups: [relationshipsGroup(), modelingCalculations(), securityGroup(), { id: "parameters", label: "Parameters", controls: [cmd("whatIf", "New parameter", "parameter", "model.whatIfDialog", { size: "large", keytip: "WI" })] }, { id: "qna", label: "Q&A", controls: [todo("qnaSetup", "Q&A setup", "qna", { size: "large" }), todo("language", "Language", "language", { size: "large" })] }],
+    groups: [relationshipsGroup(), modelingCalculations(), securityGroup(), { id: "parameters", label: "Parameters", controls: [cmd("whatIf", "New parameter", "parameter", "model.whatIfDialog", { size: "large", keytip: "WI" }), cmd("fieldParam", "Field parameter", "parameter", "model.fieldParameterDialog", { size: "large", keytip: "FP" })] }, { id: "qna", label: "Q&A", controls: [todo("qnaSetup", "Q&A setup", "qna", { size: "large" }), todo("language", "Language", "language", { size: "large" })] }],
   };
   const viewTab: RibbonTab = {
     id: "view",
@@ -489,7 +489,7 @@ function modelTabs(): RibbonTab[] {
       id: "home",
       label: "Home",
       keytip: "H",
-      groups: [...homeCommon(), relationshipsGroup(), modelingCalculations(), { id: "parameters", label: "Parameters", controls: [cmd("whatIf", "New parameter", "parameter", "model.whatIfDialog", { size: "large", keytip: "WI" })] }, securityGroup(), { id: "qna", label: "Q&A", controls: [todo("qnaSetup", "Q&A setup", "qna", { size: "large" }), todo("language", "Language", "language", { size: "large" })] }],
+      groups: [...homeCommon(), relationshipsGroup(), modelingCalculations(), { id: "parameters", label: "Parameters", controls: [cmd("whatIf", "New parameter", "parameter", "model.whatIfDialog", { size: "large", keytip: "WI" }), cmd("fieldParam", "Field parameter", "parameter", "model.fieldParameterDialog", { size: "large", keytip: "FP" })] }, securityGroup(), { id: "qna", label: "Q&A", controls: [todo("qnaSetup", "Q&A setup", "qna", { size: "large" }), todo("language", "Language", "language", { size: "large" })] }],
     },
     {
       id: "view",

@@ -78,3 +78,17 @@ fn the_model_reads_calculation_groups_from_tmdl() {
     let e = Engine::new(m, &src).unwrap();
     assert_eq!(cell(&e, "EVALUATE ROW(\"v\", CALCULATE([Total], 'Time Calc'[Period] = \"Double\"))"), Value::Int(10));
 }
+
+#[test]
+fn nameof_and_the_field_parameter_table() {
+    let e = engine();
+    assert_eq!(cell(&e, "EVALUATE ROW(\"v\", NAMEOF(Sales[Amount]))"), Value::str("'Sales'[Amount]"));
+    assert_eq!(cell(&e, "EVALUATE ROW(\"v\", NAMEOF([Total]))"), Value::str("[Total]"));
+    // the table BIForge writes for a field parameter
+    let t = &e
+        .query("EVALUATE SELECTCOLUMNS({(\"Amount\", NAMEOF('Sales'[Amount]), 0), (\"Total\", NAMEOF([Total]), 1)}, \"Pick\", [Value1], \"Pick Fields\", [Value2], \"Pick Order\", [Value3])")
+        .unwrap()[0];
+    assert_eq!(t.columns, ["[Pick]", "[Pick Fields]", "[Pick Order]"]);
+    assert_eq!(t.rows[1].iter().map(|v| v.to_text()).collect::<Vec<_>>(), ["Total", "[Total]", "1"]);
+    assert!(e.query("EVALUATE ROW(\"v\", NAMEOF(1))").is_err());
+}

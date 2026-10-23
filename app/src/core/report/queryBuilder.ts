@@ -50,7 +50,7 @@ export interface QueryOptions {
   drill?: DrillState;
 }
 
-interface Slot {
+export interface Slot {
   role: string;
   field: FieldRef;
   order: number;
@@ -131,10 +131,40 @@ function sortsByValueByDefault(typeId: string, family: VisualFamily, model: Mode
 }
 
 /** Primary build function for the grouped (non-matrix, non-slicer) visuals. Returns null when nothing is bound. */
+/**
+ * A field parameter used as a field of a visual stands for the fields chosen in its slicer (all of them when none is
+ * chosen): each becomes a field of the visual, and the filter on the parameter's own column is dropped.
+ */
+export function expandFieldParameters(slots: Slot[], model: ModelInfo, filters: FilterDef[], asValue: boolean): { slots: Slot[]; filters: FilterDef[] } {
+  let outFilters = filters;
+  const out: Slot[] = [];
+  for (const s of slots) {
+    const fp = s.field.kind === "column" ? model.fieldParameter(s.field.table, s.field.name) : null;
+    if (!fp) {
+      out.push(s);
+      continue;
+    }
+    const sel = filters.find((f) => f.field.kind === "column" && f.field.table === s.field.table && f.field.name === s.field.name && f.cond.kind === "in");
+    const chosen = sel && sel.cond.kind === "in" ? new Set(sel.cond.values.map((l) => ("v" in l ? String(l.v) : ""))) : null;
+    const entries = fp.entries.filter((e) => !chosen || chosen.has(e.label));
+    outFilters = outFilters.filter((f) => f !== sel);
+    for (const e of entries.length ? entries : fp.entries) {
+      const isMeasure = model.measures(e.table).some((m) => m.toLowerCase() === e.name.toLowerCase());
+      const field: FieldRef = isMeasure ? { kind: "measure", table: e.table, name: e.name } : asValue ? { kind: "agg", table: e.table, name: e.name, fn: 0 } : { kind: "column", table: e.table, name: e.name };
+      out.push({ role: s.role, field, order: out.length });
+    }
+  }
+  return { slots: out, filters: outFilters };
+}
+
 export function buildVisualQuery(v: VisualModel, model: ModelInfo, opt: QueryOptions): BuiltQuery | null {
   const type = visualType(v.visualType);
   if (!type) return null;
-  const { groups, values, extra } = slotsFor(v, type.family, opt.drill);
+  const s0 = slotsFor(v, type.family, opt.drill);
+  const g = expandFieldParameters(s0.groups, model, opt.filters, false);
+  const val = expandFieldParameters(s0.values, model, g.filters, true);
+  const { groups, values, extra } = { groups: g.slots, values: val.slots, extra: s0.extra };
+  opt = { ...opt, filters: val.filters };
   if (groups.length === 0 && values.length === 0) return null;
   const byValue = values.length > 0 && sortsByValueByDefault(v.visualType, type.family, model, groups[0]?.field);
   return assemble(model, groups, values, [...opt.filters, ...extra], opt.tuples ?? [], v.sort, byValue);

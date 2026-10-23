@@ -2,6 +2,7 @@
 import type { Project, TmdlNode } from "../model/types";
 import { allTables, textProp } from "../model/ops";
 import type { FieldRef } from "./fields";
+import { listFieldParameters, type FieldParam } from "../model/modeling";
 
 export interface ModelInfo {
   tables(): string[];
@@ -13,6 +14,8 @@ export interface ModelInfo {
   sortByColumn(table: string, column: string): string | null;
   /** formatString of a column or measure. */
   formatString(table: string, name: string): string | null;
+  /** The field parameter whose name column is this column, if it is one. */
+  fieldParameter(table: string, column: string): FieldParam | null;
 }
 
 function child(p: Project, table: string, name: string): TmdlNode | undefined {
@@ -38,6 +41,7 @@ export function modelInfo(p: Project): ModelInfo {
       const node = child(p, t, n);
       return node ? textProp(node, "formatString") : null;
     },
+    fieldParameter: (t, c) => listFieldParameters(p).find((fp) => fp.table.toLowerCase() === t.toLowerCase() && fp.column.toLowerCase() === c.toLowerCase()) ?? null,
   };
 }
 

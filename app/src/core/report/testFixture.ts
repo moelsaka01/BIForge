@@ -1,6 +1,7 @@
 // Test support: the DAX fixture data (tests/dax/fixtures) loaded in TypeScript, a ModelInfo for it, and helpers to
 // build visuals. The expected values in report tests are computed here from the CSV files, independently of the
 // DAX engine.
+import type { FieldParam } from "../model/modeling";
 import salesCsv from "../../../../tests/dax/fixtures/Sales.csv?raw";
 import productCsv from "../../../../tests/dax/fixtures/Product.csv?raw";
 import customerCsv from "../../../../tests/dax/fixtures/Customer.csv?raw";
@@ -32,7 +33,7 @@ export const TABLE_COLUMNS: Record<string, Record<string, string>> = {
   Date: { Date: "dateTime", Year: "int64", Quarter: "string", MonthNumber: "int64", Month: "string", YearMonth: "int64", DayOfWeek: "int64", IsWeekend: "boolean" },
 };
 
-export function fixtureModel(extra: { sortBy?: Record<string, string>; formats?: Record<string, string>; measures?: Record<string, string[]> } = {}): ModelInfo {
+export function fixtureModel(extra: { sortBy?: Record<string, string>; formats?: Record<string, string>; measures?: Record<string, string[]>; fieldParameters?: FieldParam[] } = {}): ModelInfo {
   return {
     tables: () => Object.keys(TABLE_COLUMNS),
     columns: (t) => Object.keys(TABLE_COLUMNS[t] ?? {}),
@@ -40,6 +41,7 @@ export function fixtureModel(extra: { sortBy?: Record<string, string>; formats?:
     columnType: (t, c) => TABLE_COLUMNS[t]?.[c] ?? null,
     sortByColumn: (t, c) => extra.sortBy?.[`${t}.${c}`] ?? null,
     formatString: (t, c) => extra.formats?.[`${t}.${c}`] ?? null,
+    fieldParameter: (t, c) => extra.fieldParameters?.find((fp) => fp.table === t && fp.column === c) ?? null,
   };
 }
 

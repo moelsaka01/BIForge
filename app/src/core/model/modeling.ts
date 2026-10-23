@@ -183,6 +183,68 @@ export function setCalculatedTable(p: Project, rawName: string, expression: stri
   t.children = [...columns, ...others, part];
 }
 
+// ---- field parameters -----------------------------------------------------------------------------------------
+
+export interface FieldParamEntry {
+  label: string;
+  table: string;
+  name: string;
+  order: number;
+}
+
+export interface FieldParam {
+  table: string;
+  /** The column with the names shown in a slicer (and used as the field in a visual). */
+  column: string;
+  entries: FieldParamEntry[];
+}
+
+const FIELD_PARAM_MARK = "BIForge.FieldParameter";
+
+/** The DAX table of a field parameter: the name, the field it stands for (NAMEOF) and the order. */
+export function fieldParameterExpression(column: string, fields: { label: string; table: string; name: string }[]): string {
+  const q = (s: string) => `"${s.replace(/"/g, '""')}"`;
+  const tbl = (t: string) => `'${t.replace(/'/g, "''")}'`;
+  const rows = fields.map((f, i) => `(${q(f.label)}, NAMEOF(${tbl(f.table)}[${f.name}]), ${i})`).join(", ");
+  return `SELECTCOLUMNS({${rows}}, ${q(column)}, [Value1], ${q(column + " Fields")}, [Value2], ${q(column + " Order")}, [Value3])`;
+}
+
+/** Reads back the entries of a field parameter from its expression (the only form BIForge writes and Power BI writes). */
+export function parseFieldParameter(expression: string): FieldParamEntry[] {
+  const out: FieldParamEntry[] = [];
+  const re = /\(\s*"((?:[^"]|"")*)"\s*,\s*NAMEOF\(\s*(?:'((?:[^']|'')+)'|([A-Za-z_][\w]*))?\s*\[([^\]]+)\]\s*\)\s*,\s*(\d+)\s*\)/g;
+  for (const m of expression.matchAll(re)) out.push({ label: m[1].replace(/""/g, '"'), table: (m[2] ?? m[3] ?? "").replace(/''/g, "'"), name: m[4], order: Number(m[5]) });
+  return out.sort((a, b) => a.order - b.order);
+}
+
+export function listFieldParameters(p: Project): FieldParam[] {
+  const out: FieldParam[] = [];
+  for (const d of Object.values(p.model.tmdl)) {
+    for (const t of d.nodes) {
+      if (t.kind !== "table" || !t.name || !t.children.some((c) => c.kind === "annotation" && c.name === FIELD_PARAM_MARK)) continue;
+      const part = t.children.find(isCalculatedPartition);
+      const src = part?.props.find((x) => x.key === "source");
+      const expr = src && typeof src.value === "object" && "Expr" in src.value ? src.value.Expr.text : "";
+      const col = t.children.find((c) => c.kind === "column")?.name;
+      if (col) out.push({ table: t.name, column: col, entries: parseFieldParameter(expr) });
+    }
+  }
+  return out;
+}
+
+/** Marks a calculated table as a field parameter (its last column is hidden, the order column sorts the names). */
+export function markFieldParameter(p: Project, table: string): void {
+  const t = requireTable(p, table).node;
+  if (!t.children.some((c) => c.kind === "annotation" && c.name === FIELD_PARAM_MARK)) {
+    const a = node("annotation", FIELD_PARAM_MARK);
+    a.default = { text: "true", verbatim: false };
+    t.children.push(a);
+  }
+  const cols = t.children.filter((c) => c.kind === "column");
+  if (cols[0] && cols[2]) cols[0].props.push(text("sortByColumn", cols[2].name!));
+  for (const c of cols.slice(1)) if (!c.props.some((x) => x.key === "isHidden")) c.props.push({ key: "isHidden", value: "Flag" });
+}
+
 // ---- hierarchies -----------------------------------------------------------------------------------------------
 
 export interface HierarchyView {

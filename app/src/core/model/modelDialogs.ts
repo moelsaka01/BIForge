@@ -4,7 +4,7 @@ import type { DialogDef } from "../queries/dialogs";
 import type { TableView } from "./ops";
 import { QUICK_MEASURES, quickExpression, quickName, splitColumn, type QuickKind } from "./quickMeasures";
 
-export type ModelDialogId = "newColumn" | "editColumn" | "newCalculatedTable" | "editCalculatedTable" | "newHierarchy" | "quickMeasure" | "whatIf" | "calculationGroup";
+export type ModelDialogId = "newColumn" | "editColumn" | "newCalculatedTable" | "editCalculatedTable" | "newHierarchy" | "quickMeasure" | "whatIf" | "calculationGroup" | "fieldParameter";
 
 export interface ModelDialogCtx {
   tables: TableView[];
@@ -71,6 +71,25 @@ export function modelDialogFor(id: ModelDialogId, c: ModelDialogCtx): DialogDef 
           if (editing && name !== c.calculated!.name) throw new Error("Rename the table in the Model view; this form changes its expression.");
           if (!expression) throw new Error("Enter the DAX expression of the table.");
           return { command: "model.setCalculatedTable", args: { name, expression: stripName(name, expression) } };
+        },
+      };
+    }
+    case "fieldParameter": {
+      const fields = c.tables.flatMap((t) => [...t.columns.map((x) => ({ value: `${t.name}\u0001${x.name}`, label: `${t.name}[${x.name}]` })), ...t.measures.map((m) => ({ value: `${t.name}\u0001${m.name}`, label: `${t.name}[${m.name}] (measure)` }))]);
+      if (!fields.length) throw new Error("The model has no fields yet.");
+      return {
+        title: "Field parameter",
+        submitLabel: "Create",
+        fields: [
+          { kind: "text", key: "name", label: "Name", default: "Parameter" },
+          { kind: "multi", key: "fields", label: "Fields (in the order they are listed)", options: fields, default: [] },
+        ],
+        build: (v) => {
+          const name = String(v.name ?? "").trim();
+          if (!name) throw new Error("Enter a name for the parameter.");
+          const picked = ((v.fields as string[]) ?? []).map((x) => x.split("\u0001"));
+          if (!picked.length) throw new Error("Choose at least one field.");
+          return { command: "model.addFieldParameter", args: { name, fields: picked.map(([table, field]) => ({ label: field, table, name: field })) } };
         },
       };
     }

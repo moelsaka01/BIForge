@@ -161,3 +161,25 @@ describe("calculation groups", () => {
     expect(() => mod.setCalculationGroup(p, "G", "N", [{ name: "A", expression: " " }], (pr, n) => ops.addTable(pr, n))).toThrow("expression");
   });
 });
+
+describe("field parameters", () => {
+  it("writes the table expression and reads the entries back, in order", () => {
+    const expr = mod.fieldParameterExpression("Pick", [{ label: "Revenue", table: "Sales", name: "Amount" }, { label: "It's", table: "O'Brien Co", name: "Total" }]);
+    expect(expr).toBe(`SELECTCOLUMNS({("Revenue", NAMEOF('Sales'[Amount]), 0), ("It's", NAMEOF('O''Brien Co'[Total]), 1)}, "Pick", [Value1], "Pick Fields", [Value2], "Pick Order", [Value3])`);
+    expect(mod.parseFieldParameter(expr)).toEqual([{ label: "Revenue", table: "Sales", name: "Amount", order: 0 }, { label: "It's", table: "O'Brien Co", name: "Total", order: 1 }]);
+    // Power BI's own form (an unquoted table, a measure without table)
+    expect(mod.parseFieldParameter(`{("A", NAMEOF(Sales[X]), 1), ("B", NAMEOF([M]), 0)}`).map((e) => [e.label, e.table, e.name])).toEqual([["B", "", "M"], ["A", "Sales", "X"]]);
+  });
+
+  it("a marked calculated table is listed as a field parameter with its name column", () => {
+    const p = fresh();
+    const expr = mod.fieldParameterExpression("Pick", [{ label: "Qty", table: "Sales", name: "ProductKey" }]);
+    const info = { name: "Pick", columns: [{ name: "Pick", duckdbType: "VARCHAR", biType: "string" as const }, { name: "Pick Fields", duckdbType: "VARCHAR", biType: "string" as const }, { name: "Pick Order", duckdbType: "BIGINT", biType: "int64" as const }], rowCount: 1 };
+    mod.setCalculatedTable(p, "Pick", expr, info, (pr, n) => ops.addTable(pr, n, ids()), ids());
+    expect(mod.listFieldParameters(p)).toEqual([]);
+    mod.markFieldParameter(p, "Pick");
+    expect(mod.listFieldParameters(p)).toEqual([{ table: "Pick", column: "Pick", entries: [{ label: "Qty", table: "Sales", name: "ProductKey", order: 0 }] }]);
+    expect(mod.getProperty(p, { kind: "column", table: "Pick", column: "Pick Fields" }, "isHidden")).toBe(true);
+    expect(mod.getProperty(p, { kind: "column", table: "Pick", column: "Pick" }, "sortByColumn")).toBe("Pick Order");
+  });
+});

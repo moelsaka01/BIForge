@@ -182,7 +182,7 @@ describe("ribbon definitions", () => {
 
   it("the unimplemented controls are counted (they are listed in docs/COVERAGE.md)", () => {
     const todo = allControls(ribbonFor("classic", "report")).filter((x) => x.control.status);
-    expect(todo.length).toBeGreaterThan(10);
+    expect(todo.length).toBeGreaterThan(5);
   });
 });
 
