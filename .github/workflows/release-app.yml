@@ -36,6 +36,7 @@ jobs:
         working-directory: app
         shell: pwsh
         env:
+          BIFORGE_TOOLS_DIR: ${{ github.workspace }}\app\src-tauri\windows\tools
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: npx tauri build --bundles nsis,msi --config src-tauri/tauri.updater.conf.json
@@ -49,6 +50,7 @@ jobs:
           if (-not $setup -or -not $msi) { throw "an installer was not built" }
           Copy-Item $setup.FullName, "$($setup.FullName).sig", $msi.FullName dist/
           Copy-Item target/release/biforge-server.exe, target/release/biforge-cli.exe dist/
+          Copy-Item docs/media/demo.mp4 dist/
       # Code signing with SignPath Foundation: only when the project has been accepted and configured (docs/SIGNING.md).
       # Prepared, not yet exercised: it needs the owner's SignPath organization.
       - name: Upload unsigned files for SignPath
@@ -110,12 +112,68 @@ jobs:
           node tools/release-notes.mjs $ver docs/release-public-key.txt | Set-Content -Path notes.md -Encoding utf8
           node tools/winget-manifest.mjs $ver dist winget-manifest
           Compress-Archive -Path winget-manifest/* -DestinationPath dist/winget-manifest.zip
+      - name: Keep the release notes with the files for the release job
+        shell: pwsh
+        run: Copy-Item notes.md dist/notes.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/*
       - uses: actions/attest-build-provenance@v2
         with:
           subject-path: dist/*
+  # Installs the MSI the way a user would (the runner is an administrator), opens the sample project in the installed
+  # app, then uninstalls. The release is only created when this passes.
+  install-test:
+    needs: build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - name: Frontend install (for the window driver only)
+        working-directory: app
+        run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dl
+      - name: Install the MSI with the optional tools
+        shell: pwsh
+        run: |
+          $msi = Get-ChildItem dl -Filter "*.msi" -Recurse | Select-Object -First 1
+          $p = Start-Process msiexec.exe -ArgumentList "/i", "`"$($msi.FullName)`"", "/qn", "ADDLOCAL=ALL", "/l*v", "install.log" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { Get-Content install.log -Tail 60; throw "msiexec install failed: $($p.ExitCode)" }
+          $dir = @((Join-Path $env:ProgramFiles "BIForge"), (Join-Path ${env:ProgramFiles(x86)} "BIForge")) | Where-Object { Test-Path (Join-Path $_ "biforge-app.exe") } | Select-Object -First 1
+          if (-not $dir) { Get-Content install.log -Tail 60; throw "biforge-app.exe was not installed" }
+          foreach ($f in "biforge-app.exe", "tools/biforge-server.exe", "tools/biforge-cli.exe") { if (-not (Test-Path (Join-Path $dir $f))) { throw "$f is missing from $dir" } }
+          "BIFORGE_EXE=$(Join-Path $dir 'biforge-app.exe')" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+          & (Join-Path $dir "tools/biforge-cli.exe") --version
+      - name: Launch the installed app and open the sample project
+        working-directory: app
+        run: node e2e/install.mjs
+      - name: Uninstall
+        shell: pwsh
+        run: |
+          $msi = Get-ChildItem dl -Filter "*.msi" -Recurse | Select-Object -First 1
+          $p = Start-Process msiexec.exe -ArgumentList "/x", "`"$($msi.FullName)`"", "/qn", "/l*v", "uninstall.log" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { Get-Content uninstall.log -Tail 60; throw "msiexec uninstall failed: $($p.ExitCode)" }
+          if (Test-Path $env:BIFORGE_EXE) { throw "the app is still installed after uninstall" }
+  release:
+    needs: [build, install-test]
+    runs-on: windows-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: out
       - name: Attach to the release
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${{ github.ref_name }}" (Get-ChildItem dist -File | ForEach-Object { $_.FullName }) --title "BIForge ${{ github.ref_name }}" --notes-file notes.md
+          $files = Get-ChildItem out -File | Where-Object { $_.Name -ne "notes.md" } | ForEach-Object { $_.FullName }
+          gh release create "${{ github.ref_name }}" $files --repo "${{ github.repository }}" --title "BIForge ${{ github.ref_name }}" --notes-file out/notes.md
