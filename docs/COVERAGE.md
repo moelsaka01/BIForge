@@ -148,35 +148,35 @@ Last updated: 2026-10-17, after the scope-change session was completed (see PROG
 | Start screen | 12 | 8 | 1 | 3 |
 | Title bar and window | 13 | 9 | 0 | 4 |
 | File menu and backstage | 20 | 10 | 1 | 9 |
-| Report view ribbon: Home tab | 19 | 12 | 1 | 6 |
+| Report view ribbon: Home tab | 19 | 14 | 1 | 4 |
 | Report view ribbon: Insert tab | 19 | 5 | 2 | 12 |
 | Report view ribbon: Modeling tab | 22 | 12 | 0 | 10 |
-| Report view ribbon: View tab | 19 | 9 | 1 | 9 |
+| Report view ribbon: View tab | 19 | 13 | 1 | 5 |
 | Report view ribbon: Optimize tab | 4 | 2 | 0 | 2 |
-| Report view ribbon: Help tab | 5 | 1 | 0 | 4 |
+| Report view ribbon: Help tab | 5 | 2 | 0 | 3 |
 | Report view ribbon: External Tools tab | 2 | 0 | 0 | 2 |
-| Report view contextual tabs | 35 | 17 | 2 | 16 |
-| Report canvas and page features | 53 | 25 | 2 | 26 |
-| Visuals | 76 | 38 | 0 | 38 |
-| Table view | 18 | 3 | 0 | 15 |
-| Model view | 23 | 5 | 2 | 16 |
+| Report view contextual tabs | 35 | 19 | 2 | 14 |
+| Report canvas and page features | 53 | 29 | 1 | 23 |
+| Visuals | 76 | 45 | 0 | 31 |
+| Table view | 18 | 4 | 0 | 14 |
+| Model view | 23 | 7 | 0 | 16 |
 | DAX query view | 15 | 2 | 0 | 13 |
 | TMDL view | 8 | 1 | 0 | 7 |
-| Modeling features | 48 | 18 | 1 | 29 |
+| Modeling features | 48 | 20 | 1 | 27 |
 | DAX language | 15 | 8 | 0 | 7 |
 | Power Query editor: window and ribbon | 94 | 39 | 4 | 51 |
 | M language | 12 | 3 | 0 | 9 |
 | Get data: connectors | 47 | 25 | 16 | 6 |
 | Options dialog: Global | 61 | 4 | 2 | 55 |
 | Options dialog: Current File | 23 | 0 | 0 | 23 |
-| Dialogs | 48 | 12 | 0 | 36 |
+| Dialogs | 48 | 17 | 0 | 31 |
 | Keyboard shortcuts | 37 | 19 | 0 | 18 |
 | Export, print and file formats | 15 | 2 | 0 | 13 |
 | Accessibility and platform | 12 | 1 | 1 | 10 |
 | Format pane cards per visual | 1264 | 343 | 280 | 641 |
 | DAX functions | 317 | 297 | 0 | 20 |
 | M standard library | 652 | 377 | 0 | 275 |
-| **Total** | **3008** | **1307** | **316** | **1385** |
+| **Total** | **3008** | **1337** | **313** | **1358** |
 <!-- inventory-status:end -->
 
 ## Online track (Publish & Share; plan in docs/ONLINE_PLAN.md)

@@ -35,15 +35,15 @@ N | Basic map (bubble)
 N | Filled map
 N | Shape map
 N | Azure map (excluded as cloud tiles; local boundary version only)
-N | Decomposition tree
-N | Key influencers
+D | Decomposition tree
+D | Key influencers
 N | Q&A
 N | Smart narrative
 N | R script visual (needs local R)
 N | Python script visual (needs local Python)
 N | Paginated report visual (local .rdl)
 N | Custom visual import from file (.pbiviz)
-N | Small multiples on supported visuals
+D | Small multiples on supported visuals
 N | Sparklines in table and matrix
 N | Table/matrix: drill on columns, values on rows, stepped layout, percent of row/column
 N | Table/matrix: column resizing, wrap text, word wrap headers
@@ -65,24 +65,24 @@ D | Average line
 D | Median line
 D | Percentile line
 N | X-axis constant line
-N | Y-axis constant line
+D | Y-axis constant line
 N | Symmetry shading
 D | Trend line
 N | Error bars
 N | Forecast
 N | Find anomalies
 ### Visual behavior
-N | Visual-level filters (Top N, etc.)
+D | Visual-level filters (Top N, etc.)
 N | Show items with no data
-N | Sort by (field, ascending, descending)
-N | Hierarchy: expand/collapse in matrix
+D | Sort by (field, ascending, descending)
+D | Hierarchy: expand/collapse in matrix
 N | Tooltips fields well
 N | Drill through fields well
 N | Visual calculations
 ## 14. Table view (Data view)
 D | Virtualized grid
 D | Column headers with type
-N | Header alignment matching cell alignment (text left, numbers right)
+D | Header alignment matching cell alignment (text left, numbers right)
 D | Single-column sort
 N | Multi-column sort
 N | Column width drag
@@ -102,8 +102,8 @@ N | Locale-formatted dates
 D | Table cards in a grid
 D | Drag to create relationships
 D | Relationship edit pane (cardinality, cross-filter direction, active)
-P | Cards not clipped, Power BI-style field icons (Σ, calendar)
-P | Properties pane (collapsible) for table, column, measure, relationship, multi-selection
+D | Cards not clipped, Power BI-style field icons (Σ, calendar)
+D | Properties pane (collapsible) for table, column, measure, relationship, multi-selection
 N | Move cards, zoom, fit to screen, 100%, minimap
 N | Layout tabs (All tables, additional layouts)
 N | Show/hide fields, hidden fields display
@@ -156,8 +156,8 @@ D | Calculated columns (create, edit, delete)
 D | Calculated tables (create, edit, delete)
 N | Data type of columns
 D | Format string (general, number, currency, percent, date) with decimals and units
-N | Summarize by (sum, average, count, min, max, none)
-N | Data categories
+D | Summarize by (sum, average, count, min, max, none)
+D | Data categories
 D | Sort by column
 N | Hide / unhide columns, measures, tables
 N | Display folders
@@ -504,9 +504,9 @@ D | Conditional formatting dialog
 D | Format pane
 N | Manage relationships
 N | Edit relationships
-N | Manage roles
-N | View as roles
-N | Quick measures
+D | Manage roles
+D | View as roles
+D | Quick measures
 N | New parameter (what-if)
 N | Customize theme
 N | Data source settings
@@ -516,14 +516,14 @@ N | Export data
 N | Performance analyzer
 N | Report settings dialog
 N | Feature switches (preview features)
-N | Keyboard shortcuts dialog
+D | Keyboard shortcuts dialog
 N | Save as dialog
 N | Export to PDF dialog
 N | Print dialog
 N | Linguistic schema
 N | Calculation group editor
 N | Field parameters dialog
-N | Hierarchy editor
+D | Hierarchy editor
 N | Mobile layout tools
 D | Selection pane
 D | Sync slicers pane

@@ -59,8 +59,8 @@ D | Copy
 N | Format painter
 ### Data
 D | Get data menu
-N | Excel workbook
-N | Text/CSV
+D | Excel workbook
+D | Text/CSV
 D | SQL Server
 D | Enter data
 N | Recent sources
@@ -137,10 +137,10 @@ N | Customize current theme (dialog, every setting)
 D | Save current theme
 ### Page view
 P | Fit to page / Fit to width / Actual size
-N | Mobile layout
-N | Gridlines
-N | Snap to grid
-N | Lock objects
+D | Mobile layout
+D | Gridlines
+D | Snap to grid
+D | Lock objects
 ### Show panes
 D | Filters pane
 D | Bookmarks pane
@@ -160,7 +160,7 @@ N | Optimization presets
 N | Performance analyzer (start recording, stop, refresh visuals, clear, export)
 ## 9. Report view ribbon: Help tab
 N | Documentation links (open the default browser)
-N | Keyboard shortcuts dialog
+D | Keyboard shortcuts dialog
 D | About
 N | Sample reports (own)
 N | Report an issue / Submit an idea (GitHub issues)
@@ -170,8 +170,8 @@ N | Local model server for external tools (port and database name arguments)
 ## 11. Report view contextual tabs
 ### Format tab (visual selected)
 D | Edit interactions
-N | Align (left, center, right, top, middle, bottom)
-N | Distribute horizontally / vertically
+D | Align (left, center, right, top, middle, bottom)
+D | Distribute horizontally / vertically
 D | Group / Ungroup
 D | Bring forward / Send backward (to front / to back)
 D | Selection pane
@@ -218,14 +218,14 @@ D | Page background
 D | Visual frames: drag, resize (8 handles), nudge, delete, z-order, duplicate
 D | Zoom: fit, 50%, 75%, 100%, 150%
 D | Multi-selection with rubber band and Shift/Ctrl click
-P | Align and distribute with smart guides
+D | Align and distribute with smart guides
 D | Group visuals and nested groups
 D | Copy and paste visuals between pages and reports
 D | Rotation (shapes, images, text box)
 P | Selection pane (rename, show/hide, reorder, tab order)
 N | Wallpaper and canvas background image
-N | Gridlines, snap to grid, lock objects
-N | Mobile layout canvas (phone portrait)
+D | Gridlines, snap to grid, lock objects
+D | Mobile layout canvas (phone portrait)
 D | Alt text for visuals
 N | Tab order
 N | Per-visual header icons (focus mode, more options, filters)
@@ -254,7 +254,7 @@ N | Bookmark view mode (presenting)
 D | Five built-in themes
 D | Import and export theme JSON
 N | Customize theme dialog: Name and colors, Text, Visuals, Page, Filter pane
-N | Reset theme to default
+D | Reset theme to default
 ### Filters pane
 D | Report, page and visual level filters
 D | Basic list, advanced (two conditions), Top N / Bottom N

@@ -237,7 +237,7 @@ export function Frame({ spec }: { spec: ShellSpec }) {
       paused: report.paused,
       zoom: st.zoom,
     };
-  }, [project, report, st, layout, spec.kind, sess.dataTables]);
+  }, [project, report, st, layout, spec.kind, sess.dataTables, settings.options]);
 
   const allTabs: RibbonTab[] = useMemo(() => ribbonFor(spec.kind, st.view), [spec.kind, st.view]);
   const tabs = useMemo(() => visibleTabs(allTabs, ctx), [allTabs, ctx]);
