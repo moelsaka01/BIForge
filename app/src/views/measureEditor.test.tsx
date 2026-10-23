@@ -187,6 +187,48 @@ describe("DaxEditor with an injected editor", () => {
     expect(calls).toContain("dispose");
   });
 
+  it("does not write stale props back into the editor while the user types quickly", async () => {
+    let model = "";
+    const writes: string[] = [];
+    let onChange: (v: string) => void = () => {};
+    const handle: EditorHandle = {
+      getValue: () => model,
+      setValue: (v) => {
+        if (v !== model) writes.push(v); // Monaco's setValue on different text resets the caret to the start
+        model = v;
+      },
+      setMarkers: () => {},
+      focus: () => {},
+      dispose: () => {},
+    };
+    const factory: EditorFactory = async (_c, init) => {
+      onChange = init.onChange;
+      return handle;
+    };
+    const ctx = { catalog: [], tables: [] };
+    const el = (value: string) => <DaxEditor value={value} onChange={() => {}} context={ctx} markers={[]} ariaLabel="x" factory={factory} />;
+    const { rerender } = render(el(""));
+    await waitFor(() => expect(onChange).not.toBe(undefined));
+    await act(async () => {});
+    // three keystrokes land before React hands the first value back
+    act(() => {
+      for (const v of ["S", "SU", "SUM"]) {
+        model = v;
+        onChange(v);
+      }
+    });
+    rerender(el("S"));
+    rerender(el("SU"));
+    expect(writes).toEqual([]);
+    expect(model).toBe("SUM");
+    rerender(el("SUM"));
+    expect(writes).toEqual([]);
+    // a value the editor did not produce (the parent changed it) is still written
+    rerender(el("COUNT()"));
+    expect(writes).toEqual(["COUNT()"]);
+    expect(model).toBe("COUNT()");
+  });
+
   it("disposes an editor that finishes loading after the component went away", async () => {
     const calls: string[] = [];
     let release: (h: EditorHandle) => void = () => {};

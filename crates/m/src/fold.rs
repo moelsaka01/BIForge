@@ -614,8 +614,9 @@ impl<'a> Ev<'a> {
         };
         let mut names: Vec<String> = Vec::new();
         for (i, cell) in first.into_iter().enumerate() {
+            // header text is trimmed, like the column list the import dialog shows (a header written as "  region " is the column "region")
             let base = match cell {
-                Some(s) if !s.is_empty() => s,
+                Some(s) if !s.trim().is_empty() => s.trim().to_string(),
                 _ => format!("Column{}", i + 1),
             };
             let mut n = base.clone();

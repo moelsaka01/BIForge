@@ -23,6 +23,9 @@ export function DaxEditor(p: DaxEditorProps) {
   const handle = useRef<EditorHandle | null>(null);
   const latest = useRef(p);
   latest.current = p;
+  // Text the editor itself produced that has not come back through props yet. While the user types quickly the props lag
+  // behind the editor ("S" arrives after "SU" was typed); writing that stale text back would reset the caret to the start.
+  const emitted = useRef<string[]>([]);
   const [state, setState] = useState<"loading" | "ready" | "failed">("loading");
   const [failure, setFailure] = useState("");
 
@@ -34,7 +37,10 @@ export function DaxEditor(p: DaxEditorProps) {
       value: latest.current.value,
       ariaLabel: latest.current.ariaLabel,
       getContext: () => latest.current.context,
-      onChange: (v) => latest.current.onChange(v),
+      onChange: (v) => {
+        emitted.current.push(v);
+        latest.current.onChange(v);
+      },
     })
       .then((h) => {
         if (disposed) {
@@ -61,7 +67,15 @@ export function DaxEditor(p: DaxEditorProps) {
   }, [p.factory]);
 
   useEffect(() => {
-    handle.current?.setValue(p.value);
+    const h = handle.current;
+    if (!h) return;
+    const i = emitted.current.indexOf(p.value);
+    if (i >= 0) {
+      emitted.current.splice(0, i + 1); // the editor's own text coming back, possibly stale: nothing to write
+      return;
+    }
+    emitted.current = [];
+    h.setValue(p.value);
   }, [p.value, state]);
 
   useEffect(() => {

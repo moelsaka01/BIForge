@@ -288,6 +288,20 @@ fn append_and_merge() {
 }
 
 #[test]
+fn promoted_headers_are_trimmed_so_the_changed_type_step_finds_them() {
+    // a header written with spaces around the name ("  region ") must be the column "region" for every later step
+    let src = "#table({\"Column1\",\"Column2\",\"Column3\"}, {{\"order_id\",\"  region \",\" unit price\"},{\"1\",\"north\",\"1.5\"},{\"2\",\"south\",\"8.25\"}})";
+    let m = format!("let Source = {src}, P = Table.PromoteHeaders(Source, [PromoteAllScalars=true]), T = Table.TransformColumnTypes(P, {{{{\"order_id\", Int64.Type}}, {{\"region\", type text}}, {{\"unit price\", type number}}}}) in T");
+    let (c, r) = run(&m);
+    assert_eq!(c, ["order_id", "region", "unit price"]);
+    assert_eq!(r, t(&[&["1", "north", "1.5"], &["2", "south", "8.25"]]));
+    // a header that is only spaces counts as empty
+    let blank = "#table({\"Column1\",\"Column2\"}, {{\"a\",\"   \"},{\"1\",\"2\"}})";
+    let (c, _) = run(&format!("let Source = {blank}, P = Table.PromoteHeaders(Source) in P"));
+    assert_eq!(c, ["a", "Column2"]);
+}
+
+#[test]
 fn promote_and_demote_headers() {
     let src = "#table({\"Column1\",\"Column2\",\"Column3\"}, {{\"id\",\"name\",\"\"},{\"1\",\"x\",\"y\"},{\"2\",\"z\",\"w\"}})";
     let (c, r) = run(&format!("let Source = {src}, P = Table.PromoteHeaders(Source, [PromoteAllScalars=true]) in P"));

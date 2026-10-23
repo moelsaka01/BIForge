@@ -24,6 +24,10 @@ verified against the updater public key before it is run; a failed or forged dow
 reapply once BIForge has more users, stars and releases. Nothing in the repository needs to change for that (the prepared workflow
 steps and `docs/CODE_SIGNING_POLICY.md` stay). Release notes say: "Code signing: not yet available; see the README for SmartScreen guidance."
 
+**Plan (decided 2026-10-23):**
+- **Reapply to SignPath in 2-3 months** (about January 2027). SignPath publishes no minimum waiting time (not found in their terms), so this is our own schedule. Before reapplying, build visible signals: more public releases, stars and users, a download page that documents what the program does, the code signing policy linked from the README; and ask SignPath which specific criterion failed.
+- **MSIX spike (Microsoft Store route) is planned after the parity sprint**: build an MSIX locally, run the Windows App Certification Kit, test Smart App Control on Windows 11. No account is needed for the spike; the account steps below wait for its result.
+
 ## SignPath Foundation (free Authenticode signing for open-source projects) - declined, kept for reapplying
 
 Checked on 2026-10-22 against <https://signpath.org/terms> (the application page <https://signpath.org/apply.html> is rendered by script, so its fields were not read).
