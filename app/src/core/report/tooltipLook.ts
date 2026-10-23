@@ -16,6 +16,11 @@ export interface TooltipLook {
   bold: boolean;
   italic: boolean;
   underline: boolean;
+  /** What the tooltip says: the chart's extra details (a pie's percentage, a bubble's size), the values only, a sentence, an action hint. */
+  chartSpecific: boolean;
+  fieldsOnly: boolean;
+  sentence: { on: boolean; template: string };
+  actions: { show: boolean; color: string | null };
 }
 
 /** The Header tooltip card: the information icon next to the title and what its tooltip says and looks like. */
@@ -64,5 +69,32 @@ export function tooltipLook(f: FormatReader): TooltipLook {
     bold: f.bool("visualTooltip", "bold", false),
     italic: f.bool("visualTooltip", "italic", false),
     underline: f.bool("visualTooltip", "underline", false),
+    chartSpecific: f.bool("visualTooltip", "showChartSpecificTooltips", true),
+    fieldsOnly: f.bool("visualTooltip", "showTooltipFieldsOnly", false),
+    sentence: { on: f.bool("visualTooltip", "showSentenceFormat", false), template: f.str("visualTooltip", "sentenceTemplate", "{category}: {value}") },
+    actions: { show: f.bool("visualTooltip", "showActionsInTooltips", false), color: f.color("visualTooltip", "actionFontColor") ?? null },
   };
+}
+
+export const tooltipContentChanges = (k: TooltipLook): boolean => !k.chartSpecific || k.fieldsOnly || k.sentence.on || k.actions.show;
+
+/**
+ * Applies the content settings of the Tooltips card to the HTML a chart made for its tooltip. `first` is the point the tooltip
+ * is about (an item or the first of an axis tooltip). The chart marks its extra details with <span data-extra>; the value rows are
+ * the lines that hold a <b> value; a sentence template can use {category}, {series} and {value} (the first value as shown).
+ */
+export function applyTooltipContent(html: string, k: TooltipLook, first: unknown): string {
+  let out = html;
+  if (!k.chartSpecific) out = out.replace(/<span data-extra>[\s\S]*?<\/span>/g, "");
+  else out = out.replace(/<span data-extra>([\s\S]*?)<\/span>/g, "$1");
+  if (k.sentence.on) {
+    const p = (Array.isArray(first) ? first[0] : first) as { name?: unknown; seriesName?: unknown } | undefined;
+    const value = /<b>([\s\S]*?)<\/b>/.exec(out)?.[1] ?? "";
+    const text = k.sentence.template.replace(/\{category\}/g, String(p?.name ?? "")).replace(/\{series\}/g, String(p?.seriesName ?? "")).replace(/\{value\}/g, `<b>${value}</b>`);
+    out = text;
+  } else if (k.fieldsOnly) {
+    out = out.split("<br/>").filter((line) => line.includes("<b>")).join("<br/>");
+  }
+  if (k.actions.show) out += `<br/><span style="font-size:11px;${k.actions.color ? `color:${k.actions.color}` : "opacity:.75"}">Click to filter, Ctrl+click to add to the selection</span>`;
+  return out;
 }

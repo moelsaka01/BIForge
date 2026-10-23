@@ -16,7 +16,7 @@ import type { VisualModel } from "./visualDoc";
 import { visualType } from "./visualTypes";
 import { gazetteer } from "./geo";
 import { linkModel } from "./linkModel";
-import { tooltipLook } from "./tooltipLook";
+import { applyTooltipContent, tooltipContentChanges, tooltipLook } from "./tooltipLook";
 import { bubbleMap, filledMap } from "./mapOptions";
 
 import type { O } from "./chartFormat";
@@ -548,7 +548,7 @@ function pie(inp: ChartInput): ChartBuild {
   const option: O = {
     animation: false,
     legend: legendBlock(f, theme, true),
-    tooltip: { trigger: "item", confine: true, formatter: (pa: O) => `${pa.marker}${pa.name}: <b>${formatNumber(pa.value, vcol?.format ?? null)}</b> (${total ? ((pa.value / total) * 100).toFixed(1) : 0}%)` },
+    tooltip: { trigger: "item", confine: true, formatter: (pa: O) => `${pa.marker}${pa.name}: <b>${formatNumber(pa.value, vcol?.format ?? null)}</b><span data-extra> (${total ? ((pa.value / total) * 100).toFixed(1) : 0}%)</span>` },
     series: [
       {
         type: "pie",
@@ -724,7 +724,7 @@ function scatter(inp: ChartInput): ChartBuild {
     animation: false,
     legend: legendBlock(f, theme, !!ser),
     grid: gridFor(f, f.bool("legend", "show", !!ser)),
-    tooltip: { trigger: "item", confine: true, formatter: (pa: O) => `${pa.marker}${pa.data[3] || pa.seriesName}<br/>${xc?.label}: <b>${formatNumber(pa.data[0], xc?.format ?? null)}</b><br/>${yc?.label}: <b>${formatNumber(pa.data[1], yc?.format ?? null)}</b>${sc ? `<br/>${sc.label}: <b>${formatNumber(pa.data[2], sc.format ?? null)}</b>` : ""}` },
+    tooltip: { trigger: "item", confine: true, formatter: (pa: O) => `${pa.marker}${pa.data[3] || pa.seriesName}<br/>${xc?.label}: <b>${formatNumber(pa.data[0], xc?.format ?? null)}</b><br/>${yc?.label}: <b>${formatNumber(pa.data[1], yc?.format ?? null)}</b>${sc ? `<span data-extra><br/>${sc.label}: <b>${formatNumber(pa.data[2], sc.format ?? null)}</b></i>` : ""}` },
     xAxis: axis("categoryAxis", xc),
     yAxis: axis("valueAxis", yc),
     series,
@@ -915,6 +915,7 @@ function styleTooltip(option: O, f: FormatReader): void {
     if (typeof fn !== "function") return fn;
     return (...args: unknown[]) => {
       let html = String((fn as (...a: unknown[]) => unknown)(...args));
+      html = applyTooltipContent(html, k, args[0]);
       if (!k.valuesBold) html = html.replace(/<\/?b>/g, "");
       else if (k.valueColor) html = html.replace(/<b>/g, `<b style="color:${k.valueColor}">`);
       return html;
@@ -929,7 +930,7 @@ function styleTooltip(option: O, f: FormatReader): void {
   };
   option.tooltip = {
     ...t,
-    ...(typeof t.formatter === "function" && (!k.valuesBold || k.valueColor) ? { formatter: wrap(t.formatter) } : {}),
+    ...(typeof t.formatter === "function" && (!k.valuesBold || k.valueColor || tooltipContentChanges(k)) ? { formatter: wrap(t.formatter) } : {}),
     ...(k.background || k.opacity < 1 ? { backgroundColor: `color-mix(in srgb, ${k.background ?? "#ffffff"} ${Math.round(k.opacity * 100)}%, transparent)` } : {}),
     ...(Object.keys(text).length ? { textStyle: text } : {}),
     ...(k.underline ? { extraCssText: "text-decoration: underline;" } : {}),

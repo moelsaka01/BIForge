@@ -89,13 +89,18 @@
    "webUrl"
   ],
   "visualTooltip": [
+   "actionFontColor",
    "background",
    "bold",
    "fontFamily",
    "fontSize",
    "italic",
    "section",
+   "sentenceTemplate",
    "show",
+   "showChartSpecificTooltips",
+   "showSentenceFormat",
+   "showTooltipFieldsOnly",
    "showValuesInBold",
    "themedBackground",
    "themedTitleFontColor",

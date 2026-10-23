@@ -310,3 +310,27 @@ describe("the Action card on a chart", () => {
     expect(tooltipShown([["type", lit.str("WebUrl")], ["webUrl", lit.str("https://example.com")]])).toBe(true);
   });
 });
+
+describe("the content settings of the Tooltips card", () => {
+  const html = (visualType: string, roles: Record<string, ReturnType<typeof column>[] | (typeof Qty)[]>, rows: Cell[][], props: [string, ReturnType<typeof lit.str> | ReturnType<typeof lit.bool>][], arg: unknown) => {
+    const v = visualOf(visualType, roles as never);
+    for (const [p, val] of props) setFormat(v.json, "visualTooltip", p, val);
+    const t = (build(v, grouped(v, rows)).option as { tooltip: { formatter: (a: unknown) => string } }).tooltip;
+    return t.formatter(arg);
+  };
+  const pie = (props: [string, ReturnType<typeof lit.str> | ReturnType<typeof lit.bool>][]) => html("pieChart", { Category: [Cat], Y: [Qty] }, [[c("Bikes"), c(50)], [c("Shoes"), c(50)]], props, { marker: "", name: "Bikes", value: 50 });
+  it("the pie's percentage is a chart-specific detail that can be switched off", () => {
+    expect(pie([])).toContain("(50.0%)");
+    expect(pie([["showChartSpecificTooltips", lit.bool(false)]])).not.toContain("%");
+    expect(pie([["showChartSpecificTooltips", lit.bool(false)]])).toContain("<b>");
+  });
+  it("values only, a sentence, and the action hint", () => {
+    expect(pie([["showTooltipFieldsOnly", lit.bool(true)]])).toBe("Bikes: <b>50</b> (50.0%)");
+    const sentence = pie([["showSentenceFormat", lit.bool(true)], ["sentenceTemplate", lit.str("{category} sold {value} units")]]);
+    expect(sentence).toBe("Bikes sold <b>50</b> units");
+    const hint = pie([["showActionsInTooltips", lit.bool(true)], ["actionFontColor", lit.str("#aa0000")]]);
+    expect(hint).toContain("Ctrl+click to add to the selection");
+    expect(hint).toContain("color:#aa0000");
+    expect(pie([])).not.toContain("Ctrl+click");
+  });
+});

@@ -31,7 +31,10 @@ const CONTAINER = new Set(["title", "subTitle", "divider", "spacing", "backgroun
 function cardStatus(vis, card) {
   const id = caps.visuals[vis]?.[card];
   if (!id) return { s: "N", drawn: 0, total: 0 };
-  const props = Object.entries(caps.cards[id]).filter(([, k]) => k[0] !== "x").map(([p]) => p);
+  // a container object (title, header, tooltip, ...) can only hold the property names of the published PBIR schema; the theme schema
+  // lists a few more (for example showActionsInTooltips) that a project Power BI can open could not store, so they are not editable
+  const allowed = CONTAINER.has(card) ? new Set(caps.container[card] ?? []) : null;
+  const props = Object.entries(caps.cards[id]).filter(([p, k]) => k[0] !== "x" && (!allowed || allowed.has(p))).map(([p]) => p);
   if (card === "general") props.push(...(props.includes("altText") ? [] : ["altText"]));
   const d = new Set([...(drawnMap["*"]?.[card] ?? []), ...(drawnMap[vis]?.[card] ?? [])]);
   const drawn = props.filter((p) => d.has(p)).length;
