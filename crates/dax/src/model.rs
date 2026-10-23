@@ -54,6 +54,22 @@ pub struct Table {
     pub columns: Vec<Column>,
 }
 
+/// A calculation group: a table whose column holds the names of calculation items. A measure evaluated while exactly one
+/// item is selected on the column is replaced by the item's expression (`SELECTEDMEASURE()` is the measure itself).
+#[derive(Debug, Clone)]
+pub struct CalcGroup {
+    pub table: TableId,
+    /// The column with the item names.
+    pub column: ColId,
+    pub items: Vec<CalcItem>,
+}
+
+#[derive(Debug, Clone)]
+pub struct CalcItem {
+    pub name: String,
+    pub expression: String,
+}
+
 #[derive(Debug, Clone)]
 pub struct Measure {
     pub table: TableId,
@@ -94,6 +110,7 @@ pub struct Model {
     /// Key columns of tables marked as date tables ("Mark as date table"). A CALCULATE filter on such a column
     /// replaces every filter on that table, not only the filters on the column.
     pub date_tables: Vec<ColId>,
+    pub calc_groups: Vec<CalcGroup>,
     table_index: HashMap<String, TableId>,
     measure_index: HashMap<String, usize>,
 }
@@ -202,6 +219,7 @@ impl Model {
         let docs: Vec<&Document> = docs.into_iter().collect();
         let mut m = Model::new();
         let mut pending_measures = Vec::new();
+        let mut pending_groups: Vec<(String, String, Vec<CalcItem>)> = Vec::new();
         for d in &docs {
             for n in d.nodes.iter().filter(|n| n.kind == "table") {
                 let name = n.name.clone().unwrap_or_default();
@@ -227,6 +245,18 @@ impl Model {
                         let _ = m.mark_date_table(&name, k.name.as_deref().unwrap_or(""));
                     }
                 }
+                if let Some(cg) = n.children.iter().find(|c| c.kind == "calculationGroup") {
+                    let items: Vec<CalcItem> = cg
+                        .children
+                        .iter()
+                        .filter(|c| c.kind == "calculationItem")
+                        .map(|c| CalcItem { name: c.name.clone().unwrap_or_default(), expression: c.default.as_ref().map(|e| e.text.clone()).unwrap_or_default() })
+                        .collect();
+                    // the first column of the table holds the item names
+                    if let (Some(first), true) = (n.children.iter().find(|c| c.kind == "column"), !items.is_empty()) {
+                        pending_groups.push((name.clone(), first.name.clone().unwrap_or_default(), items));
+                    }
+                }
                 for me in n.children.iter().filter(|c| c.kind == "measure") {
                     pending_measures.push((name.clone(), me.name.clone().unwrap_or_default(), me.default.as_ref().map(|e| e.text.clone()).unwrap_or_default()));
                 }
@@ -234,6 +264,11 @@ impl Model {
         }
         for (t, n, e) in pending_measures {
             m.add_measure(&t, &n, &e)?;
+        }
+        for (t, c, items) in pending_groups {
+            let table = m.table_id(&t).ok_or_else(|| ModelError(format!("Calculation group table '{t}' is missing.")))?;
+            let column = m.column_id(table, &c).ok_or_else(|| ModelError(format!("Calculation group column '{t}[{c}]' is missing.")))?;
+            m.calc_groups.push(CalcGroup { table, column, items });
         }
         for d in &docs {
             for n in d.nodes.iter().filter(|n| n.kind == "relationship") {

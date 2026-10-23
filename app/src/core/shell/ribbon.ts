@@ -224,7 +224,7 @@ const modelingCalculations = (): RibbonGroup => ({
     cmd("quickMeasure", "Quick measure", "quickMeasure", "model.quickMeasureDialog", { size: "large", keytip: "QM" }),
     cmd("newColumn", "New column", "column", "model.newColumnDialog", { size: "large", keytip: "NC" }),
     cmd("newTable", "New table", "table", "model.newCalculatedTableDialog", { size: "large", keytip: "NT" }),
-    todo("calcGroup", "Calculation group", "calc", { size: "large" }),
+    cmd("calcGroup", "Calculation group", "calc", "model.calculationGroupDialog", { size: "large", keytip: "CG" }),
   ],
 });
 

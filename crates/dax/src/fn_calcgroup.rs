@@ -1,0 +1,32 @@
+//! Calculation group functions: SELECTEDMEASURE, SELECTEDMEASURENAME, ISSELECTEDMEASURE. They only mean something inside a
+//! calculation item, where they stand for the measure the item replaces.
+
+use crate::bind::{BExpr, BKind};
+use crate::diag::ErrorCode;
+use crate::eval::{Env, Evaluator, Val};
+use crate::functions::err;
+use crate::value::{VResult, Value};
+
+pub const NAMES: &[&str] = &["SELECTEDMEASURE", "SELECTEDMEASURENAME", "ISSELECTEDMEASURE"];
+
+pub fn call<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], env: &Env<'a>) -> Option<VResult<Val>> {
+    if !NAMES.contains(&name) {
+        return None;
+    }
+    Some(run(ev, name, args, env).map(Val::S))
+}
+
+fn run<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], env: &Env<'a>) -> VResult<Value> {
+    let current = ev.selected_measures.borrow().last().copied();
+    let Some(m) = current else {
+        return Err(err(ErrorCode::InvalidValue, format!("{name} can only be used in a calculation item.")));
+    };
+    match name {
+        "SELECTEDMEASURE" => ev.eval_measure_with(m, env, false),
+        "SELECTEDMEASURENAME" => Ok(Value::str(&ev.measure_name(m))),
+        _ => {
+            let hit = args.iter().any(|a| matches!(&a.kind, BKind::Measure(x) if *x == m));
+            Ok(Value::Bool(hit))
+        }
+    }
+}

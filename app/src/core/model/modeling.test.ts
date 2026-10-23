@@ -143,3 +143,21 @@ describe("security roles", () => {
     expect(() => mod.removeRole(p, "Eastern")).toThrow("does not exist");
   });
 });
+
+describe("calculation groups", () => {
+  it("a calculation group is a table with its items in a calculationGroup object, listed back with its column", () => {
+    const p = fresh();
+    mod.setCalculationGroup(p, "Time Calc", "Period", [{ name: "YTD", expression: "CALCULATE(SELECTEDMEASURE(), DATESYTD('Date'[Date]))" }, { name: "Current", expression: "SELECTEDMEASURE()" }], (pr, n) => ops.addTable(pr, n, ids()), ids());
+    expect(mod.listCalcGroups(p)).toEqual([{ table: "Time Calc", column: "Period", items: [{ name: "YTD", expression: "CALCULATE(SELECTEDMEASURE(), DATESYTD('Date'[Date]))" }, { name: "Current", expression: "SELECTEDMEASURE()" }] }]);
+    expect(mod.calcGroupData("Period", [{ name: "YTD" }, { name: 'a"b' }])).toBe('DATATABLE("Period", STRING, "Ordinal", INTEGER, {{"YTD", 0}, {"a""b", 1}})');
+    // replacing keeps measures of the table and changes the items
+    ops.addMeasure(p, "Time Calc", "Note", "1");
+    mod.setCalculationGroup(p, "Time Calc", "Period", [{ name: "Only", expression: "SELECTEDMEASURE()" }], (pr, n) => ops.addTable(pr, n), ids());
+    expect(mod.listCalcGroups(p)[0].items.map((i) => i.name)).toEqual(["Only"]);
+    expect(ops.requireTable(p, "Time Calc").node.children.some((c) => c.kind === "measure")).toBe(true);
+    expect(() => mod.setCalculationGroup(p, "Sales", "N", [{ name: "A", expression: "1" }], (pr, n) => ops.addTable(pr, n))).toThrow("not a calculation group");
+    expect(() => mod.setCalculationGroup(p, "G", "N", [], (pr, n) => ops.addTable(pr, n))).toThrow("at least one");
+    expect(() => mod.setCalculationGroup(p, "G", "N", [{ name: "A", expression: "1" }, { name: "a", expression: "2" }], (pr, n) => ops.addTable(pr, n))).toThrow("Two calculation items");
+    expect(() => mod.setCalculationGroup(p, "G", "N", [{ name: "A", expression: " " }], (pr, n) => ops.addTable(pr, n))).toThrow("expression");
+  });
+});

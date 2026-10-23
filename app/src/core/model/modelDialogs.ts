@@ -4,7 +4,7 @@ import type { DialogDef } from "../queries/dialogs";
 import type { TableView } from "./ops";
 import { QUICK_MEASURES, quickExpression, quickName, splitColumn, type QuickKind } from "./quickMeasures";
 
-export type ModelDialogId = "newColumn" | "editColumn" | "newCalculatedTable" | "editCalculatedTable" | "newHierarchy" | "quickMeasure" | "whatIf";
+export type ModelDialogId = "newColumn" | "editColumn" | "newCalculatedTable" | "editCalculatedTable" | "newHierarchy" | "quickMeasure" | "whatIf" | "calculationGroup";
 
 export interface ModelDialogCtx {
   tables: TableView[];
@@ -74,6 +74,32 @@ export function modelDialogFor(id: ModelDialogId, c: ModelDialogCtx): DialogDef 
         },
       };
     }
+    case "calculationGroup":
+      return {
+        title: "Calculation group",
+        submitLabel: "Create",
+        fields: [
+          { kind: "text", key: "name", label: "Calculation group name", default: "Calculation group" },
+          { kind: "text", key: "column", label: "Column name", default: "Name" },
+          {
+            kind: "rows",
+            key: "items",
+            label: "Calculation items (SELECTEDMEASURE() stands for the measure being evaluated)",
+            addLabel: "Add calculation item",
+            min: 1,
+            fields: [
+              { kind: "text", key: "name", label: "Item name" },
+              { kind: "textarea", key: "expression", label: "DAX expression", rows: 2, placeholder: "SELECTEDMEASURE() * 2" },
+            ],
+          },
+        ],
+        build: (v) => {
+          const items = ((v.items as { name?: string; expression?: string }[]) ?? []).map((r) => ({ name: String(r.name ?? "").trim(), expression: String(r.expression ?? "").trim() }));
+          if (!items.length || items.some((i) => !i.name)) throw new Error("Give every calculation item a name.");
+          if (items.some((i) => !i.expression)) throw new Error("Enter the DAX expression of every calculation item.");
+          return { command: "model.setCalculationGroup", args: { name: String(v.name ?? "").trim(), column: String(v.column ?? "").trim() || "Name", items } };
+        },
+      };
     case "whatIf":
       return {
         title: "What-if parameter",

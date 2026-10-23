@@ -66,6 +66,11 @@ export function registerModelingCommands(r: CommandRegistry<Session>): void {
   reg("model.whatIfDialog", "New parameter", (s) => {
     s.shell.openDialog({ kind: "modelDialog", id: "whatIf" });
   });
+  reg("model.setCalculationGroup", "Calculation group", (s, a) => {
+    const { name, column, items } = need<{ name: string; column: string; items: { name: string; expression: string }[] }>(a, ["name", "column", "items"]);
+    return s.setCalculationGroup(name, column, items);
+  });
+  reg("model.calculationGroupDialog", "Calculation group", (s) => s.shell.openDialog({ kind: "modelDialog", id: "calculationGroup" }));
   reg("model.manageRolesDialog", "Manage roles", (s) => s.shell.openDialog({ kind: "roles" }));
   reg("model.viewAsDialog", "View as", (s) => s.shell.openDialog({ kind: "viewAs" }));
   reg("model.setRole", "Save role", (s, a) => {

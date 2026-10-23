@@ -63,3 +63,12 @@ describe("what-if parameter", () => {
     expect(() => run(d, { name: "", min: 0, max: 5, step: 1 })).toThrow("name");
   });
 });
+
+describe("calculation group dialog", () => {
+  it("needs named items with expressions", () => {
+    const d = modelDialogFor("calculationGroup", ctx);
+    expect(run(d, { name: "TI", column: "", items: [{ name: "YTD", expression: "SELECTEDMEASURE()" }] })).toEqual({ command: "model.setCalculationGroup", args: { name: "TI", column: "Name", items: [{ name: "YTD", expression: "SELECTEDMEASURE()" }] } });
+    expect(() => run(d, { name: "TI", items: [] })).toThrow("name");
+    expect(() => run(d, { name: "TI", items: [{ name: "A", expression: "" }] })).toThrow("expression");
+  });
+});

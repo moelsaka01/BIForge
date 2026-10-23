@@ -7,7 +7,7 @@ import { addTable, listTables, deleteTable } from "../model/ops";
 import { listDataSources, withLocation, type SourceLocation } from "../data/dataSources";
 import { QueryDraft } from "../queries/draft";
 import type { MApi } from "../queries/types";
-import { addCalculatedColumn, calculatedColumns, calculatedTables, setCalculatedColumn, setCalculatedTable, setColumnDataType } from "../model/modeling";
+import { calcGroupData, setCalculationGroup, addCalculatedColumn, calculatedColumns, calculatedTables, setCalculatedColumn, setCalculatedTable, setColumnDataType } from "../model/modeling";
 import { applyGroups, applyQueryLoad, expressionExists, listGroups, listQueries, queryTexts, removeExpression, upsertExpression, userMTables } from "../queries/queries";
 import { findTable } from "../model/ops";
 import { ShellStore } from "../shell/shellStore";
@@ -707,6 +707,17 @@ export class Session {
       typed(p);
     });
     this.set({ dataEpoch: this.snap.dataEpoch + 1 });
+  }
+
+  /** Creates or replaces a calculation group: the item names are stored as the table's data, the items go into the model. */
+  async setCalculationGroup(name: string, column: string, items: { name: string; expression: string }[]): Promise<void> {
+    const engine = this.requireEngine();
+    const draft = structuredClone(this.store.project!);
+    setCalculationGroup(draft, name, column, items, (pr, n) => addTable(pr, n));
+    const info = await engine.calcTable(this.docs(), name, calcGroupData(column.trim(), items));
+    this.store.transact(`Calculation group "${name}"`, (p) => setCalculationGroup(p, name, column, items, (pr, n) => addTable(pr, n)));
+    this.markLoaded(info.name);
+    this.setMessage(`Calculation group "${name}" with ${items.length} item(s).`);
   }
 
   /** Creates or recalculates a calculated table from a DAX table expression. */

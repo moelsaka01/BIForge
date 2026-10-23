@@ -92,6 +92,10 @@ pub struct Evaluator<'e> {
     pub query_measures: Vec<QueryMeasure>,
     pub query_tables: Vec<(BExpr, OnceCell<VResult<TableVal>>)>,
     measure_stack: RefCell<Vec<MeasureRef>>,
+    /// The measures whose calculation item is being evaluated (innermost last): what `SELECTEDMEASURE()` stands for.
+    pub(crate) selected_measures: RefCell<Vec<MeasureRef>>,
+    /// The bound expressions of calculation items, by (group, item).
+    calc_items: Vec<Vec<OnceCell<Result<BExpr, EvalError>>>>,
     pub sql: Option<&'e dyn SqlExecutor>,
     /// Number of aggregations answered by compiled SQL (for tests and diagnostics).
     pub sql_hits: Cell<usize>,
@@ -116,6 +120,8 @@ impl<'e> Evaluator<'e> {
             query_measures: vec![],
             query_tables: vec![],
             measure_stack: RefCell::new(vec![]),
+            selected_measures: RefCell::new(vec![]),
+            calc_items: data.model.calc_groups.iter().map(|g| g.items.iter().map(|_| OnceCell::new()).collect()).collect(),
             sql: None,
             sql_hits: Cell::new(0),
             depth: Cell::new(0),
@@ -199,6 +205,54 @@ impl<'e> Evaluator<'e> {
     /// `[Measure]`: an implicit CALCULATE (context transition) of the measure's expression, evaluated
     /// without the caller's row contexts or variables.
     pub fn eval_measure<'a>(&'a self, m: MeasureRef, env: &Env<'a>) -> VResult<Value> {
+        self.eval_measure_with(m, env, true)
+    }
+
+    /// The calculation item selected in `ctx` (exactly one item of a group is filtered): the group and item index.
+    fn selected_calc_item(&self, ctx: &FilterCtx) -> Option<(usize, usize)> {
+        for (gi, g) in self.data.model.calc_groups.iter().enumerate() {
+            for f in ctx.filters.iter() {
+                if let Filter::Values { cols, set } = f {
+                    if cols.len() == 1 && cols[0] == g.column && set.len() == 1 {
+                        let key = &set.iter().next().unwrap()[0];
+                        if let Some(ii) = g.items.iter().position(|it| Value::str(&it.name).key() == *key) {
+                            return Some((gi, ii));
+                        }
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    fn calc_item_expr(&self, gi: usize, ii: usize) -> Result<&BExpr, EvalError> {
+        self.calc_items[gi][ii]
+            .get_or_init(|| {
+                let it = &self.data.model.calc_groups[gi].items[ii];
+                let e = crate::parser::parse_expression(&it.expression).map_err(|d| EvalError::new(d.code, format!("Calculation item '{}' has a syntax error: {}", it.name, d.message)))?;
+                let scope = QueryScope::default();
+                Binder::new(&self.data.model, &scope, 0).bind(&e).map_err(|d| EvalError::new(d.code, format!("Calculation item '{}': {}", it.name, d.message)))
+            })
+            .as_ref()
+            .map_err(|e| e.clone())
+    }
+
+    /// With `calc` false the measure is evaluated as it is (what `SELECTEDMEASURE()` asks for).
+    pub(crate) fn eval_measure_with<'a>(&'a self, m: MeasureRef, env: &Env<'a>, calc: bool) -> VResult<Value> {
+        if calc && !self.data.model.calc_groups.is_empty() {
+            let ctx = self.context_transition(env)?;
+            if let Some((gi, ii)) = self.selected_calc_item(&ctx) {
+                // the item replaces the measure: it is evaluated without the selection of the group (so the measures it
+                // refers to are plain) and SELECTEDMEASURE() is this measure
+                let g = self.graph(&ctx);
+                let stripped = ctx.remove_columns(self.data, &g, &HashSet::from([self.data.model.calc_groups[gi].column]));
+                let expr = self.calc_item_expr(gi, ii)?;
+                self.selected_measures.borrow_mut().push(m);
+                let r = self.scalar(expr, &Env { filter: stripped, rows: None, vars: None });
+                self.selected_measures.borrow_mut().pop();
+                return r;
+            }
+        }
         if self.measure_stack.borrow().contains(&m) {
             return Err(EvalError::new(ErrorCode::CircularDependency, format!("A circular dependency was detected: measure '{}' refers to itself.", self.measure_name(m))));
         }

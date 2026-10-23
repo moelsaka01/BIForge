@@ -334,6 +334,11 @@ impl<'a> Parser<'a> {
         Ok(node)
     }
 
+    /// True when the next non-blank line after the current one is indented deeper than `lvl`.
+    fn next_is_deeper(&self, lvl: usize) -> bool {
+        self.lines[self.pos + 1..].iter().find(|l| !is_blank(l.text)).is_some_and(|l| self.level_of(l.text).0 > lvl)
+    }
+
     fn parse_body(&mut self, level: usize, node: &mut Node) -> Result<(), ParseError> {
         let mut desc: Vec<String> = Vec::new();
         let mut desc_line = 0;
@@ -372,6 +377,14 @@ impl<'a> Parser<'a> {
                 Classified::Decl(kind, tail) => {
                     let d = std::mem::take(&mut desc);
                     let child = self.parse_decl(level + 1, kind, tail, d)?;
+                    node.children.push(child);
+                }
+                // an object without a name (`calculationGroup`): a bare word with deeper lines under it
+                Classified::Flag(kind) if self.next_is_deeper(lvl) => {
+                    let d = std::mem::take(&mut desc);
+                    self.pos += 1;
+                    let mut child = Node { description: d, kind: kind.to_string(), ..Node::default() };
+                    self.parse_body(lvl, &mut child)?;
                     node.children.push(child);
                 }
                 other => {

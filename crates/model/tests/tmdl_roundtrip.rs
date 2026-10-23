@@ -287,3 +287,28 @@ fn named_expressions_for_queries_and_parameters_round_trip() {
     assert!(printed.contains("expression Region = \"West\" meta [IsParameterQuery=true"), "{printed}");
     assert_eq!(tmdl::print(&tmdl::parse(&printed).unwrap()), printed);
 }
+
+#[test]
+fn an_object_without_a_name_keeps_its_children() {
+    // `calculationGroup` has no name: a bare word with deeper lines under it
+    let text = "table 'Time Calc'\n\tcalculationGroup\n\t\tprecedence: 1\n\t\tcalculationItem YTD = SELECTEDMEASURE()\n\tcolumn Period\n\t\tdataType: string\n";
+    let doc = biforge_model::tmdl::parse(text).unwrap();
+    let group = &doc.nodes[0].children[0];
+    assert_eq!((group.kind.as_str(), group.name.clone()), ("calculationGroup", None));
+    assert_eq!(group.children[0].name.as_deref(), Some("YTD"));
+    // the printer puts a blank line before every child object
+    assert_eq!(biforge_model::tmdl::print(&doc), "table 'Time Calc'
+
+	calculationGroup
+		precedence: 1
+
+		calculationItem YTD = SELECTEDMEASURE()
+
+	column Period
+		dataType: string
+");
+    assert_eq!(biforge_model::tmdl::parse(&biforge_model::tmdl::print(&doc)).unwrap(), doc);
+    // a flag stays a flag when nothing is indented under it
+    let flag = biforge_model::tmdl::parse("table T\n\tcolumn C\n\t\tisHidden\n\t\tdataType: string\n").unwrap();
+    assert_eq!(flag.nodes[0].children[0].props[0].key, "isHidden");
+}

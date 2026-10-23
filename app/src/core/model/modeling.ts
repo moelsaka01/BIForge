@@ -286,3 +286,71 @@ export function removeRole(p: Project, name: string): void {
   const model = p.model.tmdl["model.tmdl"];
   if (model) model.nodes = model.nodes.filter((x) => !(x.kind === "ref role" && x.name?.toLowerCase() === name.toLowerCase()));
 }
+
+// ---- calculation groups ---------------------------------------------------------------------------------------
+
+export interface CalcGroupView {
+  table: string;
+  column: string;
+  items: { name: string; expression: string }[];
+}
+
+export function listCalcGroups(p: Project): CalcGroupView[] {
+  const out: CalcGroupView[] = [];
+  for (const d of Object.values(p.model.tmdl)) {
+    for (const t of d.nodes) {
+      const cg = t.kind === "table" ? t.children.find((c) => c.kind === "calculationGroup") : undefined;
+      if (!t.name || !cg) continue;
+      out.push({
+        table: t.name,
+        column: t.children.find((c) => c.kind === "column")?.name ?? "Name",
+        items: cg.children.filter((c) => c.kind === "calculationItem").map((c) => ({ name: c.name ?? "", expression: c.default?.text ?? "" })),
+      });
+    }
+  }
+  return out;
+}
+
+/** The DAX table expression that holds the item names (and their order) as the group's data. */
+export function calcGroupData(column: string, items: { name: string }[]): string {
+  const q = (s: string) => `"${s.replace(/"/g, '""')}"`;
+  return `DATATABLE(${q(column)}, STRING, "Ordinal", INTEGER, {${items.map((it, i) => `{${q(it.name)}, ${i}}`).join(", ")}})`;
+}
+
+/** Creates or replaces a calculation group: a table of item names with the items in a \`calculationGroup\` object. */
+export function setCalculationGroup(p: Project, rawName: string, rawColumn: string, items: { name: string; expression: string }[], addTableFn: (p: Project, name: string) => void, newId: () => string = () => crypto.randomUUID()): void {
+  const name = checkName(rawName, "Calculation group");
+  const column = checkName(rawColumn, "Column");
+  if (!items.length) throw new ModelError("invalid", "A calculation group needs at least one calculation item.");
+  const seen = new Set<string>();
+  for (const it of items) {
+    const n = checkName(it.name, "Calculation item");
+    if (seen.has(n.toLowerCase())) throw new ModelError("duplicate-name", `Two calculation items are named "${n}".`);
+    seen.add(n.toLowerCase());
+    if (!it.expression.trim()) throw new ModelError("invalid", `Enter the expression of the calculation item "${n}".`);
+  }
+  let found = findTable(p, name);
+  if (found && !found.node.children.some((c) => c.kind === "calculationGroup")) throw new ModelError("duplicate-name", `A table named "${name}" already exists and is not a calculation group.`);
+  if (!found) {
+    addTableFn(p, name);
+    found = findTable(p, name)!;
+  }
+  const t = found.node;
+  const group = node(
+    "calculationGroup",
+    null,
+    [],
+    items.map((it) => {
+      const c = node("calculationItem", it.name.trim());
+      c.default = exprOf(it.expression);
+      return c;
+    }),
+  );
+  const nameCol = columnNode(column, "string", newId);
+  nameCol.props.push(text("sortByColumn", "Ordinal"));
+  const ordinal = columnNode("Ordinal", "int64", newId);
+  ordinal.props.push({ key: "isHidden", value: "Flag" });
+  const part = node("partition", name, [text("mode", "import")]);
+  part.default = { text: "calculationGroup", verbatim: false };
+  t.children = [group, nameCol, ordinal, ...t.children.filter((c) => c.kind === "measure"), part];
+}
