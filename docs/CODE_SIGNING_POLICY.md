@@ -1,7 +1,7 @@
 # Code signing policy
 
-Status: **no Windows code-signing certificate yet.** The application to SignPath Foundation's free program for open-source projects
-is described in [SIGNING.md](SIGNING.md). Until it is accepted the installers are unsigned; releases carry a signed `SHA256SUMS`, a
+Status: **no Windows code-signing certificate yet.** SignPath Foundation declined the project for now (see [SIGNING.md](SIGNING.md), which also
+lists the other free options). Until a certificate exists the installers are unsigned; releases carry a signed `SHA256SUMS`, a
 signed updater file and a GitHub build attestation instead.
 
 ## Roles (when signing starts)

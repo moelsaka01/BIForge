@@ -65,7 +65,7 @@ if (version === "0.1.1") {
   out.push("- Modeling: calculated columns and tables, hierarchies, quick measures, what-if and field parameters, calculation groups, roles with View as, auto date/time.");
   out.push("- Power Query: cell-level errors (Keep/Remove/Replace Errors), column statistics, parameters, query groups.");
   out.push("");
-  out.push("**Honest limits of this release:** the 18 new DAX cases were recorded from Power BI Desktop 2.159; 10 matched at first and the rest were fixed or documented (XIRR differs in the 8th decimal: a known difference). Window functions over measures with relationships could not be compared with Desktop. The Phase 9/10 features have unit and jsdom UI tests but no real-window end-to-end flow yet. **Code signing is still pending**: the application to the SignPath Foundation has not been decided, so the installers are unsigned.");
+  out.push("**Honest limits of this release:** the 18 new DAX cases were recorded from Power BI Desktop 2.159; 10 matched at first and the rest were fixed or documented (XIRR differs in the 8th decimal: a known difference). Window functions over measures with relationships could not be compared with Desktop. The Phase 9/10 features have unit and jsdom UI tests but no real-window end-to-end flow yet. Code signing: not yet available; see the README for SmartScreen guidance.");
   out.push("");
 }
 out.push("## Why BIForge, and where it goes further");
@@ -83,7 +83,7 @@ out.push("- Optional components: the server (`biforge-server.exe`) and the comma
 out.push("- BIForge checks GitHub Releases for newer versions when it starts (About > switch off) and verifies each update with BIForge's update key before installing it.");
 out.push("");
 out.push("### Windows warns about this download (SmartScreen, Smart App Control)");
-out.push("The installers are **not code-signed yet** (a free signing program for open-source projects has been applied for to the SignPath Foundation; no decision yet). Until then:");
+out.push("Code signing: not yet available; see the README for SmartScreen guidance. The installers are **not code-signed**, so Windows may warn about them:");
 out.push("- **SmartScreen** (\"Windows protected your PC\"): choose *More info*, then *Run anyway*. It improves as more people download the same file.");
 out.push("- **Smart App Control** (Windows 11, in *Enforcement* mode) blocks unsigned programs and offers no *Run anyway*. Either turn it off (Settings > Privacy & security > Windows Security > App & browser control > Smart App Control; it cannot be turned back on without resetting Windows) or wait for the signed release. Do not turn it off if you are unsure.");
 out.push("- Check that the file is the one BIForge published: `SHA256SUMS` lists every file's hash and `SHA256SUMS.sig` is its signature (Ed25519). `biforge-cli verify-release --public-key " + (keyFile && fs.existsSync(keyFile) ? fs.readFileSync(keyFile, "utf8").trim() : "<docs/release-public-key.txt>") + " --dir <folder with the downloads>`; GitHub's build attestation: `gh attestation verify <file> --repo moelsaka01/BIForge`.");

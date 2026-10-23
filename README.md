@@ -61,7 +61,7 @@ Download **BIForge_0.1.0_x64-setup.exe** (installs for the current user, no admi
 
 ### Windows warns about the download (SmartScreen, Smart App Control)
 
-The installers are **not code-signed yet**; a free certificate for open-source projects (SignPath Foundation) is being applied for, see [docs/SIGNING.md](docs/SIGNING.md) and the [code signing policy](docs/CODE_SIGNING_POLICY.md). Until then:
+The installers are **not code-signed yet** (SignPath Foundation declined the project for now; other free options are being evaluated, see [docs/SIGNING.md](docs/SIGNING.md) and the [code signing policy](docs/CODE_SIGNING_POLICY.md)). Until then:
 
 - **SmartScreen** ("Windows protected your PC"): choose *More info*, then *Run anyway*.
 - **Smart App Control** (Windows 11, *Enforcement* mode) blocks unsigned programs without a *Run anyway* button. Turn it off in Settings > Privacy & security > Windows Security > App & browser control > Smart App Control (Windows cannot turn it back on without a reset), or wait for the signed release. If you are unsure, do not turn it off.
