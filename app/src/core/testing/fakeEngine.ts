@@ -1,5 +1,6 @@
 // Test double for EngineApi. It does not parse files: tests register what each path "contains".
 import type { Cardinality, ColumnInfo, EngineApi, RelationshipHint, RowPage, SortSpec, SourceSpec, TableInfo } from "../data/types";
+import type { TmdlDocument } from "../model/types";
 
 export interface FakeSource {
   columns: ColumnInfo[];
@@ -98,6 +99,23 @@ export class FakeEngine implements EngineApi {
     this.calls.push(`preview:${spec.kind}:${limit}`);
     const key = "table" in spec && spec.table ? spec.table : "path" in spec ? spec.path : "";
     return this.previews.get(key) ?? { columns: [], rows: [], total: 0 };
+  }
+  /** What calcTable answers, by table name (default: one column "Value"). */
+  calcTables = new Map<string, TableInfo>();
+  /** When set, calcColumns / calcTable fail with this message. */
+  calcError: string | null = null;
+  async calcTable(documents: TmdlDocument[], name: string, expression: string): Promise<TableInfo> {
+    this.calls.push(`calcTable:${name}:${expression}`);
+    if (this.calcError) throw new Error(this.calcError);
+    const info = this.calcTables.get(name) ?? { name, columns: [col("Value", "int64")], rowCount: 1 };
+    this.tables.set(name, { columns: info.columns, rows: [] });
+    return info;
+  }
+  async calcColumns(documents: TmdlDocument[], table: string): Promise<string[]> {
+    this.calls.push(`calcColumns:${table}`);
+    if (this.calcError) throw new Error(this.calcError);
+    const node = documents.flatMap((d) => d.nodes).find((n) => n.kind === "table" && n.name === table);
+    return (node?.children ?? []).filter((c) => c.kind === "column" && c.default).map((c) => c.name!);
   }
   stored = new Set<string>();
   async credentialExists(spec: SourceSpec): Promise<boolean> {

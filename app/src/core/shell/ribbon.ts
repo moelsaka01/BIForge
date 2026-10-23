@@ -211,7 +211,7 @@ const calculationsGroup = (): RibbonGroup => ({
   controls: [
     todo("visualCalc", "New visual calculation", "calc", { size: "large" }),
     cmd("newMeasure", "New measure", "measure", "model.newMeasure", { size: "large", keytip: "NM" }),
-    todo("quickMeasure", "Quick measure", "quickMeasure", { size: "large" }),
+    cmd("quickMeasure", "Quick measure", "quickMeasure", "model.quickMeasureDialog", { size: "large", keytip: "QM" }),
   ],
 });
 
@@ -221,9 +221,9 @@ const modelingCalculations = (): RibbonGroup => ({
   label: "Calculations",
   controls: [
     cmd("newMeasure", "New measure", "measure", "model.newMeasure", { size: "large", keytip: "NM" }),
-    todo("quickMeasure", "Quick measure", "quickMeasure", { size: "large" }),
-    todo("newColumn", "New column", "column", { size: "large" }),
-    cmd("newTable", "New table", "table", "model.newTableDialog", { size: "large", keytip: "NT" }),
+    cmd("quickMeasure", "Quick measure", "quickMeasure", "model.quickMeasureDialog", { size: "large", keytip: "QM" }),
+    cmd("newColumn", "New column", "column", "model.newColumnDialog", { size: "large", keytip: "NC" }),
+    cmd("newTable", "New table", "table", "model.newCalculatedTableDialog", { size: "large", keytip: "NT" }),
     todo("calcGroup", "Calculation group", "calc", { size: "large" }),
   ],
 });
@@ -431,7 +431,7 @@ function reportTabs(shell: ShellKind): RibbonTab[] {
     id: "modeling",
     label: "Modeling",
     keytip: "M",
-    groups: [relationshipsGroup(), modelingCalculations(), securityGroup(), { id: "parameters", label: "Parameters", controls: [todo("whatIf", "New parameter", "parameter", { size: "large" })] }, { id: "qna", label: "Q&A", controls: [todo("qnaSetup", "Q&A setup", "qna", { size: "large" }), todo("language", "Language", "language", { size: "large" })] }],
+    groups: [relationshipsGroup(), modelingCalculations(), securityGroup(), { id: "parameters", label: "Parameters", controls: [cmd("whatIf", "New parameter", "parameter", "model.whatIfDialog", { size: "large", keytip: "WI" })] }, { id: "qna", label: "Q&A", controls: [todo("qnaSetup", "Q&A setup", "qna", { size: "large" }), todo("language", "Language", "language", { size: "large" })] }],
   };
   const viewTab: RibbonTab = {
     id: "view",
@@ -489,7 +489,7 @@ function modelTabs(): RibbonTab[] {
       id: "home",
       label: "Home",
       keytip: "H",
-      groups: [...homeCommon(), relationshipsGroup(), modelingCalculations(), { id: "parameters", label: "Parameters", controls: [todo("whatIf", "New parameter", "parameter", { size: "large" })] }, securityGroup(), { id: "qna", label: "Q&A", controls: [todo("qnaSetup", "Q&A setup", "qna", { size: "large" }), todo("language", "Language", "language", { size: "large" })] }],
+      groups: [...homeCommon(), relationshipsGroup(), modelingCalculations(), { id: "parameters", label: "Parameters", controls: [cmd("whatIf", "New parameter", "parameter", "model.whatIfDialog", { size: "large", keytip: "WI" })] }, securityGroup(), { id: "qna", label: "Q&A", controls: [todo("qnaSetup", "Q&A setup", "qna", { size: "large" }), todo("language", "Language", "language", { size: "large" })] }],
     },
     {
       id: "view",

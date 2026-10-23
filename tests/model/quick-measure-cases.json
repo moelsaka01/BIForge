@@ -1,0 +1,79 @@
+{
+ "cases": [
+  {
+   "id": "sum",
+   "group": "Product[Category]",
+   "expression": "SUMX(VALUES(Product[Category]), CALCULATE(SUM(Sales[Quantity])))"
+  },
+  {
+   "id": "average",
+   "group": "Product[Category]",
+   "expression": "AVERAGEX(VALUES(Product[Category]), CALCULATE(SUM(Sales[Quantity])))"
+  },
+  {
+   "id": "max",
+   "group": "Product[Category]",
+   "expression": "MAXX(VALUES(Product[Category]), CALCULATE(SUM(Sales[Quantity])))"
+  },
+  {
+   "id": "min",
+   "group": "Product[Category]",
+   "expression": "MINX(VALUES(Product[Category]), CALCULATE(SUM(Sales[Quantity])))"
+  },
+  {
+   "id": "count",
+   "group": "Product[Category]",
+   "expression": "COUNTX(VALUES(Product[Category]), CALCULATE(SUM(Sales[Quantity])))"
+  },
+  {
+   "id": "distinctCount",
+   "group": "Product[Category]",
+   "expression": "CALCULATE(DISTINCTCOUNT(Sales[CustomerKey]), ALLSELECTED(Product[Category]))"
+  },
+  {
+   "id": "runningTotal",
+   "group": "Product[Category]",
+   "expression": "CALCULATE(SUM(Sales[Quantity]), FILTER(ALLSELECTED(Product[Category]), Product[Category] <= MAX(Product[Category])))"
+  },
+  {
+   "id": "percentOfTotal",
+   "group": "Product[Category]",
+   "expression": "DIVIDE(SUM(Sales[Quantity]), CALCULATE(SUM(Sales[Quantity]), ALLSELECTED()))"
+  },
+  {
+   "id": "ytd",
+   "group": "'Date'[Month]",
+   "expression": "TOTALYTD(SUM(Sales[Quantity]), 'Date'[Date])"
+  },
+  {
+   "id": "qtd",
+   "group": "'Date'[Month]",
+   "expression": "TOTALQTD(SUM(Sales[Quantity]), 'Date'[Date])"
+  },
+  {
+   "id": "mtd",
+   "group": "'Date'[Month]",
+   "expression": "TOTALMTD(SUM(Sales[Quantity]), 'Date'[Date])"
+  },
+  {
+   "id": "sameLastYear",
+   "group": "'Date'[Year]",
+   "expression": "CALCULATE(SUM(Sales[Quantity]), SAMEPERIODLASTYEAR('Date'[Date]))"
+  },
+  {
+   "id": "yoy",
+   "group": "'Date'[Year]",
+   "expression": "VAR __prev = CALCULATE(SUM(Sales[Quantity]), SAMEPERIODLASTYEAR('Date'[Date]))\nRETURN\nIF(NOT ISBLANK(__prev), SUM(Sales[Quantity]) - __prev)"
+  },
+  {
+   "id": "yoyPercent",
+   "group": "'Date'[Year]",
+   "expression": "VAR __prev = CALCULATE(SUM(Sales[Quantity]), SAMEPERIODLASTYEAR('Date'[Date]))\nRETURN\nDIVIDE(SUM(Sales[Quantity]) - __prev, __prev)"
+  },
+  {
+   "id": "rollingAverage",
+   "group": "'Date'[YearMonth]",
+   "expression": "AVERAGEX(DATESINPERIOD('Date'[Date], MAX('Date'[Date]), -3, MONTH), CALCULATE(SUM(Sales[Quantity])))"
+  }
+ ]
+}

@@ -1,4 +1,5 @@
 // Mirrors the serde JSON of biforge_engine::types (camelCase).
+import type { TmdlDocument } from "../model/types";
 
 /** An extra request header of a Web source. A secret header keeps its value in the Windows Credential Manager, not here. */
 export interface WebHeader {
@@ -101,4 +102,8 @@ export interface EngineApi {
   setCredential(spec: SourceSpec, secret: string): Promise<void>;
   /** Keeps the value of a secret request header of a Web source in the credential store. */
   setHeaderSecret(spec: SourceSpec, name: string, value: string): Promise<void>;
+  /** Evaluates a DAX table expression over the model and stores its rows as table `name` (a calculated table). */
+  calcTable(documents: TmdlDocument[], name: string, expression: string): Promise<TableInfo>;
+  /** Computes the calculated columns of a table and stores their values in it; returns their names. Throws the engine's message when one fails. */
+  calcColumns(documents: TmdlDocument[], table: string): Promise<string[]>;
 }

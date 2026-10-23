@@ -2,7 +2,7 @@
 // applies them to a clone and discards the clone on error, so a failed edit changes nothing.
 import type { Expr, Project, TmdlDocument, TmdlNode } from "./types";
 
-export type ModelErrorCode = "invalid-name" | "duplicate-name" | "not-found";
+export type ModelErrorCode = "invalid-name" | "duplicate-name" | "not-found" | "invalid";
 
 export class ModelError extends Error {
   constructor(

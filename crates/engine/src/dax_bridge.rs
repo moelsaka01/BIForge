@@ -160,6 +160,92 @@ impl SqlExecutor for Engine {
     }
 }
 
+/// The DuckDB type that holds all of `values` (a calculated column or table has no declared type).
+pub fn infer_sql_type(values: &[Value]) -> &'static str {
+    let mut kind: Option<&'static str> = None;
+    for v in values {
+        let k = match v {
+            Value::Blank => continue,
+            Value::Bool(_) => "BOOLEAN",
+            Value::Int(_) => "BIGINT",
+            Value::Double(_) | Value::Currency(_) => "DOUBLE",
+            Value::DateTime(_) => "TIMESTAMP",
+            Value::Str(_) => "VARCHAR",
+        };
+        kind = match (kind, k) {
+            (None, k) => Some(k),
+            (Some(a), b) if a == b => Some(a),
+            (Some("BIGINT"), "DOUBLE") | (Some("DOUBLE"), "BIGINT") => Some("DOUBLE"),
+            _ => Some("VARCHAR"),
+        };
+    }
+    kind.unwrap_or("VARCHAR")
+}
+
+fn to_duck(v: &Value, ty: &str) -> duckdb::types::Value {
+    use duckdb::types::{TimeUnit, Value as D};
+    match (v, ty) {
+        (Value::Blank, _) => D::Null,
+        (_, "VARCHAR") => D::Text(v.to_text()),
+        (Value::Bool(b), _) => D::Boolean(*b),
+        (Value::Int(i), "DOUBLE") => D::Double(*i as f64),
+        (Value::Int(i), _) => D::BigInt(*i),
+        (Value::Double(f), _) => D::Double(*f),
+        (Value::Currency(c), _) => D::Double(*c as f64 / CURRENCY_SCALE as f64),
+        (Value::DateTime(serial), _) => D::Timestamp(TimeUnit::Microsecond, ((serial - 25569.0) * 86_400_000_000.0).round() as i64),
+        (Value::Str(s), _) => D::Text(s.to_string()),
+    }
+}
+
+impl Engine {
+    /// Stores the rows of a DAX table expression as table `name` (a calculated table), replacing it. The column names
+    /// are the names without `Table[...]`; types are inferred from the values.
+    pub fn store_calculated_table(&self, name: &str, headers: &[String], rows: &[Vec<Value>]) -> crate::Result<crate::TableInfo> {
+        let names: Vec<String> = headers
+            .iter()
+            .map(|h| match (h.find('['), h.rfind(']')) {
+                (Some(a), Some(b)) if b > a => h[a + 1..b].to_string(),
+                _ => h.clone(),
+            })
+            .collect();
+        let types: Vec<&'static str> = (0..names.len()).map(|c| infer_sql_type(&rows.iter().map(|r| r[c].clone()).collect::<Vec<_>>())).collect();
+        let stage = format!("__biforge_stage_{name}");
+        self.conn().execute_batch(&format!("DROP TABLE IF EXISTS {}", q(&stage)))?;
+        let cols: Vec<String> = names.iter().zip(&types).map(|(n, t)| format!("{} {t}", q(n))).collect();
+        self.conn().execute_batch(&format!("CREATE TABLE {} ({})", q(&stage), cols.join(", ")))?;
+        {
+            let mut app = self.conn().appender(&stage)?;
+            for r in rows {
+                let vals: Vec<duckdb::types::Value> = r.iter().zip(&types).map(|(v, t)| to_duck(v, t)).collect();
+                app.append_row(duckdb::appender_params_from_iter(vals))?;
+            }
+            app.flush()?;
+        }
+        self.conn().execute_batch(&format!("DROP TABLE IF EXISTS {0}; ALTER TABLE {1} RENAME TO {0}", q(name), q(&stage)))?;
+        self.data_changed();
+        self.table_info(name)
+    }
+
+    /// Writes the computed values of a calculated column into the table (so the Table view shows them). Replaces the column if it exists.
+    pub fn store_calculated_column(&self, table: &str, column: &str, values: &[Value]) -> crate::Result<()> {
+        let ty = infer_sql_type(values);
+        let c = self.conn();
+        c.execute_batch(&format!("ALTER TABLE {} DROP COLUMN IF EXISTS {}; ALTER TABLE {0} ADD COLUMN {1} {ty}", q(table), q(column)))?;
+        c.execute_batch("DROP TABLE IF EXISTS __biforge_calc")?;
+        c.execute_batch(&format!("CREATE TEMP TABLE __biforge_calc (i BIGINT, v {ty})"))?;
+        {
+            let mut app = c.appender("__biforge_calc")?;
+            for (i, v) in values.iter().enumerate() {
+                app.append_row(duckdb::appender_params_from_iter(vec![duckdb::types::Value::BigInt(i as i64), to_duck(v, ty)]))?;
+            }
+            app.flush()?;
+        }
+        c.execute_batch(&format!("UPDATE {} SET {} = __biforge_calc.v FROM __biforge_calc WHERE {0}.rowid = __biforge_calc.i; DROP TABLE __biforge_calc", q(table), q(column)))?;
+        self.data_changed();
+        Ok(())
+    }
+}
+
 /// Keeps the last loaded DAX engine (the model's tables read from the store) so that a report page with many
 /// visuals, or repeated interactions, does not reload every table for every query. The engine is reused while the
 /// model text and the stored data are unchanged.

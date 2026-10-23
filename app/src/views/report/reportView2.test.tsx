@@ -145,6 +145,25 @@ describe("ReportView: Data pane, conditional formatting, themes", () => {
     await waitFor(() => expect(t.page().visuals[0].roles.Y?.[0].field).toEqual(measure("Sales", "Total")));
   });
 
+  it("a hierarchy lists its levels, adds all of them to the selected visual, and hidden fields are left out", async () => {
+    const t = setup();
+    await t.run("model.addHierarchy", { table: "Product", name: "Categories", columns: ["Category", "Subcategory"] });
+    await t.run("model.setProperty", { target: { kind: "column", table: "Sales", column: "Quantity" }, key: "isHidden", value: true });
+    await t.run("report.visual.add", { page: "page1", type: "clusteredColumnChart", position: { width: 500, height: 300 } });
+    t.dax.handler = () => ({ results: [result(["a", "b"], rows(["Bikes", 1]))], elapsedMs: 1 });
+    render(<t.Host withData />);
+    const frame = await waitFor(() => document.querySelector(`[data-visual="${t.page().visuals[0].name}"]`) as HTMLElement);
+    fireEvent.pointerDown(frame, { button: 0 });
+    fireEvent.click(await screen.findByText("Sales"));
+    expect(screen.queryByLabelText("Use Quantity in the selected visual")).toBeNull();
+    fireEvent.click(await screen.findByText("Product"));
+    fireEvent.click(await screen.findByLabelText("Use the hierarchy Categories in the selected visual"));
+    await waitFor(() => expect(t.page().visuals[0].roles.Category?.map((x) => x.field)).toEqual([column("Product", "Category"), column("Product", "Subcategory")]));
+    expect((screen.getByLabelText("Use the hierarchy Categories in the selected visual") as HTMLInputElement).checked).toBe(true);
+    fireEvent.click(screen.getByLabelText("Use the hierarchy Categories in the selected visual"));
+    await waitFor(() => expect(t.page().visuals[0].roles.Category).toBeUndefined());
+  });
+
   it("with nothing selected, checking a field starts a table", async () => {
     const t = setup();
     t.dax.handler = () => ({ results: [result(["a"], [[text("Bikes")]])], elapsedMs: 1 });

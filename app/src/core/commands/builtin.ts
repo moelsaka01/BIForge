@@ -7,6 +7,7 @@ import * as rel from "../model/relationships";
 import type { SourceSpec } from "../data/types";
 import { registerReportCommands } from "./reportCommands";
 import { registerQueryCommands } from "./queryCommands";
+import { registerModelingCommands } from "./modelingCommands";
 import { registerShellCommands } from "./shellCommands";
 import { registerPublishCommands } from "./publishCommands";
 import { registerHostCommands } from "./hostCommands";
@@ -299,6 +300,7 @@ export function createRegistry(session: Session): CommandRegistry<Session> {
 
   registerReportCommands(r);
   registerQueryCommands(r);
+  registerModelingCommands(r);
   registerShellCommands(r);
   registerPublishCommands(r);
   registerHostCommands(r);

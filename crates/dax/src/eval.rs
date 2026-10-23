@@ -778,6 +778,17 @@ impl Engine {
         Ok(eng)
     }
 
+    /// The values of the calculated columns of a table: (name, values) in column order.
+    pub fn calculated_columns(&self, table: &str) -> Vec<(String, Vec<Value>)> {
+        let Some(t) = self.data.model.table_id(table) else { return vec![] };
+        self.data
+            .model
+            .columns_of(t)
+            .filter(|c| self.data.model.column(*c).expression.is_some())
+            .map(|c| (self.data.model.column(c).name.clone(), self.data.column_values(c).as_ref().clone()))
+            .collect()
+    }
+
     /// Computes calculated columns in dependency order. A column that fails is left BLANK and reported.
     fn process_calculated_columns(&mut self) {
         let calcs: Vec<ColId> = (0..self.data.model.tables.len())

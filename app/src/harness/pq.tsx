@@ -41,6 +41,8 @@ const httpEngine: EngineApi = {
   clearCredential: unsupported,
   setCredential: unsupported,
   setHeaderSecret: unsupported,
+  calcTable: unsupported,
+  calcColumns: unsupported,
 };
 
 const httpM: MApi = {

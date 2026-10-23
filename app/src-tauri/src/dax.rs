@@ -47,6 +47,35 @@ impl DaxService<'_> {
         Ok(check_expression(&model, expression))
     }
 
+    /// Evaluates the DAX table expression of a calculated table and stores its rows as table `name`.
+    pub fn calc_table(&self, documents: &[Document], name: &str, expression: &str) -> Result<biforge_engine::TableInfo, String> {
+        self.data.with_store(|store| {
+            let engine = self.data.dax_cache.get(model_key(documents), store, || model_of(documents))?;
+            let tables = engine.query_with(&format!("EVALUATE {expression}"), Some(store)).map_err(|e| e.message)?;
+            let t = tables.first().ok_or("The expression returned no table.")?;
+            if t.columns.is_empty() {
+                return Err("The expression returned a table without columns.".into());
+            }
+            store.store_calculated_table(name, &t.columns, &t.rows).map_err(|e| e.to_string())
+        })
+    }
+
+    /// Computes the calculated columns of `table` and stores their values in the table; returns the column names.
+    pub fn calc_columns(&self, documents: &[Document], table: &str) -> Result<Vec<String>, String> {
+        self.data.with_store(|store| {
+            let engine = self.data.dax_cache.get(model_key(documents), store, || model_of(documents))?;
+            if let Some((t, c, msg)) = engine.column_errors.iter().find(|(t, _, _)| t.eq_ignore_ascii_case(table)) {
+                return Err(format!("The calculated column {t}[{c}] failed: {msg}"));
+            }
+            let mut names = Vec::new();
+            for (name, values) in engine.calculated_columns(table) {
+                store.store_calculated_column(table, &name, &values).map_err(|e| e.to_string())?;
+                names.push(name);
+            }
+            Ok(names)
+        })
+    }
+
     /// Runs a DAX query (`DEFINE ... EVALUATE ...`) over the project's model and data.
     pub fn query(&self, documents: &[Document], query: &str) -> Result<QueryOutcome, String> {
         self.data.with_store(|store| {
@@ -71,6 +100,16 @@ pub fn dax_check(state: tauri::State<DataService>, documents: Vec<Document>, exp
 #[tauri::command]
 pub fn dax_query(state: tauri::State<DataService>, documents: Vec<Document>, query: String) -> Result<QueryOutcome, String> {
     DaxService { data: &state }.query(&documents, &query)
+}
+
+#[tauri::command]
+pub fn dax_calc_table(state: tauri::State<DataService>, documents: Vec<Document>, name: String, expression: String) -> Result<biforge_engine::TableInfo, String> {
+    DaxService { data: &state }.calc_table(&documents, &name, &expression)
+}
+
+#[tauri::command]
+pub fn dax_calc_columns(state: tauri::State<DataService>, documents: Vec<Document>, table: String) -> Result<Vec<String>, String> {
+    DaxService { data: &state }.calc_columns(&documents, &table)
 }
 
 #[cfg(test)]
@@ -107,6 +146,57 @@ mod tests {
         let out = dax.query(&docs, q).unwrap();
         let rows: Vec<(String, String)> = out.results[0].rows.iter().map(|r| (r[0].v.clone(), r[1].v.clone())).collect();
         assert_eq!(rows, vec![("East".into(), "14".into()), ("West".into(), "6".into())]);
+    }
+
+
+    #[test]
+    fn calculated_tables_and_columns_are_stored_so_the_views_and_visuals_can_read_them() {
+        let (_d, svc, docs) = setup();
+        let dax = DaxService { data: &svc };
+        // a calculated table from a DAX table expression
+        let info = dax.calc_table(&docs, "Regions", "SUMMARIZE(Sales, Sales[Region], \"Total\", SUM(Sales[Qty]))").unwrap();
+        assert_eq!(info.row_count, 2);
+        assert_eq!(info.columns.iter().map(|c| c.name.as_str()).collect::<Vec<_>>(), ["Region", "Total"]);
+        let page = svc.fetch_page("Regions", 0, 10, None).unwrap();
+        let mut rows: Vec<Vec<Option<String>>> = page.rows;
+        rows.sort();
+        assert_eq!(rows, vec![vec![Some("East".to_string()), Some("7".to_string())], vec![Some("West".to_string()), Some("3".to_string())]]);
+        // the table is part of the model afterwards and can be queried like any other
+        let with_table = format!("{MODEL}\ntable Regions\n\tcolumn Region\n\t\tdataType: string\n\tcolumn Total\n\t\tdataType: int64\n");
+        let docs2 = vec![biforge_model::tmdl::parse(&with_table).unwrap()];
+        let out = dax.query(&docs2, "EVALUATE ROW(\"n\", COUNTROWS(Regions), \"s\", SUM(Regions[Total]))").unwrap();
+        assert_eq!((out.results[0].rows[0][0].v.as_str(), out.results[0].rows[0][1].v.as_str()), ("2", "10"));
+        // recalculating replaces the table
+        let info = dax.calc_table(&docs2, "Regions", "FILTER(SUMMARIZE(Sales, Sales[Region], \"Total\", SUM(Sales[Qty])), [Total] > 5)").unwrap();
+        assert_eq!(info.row_count, 1);
+        // a calculated column is computed by the engine and written into the table
+        let with_col = format!("{MODEL}\ttable Sales2\n").replace("\ttable Sales2\n", "");
+        let with_col = with_col.replace("\tmeasure Total", "\tcolumn Double = Sales[Qty] * 2\n\t\tdataType: int64\n\tmeasure Total");
+        let docs3 = vec![biforge_model::tmdl::parse(&with_col).unwrap()];
+        assert_eq!(dax.calc_columns(&docs3, "Sales").unwrap(), ["Double"]);
+        let page = svc.fetch_page("Sales", 0, 10, None).unwrap();
+        let idx = page.columns.iter().position(|c| c.name == "Double").unwrap();
+        assert_eq!(page.rows.iter().map(|r| r[idx].clone().unwrap()).collect::<Vec<_>>(), ["4", "6", "10"]);
+        // the model still reads the stored column as calculated (not as imported data)
+        assert_eq!(dax.query(&docs3, "EVALUATE ROW(\"v\", SUM(Sales[Double]))").unwrap().results[0].rows[0][0].v, "20");
+        // a calculated column that fails is reported
+        let bad = with_col.replace("Sales[Qty] * 2", "Sales[Nope] * 2");
+        let docs4 = vec![biforge_model::tmdl::parse(&bad).unwrap()];
+        assert!(dax.calc_columns(&docs4, "Sales").unwrap_err().contains("Double"));
+    }
+
+
+    #[test]
+    fn a_what_if_parameter_is_a_generated_series_and_a_measure_that_reads_the_selection() {
+        let (_d, svc, docs) = setup();
+        let dax = DaxService { data: &svc };
+        let info = dax.calc_table(&docs, "Discount", "SELECTCOLUMNS(GENERATESERIES(0, 50, 5), \"Discount\", [Value])").unwrap();
+        assert_eq!((info.row_count, info.columns[0].name.as_str()), (11, "Discount"));
+        let model = format!("{MODEL}\ntable Discount\n\tcolumn Discount\n\t\tdataType: int64\n\tmeasure 'Discount Value' = SELECTEDVALUE('Discount'[Discount], 10)\n");
+        let docs2 = vec![biforge_model::tmdl::parse(&model).unwrap()];
+        let q = |s: &str| dax.query(&docs2, s).unwrap().results[0].rows[0][0].v.clone();
+        assert_eq!(q("EVALUATE ROW(\"v\", [Discount Value])"), "10", "nothing selected: the default");
+        assert_eq!(q("EVALUATE CALCULATETABLE(ROW(\"v\", [Discount Value]), 'Discount'[Discount] = 25)"), "25");
     }
 
     #[test]

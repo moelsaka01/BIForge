@@ -20,5 +20,7 @@ export const tauriEngine: EngineApi = {
   credentialExists: (spec: SourceSpec) => invoke<boolean>("engine_credential_exists", { spec }),
   clearCredential: (spec: SourceSpec) => invoke<void>("engine_clear_credential", { spec }),
   setCredential: (spec, secret) => invoke<void>("engine_set_credential", { spec, secret }),
+  calcTable: (documents, name, expression) => invoke<TableInfo>("dax_calc_table", { documents, name, expression }),
+  calcColumns: (documents, table) => invoke<string[]>("dax_calc_columns", { documents, table }),
   setHeaderSecret: (spec, name, value) => invoke<void>("engine_set_header_secret", { spec, name, value }),
 };

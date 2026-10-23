@@ -1,12 +1,13 @@
 import { DocumentStore } from "../store/documentStore";
 import { ReportRuntime } from "../report/runtime";
-import type { Project, SaveReport } from "../model/types";
+import type { Project, SaveReport, TmdlDocument } from "../model/types";
 import type { EngineApi, SourceSpec } from "../data/types";
 import { applyImport, getTableSource, importedTables, PRIVACY_LEVELS, setPrivacyLevel, type PrivacyLevel } from "../model/tables";
-import { listTables, deleteTable } from "../model/ops";
+import { addTable, listTables, deleteTable } from "../model/ops";
 import { listDataSources, withLocation, type SourceLocation } from "../data/dataSources";
 import { QueryDraft } from "../queries/draft";
 import type { MApi } from "../queries/types";
+import { addCalculatedColumn, calculatedColumns, calculatedTables, setCalculatedColumn, setCalculatedTable, setColumnDataType } from "../model/modeling";
 import { applyGroups, applyQueryLoad, expressionExists, listGroups, listQueries, queryTexts, removeExpression, upsertExpression, userMTables } from "../queries/queries";
 import { findTable } from "../model/ops";
 import { ShellStore } from "../shell/shellStore";
@@ -657,6 +658,84 @@ export class Session {
     return { loaded: loaded.map((l) => l.name), failures };
   }
 
+  // ---- calculated columns and tables ----
+
+  private docs(p: Project = this.store.project!): TmdlDocument[] {
+    return Object.values(p.model.tmdl);
+  }
+
+  /** Writes the data types the engine found for the calculated columns of `table`. */
+  private async typeCalculated(table: string): Promise<(p: Project) => void> {
+    const info = await this.requireEngine().tableInfo(table);
+    return (p) => {
+      for (const c of calculatedColumns(p, table)) {
+        const found = info?.columns.find((x) => x.name === c.name);
+        if (found) setColumnDataType(p, table, c.name, found.biType);
+      }
+    };
+  }
+
+  /** Adds a calculated column: the engine computes it first, so a formula that fails changes nothing. */
+  async addCalculatedColumn(table: string, name: string, expression: string): Promise<void> {
+    const engine = this.requireEngine();
+    const draft = structuredClone(this.store.project!);
+    addCalculatedColumn(draft, table, name, expression);
+    await engine.calcColumns(this.docs(draft), table);
+    const typed = await this.typeCalculated(table);
+    this.store.transact(`New column "${name}"`, (p) => {
+      addCalculatedColumn(p, table, name, expression);
+      typed(p);
+    });
+    this.set({ dataEpoch: this.snap.dataEpoch + 1 });
+    this.setMessage(`Added the calculated column ${table}[${name}].`);
+  }
+
+  async editCalculatedColumn(table: string, column: string, expression: string): Promise<void> {
+    const engine = this.requireEngine();
+    const draft = structuredClone(this.store.project!);
+    setCalculatedColumn(draft, table, column, expression);
+    await engine.calcColumns(this.docs(draft), table);
+    const typed = await this.typeCalculated(table);
+    this.store.transact(`Edit column "${column}"`, (p) => {
+      setCalculatedColumn(p, table, column, expression);
+      typed(p);
+    });
+    this.set({ dataEpoch: this.snap.dataEpoch + 1 });
+  }
+
+  /** Creates or recalculates a calculated table from a DAX table expression. */
+  async setCalculatedTable(name: string, expression: string): Promise<void> {
+    const engine = this.requireEngine();
+    const info = await engine.calcTable(this.docs(), name, expression);
+    this.store.transact(`Calculated table "${name}"`, (p) => setCalculatedTable(p, name, expression, info, (pr, n) => addTable(pr, n)));
+    this.markLoaded(info.name);
+    this.setMessage(`Calculated table "${info.name}": ${info.rowCount} rows, ${info.columns.length} columns.`);
+  }
+
+  /** Recomputes every calculated column and table after the data changed; a failure is reported and does not stop the others. */
+  async recalculate(): Promise<{ table: string; error: string }[]> {
+    const p = this.store.project;
+    if (!p || !this.engine) return [];
+    const failures: { table: string; error: string }[] = [];
+    const calcTables = calculatedTables(p);
+    const isCalcTable = (n: string) => calcTables.some((c) => c.name.toLowerCase() === n.toLowerCase());
+    const tablesWithColumns = (proj: Project) => listTables(proj).map((t) => t.name).filter((t) => calculatedColumns(proj, t).length > 0);
+    const run = async (table: string, f: () => Promise<unknown>) => {
+      try {
+        await f();
+      } catch (e) {
+        failures.push({ table, error: errText(e) });
+      }
+    };
+    for (const t of tablesWithColumns(p).filter((x) => !isCalcTable(x))) await run(t, () => this.engine!.calcColumns(this.docs(), t));
+    for (const c of calcTables) {
+      await run(c.name, () => this.engine!.calcTable(this.docs(), c.name, c.expression));
+      if (calculatedColumns(this.store.project!, c.name).length > 0) await run(c.name, () => this.engine!.calcColumns(this.docs(), c.name));
+    }
+    if (calcTables.length || tablesWithColumns(p).length) this.set({ dataEpoch: this.snap.dataEpoch + 1 });
+    return failures;
+  }
+
   /** Refreshes every imported table; one failing table does not stop the others. Returns the failures. */
   async refreshAll(): Promise<{ table: string; error: string }[]> {
     const p = this.store.project;
@@ -670,9 +749,11 @@ export class Session {
         failures.push({ table: t, error: errText(e) });
       }
     }
+    const calc = await this.recalculate();
+    failures.push(...calc);
     this.setMessage(
       failures.length
-        ? `Refreshed ${tables.length - failures.length} of ${tables.length} table(s). Failed: ${failures.map((f) => `${f.table} (${f.error})`).join("; ")}`
+        ? `Refreshed ${tables.length - failures.filter((f) => tables.includes(f.table)).length} of ${tables.length} table(s). Failed: ${failures.map((f) => `${f.table} (${f.error})`).join("; ")}`
         : `Refreshed ${tables.length} table(s).`,
     );
     return failures;

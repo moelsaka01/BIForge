@@ -4,7 +4,8 @@ import type { Project } from "../core/model/types";
 import { listTables } from "../core/model/ops";
 import { getTableSource } from "../core/model/tables";
 import type { FieldRef } from "../core/report/fields";
-import { FIELD_MIME } from "./report/VisualizationsPane";
+import { FIELD_MIME, FIELDS_MIME } from "./report/VisualizationsPane";
+import { getProperty, listHierarchies } from "../core/model/modeling";
 
 export interface FieldUse {
   /** True when the field is used by the selected visual. */
@@ -38,9 +39,13 @@ export function DataPane(p: DataPaneProps) {
   const tables = listTables(p.project)
     .map((t) => {
       const tableHit = t.name.toLowerCase().includes(needle);
-      const columns = t.columns.filter((c) => tableHit || c.name.toLowerCase().includes(needle));
-      const measures = t.measures.filter((m) => tableHit || m.name.toLowerCase().includes(needle));
-      return { ...t, columns, measures, show: needle === "" || tableHit || columns.length > 0 || measures.length > 0 };
+      // while a report is open, hidden fields are left out of the list (Power BI hides them in Report view)
+      const hidden = (c: { name: string }) => !!p.fieldUse && getProperty(p.project, { kind: "column", table: t.name, column: c.name }, "isHidden") === true;
+      const hiddenMeasure = (m: { name: string }) => !!p.fieldUse && getProperty(p.project, { kind: "measure", table: t.name, name: m.name }, "isHidden") === true;
+      const columns = t.columns.filter((c) => !hidden(c) && (tableHit || c.name.toLowerCase().includes(needle)));
+      const measures = t.measures.filter((m) => !hiddenMeasure(m) && (tableHit || m.name.toLowerCase().includes(needle)));
+      const hierarchies = listHierarchies(p.project, t.name).filter((h) => tableHit || h.name.toLowerCase().includes(needle) || h.levels.some((l) => l.column.toLowerCase().includes(needle)));
+      return { ...t, columns, measures, hierarchies, show: needle === "" || tableHit || columns.length > 0 || measures.length > 0 || hierarchies.length > 0 };
     })
     .filter((t) => t.show);
 
@@ -82,6 +87,22 @@ export function DataPane(p: DataPaneProps) {
                 )}
               </TreeItemLayout>
               <Tree>
+                {t.hierarchies.map((h) => (
+                  <TreeItem key={`h-${h.name}`} itemType="branch" value={`${t.name}.<${h.name}>`}>
+                    <TreeItemLayout>
+                      <HierarchyLabel p={p} table={t.name} hierarchy={h} />
+                    </TreeItemLayout>
+                    <Tree>
+                      {h.levels.map((l) => (
+                        <TreeItem key={l.name} itemType="leaf" value={`${t.name}.<${h.name}>.${l.name}`}>
+                          <TreeItemLayout>
+                            <FieldLabel p={p} field={{ kind: "column", table: t.name, name: l.column }} glyph="↳" />
+                          </TreeItemLayout>
+                        </TreeItem>
+                      ))}
+                    </Tree>
+                  </TreeItem>
+                ))}
                 {t.columns.map((c) => (
                   <TreeItem key={`c-${c.name}`} itemType="leaf" value={`${t.name}.${c.name}`}>
                     <TreeItemLayout>
@@ -103,6 +124,36 @@ export function DataPane(p: DataPaneProps) {
       </Tree>
       {tables.length === 0 && <div style={{ fontSize: 12, opacity: 0.7 }}>{needle ? "No matching fields." : "No tables yet. Choose Import data."}</div>}
     </div>
+  );
+}
+
+/** A hierarchy row: a checkbox that adds or removes all its levels, and a drag source that carries the levels in order. */
+function HierarchyLabel({ p, table, hierarchy }: { p: DataPaneProps; table: string; hierarchy: { name: string; levels: { name: string; column: string }[] } }) {
+  const use = p.fieldUse;
+  const levels = hierarchy.levels.map((l): FieldRef => ({ kind: "column", table, name: l.column }));
+  const all = levels.length > 0 && levels.every((f) => use?.isUsed(f));
+  return (
+    <span
+      draggable={!!use}
+      onDragStart={(e) => {
+        e.dataTransfer.setData(FIELDS_MIME, JSON.stringify(levels));
+        e.dataTransfer.effectAllowed = "copy";
+      }}
+      style={{ display: "inline-flex", alignItems: "center" }}
+    >
+      {use && (
+        <input
+          type="checkbox"
+          aria-label={`Use the hierarchy ${hierarchy.name} in the selected visual`}
+          checked={all}
+          onChange={() => (all ? [...levels].reverse() : levels).forEach((f) => (all ? use.isUsed(f) && use.onToggle(f) : !use.isUsed(f) && use.onToggle(f)))}
+          onClick={(e) => e.stopPropagation()}
+          style={{ marginRight: 4 }}
+        />
+      )}
+      <span style={{ opacity: 0.6, marginRight: 6 }}>⛓</span>
+      {hierarchy.name}
+    </span>
   );
 }
 

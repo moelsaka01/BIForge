@@ -11,6 +11,25 @@ import { useReport } from "./reportContext";
 
 export const FIELD_MIME = "application/x-biforge-field";
 
+/** Several fields at once (a hierarchy dragged from the Data pane: its levels, top to bottom). */
+export const FIELDS_MIME = "application/x-biforge-fields";
+
+/** Everything the Data pane put on a drag: the levels of a hierarchy, or the one field. */
+export function fieldsFromDrag(dt: DataTransfer): FieldRef[] {
+  const raw = dt.getData(FIELDS_MIME);
+  if (raw) {
+    try {
+      const list = JSON.parse(raw) as FieldRef[];
+      const ok = Array.isArray(list) && list.every((f) => f && typeof f.table === "string" && typeof f.name === "string" && f.kind === "column");
+      if (ok) return list;
+    } catch {
+      /* fall through to the single field */
+    }
+  }
+  const one = fieldFromDrag(dt);
+  return one ? [one] : [];
+}
+
 /** Parses what the Data pane puts on a drag. */
 export function fieldFromDrag(dt: DataTransfer): FieldRef | null {
   const raw = dt.getData(FIELD_MIME);
@@ -126,8 +145,7 @@ export function VisualizationsPane(p: VisualizationsPaneProps) {
                       onDragOver={(e) => e.preventDefault()}
                       onDrop={(e) => {
                         e.preventDefault();
-                        const f = fieldFromDrag(e.dataTransfer);
-                        if (f) c.dispatch("report.field.add", { page: page.name, visual: visual.name, role: r.name, field: fieldForRole(c.model, r.accepts, f) });
+                        for (const f of fieldsFromDrag(e.dataTransfer)) c.dispatch("report.field.add", { page: page.name, visual: visual.name, role: r.name, field: fieldForRole(c.model, r.accepts, f) });
                       }}
                       style={{ minHeight: 28, border: "1px dashed #aaa", borderRadius: 4, padding: 3, display: "flex", flexDirection: "column", gap: 3 }}
                     >

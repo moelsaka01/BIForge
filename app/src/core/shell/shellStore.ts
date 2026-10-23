@@ -1,6 +1,8 @@
 import { SettingsStore, resolveTheme, type KeyValueStorage, type ResolvedTheme, type ShellKind } from "./settings";
 import { noWindow, type WindowApi } from "./windowApi";
 
+import type { ModelDialogId } from "../model/modelDialogs";
+
 export type ViewId = "report" | "data" | "model" | "dax" | "tmdl";
 export const VIEW_IDS: readonly ViewId[] = ["report", "data", "model", "dax", "tmdl"];
 export type Zoom = "fit" | number;
@@ -10,6 +12,7 @@ export type DialogRequest =
   | { kind: "newProject"; /** create the sample project instead of a blank one */ sample?: boolean; /** open the import dialog (for this source) right after the project exists */ thenImport?: string | true }
   | { kind: "import"; source?: string }
   | { kind: "newTable" }
+  | { kind: "modelDialog"; id: ModelDialogId; table?: string | null; column?: string }
   | { kind: "unsaved"; /** the command to run again (with discard: true) once the user has decided */ resume: { id: string; args?: Record<string, unknown> } }
   | { kind: "options"; page?: string }
   | { kind: "saveAs"; copy?: boolean }

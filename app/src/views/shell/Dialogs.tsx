@@ -6,6 +6,10 @@ import { APP_NAME, APP_VERSION, NOT_YET_IMPLEMENTED, WORKING_FEATURES } from "..
 import { dirname, joinPath } from "../../core/session/session";
 import type { DialogRequest } from "../../core/shell/shellStore";
 import { OptionsDialog } from "./OptionsDialog";
+import { FormDialog } from "../pq/FormDialog";
+import { modelDialogFor } from "../../core/model/modelDialogs";
+import { calculatedColumns, calculatedTables } from "../../core/model/modeling";
+import { listTables } from "../../core/model/ops";
 import { DataSourcesDialog } from "./DataSourcesDialog";
 import { GuideDialog, OpenPackageDialog, PublishDialog } from "./PublishDialog";
 import { HostDialog, JoinServerDialog } from "./HostDialog";
@@ -247,6 +251,50 @@ function ImportHost({ request }: { request: Extract<DialogRequest, { kind: "impo
   );
 }
 
+/** The modeling forms (new column, calculated table, hierarchy): a data-driven form that runs a command. */
+function ModelDialogHost({ request }: { request: Extract<DialogRequest, { kind: "modelDialog" }> }) {
+  const env = useEnv();
+  const doc = useDoc();
+  const close = () => env.session.shell.closeDialog();
+  const project = doc.project;
+  if (!project) return null;
+  const tables = listTables(project);
+  const def = (() => {
+    try {
+      return modelDialogFor(request.id, {
+        tables,
+        table: request.table ?? null,
+        column: request.column ? calculatedColumns(project, request.table ?? "").find((c) => c.name === request.column) ?? null : null,
+        calculated: calculatedTables(project).find((c) => c.name === request.table) ?? null,
+      });
+    } catch (e) {
+      return e instanceof Error ? e : new Error(String(e));
+    }
+  })();
+  if (def instanceof Error) {
+    return (
+      <Shell title="Not available" onClose={close} actions={<Button onClick={close}>Close</Button>}>
+        <div role="alert">{def.message}</div>
+      </Shell>
+    );
+  }
+  return (
+    <FormDialog
+      def={def}
+      pickFile={async () => null}
+      pickFolder={async () => null}
+      onCancel={close}
+      onSubmit={async (action) => {
+        if (!("command" in action)) return "This form does not run a command.";
+        const r = await env.registry.execute(action.command, action.args);
+        if (!r.ok) return r.message;
+        close();
+        return null;
+      }}
+    />
+  );
+}
+
 function NewTableDialog() {
   const env = useEnv();
   const [name, setName] = useState("");
@@ -445,6 +493,8 @@ export function Dialogs() {
       return <ImportHost request={dialog} />;
     case "newTable":
       return <NewTableDialog />;
+    case "modelDialog":
+      return <ModelDialogHost request={dialog} />;
     case "unsaved":
       return <UnsavedDialog request={dialog} />;
     case "options":

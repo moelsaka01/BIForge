@@ -6,6 +6,7 @@ import type { EngineApi } from "../core/data/types";
 import { listTables, type TableView } from "../core/model/ops";
 import { getTableSource } from "../core/model/tables";
 import { PaneFrame } from "./shell/PaneFrame";
+import { ModelProperties } from "./ModelProperties";
 import { FieldIcon, fieldIconKind } from "./fieldIcon";
 import { listRelationships, type EndCardinality, type NewRelationship, type Relationship } from "../core/model/relationships";
 
@@ -265,40 +266,7 @@ export function ModelView({ project, session, registry, engine, onError, propert
     const numeric = (t: string | null | undefined) => t === "int64" || t === "double" || t === "decimal";
     return (
       <div style={{ padding: 12 }} data-testid="properties">
-        {sel0.kind === "table" && (
-          <section aria-label="Table properties" data-testid="table-properties">
-            <strong>Table</strong>
-            {field("Name", sel0.table)}
-            {field("Columns", String(table(sel0.table)?.columns.length ?? 0))}
-            {field("Measures", String(table(sel0.table)?.measures.length ?? 0))}
-            {field("Source", getTableSource(project, sel0.table)?.kind ?? "none (model table)")}
-            <div style={{ fontSize: 12, opacity: 0.7, marginTop: 6 }}>Table properties cannot be edited yet.</div>
-          </section>
-        )}
-        {sel0.kind === "column" && (() => {
-          const c = table(sel0.table)?.columns.find((x) => x.name === sel0.column);
-          return (
-            <section aria-label="Column properties" data-testid="column-properties">
-              <strong>Column</strong>
-              {field("Name", sel0.column)}
-              {field("Table", sel0.table)}
-              {field("Data type", c?.dataType ? (TYPE_NAMES[c.dataType] ?? c.dataType) : "Not set")}
-              {field("Summarize by", c?.summarizeBy ?? (numeric(c?.dataType) ? "Sum (default)" : "None"))}
-              <div style={{ fontSize: 12, opacity: 0.7, marginTop: 6 }}>Column properties cannot be edited yet.</div>
-            </section>
-          );
-        })()}
-        {sel0.kind === "measure" && (() => {
-          const m = table(sel0.table)?.measures.find((x) => x.name === sel0.name);
-          return (
-            <section aria-label="Measure properties" data-testid="measure-properties">
-              <strong>Measure</strong>
-              {field("Name", sel0.name)}
-              {field("Table", sel0.table)}
-              {field("Expression", m?.expression ?? "")}
-            </section>
-          );
-        })()}
+        {(sel0.kind === "table" || sel0.kind === "column" || sel0.kind === "measure") && <ModelProperties project={project} tables={tables} sel={sel0} run={run} />}
         <strong style={{ display: "block", marginTop: sel0.kind === "none" || sel0.kind === "rel" ? 0 : 14 }}>Relationships ({rels.length})</strong>
         <ul style={{ paddingLeft: 16, margin: "6px 0" }}>
           {rels.map((r) => (

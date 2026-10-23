@@ -88,6 +88,8 @@ fn main() {
             dax::dax_catalog,
             dax::dax_check,
             dax::dax_query,
+            dax::dax_calc_table,
+            dax::dax_calc_columns,
             pq::m_parse_query,
             pq::m_check,
             pq::m_apply_transform,
