@@ -28,11 +28,14 @@ const SCALAR_FNS: &[&str] = &[
 ];
 
 pub fn is_builtin(name: &str) -> bool {
-    SCALAR_FNS.contains(&name) || TABLE_FNS.contains(&name)
+    SCALAR_FNS.contains(&name) || TABLE_FNS.contains(&name) || crate::stdlib_ext::is_ext(name)
 }
 
 /// Named constants: enumerations and type values.
 pub fn constant(name: &str) -> Option<Value> {
+    if let Some(v) = crate::stdlib_ext::constant(name) {
+        return Some(v);
+    }
     let num = |n: f64| Some(Value::Num(n));
     let ty = |t: &str| Some(Value::Type(TypeExpr::Named(t.to_string())));
     match name {
@@ -139,6 +142,9 @@ pub fn call(ev: &Ev, name: &str, args: Vec<Value>) -> R<Value> {
             Some(v) => Ok(v),
             None => Err(MError::expr(format!("The function {name} is not available."))),
         };
+    }
+    if let Some(r) = crate::stdlib_ext::call(ev, name, &args) {
+        return r;
     }
     let a = &args;
     // SQL text of a scalar argument
@@ -515,13 +521,13 @@ fn aggregate(name: &str, v: &Value) -> R<Value> {
 pub const NOT_SUPPORTED: &[&str] = &[
     "Web.Contents", "Sql.Database", "PostgreSQL.Database", "OData.Feed",
     "Table.ExpandRecordColumn", "Table.ExpandListColumn",
-    "Table.Profile", "Table.TransformColumnNames", "#time", "#duration", "Splitter.SplitTextByEachDelimiter",
+    "Table.Profile", "#time", "#duration", "Splitter.SplitTextByEachDelimiter",
     "Splitter.SplitTextByCharacterTransition",
 ];
 
 /// Sorted names of the library functions that work (used for editor completions; a test keeps the app's copy in sync).
 pub fn supported_functions() -> Vec<&'static str> {
-    let mut v: Vec<&'static str> = SCALAR_FNS.iter().chain(TABLE_FNS.iter()).copied().filter(|n| !NOT_SUPPORTED.contains(n)).collect();
+    let mut v: Vec<&'static str> = SCALAR_FNS.iter().chain(TABLE_FNS.iter()).chain(crate::stdlib_ext::all_names().iter()).copied().filter(|n| !NOT_SUPPORTED.contains(n)).collect();
     v.sort_unstable();
     v.dedup();
     v

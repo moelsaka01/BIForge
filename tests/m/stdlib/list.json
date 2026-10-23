@@ -1,0 +1,338 @@
+[
+ {
+  "fn": "List.Accumulate",
+  "m": "List.Accumulate({1, 2, 3, 4}, 0, (s, c) => s + c)",
+  "expect": "10",
+  "mode": "value"
+ },
+ {
+  "fn": "List.AllTrue",
+  "m": "List.AllTrue({true, true})",
+  "expect": "true",
+  "mode": "value"
+ },
+ {
+  "fn": "List.AllTrue",
+  "m": "List.AllTrue({true, false})",
+  "expect": "false",
+  "mode": "value"
+ },
+ {
+  "fn": "List.AnyTrue",
+  "m": "List.AnyTrue({false, true})",
+  "expect": "true",
+  "mode": "value"
+ },
+ {
+  "fn": "List.AnyTrue",
+  "m": "List.AnyTrue({false, false})",
+  "expect": "false",
+  "mode": "value"
+ },
+ {
+  "fn": "List.MatchesAll",
+  "m": "List.MatchesAll({2, 4}, each _ > 1)",
+  "expect": "true",
+  "mode": "value"
+ },
+ {
+  "fn": "List.MatchesAny",
+  "m": "List.MatchesAny({2, 4}, each _ > 3)",
+  "expect": "true",
+  "mode": "value"
+ },
+ {
+  "fn": "List.ContainsAll",
+  "m": "List.ContainsAll({1, 2, 3}, {1, 3})",
+  "expect": "true",
+  "mode": "value"
+ },
+ {
+  "fn": "List.ContainsAll",
+  "m": "List.ContainsAll({1, 2}, {1, 5})",
+  "expect": "false",
+  "mode": "value"
+ },
+ {
+  "fn": "List.ContainsAny",
+  "m": "List.ContainsAny({1, 2}, {5, 2})",
+  "expect": "true",
+  "mode": "value"
+ },
+ {
+  "fn": "List.ContainsAny",
+  "m": "List.ContainsAny({1, 2}, {5, 6})",
+  "expect": "false",
+  "mode": "value"
+ },
+ {
+  "fn": "List.Difference",
+  "m": "List.Difference({1, 2, 3, 4, 5}, {4, 5, 3})",
+  "expect": "{1,2}",
+  "mode": "value"
+ },
+ {
+  "fn": "List.Difference",
+  "m": "List.Difference({1, 1, 2}, {1})",
+  "expect": "{1,2}",
+  "mode": "value"
+ },
+ {
+  "fn": "List.RemoveItems",
+  "m": "List.RemoveItems({1, 2, 3, 2}, {2})",
+  "expect": "{1,3}",
+  "mode": "value"
+ },
+ {
+  "fn": "List.RemoveMatchingItems",
+  "m": "List.RemoveMatchingItems({1, 2, 3, 2}, {2})",
+  "expect": "{1,3}",
+  "mode": "value"
+ },
+ {
+  "fn": "List.Intersect",
+  "m": "List.Intersect({{1, 2, 3}, {2, 3, 4}, {3, 4, 5}})",
+  "expect": "{3}",
+  "mode": "value"
+ },
+ {
+  "fn": "List.FirstN",
+  "m": "List.FirstN({1, 2, 3, 4}, 2)",
+  "expect": "{1,2}",
+  "mode": "value"
+ },
+ {
+  "fn": "List.FirstN",
+  "m": "List.FirstN({1, 2, 3, 4}, each _ < 3)",
+  "expect": "{1,2}",
+  "mode": "value"
+ },
+ {
+  "fn": "List.LastN",
+  "m": "List.LastN({1, 2, 3, 4}, 2)",
+  "expect": "{3,4}",
+  "mode": "value"
+ },
+ {
+  "fn": "List.Skip",
+  "m": "List.Skip({1, 2, 3, 4}, 2)",
+  "expect": "{3,4}",
+  "mode": "value"
+ },
+ {
+  "fn": "List.Skip",
+  "m": "List.Skip({1, 2, 3})",
+  "expect": "{2,3}",
+  "mode": "value"
+ },
+ {
+  "fn": "List.Skip",
+  "m": "List.Skip({1, 2, 3, 1}, each _ < 3)",
+  "expect": "{3,1}",
+  "mode": "value"
+ },
+ {
+  "fn": "List.RemoveFirstN",
+  "m": "List.RemoveFirstN({1, 2, 3}, 1)",
+  "expect": "{2,3}",
+  "mode": "value"
+ },
+ {
+  "fn": "List.RemoveLastN",
+  "m": "List.RemoveLastN({1, 2, 3}, 2)",
+  "expect": "{1}",
+  "mode": "value"
+ },
+ {
+  "fn": "List.MaxN",
+  "m": "List.MaxN({3, 1, 4, 1, 5}, 2)",
+  "expect": "{5,4}",
+  "mode": "value"
+ },
+ {
+  "fn": "List.MinN",
+  "m": "List.MinN({3, 1, 4, 1, 5}, 2)",
+  "expect": "{1,1}",
+  "mode": "value"
+ },
+ {
+  "fn": "List.Generate",
+  "m": "List.Generate(() => 0, each _ < 5, each _ + 1)",
+  "expect": "{0,1,2,3,4}",
+  "mode": "value"
+ },
+ {
+  "fn": "List.Generate",
+  "m": "List.Generate(() => 1, each _ <= 4, each _ * 2, each _ + 100)",
+  "expect": "{101,102,104}",
+  "mode": "value"
+ },
+ {
+  "fn": "List.IsDistinct",
+  "m": "List.IsDistinct({1, 2, 3})",
+  "expect": "true",
+  "mode": "value"
+ },
+ {
+  "fn": "List.IsDistinct",
+  "m": "List.IsDistinct({1, 1})",
+  "expect": "false",
+  "mode": "value"
+ },
+ {
+  "fn": "List.Mode",
+  "m": "List.Mode({1, 2, 2, 3})",
+  "expect": "2",
+  "mode": "value"
+ },
+ {
+  "fn": "List.Modes",
+  "m": "List.Modes({1, 1, 2, 2, 3})",
+  "expect": "{1,2}",
+  "mode": "value"
+ },
+ {
+  "fn": "List.Product",
+  "m": "List.Product({2, 3, 4})",
+  "expect": "24",
+  "mode": "value"
+ },
+ {
+  "fn": "List.Positions",
+  "m": "List.Positions({\"a\", \"b\", \"c\"})",
+  "expect": "{0,1,2}",
+  "mode": "value"
+ },
+ {
+  "fn": "List.PositionOf",
+  "m": "List.PositionOf({\"a\", \"b\", \"a\"}, \"a\")",
+  "expect": "0",
+  "mode": "value"
+ },
+ {
+  "fn": "List.PositionOf",
+  "m": "List.PositionOf({\"a\", \"b\", \"a\"}, \"a\", 1)",
+  "expect": "2",
+  "mode": "value"
+ },
+ {
+  "fn": "List.PositionOf",
+  "m": "List.PositionOf({\"a\", \"b\", \"a\"}, \"a\", 2)",
+  "expect": "{0,2}",
+  "mode": "value"
+ },
+ {
+  "fn": "List.PositionOf",
+  "m": "List.PositionOf({\"a\", \"b\"}, \"z\")",
+  "expect": "-1",
+  "mode": "value"
+ },
+ {
+  "fn": "List.PositionOfAny",
+  "m": "List.PositionOfAny({\"a\", \"b\", \"c\"}, {\"c\", \"b\"})",
+  "expect": "1",
+  "mode": "value"
+ },
+ {
+  "fn": "List.Range",
+  "m": "List.Range({1, 2, 3, 4, 5}, 1, 3)",
+  "expect": "{2,3,4}",
+  "mode": "value"
+ },
+ {
+  "fn": "List.Range",
+  "m": "List.Range({1, 2, 3}, 1)",
+  "expect": "{2,3}",
+  "mode": "value"
+ },
+ {
+  "fn": "List.RemoveRange",
+  "m": "List.RemoveRange({1, 2, 3, 4, 5}, 1, 2)",
+  "expect": "{1,4,5}",
+  "mode": "value"
+ },
+ {
+  "fn": "List.RemoveRange",
+  "m": "List.RemoveRange({1, 2, 3}, 1)",
+  "expect": "{1,3}",
+  "mode": "value"
+ },
+ {
+  "fn": "List.ReplaceRange",
+  "m": "List.ReplaceRange({1, 2, 3, 4}, 1, 2, {9})",
+  "expect": "{1,9,4}",
+  "mode": "value"
+ },
+ {
+  "fn": "List.InsertRange",
+  "m": "List.InsertRange({1, 2, 3}, 1, {8, 9})",
+  "expect": "{1,8,9,2,3}",
+  "mode": "value"
+ },
+ {
+  "fn": "List.RemoveNulls",
+  "m": "List.RemoveNulls({1, null, 2})",
+  "expect": "{1,2}",
+  "mode": "value"
+ },
+ {
+  "fn": "List.Repeat",
+  "m": "List.Repeat({1, 2}, 2)",
+  "expect": "{1,2,1,2}",
+  "mode": "value"
+ },
+ {
+  "fn": "List.ReplaceMatchingItems",
+  "m": "List.ReplaceMatchingItems({1, 2, 3}, {{2, 20}})",
+  "expect": "{1,20,3}",
+  "mode": "value"
+ },
+ {
+  "fn": "List.ReplaceValue",
+  "m": "List.ReplaceValue({1, 2, 3, 2}, 2, 9, Replacer.ReplaceValue)",
+  "expect": "{1,9,3,9}",
+  "mode": "value"
+ },
+ {
+  "fn": "List.ReplaceValue",
+  "m": "List.ReplaceValue({\"abc\", \"xbz\"}, \"b\", \"-\", Replacer.ReplaceText)",
+  "expect": "{a-c,x-z}",
+  "mode": "value"
+ },
+ {
+  "fn": "List.Single",
+  "m": "List.Single({5})",
+  "expect": "5",
+  "mode": "value"
+ },
+ {
+  "fn": "List.SingleOrDefault",
+  "m": "List.SingleOrDefault({}, 7)",
+  "expect": "7",
+  "mode": "value"
+ },
+ {
+  "fn": "List.Split",
+  "m": "List.Count(List.Split({1, 2, 3, 4, 5}, 2))",
+  "expect": "3",
+  "mode": "value"
+ },
+ {
+  "fn": "List.Zip",
+  "m": "List.Count(List.Zip({{1, 2}, {3, 4}}))",
+  "expect": "2",
+  "mode": "value"
+ },
+ {
+  "fn": "List.Zip",
+  "m": "List.Sum(List.First(List.Zip({{1, 2}, {3, 4}})))",
+  "expect": "4",
+  "mode": "value"
+ },
+ {
+  "fn": "List.TransformMany",
+  "m": "List.TransformMany({1, 2}, each {_, _ * 10}, (x, y) => x + y)",
+  "expect": "{2,11,4,22}",
+  "mode": "value"
+ }
+]

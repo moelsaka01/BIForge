@@ -1,0 +1,250 @@
+[
+ {
+  "fn": "Number.BitwiseAnd",
+  "m": "Number.BitwiseAnd(12, 10)",
+  "expect": "8"
+ },
+ {
+  "fn": "Number.BitwiseOr",
+  "m": "Number.BitwiseOr(12, 10)",
+  "expect": "14"
+ },
+ {
+  "fn": "Number.BitwiseXor",
+  "m": "Number.BitwiseXor(12, 10)",
+  "expect": "6"
+ },
+ {
+  "fn": "Number.BitwiseNot",
+  "m": "Number.BitwiseNot(5)",
+  "expect": "-6"
+ },
+ {
+  "fn": "Number.BitwiseShiftLeft",
+  "m": "Number.BitwiseShiftLeft(1, 4)",
+  "expect": "16"
+ },
+ {
+  "fn": "Number.BitwiseShiftRight",
+  "m": "Number.BitwiseShiftRight(256, 4)",
+  "expect": "16"
+ },
+ {
+  "fn": "Number.Factorial",
+  "m": "Number.Factorial(5)",
+  "expect": "120"
+ },
+ {
+  "fn": "Number.Factorial",
+  "m": "Number.Factorial(0)",
+  "expect": "1"
+ },
+ {
+  "fn": "Number.Combinations",
+  "m": "Number.Combinations(5, 2)",
+  "expect": "10"
+ },
+ {
+  "fn": "Number.Permutations",
+  "m": "Number.Permutations(5, 2)",
+  "expect": "20"
+ },
+ {
+  "fn": "Number.Cosh",
+  "m": "Number.Cosh(0)",
+  "expect": "1"
+ },
+ {
+  "fn": "Number.Sinh",
+  "m": "Number.Sinh(0)",
+  "expect": "0"
+ },
+ {
+  "fn": "Number.Tanh",
+  "m": "Number.Tanh(0)",
+  "expect": "0"
+ },
+ {
+  "fn": "Number.Log",
+  "m": "Number.Log(100, 10)",
+  "expect": "2"
+ },
+ {
+  "fn": "Number.Log",
+  "m": "Number.Log(1)",
+  "expect": "0"
+ },
+ {
+  "fn": "Number.IsNaN",
+  "m": "Number.IsNaN(Number.NaN)",
+  "expect": "true"
+ },
+ {
+  "fn": "Number.IsNaN",
+  "m": "Number.IsNaN(1)",
+  "expect": "false"
+ },
+ {
+  "fn": "Number.NaN",
+  "m": "Number.IsNaN(Number.NaN)",
+  "expect": "true"
+ },
+ {
+  "fn": "Number.FromText",
+  "m": "Number.FromText(\"1,234.5\")",
+  "expect": "1234.5"
+ },
+ {
+  "fn": "Number.FromText",
+  "m": "Number.FromText(\" 42 \")",
+  "expect": "42"
+ },
+ {
+  "fn": "Number.PI",
+  "m": "Number.PI",
+  "expect": "3.141592653589793"
+ },
+ {
+  "fn": "Number.E",
+  "m": "Number.E",
+  "expect": "2.718281828459045"
+ },
+ {
+  "fn": "Number.Epsilon",
+  "m": "Number.Epsilon > 0 and Number.Epsilon < 0.000001",
+  "expect": "true"
+ },
+ {
+  "fn": "Number.PositiveInfinity",
+  "m": "Number.PositiveInfinity > 1000000000",
+  "expect": "true"
+ },
+ {
+  "fn": "Number.NegativeInfinity",
+  "m": "Number.NegativeInfinity < -1000000000",
+  "expect": "true"
+ },
+ {
+  "fn": "Number.Random",
+  "m": "Number.Random() >= 0 and Number.Random() < 1",
+  "expect": "true"
+ },
+ {
+  "fn": "Number.RandomBetween",
+  "m": "Number.RandomBetween(5, 5)",
+  "expect": "5"
+ },
+ {
+  "fn": "Number.RandomBetween",
+  "m": "Number.RandomBetween(1, 2) >= 1 and Number.RandomBetween(1, 2) <= 2",
+  "expect": "true"
+ },
+ {
+  "fn": "Logical.FromText",
+  "m": "Logical.FromText(\"TRUE\")",
+  "expect": "true"
+ },
+ {
+  "fn": "Logical.FromText",
+  "m": "Logical.FromText(\"false\")",
+  "expect": "false"
+ },
+ {
+  "fn": "Logical.ToText",
+  "m": "Logical.ToText(false)",
+  "expect": "false"
+ },
+ {
+  "fn": "Logical.ToText",
+  "m": "Logical.ToText(1 = 1)",
+  "expect": "true"
+ },
+ {
+  "fn": "Text.At",
+  "m": "Text.At(\"Hello\", 1)",
+  "expect": "e"
+ },
+ {
+  "fn": "Text.Insert",
+  "m": "Text.Insert(\"abc\", 1, \"X\")",
+  "expect": "aXbc"
+ },
+ {
+  "fn": "Text.Insert",
+  "m": "Text.Insert(\"abc\", 3, \"Z\")",
+  "expect": "abcZ"
+ },
+ {
+  "fn": "Text.PositionOfAny",
+  "m": "Text.PositionOfAny(\"hello world\", {\"o\", \"w\"})",
+  "expect": "4"
+ },
+ {
+  "fn": "Text.PositionOfAny",
+  "m": "Text.PositionOfAny(\"hello\", {\"x\", \"y\"})",
+  "expect": "-1"
+ },
+ {
+  "fn": "Text.Proper",
+  "m": "Text.Proper(\"the QUICK bROWN fOx\")",
+  "expect": "The Quick Brown Fox"
+ },
+ {
+  "fn": "Text.Remove",
+  "m": "Text.Remove(\"a,b;c\", {\",\", \";\"})",
+  "expect": "abc"
+ },
+ {
+  "fn": "Text.Remove",
+  "m": "Text.Remove(\"hello\", \"l\")",
+  "expect": "heo"
+ },
+ {
+  "fn": "Text.Select",
+  "m": "Text.Select(\"a1b2c3\", {\"1\", \"2\", \"3\"})",
+  "expect": "123"
+ },
+ {
+  "fn": "Text.RemoveRange",
+  "m": "Text.RemoveRange(\"abcdef\", 1, 2)",
+  "expect": "adef"
+ },
+ {
+  "fn": "Text.RemoveRange",
+  "m": "Text.RemoveRange(\"abcdef\", 4)",
+  "expect": "abcdf"
+ },
+ {
+  "fn": "Text.ReplaceRange",
+  "m": "Text.ReplaceRange(\"abcdef\", 1, 2, \"XYZ\")",
+  "expect": "aXYZdef"
+ },
+ {
+  "fn": "Text.Range",
+  "m": "Text.Range(\"Hello World\", 6)",
+  "expect": "World"
+ },
+ {
+  "fn": "Text.Range",
+  "m": "Text.Range(\"Hello World\", 0, 5)",
+  "expect": "Hello"
+ },
+ {
+  "fn": "Text.Split",
+  "m": "Text.Split(\"a,b,c\", \",\")",
+  "expect": "{a,b,c}",
+  "mode": "value"
+ },
+ {
+  "fn": "Text.SplitAny",
+  "m": "Text.SplitAny(\"a,b;c\", \",;\")",
+  "expect": "{a,b,c}",
+  "mode": "value"
+ },
+ {
+  "fn": "Text.ToList",
+  "m": "Text.ToList(\"abc\")",
+  "expect": "{a,b,c}",
+  "mode": "value"
+ }
+]

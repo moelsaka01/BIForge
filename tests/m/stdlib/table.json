@@ -1,0 +1,8 @@
+[
+ {
+  "fn": "Table.TransformColumnNames",
+  "m": "Table.ColumnNames(Table.TransformColumnNames(#table({\"a b\",\"C\"}, {{1, 2}}), Text.Upper))",
+  "expect": "{A B,C}",
+  "mode": "value"
+ }
+]

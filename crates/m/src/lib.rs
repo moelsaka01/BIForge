@@ -7,6 +7,8 @@ pub mod lexer;
 pub mod parser;
 pub mod run;
 pub mod stdlib;
+pub mod stdlib_ext;
+pub mod stdlib_list;
 pub mod steps;
 pub mod transforms;
 pub mod value;
