@@ -32,6 +32,25 @@ describe("recovery snapshot lifecycle", () => {
     expect(session.store.getSnapshot().isDirty).toBe(false);
   });
 
+  it("an autosave that was already scheduled does not bring the snapshot back after Don't save", async () => {
+    const { io, reg, session } = await setup();
+    await reg.execute("model.addTable", { name: "A" });
+    await vi.advanceTimersByTimeAsync(1500);
+    expect(io.recovery.has(ROOT)).toBe(true);
+    // a second edit schedules a debounced write; the user then closes without saving, before the timer fires
+    await reg.execute("model.addTable", { name: "B" });
+    await session.discardUnsavedForExit();
+    expect(io.recovery.has(ROOT)).toBe(false);
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(io.recovery.has(ROOT)).toBe(false);
+    // opening the project again later works as before
+    session.closeProject();
+    await session.openProject(`${ROOT}\\Retail.pbip`);
+    await reg.execute("model.addTable", { name: "C" });
+    await vi.advanceTimersByTimeAsync(1500);
+    expect(io.recovery.has(ROOT)).toBe(true);
+  });
+
   it("undoing every edit removes the snapshot, so the next open offers nothing", async () => {
     const { io, reg, session } = await setup();
     await reg.execute("model.addTable", { name: "A" });

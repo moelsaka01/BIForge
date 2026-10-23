@@ -408,15 +408,19 @@ export class Session {
   /** Writes the crash-recovery snapshot for the open project (used by autosave) and remembers that this run wrote it. */
   async writeRecovery(): Promise<void> {
     const root = this.snap.root;
-    if (!root || !this.store.project) return;
+    if (!root || !this.store.project || this.leavingWithoutSaving === rootKey(root)) return;
     await this.queueRecovery(async () => {
-      // re-check when this write's turn comes: the user may have saved or undone everything in the meantime
+      // re-check when this write's turn comes: the user may have saved or undone everything in the meantime, or chosen to
+      // leave without saving (a debounced autosave that was already scheduled must not bring the snapshot back)
       const project = this.store.project;
-      if (this.snap.root !== root || !project || !this.store.getSnapshot().isDirty) return;
+      if (this.snap.root !== root || !project || !this.store.getSnapshot().isDirty || this.leavingWithoutSaving === rootKey(root)) return;
       this.ownRecovery.add(rootKey(root));
       await this.io.writeRecovery(root, project);
     });
   }
+
+  /** Set when the user chose "Don't save": no recovery snapshot of this project is written any more (cleared when a project closes). */
+  private leavingWithoutSaving: string | null = null;
 
   private queueRecovery(task: () => Promise<void>): Promise<void> {
     const run = this.recoveryQueue.then(task);
@@ -445,6 +449,7 @@ export class Session {
   async discardUnsavedForExit(): Promise<void> {
     const root = this.snap.root;
     if (!root || this.snap.pendingRecovery) return;
+    this.leavingWithoutSaving = rootKey(root);
     await this.clearRecoveryOf(root);
   }
 
@@ -470,6 +475,7 @@ export class Session {
   }
 
   closeProject(): void {
+    this.leavingWithoutSaving = null;
     void this.stopCoEdit();
     this.store.close();
     this.set({ root: null, viewing: null, pendingRecovery: null, lastMessage: null, dataTables: [], dataEpoch: this.snap.dataEpoch + 1 });
