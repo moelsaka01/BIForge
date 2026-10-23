@@ -115,6 +115,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashArray",
    "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
@@ -162,8 +163,11 @@
    "labelPrecision",
    "optimizeLabelDisplay",
    "show",
+   "showBlankAs",
    "showSeries",
    "transparency",
+   "valueCustomFormatString",
+   "valueFormatString",
    "wordWrap"
   ],
   "layout": [
@@ -176,12 +180,15 @@
    "italic",
    "labelColor",
    "position",
-   "show"
+   "show",
+   "showTitle",
+   "titleText"
   ],
   "plotArea": [
    "color"
   ],
   "referenceLine": [
+   "dashArray",
    "dashCap",
    "dataLabelColor",
    "dataLabelDisplayUnits",
@@ -192,6 +199,10 @@
    "displayName",
    "lineColor",
    "position",
+   "shadeColor",
+   "shadeRegion",
+   "shadeShow",
+   "shadeTransparency",
    "show",
    "style",
    "transparency",
@@ -199,6 +210,7 @@
    "width"
   ],
   "trend": [
+   "dashArray",
    "dashCap",
    "displayName",
    "lineColor",
@@ -214,6 +226,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashArray",
    "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
@@ -237,6 +250,7 @@
    "titleText"
   ],
   "y1AxisReferenceLine": [
+   "dashArray",
    "dashCap",
    "dataLabelColor",
    "dataLabelDisplayUnits",
@@ -247,6 +261,10 @@
    "displayName",
    "lineColor",
    "position",
+   "shadeColor",
+   "shadeRegion",
+   "shadeShow",
+   "shadeTransparency",
    "show",
    "style",
    "transparency",
@@ -264,7 +282,10 @@
   ],
   "smallMultiplesLayout": [
    "backgroundColor",
-   "gridPadding"
+   "backgroundTransparency",
+   "columnCount",
+   "gridPadding",
+   "rowCount"
   ],
   "subheader": [
    "alignment",
@@ -284,6 +305,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashArray",
    "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
@@ -331,8 +353,11 @@
    "labelPrecision",
    "optimizeLabelDisplay",
    "show",
+   "showBlankAs",
    "showSeries",
    "transparency",
+   "valueCustomFormatString",
+   "valueFormatString",
    "wordWrap"
   ],
   "layout": [
@@ -345,12 +370,15 @@
    "italic",
    "labelColor",
    "position",
-   "show"
+   "show",
+   "showTitle",
+   "titleText"
   ],
   "plotArea": [
    "color"
   ],
   "referenceLine": [
+   "dashArray",
    "dashCap",
    "dataLabelColor",
    "dataLabelDisplayUnits",
@@ -361,6 +389,10 @@
    "displayName",
    "lineColor",
    "position",
+   "shadeColor",
+   "shadeRegion",
+   "shadeShow",
+   "shadeTransparency",
    "show",
    "style",
    "transparency",
@@ -368,6 +400,7 @@
    "width"
   ],
   "trend": [
+   "dashArray",
    "dashCap",
    "displayName",
    "lineColor",
@@ -383,6 +416,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashArray",
    "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
@@ -406,6 +440,7 @@
    "titleText"
   ],
   "y1AxisReferenceLine": [
+   "dashArray",
    "dashCap",
    "dataLabelColor",
    "dataLabelDisplayUnits",
@@ -416,6 +451,10 @@
    "displayName",
    "lineColor",
    "position",
+   "shadeColor",
+   "shadeRegion",
+   "shadeShow",
+   "shadeTransparency",
    "show",
    "style",
    "transparency",
@@ -433,7 +472,10 @@
   ],
   "smallMultiplesLayout": [
    "backgroundColor",
-   "gridPadding"
+   "backgroundTransparency",
+   "columnCount",
+   "gridPadding",
+   "rowCount"
   ],
   "subheader": [
    "alignment",
@@ -453,6 +495,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashArray",
    "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
@@ -500,8 +543,11 @@
    "labelPrecision",
    "optimizeLabelDisplay",
    "show",
+   "showBlankAs",
    "showSeries",
    "transparency",
+   "valueCustomFormatString",
+   "valueFormatString",
    "wordWrap"
   ],
   "legend": [
@@ -511,7 +557,9 @@
    "italic",
    "labelColor",
    "position",
-   "show"
+   "show",
+   "showTitle",
+   "titleText"
   ],
   "plotArea": [
    "color"
@@ -523,6 +571,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashArray",
    "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
@@ -546,6 +595,7 @@
    "titleText"
   ],
   "y1AxisReferenceLine": [
+   "dashArray",
    "dashCap",
    "dataLabelColor",
    "dataLabelDisplayUnits",
@@ -556,6 +606,10 @@
    "displayName",
    "lineColor",
    "position",
+   "shadeColor",
+   "shadeRegion",
+   "shadeShow",
+   "shadeTransparency",
    "show",
    "style",
    "transparency",
@@ -573,7 +627,10 @@
   ],
   "smallMultiplesLayout": [
    "backgroundColor",
-   "gridPadding"
+   "backgroundTransparency",
+   "columnCount",
+   "gridPadding",
+   "rowCount"
   ],
   "subheader": [
    "alignment",
@@ -593,6 +650,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashArray",
    "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
@@ -640,8 +698,11 @@
    "labelPrecision",
    "optimizeLabelDisplay",
    "show",
+   "showBlankAs",
    "showSeries",
    "transparency",
+   "valueCustomFormatString",
+   "valueFormatString",
    "wordWrap"
   ],
   "legend": [
@@ -651,7 +712,9 @@
    "italic",
    "labelColor",
    "position",
-   "show"
+   "show",
+   "showTitle",
+   "titleText"
   ],
   "plotArea": [
    "color"
@@ -663,6 +726,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashArray",
    "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
@@ -686,6 +750,7 @@
    "titleText"
   ],
   "y1AxisReferenceLine": [
+   "dashArray",
    "dashCap",
    "dataLabelColor",
    "dataLabelDisplayUnits",
@@ -696,6 +761,10 @@
    "displayName",
    "lineColor",
    "position",
+   "shadeColor",
+   "shadeRegion",
+   "shadeShow",
+   "shadeTransparency",
    "show",
    "style",
    "transparency",
@@ -713,7 +782,10 @@
   ],
   "smallMultiplesLayout": [
    "backgroundColor",
-   "gridPadding"
+   "backgroundTransparency",
+   "columnCount",
+   "gridPadding",
+   "rowCount"
   ],
   "subheader": [
    "alignment",
@@ -733,6 +805,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashArray",
    "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
@@ -789,7 +862,9 @@
    "italic",
    "labelColor",
    "position",
-   "show"
+   "show",
+   "showTitle",
+   "titleText"
   ],
   "plotArea": [
    "color"
@@ -801,6 +876,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashArray",
    "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
@@ -832,7 +908,10 @@
   ],
   "smallMultiplesLayout": [
    "backgroundColor",
-   "gridPadding"
+   "backgroundTransparency",
+   "columnCount",
+   "gridPadding",
+   "rowCount"
   ],
   "subheader": [
    "alignment",
@@ -852,6 +931,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashArray",
    "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
@@ -908,7 +988,9 @@
    "italic",
    "labelColor",
    "position",
-   "show"
+   "show",
+   "showTitle",
+   "titleText"
   ],
   "plotArea": [
    "color"
@@ -920,6 +1002,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashArray",
    "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
@@ -951,7 +1034,10 @@
   ],
   "smallMultiplesLayout": [
    "backgroundColor",
-   "gridPadding"
+   "backgroundTransparency",
+   "columnCount",
+   "gridPadding",
+   "rowCount"
   ],
   "subheader": [
    "alignment",
@@ -971,6 +1057,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashArray",
    "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
@@ -1009,8 +1096,11 @@
    "labelPrecision",
    "optimizeLabelDisplay",
    "show",
+   "showBlankAs",
    "showSeries",
-   "transparency"
+   "transparency",
+   "valueCustomFormatString",
+   "valueFormatString"
   ],
   "legend": [
    "bold",
@@ -1020,7 +1110,9 @@
    "labelColor",
    "legendMarkerRendering",
    "position",
-   "show"
+   "show",
+   "showTitle",
+   "titleText"
   ],
   "lineStyles": [
    "areaShow",
@@ -1035,6 +1127,7 @@
    "showMarker",
    "showMarkerByDefault",
    "strokeColor",
+   "strokeDashArray",
    "strokeDashCap",
    "strokeLineJoin",
    "strokeShow",
@@ -1054,6 +1147,7 @@
    "color"
   ],
   "referenceLine": [
+   "dashArray",
    "dashCap",
    "dataLabelColor",
    "dataLabelDisplayUnits",
@@ -1064,6 +1158,10 @@
    "displayName",
    "lineColor",
    "position",
+   "shadeColor",
+   "shadeRegion",
+   "shadeShow",
+   "shadeTransparency",
    "show",
    "style",
    "transparency",
@@ -1071,6 +1169,7 @@
    "width"
   ],
   "trend": [
+   "dashArray",
    "dashCap",
    "displayName",
    "lineColor",
@@ -1086,6 +1185,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashArray",
    "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
@@ -1109,6 +1209,7 @@
    "titleText"
   ],
   "y1AxisReferenceLine": [
+   "dashArray",
    "dashCap",
    "dataLabelColor",
    "dataLabelDisplayUnits",
@@ -1119,6 +1220,10 @@
    "displayName",
    "lineColor",
    "position",
+   "shadeColor",
+   "shadeRegion",
+   "shadeShow",
+   "shadeTransparency",
    "show",
    "style",
    "transparency",
@@ -1136,7 +1241,10 @@
   ],
   "smallMultiplesLayout": [
    "backgroundColor",
-   "gridPadding"
+   "backgroundTransparency",
+   "columnCount",
+   "gridPadding",
+   "rowCount"
   ],
   "subheader": [
    "alignment",
@@ -1156,6 +1264,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashArray",
    "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
@@ -1194,8 +1303,11 @@
    "labelPrecision",
    "optimizeLabelDisplay",
    "show",
+   "showBlankAs",
    "showSeries",
-   "transparency"
+   "transparency",
+   "valueCustomFormatString",
+   "valueFormatString"
   ],
   "legend": [
    "bold",
@@ -1205,7 +1317,9 @@
    "labelColor",
    "legendMarkerRendering",
    "position",
-   "show"
+   "show",
+   "showTitle",
+   "titleText"
   ],
   "lineStyles": [
    "interpolationSmooth",
@@ -1219,6 +1333,7 @@
    "showMarker",
    "showMarkerByDefault",
    "strokeColor",
+   "strokeDashArray",
    "strokeDashCap",
    "strokeLineJoin",
    "strokeShow",
@@ -1238,6 +1353,7 @@
    "color"
   ],
   "referenceLine": [
+   "dashArray",
    "dashCap",
    "dataLabelColor",
    "dataLabelDisplayUnits",
@@ -1248,6 +1364,10 @@
    "displayName",
    "lineColor",
    "position",
+   "shadeColor",
+   "shadeRegion",
+   "shadeShow",
+   "shadeTransparency",
    "show",
    "style",
    "transparency",
@@ -1255,6 +1375,7 @@
    "width"
   ],
   "trend": [
+   "dashArray",
    "dashCap",
    "displayName",
    "lineColor",
@@ -1270,6 +1391,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashArray",
    "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
@@ -1293,6 +1415,7 @@
    "titleText"
   ],
   "y1AxisReferenceLine": [
+   "dashArray",
    "dashCap",
    "dataLabelColor",
    "dataLabelDisplayUnits",
@@ -1303,6 +1426,10 @@
    "displayName",
    "lineColor",
    "position",
+   "shadeColor",
+   "shadeRegion",
+   "shadeShow",
+   "shadeTransparency",
    "show",
    "style",
    "transparency",
@@ -1320,7 +1447,10 @@
   ],
   "smallMultiplesLayout": [
    "backgroundColor",
-   "gridPadding"
+   "backgroundTransparency",
+   "columnCount",
+   "gridPadding",
+   "rowCount"
   ],
   "subheader": [
    "alignment",
@@ -1340,6 +1470,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashArray",
    "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
@@ -1378,8 +1509,11 @@
    "labelPrecision",
    "optimizeLabelDisplay",
    "show",
+   "showBlankAs",
    "showSeries",
-   "transparency"
+   "transparency",
+   "valueCustomFormatString",
+   "valueFormatString"
   ],
   "legend": [
    "bold",
@@ -1389,7 +1523,9 @@
    "labelColor",
    "legendMarkerRendering",
    "position",
-   "show"
+   "show",
+   "showTitle",
+   "titleText"
   ],
   "lineStyles": [
    "interpolationSmooth",
@@ -1403,6 +1539,7 @@
    "showMarker",
    "showMarkerByDefault",
    "strokeColor",
+   "strokeDashArray",
    "strokeDashCap",
    "strokeLineJoin",
    "strokeShow",
@@ -1428,6 +1565,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashArray",
    "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
@@ -1451,6 +1589,7 @@
    "titleText"
   ],
   "y1AxisReferenceLine": [
+   "dashArray",
    "dashCap",
    "dataLabelColor",
    "dataLabelDisplayUnits",
@@ -1461,6 +1600,10 @@
    "displayName",
    "lineColor",
    "position",
+   "shadeColor",
+   "shadeRegion",
+   "shadeShow",
+   "shadeTransparency",
    "show",
    "style",
    "transparency",
@@ -1478,7 +1621,10 @@
   ],
   "smallMultiplesLayout": [
    "backgroundColor",
-   "gridPadding"
+   "backgroundTransparency",
+   "columnCount",
+   "gridPadding",
+   "rowCount"
   ],
   "subheader": [
    "alignment",
@@ -1498,6 +1644,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashArray",
    "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
@@ -1545,7 +1692,9 @@
    "labelColor",
    "legendMarkerRendering",
    "position",
-   "show"
+   "show",
+   "showTitle",
+   "titleText"
   ],
   "lineStyles": [
    "interpolationSmooth",
@@ -1559,6 +1708,7 @@
    "showMarker",
    "showMarkerByDefault",
    "strokeColor",
+   "strokeDashArray",
    "strokeDashCap",
    "strokeLineJoin",
    "strokeShow",
@@ -1584,6 +1734,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashArray",
    "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
@@ -1615,7 +1766,10 @@
   ],
   "smallMultiplesLayout": [
    "backgroundColor",
-   "gridPadding"
+   "backgroundTransparency",
+   "columnCount",
+   "gridPadding",
+   "rowCount"
   ],
   "subheader": [
    "alignment",
@@ -1635,6 +1789,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashArray",
    "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
@@ -1665,7 +1820,9 @@
    "italic",
    "labelColor",
    "position",
-   "show"
+   "show",
+   "showTitle",
+   "titleText"
   ],
   "plotArea": [
    "color"
@@ -1677,6 +1834,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashArray",
    "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
@@ -1716,6 +1874,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashArray",
    "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
@@ -1761,8 +1920,11 @@
    "labelPrecision",
    "optimizeLabelDisplay",
    "show",
+   "showBlankAs",
    "showSeries",
-   "transparency"
+   "transparency",
+   "valueCustomFormatString",
+   "valueFormatString"
   ],
   "layout": [
    "clusteredGapSize"
@@ -1775,7 +1937,9 @@
    "labelColor",
    "legendMarkerRendering",
    "position",
-   "show"
+   "show",
+   "showTitle",
+   "titleText"
   ],
   "lineStyles": [
    "areaShow",
@@ -1789,6 +1953,7 @@
    "markerSize",
    "showMarker",
    "showMarkerByDefault",
+   "strokeDashArray",
    "strokeDashCap",
    "strokeLineJoin",
    "strokeShow",
@@ -1808,6 +1973,7 @@
    "color"
   ],
   "referenceLine": [
+   "dashArray",
    "dashCap",
    "dataLabelColor",
    "dataLabelDecimalPoints",
@@ -1819,6 +1985,10 @@
    "displayName",
    "lineColor",
    "position",
+   "shadeColor",
+   "shadeRegion",
+   "shadeShow",
+   "shadeTransparency",
    "show",
    "style",
    "transparency",
@@ -1826,6 +1996,7 @@
    "width"
   ],
   "trend": [
+   "dashArray",
    "dashCap",
    "displayName",
    "lineColor",
@@ -1841,6 +2012,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashArray",
    "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
@@ -1883,6 +2055,7 @@
    "titleText"
   ],
   "y1AxisReferenceLine": [
+   "dashArray",
    "dashCap",
    "dataLabelColor",
    "dataLabelDisplayUnits",
@@ -1893,6 +2066,10 @@
    "displayName",
    "lineColor",
    "position",
+   "shadeColor",
+   "shadeRegion",
+   "shadeShow",
+   "shadeTransparency",
    "show",
    "style",
    "transparency",
@@ -1943,7 +2120,9 @@
    "italic",
    "labelColor",
    "position",
-   "show"
+   "show",
+   "showTitle",
+   "titleText"
   ],
   "slices": [
    "startAngle"
@@ -1983,7 +2162,9 @@
    "italic",
    "labelColor",
    "position",
-   "show"
+   "show",
+   "showTitle",
+   "titleText"
   ],
   "slices": [
    "innerRadiusRatio",
@@ -2042,7 +2223,9 @@
    "italic",
    "labelColor",
    "position",
-   "show"
+   "show",
+   "showTitle",
+   "titleText"
   ]
  },
  "scatterChart": {
@@ -2057,6 +2240,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashArray",
    "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
@@ -2097,7 +2281,9 @@
    "italic",
    "labelColor",
    "position",
-   "show"
+   "show",
+   "showTitle",
+   "titleText"
   ],
   "markers": [
    "borderColor",
@@ -2117,6 +2303,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashArray",
    "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",
@@ -2174,7 +2361,9 @@
    "italic",
    "labelColor",
    "position",
-   "show"
+   "show",
+   "showTitle",
+   "titleText"
   ],
   "mapControls": [
    "autoZoom",
@@ -2263,7 +2452,9 @@
    "italic",
    "labelColor",
    "position",
-   "show"
+   "show",
+   "showTitle",
+   "titleText"
   ],
   "plotArea": [
    "color"
@@ -2280,6 +2471,7 @@
    "fontFamily",
    "fontSize",
    "gridlineColor",
+   "gridlineDashArray",
    "gridlineDashCap",
    "gridlineShow",
    "gridlineStyle",

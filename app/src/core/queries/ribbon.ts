@@ -20,7 +20,7 @@ export type RibbonAction =
   | { type: "transform"; build: (c: RibbonContext) => Transform }
   | { type: "dialog"; dialog: DialogKind }
   | { type: "command"; id: string; args?: unknown; argsFor?: (c: RibbonContext) => unknown }
-  | { type: "ui"; what: "advanced" | "dependencies" | "settings" | "formulaBar" | "refresh" | "close" | "quality" | "distribution" | "profile" }
+  | { type: "ui"; what: "advanced" | "dependencies" | "settings" | "formulaBar" | "refresh" | "close" | "quality" | "distribution" | "profile" | "examples" }
   | { type: "none" };
 
 export type Need = "none" | "table" | "column" | "columns" | "textColumn" | "numberColumn" | "parameter";
@@ -327,7 +327,16 @@ export const RIBBON: RibbonTab[] = [
               { id: "t.ext.between", label: "Text Between Delimiters", need: "textColumn", action: dlg("extractBetween") },
             ],
           },
-          todo("t.parse", "Parse", "textColumn"),
+          {
+            id: "t.parse",
+            label: "Parse",
+            need: "textColumn",
+            action: { type: "none" },
+            menu: [
+              { id: "t.parse.json", label: "JSON", need: "textColumn", action: dlg("parseJson") },
+              { id: "t.parse.xml", label: "XML", need: "textColumn", action: { type: "none" }, notImplemented: true },
+            ],
+          },
         ],
       },
       {
@@ -411,7 +420,7 @@ export const RIBBON: RibbonTab[] = [
         id: "general",
         label: "General",
         items: [
-          todo("a.examples", "Column From Examples", "none"),
+          { id: "a.examples", label: "Column From Examples", need: "table", action: { type: "ui", what: "examples" } },
           { id: "a.custom", label: "Custom Column", need: "table", action: dlg("custom") },
           todo("a.function", "Invoke Custom Function", "table"),
           { id: "a.conditional", label: "Conditional Column", need: "table", action: dlg("conditional") },

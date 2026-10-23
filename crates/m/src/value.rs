@@ -178,11 +178,13 @@ pub enum Value {
     Nav(Rc<NavSrc>),
     /// `Json.Document(File.Contents(path))`
     Json(String),
+    /// `Json.Document([Column])`: JSON text computed in SQL (the SQL of the text) and the path inside it (`$.a[0].b`).
+    JsonText(String, String),
 }
 
 impl Value {
     pub fn is_symbolic(&self) -> bool {
-        matches!(self, Value::Sql(_) | Value::ColList { .. } | Value::Row(_))
+        matches!(self, Value::Sql(_) | Value::ColList { .. } | Value::Row(_) | Value::JsonText(..))
     }
     pub fn type_name(&self) -> &'static str {
         match self {
@@ -200,7 +202,7 @@ impl Value {
             Value::Row(_) => "a table row",
             Value::Binary(_) => "binary",
             Value::Nav(_) => "table",
-            Value::Json(_) => "a JSON document",
+            Value::Json(_) | Value::JsonText(..) => "a JSON document",
         }
     }
 }

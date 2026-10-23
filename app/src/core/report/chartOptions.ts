@@ -868,8 +868,35 @@ function gauge(inp: ChartInput): ChartBuild {
 /** Builds the chart for the visual, or null when the visual is not an ECharts visual. */
 export function buildChart(inp: ChartInput): ChartBuild | null {
   const b = buildChartRaw(inp);
-  if (b) styleTooltip(b.option, new FormatReader(inp.visual.json, inp.theme, inp.visual.visualType));
+  if (b) {
+    const f = new FormatReader(inp.visual.json, inp.theme, inp.visual.visualType);
+    styleTooltip(b.option, f);
+    styleLegendTitle(b.option, f, inp.theme);
+  }
   return b;
+}
+
+/** The legend title (legend > Title): a text above or beside the entries; the legend and the plot area make room for it. */
+function styleLegendTitle(option: O, f: FormatReader, theme: Theme): void {
+  const legend = option.legend;
+  if (!legend || legend.show === false || !f.bool("legend", "showTitle", false)) return;
+  const pos = f.str("legend", "position", "Top");
+  const text = f.str("legend", "titleText", "") || "Legend";
+  const font = readFont(f, "legend", { color: "labelColor" });
+  const t: O = { text, textStyle: { ...echartsText(font, labelDefaults(theme)), fontWeight: "bold" }, itemGap: 0, padding: 0 };
+  const room = 18;
+  if (pos.startsWith("Bottom")) {
+    Object.assign(t, { bottom: 22, left: pos === "BottomCenter" ? "center" : pos === "BottomRight" ? undefined : 0, right: pos === "BottomRight" ? 0 : undefined });
+    if (option.grid) option.grid = { ...option.grid, bottom: (option.grid.bottom ?? 8) + room };
+  } else if (pos.startsWith("Left") || pos.startsWith("Right")) {
+    Object.assign(t, pos.startsWith("Left") ? { top: 0, left: 0 } : { top: 0, right: 0 });
+    legend.top = pos.endsWith("Center") ? "middle" : room;
+  } else {
+    Object.assign(t, { top: 0, left: pos === "TopCenter" ? "center" : pos === "TopRight" ? undefined : 0, right: pos === "TopRight" ? 0 : undefined });
+    legend.top = room;
+    if (option.grid) option.grid = { ...option.grid, top: (option.grid.top ?? 8) + room };
+  }
+  option.title = [...(Array.isArray(option.title) ? option.title : option.title ? [option.title] : []), t];
 }
 
 /** The look of the hover tooltip from the Tooltips card: colors, font, bold values, transparency, and the switch. */

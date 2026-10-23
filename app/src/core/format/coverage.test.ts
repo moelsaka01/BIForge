@@ -59,7 +59,8 @@ function testValues(prop: string, kind: Kind): Lit[] {
     case "c":
       return [lit.str("#123456")];
     case "s":
-      return [lit.str(/fontFamily/i.test(prop) ? "Courier New" : "Zz")];
+      // a dash pattern must be one to be read
+      return [lit.str(/fontFamily/i.test(prop) ? "Courier New" : /dashArray/i.test(prop) ? "4 2" : /FormatString/i.test(prop) ? "0.000" : "Zz")];
     case "f":
       return [lit.num(Math.min(kind[2], Math.max(kind[1], 20)))];
     case "n": {
@@ -112,6 +113,7 @@ const ENABLE: Record<string, Record<string, Lit>> = {
   subTotals: { rowSubtotals: lit.bool(true), columnSubtotals: lit.bool(true) },
   heatMap: { show: lit.bool(true) },
   zoom: { show: lit.bool(true) },
+  smallMultiplesLayout: { backgroundColor: lit.str("#eeeeee") },
 };
 
 /** Properties that only matter together with another one. */
@@ -119,6 +121,7 @@ const WITH: Record<string, Record<string, Record<string, Lit>>> = {
   valueAxis: { labelDisplayUnits: { labelPrecision: lit.num(2) } },
   labels: { labelDisplayUnits: { labelPrecision: lit.num(2) } },
   mapControls: { zoomLevel: { autoZoom: lit.bool(false) } },
+  smallMultiplesLayout: { columnCount: { layoutType: lit.str("custom") }, rowCount: { layoutType: lit.str("custom") } },
 };
 
 // ---- what to render, per visual type -------------------------------------------------------------------------
@@ -278,9 +281,9 @@ function measure(scenarioOf: Scenario, visualType: string, objects: string[]): R
     if (!props) continue;
     const instances: { selector?: string; extra: [string, Lit][] }[] =
       object === "y1AxisReferenceLine"
-        ? [{ selector: "id:constant", extra: [["show", lit.bool(true)], ["value", lit.num(25)]] }]
+        ? [{ selector: "id:constant", extra: [["show", lit.bool(true)], ["value", lit.num(25)], ["shadeShow", lit.bool(true)], ["shadeRegion", lit.str("before")], ["dataLabelShow", lit.bool(true)]] }]
         : object === "referenceLine"
-          ? [{ selector: "id:average", extra: [["show", lit.bool(true)], ["type", lit.str("Average")]] }]
+          ? [{ selector: "id:average", extra: [["show", lit.bool(true)], ["type", lit.str("Average")], ["shadeShow", lit.bool(true)], ["shadeRegion", lit.str("after")], ["dataLabelShow", lit.bool(true)]] }]
           : [{ extra: [] }];
     for (const inst of instances) {
       const prepare = (v: VisualModel, skip: string) => {

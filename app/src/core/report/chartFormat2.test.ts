@@ -189,3 +189,60 @@ describe("slice borders and pie labels", () => {
     expect(bikes).toMatchObject({ color: "transparent", borderColor: "rgba(0, 0, 255, 1)" });
   });
 });
+
+describe("legend title and label value formats", () => {
+  const withLegend = (v: VisualModel) => {
+    const w = visualOf("clusteredColumnChart", { Category: [Cat], Series: [column("Customer", "Country")], Y: [Qty] });
+    void w;
+    setFormat(v.json, "legend", "show", lit.bool(true));
+  };
+
+  it("the legend title is a text beside the entries and the plot area leaves room for it", () => {
+    const plain = build("clusteredColumnChart", withLegend);
+    const titled = build("clusteredColumnChart", (v) => {
+      withLegend(v);
+      setFormat(v.json, "legend", "showTitle", lit.bool(true));
+      setFormat(v.json, "legend", "titleText", lit.str("Country"));
+    });
+    expect(plain.title).toBeUndefined();
+    const t = (titled.title as { text: string; top: number }[]).find((x) => x.text === "Country")!;
+    expect(t.top).toBe(0);
+    expect(titled.legend.top).toBe(18);
+    expect(titled.grid.top).toBe(plain.grid.top + 18);
+    // bottom legends put it above the entries at the bottom
+    const bottom = build("clusteredColumnChart", (v) => {
+      withLegend(v);
+      setFormat(v.json, "legend", "position", lit.str("Bottom"));
+      setFormat(v.json, "legend", "showTitle", lit.bool(true));
+    });
+    expect((bottom.title as { text: string; bottom: number }[])[0]).toMatchObject({ text: "Legend", bottom: 22 });
+    expect(bottom.grid.bottom).toBeGreaterThan(plain.grid.bottom);
+  });
+
+  it("data labels use the value format string, and a blank value shows the chosen text", () => {
+    const label = (set: (v: VisualModel) => void) => {
+      const o = build("clusteredColumnChart", (v) => {
+        setFormat(v.json, "labels", "show", lit.bool(true));
+        set(v);
+      });
+      return o.series[0].label.formatter({ value: 1234.5, data: { raw: 1234.5, value: 1234.5 } }) as string;
+    };
+    expect(label(() => undefined)).toBe("1.2K");
+    expect(label((v) => setFormat(v.json, "labels", "valueCustomFormatString", lit.str("0.000")))).toBe("1234.500");
+    expect(label((v) => setFormat(v.json, "labels", "valueCustomFormatString", lit.str("#,0.0")))).toBe("1,234.5");
+    // display units chosen explicitly still apply on top of the format
+    expect(label((v) => {
+      setFormat(v.json, "labels", "valueCustomFormatString", lit.str("0.00"));
+      setFormat(v.json, "labels", "labelDisplayUnits", lit.num(1000));
+      setFormat(v.json, "labels", "labelPrecision", lit.num(2));
+    })).toBe("1.23K");
+  });
+
+  it("dash patterns written as text are read for gridlines, lines, reference lines and trends", () => {
+    const o = build("clusteredColumnChart", (v) => {
+      setFormat(v.json, "valueAxis", "gridlineShow", lit.bool(true));
+      setFormat(v.json, "valueAxis", "gridlineDashArray", lit.str("4 2"));
+    });
+    expect(([] as { splitLine: { lineStyle: { type: unknown } } }[]).concat(o.yAxis)[0].splitLine.lineStyle.type).toEqual([4, 2]);
+  });
+});

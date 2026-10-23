@@ -385,7 +385,11 @@ impl<'a> Ev<'a> {
                 let sql = self.be.source_sql(&SourceRequest::Parquet { path: p }).map_err(MError::source)?;
                 Value::Table(self.source_rel(&sql)?)
             }
-            "Json.Document" => Value::Json(self.bin_path(arg(a, 0, name)?)?),
+            "Json.Document" => match arg(a, 0, name)? {
+                // JSON text in a column: its fields are read in SQL
+                v if v.is_symbolic() => Value::JsonText(self.to_sql(v)?, "$".into()),
+                other => Value::Json(self.bin_path(other)?),
+            },
             "Excel.Workbook" => {
                 let path = self.bin_path(arg(a, 0, name)?)?;
                 let header = match a.get(1) {

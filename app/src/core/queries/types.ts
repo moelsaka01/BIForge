@@ -129,6 +129,7 @@ export type Transform =
   | { kind: "transpose" }
   | { kind: "removeAlternateRows"; offset: number; remove: number; keep: number }
   | { kind: "mergeColumns"; columns: string[]; delimiter: string; newName: string }
+  | { kind: "parseJson"; column: string; fields: string[] }
   | { kind: "countRows" }
   | { kind: "columnStatistic"; column: string; op: StatisticOp }
   | { kind: "rowStatistic"; columns: string[]; op: StatisticOp; newName: string }

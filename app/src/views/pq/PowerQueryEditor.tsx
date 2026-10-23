@@ -10,6 +10,7 @@ import { itemState, RIBBON, type RibbonContext, type RibbonItem } from "../../co
 import type { StepColumn } from "../../core/queries/types";
 import { Ribbon } from "./Ribbon";
 import { QueriesPane, StepsPane } from "./Panes";
+import { ExamplesDialog } from "./ExamplesDialog";
 import { parseParameter } from "../../core/queries/parameters";
 import { PreviewGrid, type HeaderMenuEntry } from "./PreviewGrid";
 import { ProfilePane } from "./ProfilePane";
@@ -56,6 +57,7 @@ export function PowerQueryEditor({ session, registry, factory = createMMonacoEdi
   const [dialog, setDialog] = useState<DialogState>(null);
   const [advanced, setAdvanced] = useState(false);
   const [deps, setDeps] = useState(false);
+  const [examplesOpen, setExamplesOpen] = useState(false);
   const [confirmClose, setConfirmClose] = useState(false);
   const [showSettings, setShowSettings] = useState(true);
   // Options > Power Query Editor > Display the formula bar sets the starting state
@@ -175,6 +177,7 @@ export function PowerQueryEditor({ session, registry, factory = createMMonacoEdi
     } else if (a.type === "ui") {
       if (a.what === "advanced") setAdvanced(true);
       else if (a.what === "dependencies") setDeps(true);
+      else if (a.what === "examples") setExamplesOpen(true);
       else if (a.what === "settings") setShowSettings((v) => !v);
       else if (a.what === "formulaBar") setShowFormula((v) => !v);
       else if (a.what === "quality") setShowQuality((v) => !v);
@@ -347,6 +350,18 @@ export function PowerQueryEditor({ session, registry, factory = createMMonacoEdi
             return err;
           }}
           onCancel={() => setAdvanced(false)}
+        />
+      )}
+      {examplesOpen && data.page && (
+        <ExamplesDialog
+          page={data.page}
+          columns={data.columns}
+          onCancel={() => setExamplesOpen(false)}
+          onDone={async (name, formula) => {
+            const err = await run("query.transform", { transform: { kind: "addCustomColumn", name, formula, valueType: "text" } });
+            if (!err) setExamplesOpen(false);
+            return err;
+          }}
         />
       )}
       {deps && <DependenciesView m={m} texts={texts} loaded={loadedSet} onClose={() => setDeps(false)} />}

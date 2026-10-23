@@ -166,3 +166,23 @@ fn detect_data_type_picks_the_type_every_value_converts_to() {
     let typed = e.m_detect_types(&qs(PEOPLE), "Q", None, &["Age".to_string()]).unwrap();
     assert_eq!(typed, [("Age".to_string(), "text".to_string())]);
 }
+
+#[test]
+fn parse_json_reads_fields_of_json_text_in_a_column() {
+    let e = Engine::in_memory().unwrap();
+    let base = r#"let
+    Source = #table({"Id","Doc"}, {{1,"{""name"":""Ann"",""age"":30,""address"":{""city"":""Rome""},""tags"":[""a"",""b""]}"},{2,"{""name"":""Bob""}"},{3,null}})
+in
+    Source"#;
+    let text = build(base, &[r#"{"kind":"parseJson","column":"Doc","fields":["name","address.city","age"]}"#]);
+    let page = e.m_preview(&qs(&text), "Q", None, 100).unwrap();
+    assert_eq!(page.columns.iter().map(|c| c.name.as_str()).collect::<Vec<_>>(), ["Id", "Doc", "Doc.name", "Doc.address.city", "Doc.age"]);
+    let r = rows(&e, &text);
+    assert_eq!(r[0].split('|').skip(2).collect::<Vec<_>>(), ["Ann", "Rome", "30"]);
+    assert_eq!(r[1].split('|').skip(2).collect::<Vec<_>>(), ["Bob", "~", "~"], "a missing field is null");
+    assert_eq!(r[2].split('|').skip(2).collect::<Vec<_>>(), ["~", "~", "~"], "null text parses to nulls");
+    // list items by index through M the user can write too
+    let custom = build(base, &[r#"{"kind":"addCustomColumn","name":"T","formula":"Json.Document([Doc])[tags]{1}"}"#]);
+    assert_eq!(rows(&e, &custom)[0].split('|').last().unwrap(), "b");
+    assert!(apply_transform(base, None, &tr(r#"{"kind":"parseJson","column":"Doc","fields":[]}"#)).is_err());
+}

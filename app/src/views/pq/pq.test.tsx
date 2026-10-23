@@ -88,7 +88,25 @@ describe("Power Query editor", () => {
     expect((dur as HTMLButtonElement).disabled).toBe(true);
     expect(dur.getAttribute("title")).toContain("Not implemented");
     fireEvent.click(screen.getByRole("tab", { name: "Add Column" }));
-    expect((screen.getByRole("button", { name: /Column From Examples/ }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: /Invoke Custom Function/ }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("Column From Examples suggests a formula from typed examples and adds it as a custom column", async () => {
+    const { m } = await setup();
+    fireEvent.click(screen.getByRole("tab", { name: "Add Column" }));
+    fireEvent.click(screen.getByRole("button", { name: /Column From Examples/ }));
+    const dlg = await screen.findByRole("dialog", { name: "Column From Examples", hidden: true });
+    expect((within(dlg).getByRole("button", { name: "OK" }) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.change(within(dlg).getByLabelText("Example for row 1"), { target: { value: "ANN" } });
+    await waitFor(() => expect(within(dlg).getByTestId("suggested-formula").textContent).toBe("= Text.Upper([Name])"));
+    expect(within(dlg).getByTestId("suggested-1").textContent).toBe("BOB");
+    fireEvent.change(within(dlg).getByLabelText("Example for row 2"), { target: { value: "x" } });
+    await waitFor(() => expect(within(dlg).getByTestId("suggested-formula").textContent).toContain("No formula"));
+    expect((within(dlg).getByRole("button", { name: "OK" }) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.change(within(dlg).getByLabelText("Example for row 2"), { target: { value: "" } });
+    await waitFor(() => expect((within(dlg).getByRole("button", { name: "OK" }) as HTMLButtonElement).disabled).toBe(false));
+    fireEvent.click(within(dlg).getByRole("button", { name: "OK" }));
+    await waitFor(() => expect(m.calls).toContain("transform:addCustomColumn:end"));
   });
 
   it("a step that returns one value (Count Rows) shows the value instead of a grid, and cannot be loaded", async () => {

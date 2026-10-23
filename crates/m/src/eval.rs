@@ -296,6 +296,8 @@ impl<'a> Ev<'a> {
             Value::Num(n) => fmt_num(*n),
             Value::Text(t) => ql(t),
             Value::Sql(s) => s.clone(),
+            // a value inside JSON text, as text (an object or a list stays JSON text); null when absent
+            Value::JsonText(text, path) => format!("json_extract_string({text}, {})", ql(path)),
             other => return Err(MError::expr(format!("A column expression cannot use {}.", other.type_name()))),
         })
     }
@@ -432,6 +434,10 @@ impl<'a> Ev<'a> {
                 }
                 self.column_list(rel, name)
             }
+            Value::JsonText(text, path) => {
+                let seg = if name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') { format!(".{name}") } else { format!(".\"{}\"", name.replace('"', "\\\"")) };
+                Ok(Value::JsonText(text.clone(), format!("{path}{seg}")))
+            }
             Value::Null if opt => Ok(Value::Null),
             other => Err(MError::expr(format!("Cannot select the field '{name}' of {}.", other.type_name()))),
         }
@@ -446,6 +452,10 @@ impl<'a> Ev<'a> {
                 _ => Err(MError::expr("A list item index must be a number.")),
             },
             Value::Nav(nav) => self.nav_item(&nav, &idx),
+            Value::JsonText(text, path) => match idx {
+                Value::Num(n) if n >= 0.0 => Ok(Value::JsonText(text, format!("{path}[{}]", n as u64))),
+                _ => Err(MError::expr("A JSON list item index must be a number.")),
+            },
             Value::Table(rel) => match idx {
                 Value::Num(n) if n >= 0.0 => self.table_row(&rel, n as usize, opt),
                 _ => Err(MError::unsupported("Only a row number is supported to select a row of a table.")),

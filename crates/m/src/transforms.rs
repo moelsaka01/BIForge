@@ -130,6 +130,8 @@ pub enum Transform {
     Round { columns: Vec<String>, digits: i64 },
     ReverseRows,
     Transpose,
+    /// Parse > JSON: one new column per field of the JSON text in `column` (a dotted path reaches nested fields).
+    ParseJson { column: String, fields: Vec<String> },
     /// Table.RowCount: the step returns one number.
     CountRows,
     /// One statistic of a column (sum, min, max, median, average, standardDeviation, count, countDistinct): a number.
@@ -472,6 +474,23 @@ impl Transform {
                 step("Rounded Off", format!("Table.TransformColumns({p}, {{{}}})", items.join(", ")))
             }
             ReverseRows => step("Reversed Rows", format!("Table.ReverseRows({p})")),
+            ParseJson { column, fields } => {
+                if fields.is_empty() {
+                    return Err("Name at least one field to read from the JSON.".into());
+                }
+                let mut out: Vec<NewStep> = Vec::new();
+                                for (i, f) in fields.iter().enumerate() {
+                    if f.trim().is_empty() {
+                        return Err("A field name cannot be empty.".into());
+                    }
+                    let path: String = f.trim().split('.').map(|seg| format!("[#\"{}\"]", seg.replace('"', "\"\""))).collect();
+                    let name = format!("{column}.{}", f.trim());
+                    let expr = format!("Table.AddColumn({}, {}, each Json.Document({}){path})", if i == 0 { p.clone() } else { "@PREV@".to_string() }, m_text(&name), field(column));
+                    let label = if i == 0 { "Parsed JSON".to_string() } else { format!("Parsed JSON{}", i) };
+                    out.extend(step(&label, expr));
+                }
+                out
+            }
             CountRows => step("Counted Rows", format!("Table.RowCount({p})")),
             ColumnStatistic { column, op } => {
                 let (func, label) = statistic(op)?;

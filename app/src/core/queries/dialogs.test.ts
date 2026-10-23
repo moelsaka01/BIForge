@@ -222,6 +222,8 @@ describe("ribbon", () => {
     expect(edit.fields.map((f) => ("default" in f ? f.default : undefined))).toEqual(["Top", "d", false, "WholeNumber", "any", "", "", "5"]);
     expect(() => dialogFor("editParameter", baseCtx)).toThrow("Select a parameter");
     expect(() => cmd("editParameter", { name: "Other", type: "WholeNumber", suggested: "any", current: "5" }, { parameter })).toThrow("Rename the parameter");
+    expect(transformOf(build("parseJson", { fields: "name\n address.city \n" }))).toEqual({ kind: "parseJson", column: "Name", fields: ["name", "address.city"] });
+    expect(() => build("parseJson", { fields: " " })).toThrow("at least one field");
     // groups
     expect(cmd("newGroup", { name: "Staging" }, { query: "Orders" })).toEqual({ command: "query.group.add", args: { name: "Staging", query: "Orders" } });
     expect(cmd("moveToGroup", { group: "Staging" }, { query: "Orders", groups: ["Staging"] })).toEqual({ command: "query.setGroup", args: { query: "Orders", group: "Staging" } });

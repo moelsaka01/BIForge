@@ -53,7 +53,7 @@ export type DialogKind =
   | "append" | "conditional" | "custom" | "chooseColumns" | "pivot" | "round" | "rename" | "newCsv" | "newExcel" | "newFolder"
   | "enterData" | "customStep" | "indexCustom" | "removeAlt" | "mergeColumns" | "extractFirst" | "extractLast" | "extractRange"
   | "extractBefore" | "extractAfter" | "extractBetween" | "replaceErrors" | "newParameter" | "editParameter"
-  | "newGroup" | "moveToGroup" | "renameGroup" | "deleteGroup";
+  | "parseJson" | "newGroup" | "moveToGroup" | "renameGroup" | "deleteGroup";
 
 const NUMERIC = /^(TINYINT|SMALLINT|INTEGER|BIGINT|HUGEINT|UTINYINT|USMALLINT|UINTEGER|UBIGINT|FLOAT|DOUBLE|DECIMAL)/i;
 
@@ -304,6 +304,23 @@ export function dialogFor(kind: DialogKind, c: DialogContext): DialogDef {
           if (list.length && !list.includes(def.current)) throw new Error("The current value must be one of the suggested values.");
           if (list.length && def.defaultValue && !list.includes(def.defaultValue)) throw new Error("The default value must be one of the suggested values.");
           return { command: "query.setParameter", args: { name, def } };
+        },
+      };
+    }
+    case "parseJson": {
+      const textCols = c.columns.filter((x) => valueTypeOf(x.duckdbType) === "text").map((x) => ({ value: x.name, label: x.name }));
+      if (!textCols.length) throw new Error("The table has no text column to parse.");
+      return {
+        title: "Parse JSON",
+        submitLabel: "OK",
+        fields: [
+          { kind: "select", key: "column", label: "Column with JSON text", options: textCols, default: c.selected.find((s) => textCols.some((t) => t.value === s)) ?? textCols[0].value },
+          { kind: "textarea", key: "fields", label: "Fields to read (one per line; address.city reaches a nested field)", rows: 5 },
+        ],
+        build: (v) => {
+          const fields = String(v.fields ?? "").split(/\r?\n/).map((x) => x.trim()).filter((x) => x !== "");
+          if (!fields.length) throw new Error("Name at least one field to read from the JSON.");
+          return { transform: { kind: "parseJson", column: String(v.column ?? ""), fields } };
         },
       };
     }

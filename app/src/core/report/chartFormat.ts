@@ -23,8 +23,13 @@ export const unitLabel = (u: DisplayUnits): string => UNIT_NAME[u] ?? "";
 
 /** A value as text with the card's display units and decimal places. */
 export function valueText(x: number | null, fmt: string | null, f: FormatReader, object = "labels", prefix = "", selector?: string): string {
-  if (x === null) return "";
-  const u = unitsOf(f, object, prefix ? `${prefix}LabelDisplayUnits` : "labelDisplayUnits", selector);
+  // "Show blank as": the text a missing value gets
+  if (x === null) return f.str(object, prefix ? `${prefix}ShowBlankAs` : "showBlankAs", "", selector);
+  // the format string of the values (valueFormatString, or the custom one) replaces the measure's own format
+  const own = f.str(object, "valueCustomFormatString", "", selector) || (f.str(object, "valueFormatString", "", selector).replace(/^(Auto|Custom)$/i, ""));
+  if (own && !prefix) fmt = own;
+  // a format string of the values means the number is written as that string unless display units are chosen too
+  const u = own && !prefix && !f.has(object, "labelDisplayUnits", selector) ? "none" : unitsOf(f, object, prefix ? `${prefix}LabelDisplayUnits` : "labelDisplayUnits", selector);
   const precKey = prefix ? `${prefix}LabelPrecision` : "labelPrecision";
   const dec = f.has(object, precKey, selector) ? f.num(object, precKey, 1, selector) : u === "none" ? 2 : 1;
   return fmt && u === "none" ? formatNumber(x, fmt) : formatCompact(x, u, dec, fmt);
