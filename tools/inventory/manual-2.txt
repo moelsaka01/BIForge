@@ -114,8 +114,8 @@ N | Select related tables
 N | Bulk edit of properties (multi-select)
 N | Hierarchies in cards
 N | Display folders in cards
-N | Calculation group cards
-N | Field parameter cards
+D | Calculation group cards
+D | Field parameter cards
 N | Context menus (Delete, Hide, Rename, Add to layout)
 N | Auto-create relationships
 N | Manage relationships dialog (grid, autodetect)
@@ -152,13 +152,13 @@ N | Compare local versus model
 D | Add / delete table
 D | Add / edit / delete measure (DAX text)
 N | Rename table / column / measure
-N | Calculated columns (create, edit, delete)
-N | Calculated tables (create, edit, delete)
+D | Calculated columns (create, edit, delete)
+D | Calculated tables (create, edit, delete)
 N | Data type of columns
-N | Format string (general, number, currency, percent, date) with decimals and units
+D | Format string (general, number, currency, percent, date) with decimals and units
 N | Summarize by (sum, average, count, min, max, none)
 N | Data categories
-N | Sort by column
+D | Sort by column
 N | Hide / unhide columns, measures, tables
 N | Display folders
 N | Descriptions
@@ -166,21 +166,21 @@ N | Synonyms (Q&A)
 N | Alternate keys
 N | Column from examples (Power Query)
 ### Hierarchies, groups, parameters
-N | Hierarchies (create, edit, levels)
+D | Hierarchies (create, edit, levels)
 N | Data groups (list and bin groups)
-N | What-if parameters
-N | Field parameters
-N | Calculation groups with precedence and format string expressions
-N | Quick measures (all calculation types)
+D | What-if parameters
+D | Field parameters
+D | Calculation groups with precedence and format string expressions
+D | Quick measures (all calculation types)
 N | Time intelligence (enhanced) preview
 ### Dates
 D | Mark as date table
-N | Auto date/time (hidden tables and hierarchies)
+D | Auto date/time (hidden tables and hierarchies)
 N | Date table created by DAX templates (CALENDAR, CALENDARAUTO)
 N | Date/time hierarchy in field list
 ### Security
-N | Row-level security: roles, table filter expressions
-N | View as roles (and as specific user)
+D | Row-level security: roles, table filter expressions
+D | View as roles (and as specific user)
 N | Object-level security (table/column)
 ### Relationships
 D | Create, edit cardinality, cross-filter direction, active/inactive, delete
@@ -196,7 +196,7 @@ N | Incremental refresh policy (local)
 N | Composite model storage modes (Import, DirectQuery, Dual)
 N | DirectQuery sources
 N | Model properties (culture, description)
-N | Calculated tables: column and table functions
+P | Calculated tables: column and table functions
 N | User-defined functions
 N | Query-reduction settings
 N | Display units and formatting for measures
@@ -228,10 +228,10 @@ D | Formula bar
 D | Preview grid with column menus
 D | Advanced Editor
 D | Query Dependencies view
-N | Query groups (folders)
+D | Query groups (folders)
 D | Column quality, distribution, profile
 N | Column profiling based on entire data set
-N | Parameters (manage)
+D | Parameters (manage)
 N | Data source settings
 N | Query properties dialog
 N | Enable load / Include in report refresh
@@ -253,7 +253,7 @@ D | New source (opens the import dialog)
 N | Recent sources
 D | Enter data
 N | Data source settings
-N | Manage parameters
+D | Manage parameters
 D | Refresh preview
 N | Properties
 D | Advanced editor
@@ -285,8 +285,8 @@ N | Convert to list
 N | Format: lowercase, UPPERCASE, Capitalize each word, Trim, Clean, Add prefix, Add suffix
 D | Merge columns
 D | Extract: length, first characters, last characters, range, text before/after/between delimiter
-N | Parse: JSON, XML
-N | Statistics: sum, min, max, median, average, count values, count distinct, standard deviation
+P | Parse: JSON, XML
+P | Statistics: sum, min, max, median, average, count values, count distinct, standard deviation
 N | Standard: add, multiply, subtract, divide, integer-divide, modulo, percentage, percent of
 N | Scientific: absolute, power, square root, exponent, logarithm, factorial, trig
 N | Rounding: round up, down, round
@@ -334,7 +334,7 @@ D | Evaluator folding to DuckDB SQL (symbolic scalars, CTE chains)
 N | Native query / Value.NativeQuery
 N | Custom functions over tables
 N | Privacy levels and formula firewall (local rules)
-N | Parameters as M values
+D | Parameters as M values
 ## 22. Get data: connectors (local; online services excluded)
 ### File
 D | Text/CSV

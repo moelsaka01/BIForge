@@ -56,7 +56,11 @@ Last updated: 2026-10-17, after the scope-change session was completed (see PROG
 | DAX | Row context, context transition (duplicate rows), EARLIER/EARLIEST, blank semantics, VAR/RETURN (lazy, table variables), measures (cycle detection), calculated columns (dependency order, cycles reported) | Done-tested (semantics.rs, value.rs unit tests). Calculated columns are computed in memory, not stored in DuckDB |
 | DAX | Query execution (EVALUATE, DEFINE MEASURE/VAR/TABLE, ORDER BY, START AT) | Done-tested (semantics.rs). DEFINE COLUMN and DEFINE FUNCTION report "not implemented" |
 | DAX | Functions implemented | Partial: 268 of the 317 catalog functions (APPROXIMATEDISTINCTCOUNT is registered but fails exactly like an imported model in Desktop, where it is DirectQuery only) (every category except the ones listed in the next row). Implemented names are listed by `biforge_dax::functions::implemented_names()`; a test checks each is in the catalog exactly once. Every other function reports "not implemented" at bind time (a warning in the editor) |
-| DAX | Not implemented (reported, never faked) | Window functions (INDEX, OFFSET, WINDOW, RANK, ROWNUMBER, ORDERBY, PARTITIONBY, MATCHBY), financial (XIRR, XNPV, FV, PV, PMT, NPER, RATE), parent-child (PATH*), LINEST/LINESTX, ROLLUP*/ADDMISSINGITEMS/TOPNSKIP/SAMPLE/DETAILROWS, ISINSCOPE/ISSUBTOTAL, calculation-group and user-identity functions (SELECTEDMEASURE*, USERNAME, ...), INFO.VIEW.*, COLUMNSTATISTICS, TOCSV/TOJSON, NAMEOF, LOOKUP, SUBSTITUTEWITHINDEX, EXTERNALMEASURE, DEFINE COLUMN/FUNCTION |
+| DAX | Not implemented (reported, never faked) | ROLLUP*/ADDMISSINGITEMS/TOPNSKIP/SAMPLE/DETAILROWS, ISSUBTOTAL, user-identity functions (USERNAME, ...), INFO.VIEW.*, TOJSON, LOOKUP, SUBSTITUTEWITHINDEX, EXTERNALMEASURE, DEFINE COLUMN/FUNCTION |
+| DAX | Window functions (INDEX, OFFSET, WINDOW, RANK, ROWNUMBER with ORDERBY / PARTITIONBY / MATCHBY), financial (FV, PV, PMT, NPER, RATE, XNPV, XIRR), parent-child (PATH, PATHITEM, PATHITEMREVERSE, PATHLENGTH, PATHCONTAINS), TOCSV, COLUMNSTATISTICS, LINEST/LINESTX, ISINSCOPE, SELECTEDMEASURE*, NAMEOF | **Partial: tested against hand-computed values only (crates/dax/tests/window.rs, extra_functions.rs), NOT recorded from Power BI Desktop** (Desktop was not running; tests/dax/cases/extra.json has pending cases without expected results). The `relation` argument of window functions is required; `blanks` and `reset` are not supported; the current row is found from the row context or from single-valued columns of the relation |
+| Modeling | Calculated columns and tables (New column / New table, edit, recalculate on refresh), editable column/table/measure properties (format, summarize by, sort by column, hidden, data category), hierarchies, quick measures, what-if parameters, field parameters (expanded in visuals), calculation groups (TMDL `calculationGroup`, SELECTEDMEASURE), security roles with View as roles, auto date/time, mark as date table | Done-tested (modeling.test.ts, modelDialogs.test.ts, modeling.ui.test.tsx, crates/dax calc_groups.rs, app dax.rs tests incl. view-as through a secured engine). Not done: perspectives, translations, aggregations, display folders beyond the property, calculation group precedence and format string expressions, data groups, a Table-view column tools ribbon. Behavior vs Desktop not compared |
+| Power Query | Count Rows, Statistics as single-value queries (preview and Apply), cell-level errors with Keep/Remove/Replace Errors, Detect Data Type, Keep Duplicates, Parse JSON, Column From Examples, parameters (manage, used as M values), query groups | Done-tested (crates/engine m_phase9.rs, parameters.test.ts, examples.test.ts, pq.test.tsx). Parse XML, Duration, function queries / Invoke Custom Function and Add Column Format/Extract are Not started; Statistics median is Not started |
+| Performance | 1M and 10M row fixtures, release benchmarks, lazy column loading, DAX aggregates and group-bys compiled to DuckDB SQL, per-filter-context cache | Done-tested (docs/PERFORMANCE.md; SQL path checked against the in-memory evaluator on all conformance and report cases). 1M slicer click 0.24 s, 10M 2.2 s. Remaining slow cases are listed there |
 | DAX | Aggregation tranche (AVERAGEA, MINA/MAXA, PRODUCT(X), APPROXIMATEDISTINCTCOUNT) | Done-tested (crates/dax/tests/tranche_agg_logic.rs). APPROXIMATEDISTINCTCOUNT counts exactly. Result types and the A-function rules were corrected from the recordings |
 | DAX | Logical and information tranche (IF.EAGER, IFERROR, SWITCH, BIT*, ISERROR, ISNUMBER/ISTEXT/ISNONTEXT/ISLOGICAL, ISEVEN/ISODD, CONTAINS*, LOOKUPVALUE, HASONEFILTER, USERCULTURE) | Done-tested (tranche_agg_logic.rs). LOOKUPVALUE only with search columns of the result column's table (other tables report not implemented); whether it ignores the filter context is an open question for the recorder |
 | DAX | Math tranche (51 functions: rounding, trig, logs, integer math, CURRENCY, CONVERT, RAND) | Done-tested (tranche_math.rs). BLANK counts as 0 and result types (Integer vs Number) are our reading; recorded cases pass |
@@ -144,24 +148,24 @@ Last updated: 2026-10-17, after the scope-change session was completed (see PROG
 | Start screen | 12 | 8 | 1 | 3 |
 | Title bar and window | 13 | 9 | 0 | 4 |
 | File menu and backstage | 20 | 10 | 1 | 9 |
-| Report view ribbon: Home tab | 19 | 11 | 1 | 7 |
+| Report view ribbon: Home tab | 19 | 12 | 1 | 6 |
 | Report view ribbon: Insert tab | 19 | 5 | 2 | 12 |
-| Report view ribbon: Modeling tab | 22 | 3 | 0 | 19 |
+| Report view ribbon: Modeling tab | 22 | 12 | 0 | 10 |
 | Report view ribbon: View tab | 19 | 9 | 1 | 9 |
 | Report view ribbon: Optimize tab | 4 | 2 | 0 | 2 |
 | Report view ribbon: Help tab | 5 | 1 | 0 | 4 |
 | Report view ribbon: External Tools tab | 2 | 0 | 0 | 2 |
-| Report view contextual tabs | 35 | 13 | 2 | 20 |
+| Report view contextual tabs | 35 | 17 | 2 | 16 |
 | Report canvas and page features | 53 | 25 | 2 | 26 |
 | Visuals | 76 | 38 | 0 | 38 |
 | Table view | 18 | 3 | 0 | 15 |
-| Model view | 23 | 3 | 2 | 18 |
+| Model view | 23 | 5 | 2 | 16 |
 | DAX query view | 15 | 2 | 0 | 13 |
 | TMDL view | 8 | 1 | 0 | 7 |
-| Modeling features | 48 | 6 | 0 | 42 |
+| Modeling features | 48 | 18 | 1 | 29 |
 | DAX language | 15 | 8 | 0 | 7 |
-| Power Query editor: window and ribbon | 94 | 36 | 2 | 56 |
-| M language | 12 | 2 | 0 | 10 |
+| Power Query editor: window and ribbon | 94 | 39 | 4 | 51 |
+| M language | 12 | 3 | 0 | 9 |
 | Get data: connectors | 47 | 25 | 16 | 6 |
 | Options dialog: Global | 61 | 4 | 2 | 55 |
 | Options dialog: Current File | 23 | 0 | 0 | 23 |
@@ -170,9 +174,9 @@ Last updated: 2026-10-17, after the scope-change session was completed (see PROG
 | Export, print and file formats | 15 | 2 | 0 | 13 |
 | Accessibility and platform | 12 | 1 | 1 | 10 |
 | Format pane cards per visual | 1264 | 256 | 309 | 699 |
-| DAX functions | 317 | 268 | 0 | 49 |
-| M standard library | 652 | 147 | 0 | 505 |
-| **Total** | **3008** | **916** | **342** | **1750** |
+| DAX functions | 317 | 297 | 0 | 20 |
+| M standard library | 652 | 148 | 0 | 504 |
+| **Total** | **3008** | **978** | **345** | **1685** |
 <!-- inventory-status:end -->
 
 ## Online track (Publish & Share; plan in docs/ONLINE_PLAN.md)

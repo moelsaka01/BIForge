@@ -403,3 +403,28 @@ BIForge uses the authorization-code flow with PKCE and a loopback redirect. The 
 1. Phase 9 remainder: Detect Data Type, Keep Duplicates, Parse, Column From Examples, Duration, parameters, query groups, function queries; scalar-result queries (Count Rows, Statistics).
 2. Format properties still "not drawn yet": legend title, label parts and number formats, small multiples layout, error bars, secondary axis on combo charts, x-axis reference lines, visual header buttons, `visualTooltip`, `visualLink`.
 3. You: rotate the secrets pasted in session 4; connect Google Drive and run `storage_live`; give the Cloudflare token.
+
+## 2026-10-23 (session 7): performance baseline, Phase 9 remainder, Phase 10, Phase 11 batch 1
+### Done
+- **Performance** (docs/PERFORMANCE.md): deterministic 1M/10M Sales fixtures (`tools/dax-fixtures/generate-large.mjs`), release benchmark (`crates/engine/examples/perf_bench.rs`). Lazy column loading, aggregates / iterators / whole group-bys compiled to DuckDB SQL, per-filter-context cache. 1M slicer click 0.24 s, 10M 2.2 s. Frontend bundle split (Monaco, ECharts maps, Power Query editor lazy); startup before/after in the file.
+- **Phase 9**: cell-level errors (hidden flag columns) with Keep/Remove/Replace Errors, Count Rows and Statistics as single-value queries, Detect Data Type, Keep Duplicates, Parse JSON, Column From Examples, parameters, query groups.
+- **Format**: legend title and data label value formats drawn.
+- **Phase 10**: calculated columns/tables, editable properties, hierarchies, quick measures, what-if and field parameters, calculation groups, roles + View as, auto date/time, mark as date table.
+- **Phase 11 batch 1**: window functions, financial, PATH*, TOCSV, COLUMNSTATISTICS, LINEST/LINESTX, ISINSCOPE.
+
+### What went wrong / limits (honest)
+- Power BI Desktop was not running, so **no Phase 11 conformance case was recorded**; `tests/dax/cases/extra.json` holds pending cases without expected results. Those functions are tested only against hand-computed values from public documentation.
+- The SQL path first ignored fact-table row filters (found by the SQL conformance run, fixed); View as first returned unrestricted totals because aggregates ran as SQL on the unsecured store (fixed: secured engines have no SQL executor).
+- `modeling.ui.test.tsx` "View as" timed out once in the full vitest run (passes alone, 8/8); likely load-related, not investigated further.
+- **No new real-window e2e flow was written for the Phase 9/10 features** (unit and jsdom UI tests only). Not requested items: Table-view column tools.
+- CI result for the final push and the v0.1.1 release were not checked/done in this session.
+
+### Numbers
+- **Inventory: 978 Done-tested / 345 Partial / 1685 Not started of 3008** (last: 916 / 342 / 1750).
+- Rust workspace passes; frontend 921 passed, 1 flaky timeout (above), 1 skipped.
+
+### Next steps
+1. Check CI on the last push; if green, tag v0.1.1 through release-app.yml with honest notes (hand-computed Phase 11 semantics, no e2e for Phase 9/10).
+2. When Desktop is open: record `tests/dax/cases/extra.json` expected results and fix differences.
+3. One real-window e2e flow (app/e2e, rebuild the exe first) covering calculated column, hierarchy, View as, a parameter and Keep Errors.
+4. Remaining: Parse XML, Duration, function queries; perspectives, translations, aggregations, DEFINE COLUMN/FUNCTION; ROLLUP family, ISSUBTOTAL, TOPNSKIP, SAMPLE, INFO.VIEW.*, TOJSON; format: error bars, secondary y-axis, x-axis reference lines, small-multiples layout.

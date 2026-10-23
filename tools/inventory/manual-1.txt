@@ -74,7 +74,7 @@ D | Text box
 N | More visuals (from file)
 ### Calculations
 D | New measure
-N | Quick measure
+D | Quick measure
 ## 5. Report view ribbon: Insert tab
 ### Pages
 D | New page
@@ -103,25 +103,25 @@ N | Bookmark navigator
 D | Manage relationships
 ### Calculations
 D | New measure
-N | Quick measure
-N | New column
-N | New table
-N | New calculation group
+D | Quick measure
+D | New column
+D | New table
+D | New calculation group
 N | New visual calculation
 ### What-if
-N | New parameter
+D | New parameter
 ### Sort
-N | Sort by column
+D | Sort by column
 ### Formatting
 N | Data type
 N | Format menu
 N | Currency, Percent, Comma, Auto decimal places
 N | Summarization
-N | Data category
+D | Data category
 N | Data groups (group, bin)
 ### Security
-N | Manage roles
-N | View as roles
+D | Manage roles
+D | View as roles
 ### Q&A
 N | Linguistic schema import/export
 N | Q&A language
@@ -196,11 +196,11 @@ P | Text box font, size, bold, italic, underline, color, alignment, bullets, lin
 D | Image scaling and fit
 ### Table tools (Table view)
 D | Mark as date table
-N | New column
-N | New table
+D | New column
+D | New table
 D | New measure
-N | Sort by column
-N | Data category
+D | Sort by column
+D | Data category
 N | Properties group (name, home table, data type, format)
 ### Column tools
 N | Name, data type, format, summarization, data category, sort by column
