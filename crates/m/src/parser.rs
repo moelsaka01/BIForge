@@ -235,6 +235,11 @@ impl<'a> Parser<'a> {
                 self.bump();
                 Ok(TypeExpr::Named("null".into()))
             }
+            // `type [a = number, ...]`: a record type written without the word record
+            Tok::Punct("[") => {
+                let (fields, open) = self.type_fields()?;
+                Ok(TypeExpr::Record { fields, open })
+            }
             Tok::Punct("{") => {
                 self.bump();
                 let t = self.type_expr()?;

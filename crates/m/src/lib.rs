@@ -10,6 +10,7 @@ pub mod stdlib;
 pub mod stdlib_date;
 pub mod stdlib_ext;
 pub mod stdlib_list;
+pub mod stdlib_misc;
 pub mod stdlib_rec;
 pub mod steps;
 pub mod transforms;

@@ -1,0 +1,338 @@
+[
+ {
+  "fn": "Int8.From",
+  "m": "Int8.From(5.6)",
+  "expect": "6",
+  "mode": "cell"
+ },
+ {
+  "fn": "Int8.From",
+  "m": "Int8.From(-2.5)",
+  "expect": "-3",
+  "mode": "cell"
+ },
+ {
+  "fn": "Int16.From",
+  "m": "Int16.From(1000.4)",
+  "expect": "1000",
+  "mode": "cell"
+ },
+ {
+  "fn": "Int32.From",
+  "m": "Int32.From(\"7\")",
+  "expect": "7",
+  "mode": "cell"
+ },
+ {
+  "fn": "Double.From",
+  "m": "Double.From(\"1.5\")",
+  "expect": "1.5",
+  "mode": "cell"
+ },
+ {
+  "fn": "Single.From",
+  "m": "Single.From(1.5)",
+  "expect": "1.5",
+  "mode": "cell"
+ },
+ {
+  "fn": "Decimal.From",
+  "m": "Decimal.From(\"2.25\")",
+  "expect": "2.25",
+  "mode": "cell"
+ },
+ {
+  "fn": "Currency.From",
+  "m": "Currency.From(1.23456)",
+  "expect": "1.2346",
+  "mode": "cell"
+ },
+ {
+  "fn": "Percentage.From",
+  "m": "Percentage.From(\"50%\")",
+  "expect": "0.5",
+  "mode": "value"
+ },
+ {
+  "fn": "Percentage.From",
+  "m": "Percentage.From(0.25)",
+  "expect": "0.25",
+  "mode": "cell"
+ },
+ {
+  "fn": "Guid.From",
+  "m": "Guid.From(\"B43D2F12-0000-4A9B-9B6E-E8F8E8F8E8F8\")",
+  "expect": "b43d2f12-0000-4a9b-9b6e-e8f8e8f8e8f8",
+  "mode": "value"
+ },
+ {
+  "fn": "Guid.From",
+  "m": "Guid.From(\"{B43D2F120000-4A9B-9B6E-E8F8E8F8E8F8}\")",
+  "expect": "b43d2f12-0000-4a9b-9b6e-e8f8e8f8e8f8",
+  "mode": "value"
+ },
+ {
+  "fn": "Text.NewGuid",
+  "m": "Text.Length(Text.NewGuid()) = 36",
+  "expect": "true",
+  "mode": "cell"
+ },
+ {
+  "fn": "Text.Format",
+  "m": "Text.Format(\"#{0} is #{1}\", {\"a\", 2})",
+  "expect": "a is 2",
+  "mode": "value"
+ },
+ {
+  "fn": "Text.Format",
+  "m": "Text.Format(\"Hi #{name}!\", [name = \"Bo\"])",
+  "expect": "Hi Bo!",
+  "mode": "value"
+ },
+ {
+  "fn": "Uri.EscapeDataString",
+  "m": "Uri.EscapeDataString(\"a b&c/\u00e9\")",
+  "expect": "a%20b%26c%2F%C3%A9",
+  "mode": "value"
+ },
+ {
+  "fn": "Uri.BuildQueryString",
+  "m": "Uri.BuildQueryString([a = 1, b = \"x y\"])",
+  "expect": "a=1&b=x%20y",
+  "mode": "value"
+ },
+ {
+  "fn": "Uri.Combine",
+  "m": "Uri.Combine(\"http://a.com/b/\", \"c\")",
+  "expect": "http://a.com/b/c",
+  "mode": "value"
+ },
+ {
+  "fn": "Uri.Combine",
+  "m": "Uri.Combine(\"http://a.com/b\", \"c\")",
+  "expect": "http://a.com/c",
+  "mode": "value"
+ },
+ {
+  "fn": "Uri.Combine",
+  "m": "Uri.Combine(\"http://a.com/b/c\", \"/x\")",
+  "expect": "http://a.com/x",
+  "mode": "value"
+ },
+ {
+  "fn": "Uri.Parts",
+  "m": "Uri.Parts(\"https://u:p@a.com:8080/p/q?x=1&y=a%20b#f\")[Host]",
+  "expect": "a.com",
+  "mode": "value"
+ },
+ {
+  "fn": "Uri.Parts",
+  "m": "Uri.Parts(\"https://u:p@a.com:8080/p/q?x=1&y=a%20b#f\")[Port]",
+  "expect": "8080",
+  "mode": "value"
+ },
+ {
+  "fn": "Uri.Parts",
+  "m": "Uri.Parts(\"https://u:p@a.com:8080/p/q?x=1&y=a%20b#f\")[Path]",
+  "expect": "/p/q",
+  "mode": "value"
+ },
+ {
+  "fn": "Uri.Parts",
+  "m": "Uri.Parts(\"https://u:p@a.com:8080/p/q?x=1&y=a%20b#f\")[UserName]",
+  "expect": "u",
+  "mode": "value"
+ },
+ {
+  "fn": "Uri.Parts",
+  "m": "Uri.Parts(\"https://u:p@a.com:8080/p/q?x=1&y=a%20b#f\")[Fragment]",
+  "expect": "f",
+  "mode": "value"
+ },
+ {
+  "fn": "Uri.Parts",
+  "m": "Uri.Parts(\"https://u:p@a.com:8080/p/q?x=1&y=a%20b#f\")[Query][y]",
+  "expect": "a b",
+  "mode": "value"
+ },
+ {
+  "fn": "Uri.Parts",
+  "m": "Uri.Parts(\"https://a.com/x\")[Port]",
+  "expect": "443",
+  "mode": "value"
+ },
+ {
+  "fn": "Uri.FromParts",
+  "m": "Uri.FromParts(Uri.Parts(\"https://a.com/x?y=1\"))",
+  "expect": "https://a.com/x?y=1",
+  "mode": "value"
+ },
+ {
+  "fn": "Uri.FromParts",
+  "m": "Uri.FromParts(Uri.Parts(\"https://u:p@a.com:8080/p/q?x=1&y=a%20b#f\"))",
+  "expect": "https://u:p@a.com:8080/p/q?x=1&y=a%20b#f",
+  "mode": "value"
+ },
+ {
+  "fn": "Function.Invoke",
+  "m": "Function.Invoke((a, b) => a * b, {6, 7})",
+  "expect": "42",
+  "mode": "value"
+ },
+ {
+  "fn": "Function.IsDataSource",
+  "m": "Function.IsDataSource((x) => x)",
+  "expect": "false",
+  "mode": "value"
+ },
+ {
+  "fn": "Expression.Constant",
+  "m": "Expression.Constant(\"a\"\"b\")",
+  "expect": "\"a\"\"b\"",
+  "mode": "value"
+ },
+ {
+  "fn": "Expression.Constant",
+  "m": "Expression.Constant(1.5)",
+  "expect": "1.5",
+  "mode": "value"
+ },
+ {
+  "fn": "Expression.Constant",
+  "m": "Expression.Constant({1, 2})",
+  "expect": "{1, 2}",
+  "mode": "value"
+ },
+ {
+  "fn": "Expression.Constant",
+  "m": "Expression.Constant([a = 1])",
+  "expect": "[a = 1]",
+  "mode": "value"
+ },
+ {
+  "fn": "Expression.Identifier",
+  "m": "Expression.Identifier(\"x\")",
+  "expect": "x",
+  "mode": "value"
+ },
+ {
+  "fn": "Expression.Identifier",
+  "m": "Expression.Identifier(\"a b\")",
+  "expect": "#\"a b\"",
+  "mode": "value"
+ },
+ {
+  "fn": "Expression.Evaluate",
+  "m": "Expression.Evaluate(\"1 + 2\")",
+  "expect": "3",
+  "mode": "value"
+ },
+ {
+  "fn": "Expression.Evaluate",
+  "m": "Expression.Evaluate(\"x * 2\", [x = 21])",
+  "expect": "42",
+  "mode": "value"
+ },
+ {
+  "fn": "Expression.Evaluate",
+  "m": "Expression.Evaluate(\"List.Sum({1, 2, 3})\")",
+  "expect": "6",
+  "mode": "value"
+ },
+ {
+  "fn": "Diagnostics.ValueToText",
+  "m": "Diagnostics.ValueToText({1, \"a\"})",
+  "expect": "{1, \"a\"}",
+  "mode": "value"
+ },
+ {
+  "fn": "Type.Is",
+  "m": "Type.Is(type number, type any)",
+  "expect": "true",
+  "mode": "value"
+ },
+ {
+  "fn": "Type.Is",
+  "m": "Type.Is(type text, type number)",
+  "expect": "false",
+  "mode": "value"
+ },
+ {
+  "fn": "Type.Is",
+  "m": "Type.Is(Int64.Type, type number)",
+  "expect": "true",
+  "mode": "value"
+ },
+ {
+  "fn": "Type.Is",
+  "m": "Type.Is(type number, type nullable number)",
+  "expect": "true",
+  "mode": "value"
+ },
+ {
+  "fn": "Type.Is",
+  "m": "Type.Is(type nullable number, type number)",
+  "expect": "false",
+  "mode": "value"
+ },
+ {
+  "fn": "Type.Is",
+  "m": "Type.Is(type {number}, type {any})",
+  "expect": "true",
+  "mode": "value"
+ },
+ {
+  "fn": "Type.IsNullable",
+  "m": "Type.IsNullable(type nullable number)",
+  "expect": "true",
+  "mode": "value"
+ },
+ {
+  "fn": "Type.IsNullable",
+  "m": "Type.IsNullable(type number)",
+  "expect": "false",
+  "mode": "value"
+ },
+ {
+  "fn": "Type.NonNullable",
+  "m": "Type.IsNullable(Type.NonNullable(type nullable number))",
+  "expect": "false",
+  "mode": "value"
+ },
+ {
+  "fn": "Type.ListItem",
+  "m": "Type.Is(Type.ListItem(type {text}), type text)",
+  "expect": "true",
+  "mode": "value"
+ },
+ {
+  "fn": "Type.TableColumn",
+  "m": "Type.Is(Type.TableColumn(type table [a = number, b = text], \"b\"), type text)",
+  "expect": "true",
+  "mode": "value"
+ },
+ {
+  "fn": "Type.OpenRecord",
+  "m": "Type.IsOpenRecord(Type.OpenRecord(type [a = number]))",
+  "expect": "true",
+  "mode": "value"
+ },
+ {
+  "fn": "Type.ClosedRecord",
+  "m": "Type.IsOpenRecord(Type.ClosedRecord(type [a = number, ...]))",
+  "expect": "false",
+  "mode": "value"
+ },
+ {
+  "fn": "Type.IsOpenRecord",
+  "m": "Type.IsOpenRecord(type [a = number, ...])",
+  "expect": "true",
+  "mode": "value"
+ },
+ {
+  "fn": "Diagnostics.Trace",
+  "m": "Diagnostics.Trace(0, \"note\", 5)",
+  "expect": "5",
+  "mode": "value"
+ }
+]
