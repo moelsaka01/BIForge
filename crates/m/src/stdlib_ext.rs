@@ -67,7 +67,7 @@ fn class(chars: &[char]) -> String {
 /// Every function added in the stdlib_*.rs modules.
 pub fn all_names() -> &'static [&'static str] {
     static ALL: std::sync::OnceLock<Vec<&'static str>> = std::sync::OnceLock::new();
-    ALL.get_or_init(|| EXT_FNS.iter().chain(crate::stdlib_list::LIST_FNS.iter()).copied().collect())
+    ALL.get_or_init(|| EXT_FNS.iter().chain(crate::stdlib_list::LIST_FNS.iter()).chain(crate::stdlib_date::DATE_FNS.iter()).chain(crate::stdlib_rec::REC_FNS.iter()).copied().collect())
 }
 
 pub fn is_ext(name: &str) -> bool {
@@ -79,6 +79,8 @@ pub fn call(ev: &Ev, name: &str, a: &[Value]) -> Option<R<Value>> {
         return Some(dispatch(ev, name, a));
     }
     crate::stdlib_list::call(ev, name, a)
+        .or_else(|| crate::stdlib_date::call(ev, name, a))
+        .or_else(|| crate::stdlib_rec::call(ev, name, a))
 }
 
 fn dispatch(ev: &Ev, name: &str, a: &[Value]) -> R<Value> {

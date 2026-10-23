@@ -1,0 +1,164 @@
+[
+ {
+  "fn": "Record.AddField",
+  "m": "Record.AddField([a = 1], \"b\", 2)",
+  "expect": "[a: 1,b: 2]",
+  "mode": "value"
+ },
+ {
+  "fn": "Record.Combine",
+  "m": "Record.Combine({[a = 1, b = 2], [b = 3, c = 4]})",
+  "expect": "[a: 1,b: 3,c: 4]",
+  "mode": "value"
+ },
+ {
+  "fn": "Record.FieldCount",
+  "m": "Record.FieldCount([a = 1, b = 2])",
+  "expect": "2",
+  "mode": "value"
+ },
+ {
+  "fn": "Record.FieldOrDefault",
+  "m": "Record.FieldOrDefault([a = 1], \"z\", 9)",
+  "expect": "9",
+  "mode": "value"
+ },
+ {
+  "fn": "Record.FieldOrDefault",
+  "m": "Record.FieldOrDefault([a = 1], \"a\", 9)",
+  "expect": "1",
+  "mode": "value"
+ },
+ {
+  "fn": "Record.FieldValues",
+  "m": "Record.FieldValues([a = 1, b = 2])",
+  "expect": "{1,2}",
+  "mode": "value"
+ },
+ {
+  "fn": "Record.ToList",
+  "m": "Record.ToList([a = 1, b = 2])",
+  "expect": "{1,2}",
+  "mode": "value"
+ },
+ {
+  "fn": "Record.FromList",
+  "m": "Record.FromList({1, 2}, {\"a\", \"b\"})",
+  "expect": "[a: 1,b: 2]",
+  "mode": "value"
+ },
+ {
+  "fn": "Record.HasFields",
+  "m": "Record.HasFields([a = 1, b = 2], {\"a\", \"b\"})",
+  "expect": "true",
+  "mode": "value"
+ },
+ {
+  "fn": "Record.HasFields",
+  "m": "Record.HasFields([a = 1, b = 2], {\"c\"})",
+  "expect": "false",
+  "mode": "value"
+ },
+ {
+  "fn": "Record.RemoveFields",
+  "m": "Record.RemoveFields([a = 1, b = 2, c = 3], \"b\")",
+  "expect": "[a: 1,c: 3]",
+  "mode": "value"
+ },
+ {
+  "fn": "Record.SelectFields",
+  "m": "Record.SelectFields([a = 1, b = 2, c = 3], {\"c\", \"a\"})",
+  "expect": "[c: 3,a: 1]",
+  "mode": "value"
+ },
+ {
+  "fn": "Record.ReorderFields",
+  "m": "Record.ReorderFields([a = 1, b = 2, c = 3], {\"c\", \"a\"})",
+  "expect": "[c: 3,a: 1,b: 2]",
+  "mode": "value"
+ },
+ {
+  "fn": "Record.RenameFields",
+  "m": "Record.RenameFields([a = 1, b = 2], {{\"a\", \"x\"}})",
+  "expect": "[x: 1,b: 2]",
+  "mode": "value"
+ },
+ {
+  "fn": "Record.TransformFields",
+  "m": "Record.TransformFields([a = 1, b = 2], {\"a\", each _ + 10})",
+  "expect": "[a: 11,b: 2]",
+  "mode": "value"
+ },
+ {
+  "fn": "Value.Add",
+  "m": "Value.Add(1, 2)",
+  "expect": "3",
+  "mode": "value"
+ },
+ {
+  "fn": "Value.Subtract",
+  "m": "Value.Subtract(5, 2)",
+  "expect": "3",
+  "mode": "value"
+ },
+ {
+  "fn": "Value.Multiply",
+  "m": "Value.Multiply(3, 4)",
+  "expect": "12",
+  "mode": "value"
+ },
+ {
+  "fn": "Value.Divide",
+  "m": "Value.Divide(10, 4)",
+  "expect": "2.5",
+  "mode": "value"
+ },
+ {
+  "fn": "Value.Equals",
+  "m": "Value.Equals(1, 1)",
+  "expect": "true",
+  "mode": "value"
+ },
+ {
+  "fn": "Value.Equals",
+  "m": "Value.Equals(\"a\", \"b\")",
+  "expect": "false",
+  "mode": "value"
+ },
+ {
+  "fn": "Value.Compare",
+  "m": "Value.Compare(1, 2)",
+  "expect": "-1",
+  "mode": "value"
+ },
+ {
+  "fn": "Value.Compare",
+  "m": "Value.Compare(\"b\", \"a\")",
+  "expect": "1",
+  "mode": "value"
+ },
+ {
+  "fn": "Value.Compare",
+  "m": "Value.Compare(2, 2)",
+  "expect": "0",
+  "mode": "value"
+ },
+ {
+  "fn": "Value.Is",
+  "m": "Value.Is(1, type number)",
+  "expect": "true",
+  "mode": "value"
+ },
+ {
+  "fn": "Value.Is",
+  "m": "Value.Is(\"a\", type number)",
+  "expect": "false",
+  "mode": "value"
+ },
+ {
+  "fn": "Value.As",
+  "m": "Value.As(5, type number)",
+  "expect": "5",
+  "mode": "value"
+ }
+]

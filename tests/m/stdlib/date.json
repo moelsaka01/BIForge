@@ -1,0 +1,472 @@
+[
+ {
+  "fn": "Date.IsInCurrentDay",
+  "m": "Date.IsInCurrentDay(Date.From(DateTime.LocalNow()))",
+  "expect": "true"
+ },
+ {
+  "fn": "Date.IsInCurrentDay",
+  "m": "Date.IsInCurrentDay(Date.AddDays(Date.From(DateTime.LocalNow()), 2))",
+  "expect": "false"
+ },
+ {
+  "fn": "Date.IsInNextDay",
+  "m": "Date.IsInNextDay(Date.AddDays(Date.From(DateTime.LocalNow()), 1))",
+  "expect": "true"
+ },
+ {
+  "fn": "Date.IsInNextDay",
+  "m": "Date.IsInNextDay(Date.From(DateTime.LocalNow()))",
+  "expect": "false"
+ },
+ {
+  "fn": "Date.IsInPreviousDay",
+  "m": "Date.IsInPreviousDay(Date.AddDays(Date.From(DateTime.LocalNow()), -1))",
+  "expect": "true"
+ },
+ {
+  "fn": "Date.IsInPreviousDay",
+  "m": "Date.IsInPreviousDay(Date.From(DateTime.LocalNow()))",
+  "expect": "false"
+ },
+ {
+  "fn": "Date.IsInNextNDays",
+  "m": "Date.IsInNextNDays(Date.AddDays(Date.From(DateTime.LocalNow()), 3), 3)",
+  "expect": "true"
+ },
+ {
+  "fn": "Date.IsInNextNDays",
+  "m": "Date.IsInNextNDays(Date.AddDays(Date.From(DateTime.LocalNow()), 4), 3)",
+  "expect": "false"
+ },
+ {
+  "fn": "Date.IsInNextNDays",
+  "m": "Date.IsInNextNDays(Date.From(DateTime.LocalNow()), 3)",
+  "expect": "false"
+ },
+ {
+  "fn": "Date.IsInPreviousNDays",
+  "m": "Date.IsInPreviousNDays(Date.AddDays(Date.From(DateTime.LocalNow()), -3), 3)",
+  "expect": "true"
+ },
+ {
+  "fn": "Date.IsInPreviousNDays",
+  "m": "Date.IsInPreviousNDays(Date.AddDays(Date.From(DateTime.LocalNow()), -4), 3)",
+  "expect": "false"
+ },
+ {
+  "fn": "Date.IsInPreviousNDays",
+  "m": "Date.IsInPreviousNDays(Date.From(DateTime.LocalNow()), 3)",
+  "expect": "false"
+ },
+ {
+  "fn": "Date.IsInCurrentWeek",
+  "m": "Date.IsInCurrentWeek(Date.From(DateTime.LocalNow()))",
+  "expect": "true"
+ },
+ {
+  "fn": "Date.IsInCurrentWeek",
+  "m": "Date.IsInCurrentWeek(Date.AddWeeks(Date.From(DateTime.LocalNow()), 2))",
+  "expect": "false"
+ },
+ {
+  "fn": "Date.IsInNextWeek",
+  "m": "Date.IsInNextWeek(Date.AddWeeks(Date.From(DateTime.LocalNow()), 1))",
+  "expect": "true"
+ },
+ {
+  "fn": "Date.IsInNextWeek",
+  "m": "Date.IsInNextWeek(Date.From(DateTime.LocalNow()))",
+  "expect": "false"
+ },
+ {
+  "fn": "Date.IsInPreviousWeek",
+  "m": "Date.IsInPreviousWeek(Date.AddWeeks(Date.From(DateTime.LocalNow()), -1))",
+  "expect": "true"
+ },
+ {
+  "fn": "Date.IsInPreviousWeek",
+  "m": "Date.IsInPreviousWeek(Date.From(DateTime.LocalNow()))",
+  "expect": "false"
+ },
+ {
+  "fn": "Date.IsInNextNWeeks",
+  "m": "Date.IsInNextNWeeks(Date.AddWeeks(Date.From(DateTime.LocalNow()), 3), 3)",
+  "expect": "true"
+ },
+ {
+  "fn": "Date.IsInNextNWeeks",
+  "m": "Date.IsInNextNWeeks(Date.AddWeeks(Date.From(DateTime.LocalNow()), 4), 3)",
+  "expect": "false"
+ },
+ {
+  "fn": "Date.IsInNextNWeeks",
+  "m": "Date.IsInNextNWeeks(Date.From(DateTime.LocalNow()), 3)",
+  "expect": "false"
+ },
+ {
+  "fn": "Date.IsInPreviousNWeeks",
+  "m": "Date.IsInPreviousNWeeks(Date.AddWeeks(Date.From(DateTime.LocalNow()), -3), 3)",
+  "expect": "true"
+ },
+ {
+  "fn": "Date.IsInPreviousNWeeks",
+  "m": "Date.IsInPreviousNWeeks(Date.AddWeeks(Date.From(DateTime.LocalNow()), -4), 3)",
+  "expect": "false"
+ },
+ {
+  "fn": "Date.IsInPreviousNWeeks",
+  "m": "Date.IsInPreviousNWeeks(Date.From(DateTime.LocalNow()), 3)",
+  "expect": "false"
+ },
+ {
+  "fn": "Date.IsInCurrentMonth",
+  "m": "Date.IsInCurrentMonth(Date.From(DateTime.LocalNow()))",
+  "expect": "true"
+ },
+ {
+  "fn": "Date.IsInCurrentMonth",
+  "m": "Date.IsInCurrentMonth(Date.AddMonths(Date.From(DateTime.LocalNow()), 2))",
+  "expect": "false"
+ },
+ {
+  "fn": "Date.IsInNextMonth",
+  "m": "Date.IsInNextMonth(Date.AddMonths(Date.From(DateTime.LocalNow()), 1))",
+  "expect": "true"
+ },
+ {
+  "fn": "Date.IsInNextMonth",
+  "m": "Date.IsInNextMonth(Date.From(DateTime.LocalNow()))",
+  "expect": "false"
+ },
+ {
+  "fn": "Date.IsInPreviousMonth",
+  "m": "Date.IsInPreviousMonth(Date.AddMonths(Date.From(DateTime.LocalNow()), -1))",
+  "expect": "true"
+ },
+ {
+  "fn": "Date.IsInPreviousMonth",
+  "m": "Date.IsInPreviousMonth(Date.From(DateTime.LocalNow()))",
+  "expect": "false"
+ },
+ {
+  "fn": "Date.IsInNextNMonths",
+  "m": "Date.IsInNextNMonths(Date.AddMonths(Date.From(DateTime.LocalNow()), 3), 3)",
+  "expect": "true"
+ },
+ {
+  "fn": "Date.IsInNextNMonths",
+  "m": "Date.IsInNextNMonths(Date.AddMonths(Date.From(DateTime.LocalNow()), 4), 3)",
+  "expect": "false"
+ },
+ {
+  "fn": "Date.IsInNextNMonths",
+  "m": "Date.IsInNextNMonths(Date.From(DateTime.LocalNow()), 3)",
+  "expect": "false"
+ },
+ {
+  "fn": "Date.IsInPreviousNMonths",
+  "m": "Date.IsInPreviousNMonths(Date.AddMonths(Date.From(DateTime.LocalNow()), -3), 3)",
+  "expect": "true"
+ },
+ {
+  "fn": "Date.IsInPreviousNMonths",
+  "m": "Date.IsInPreviousNMonths(Date.AddMonths(Date.From(DateTime.LocalNow()), -4), 3)",
+  "expect": "false"
+ },
+ {
+  "fn": "Date.IsInPreviousNMonths",
+  "m": "Date.IsInPreviousNMonths(Date.From(DateTime.LocalNow()), 3)",
+  "expect": "false"
+ },
+ {
+  "fn": "Date.IsInCurrentQuarter",
+  "m": "Date.IsInCurrentQuarter(Date.From(DateTime.LocalNow()))",
+  "expect": "true"
+ },
+ {
+  "fn": "Date.IsInCurrentQuarter",
+  "m": "Date.IsInCurrentQuarter(Date.AddQuarters(Date.From(DateTime.LocalNow()), 2))",
+  "expect": "false"
+ },
+ {
+  "fn": "Date.IsInNextQuarter",
+  "m": "Date.IsInNextQuarter(Date.AddQuarters(Date.From(DateTime.LocalNow()), 1))",
+  "expect": "true"
+ },
+ {
+  "fn": "Date.IsInNextQuarter",
+  "m": "Date.IsInNextQuarter(Date.From(DateTime.LocalNow()))",
+  "expect": "false"
+ },
+ {
+  "fn": "Date.IsInPreviousQuarter",
+  "m": "Date.IsInPreviousQuarter(Date.AddQuarters(Date.From(DateTime.LocalNow()), -1))",
+  "expect": "true"
+ },
+ {
+  "fn": "Date.IsInPreviousQuarter",
+  "m": "Date.IsInPreviousQuarter(Date.From(DateTime.LocalNow()))",
+  "expect": "false"
+ },
+ {
+  "fn": "Date.IsInNextNQuarters",
+  "m": "Date.IsInNextNQuarters(Date.AddQuarters(Date.From(DateTime.LocalNow()), 3), 3)",
+  "expect": "true"
+ },
+ {
+  "fn": "Date.IsInNextNQuarters",
+  "m": "Date.IsInNextNQuarters(Date.AddQuarters(Date.From(DateTime.LocalNow()), 4), 3)",
+  "expect": "false"
+ },
+ {
+  "fn": "Date.IsInNextNQuarters",
+  "m": "Date.IsInNextNQuarters(Date.From(DateTime.LocalNow()), 3)",
+  "expect": "false"
+ },
+ {
+  "fn": "Date.IsInPreviousNQuarters",
+  "m": "Date.IsInPreviousNQuarters(Date.AddQuarters(Date.From(DateTime.LocalNow()), -3), 3)",
+  "expect": "true"
+ },
+ {
+  "fn": "Date.IsInPreviousNQuarters",
+  "m": "Date.IsInPreviousNQuarters(Date.AddQuarters(Date.From(DateTime.LocalNow()), -4), 3)",
+  "expect": "false"
+ },
+ {
+  "fn": "Date.IsInPreviousNQuarters",
+  "m": "Date.IsInPreviousNQuarters(Date.From(DateTime.LocalNow()), 3)",
+  "expect": "false"
+ },
+ {
+  "fn": "Date.IsInCurrentYear",
+  "m": "Date.IsInCurrentYear(Date.From(DateTime.LocalNow()))",
+  "expect": "true"
+ },
+ {
+  "fn": "Date.IsInCurrentYear",
+  "m": "Date.IsInCurrentYear(Date.AddYears(Date.From(DateTime.LocalNow()), 2))",
+  "expect": "false"
+ },
+ {
+  "fn": "Date.IsInNextYear",
+  "m": "Date.IsInNextYear(Date.AddYears(Date.From(DateTime.LocalNow()), 1))",
+  "expect": "true"
+ },
+ {
+  "fn": "Date.IsInNextYear",
+  "m": "Date.IsInNextYear(Date.From(DateTime.LocalNow()))",
+  "expect": "false"
+ },
+ {
+  "fn": "Date.IsInPreviousYear",
+  "m": "Date.IsInPreviousYear(Date.AddYears(Date.From(DateTime.LocalNow()), -1))",
+  "expect": "true"
+ },
+ {
+  "fn": "Date.IsInPreviousYear",
+  "m": "Date.IsInPreviousYear(Date.From(DateTime.LocalNow()))",
+  "expect": "false"
+ },
+ {
+  "fn": "Date.IsInNextNYears",
+  "m": "Date.IsInNextNYears(Date.AddYears(Date.From(DateTime.LocalNow()), 3), 3)",
+  "expect": "true"
+ },
+ {
+  "fn": "Date.IsInNextNYears",
+  "m": "Date.IsInNextNYears(Date.AddYears(Date.From(DateTime.LocalNow()), 4), 3)",
+  "expect": "false"
+ },
+ {
+  "fn": "Date.IsInNextNYears",
+  "m": "Date.IsInNextNYears(Date.From(DateTime.LocalNow()), 3)",
+  "expect": "false"
+ },
+ {
+  "fn": "Date.IsInPreviousNYears",
+  "m": "Date.IsInPreviousNYears(Date.AddYears(Date.From(DateTime.LocalNow()), -3), 3)",
+  "expect": "true"
+ },
+ {
+  "fn": "Date.IsInPreviousNYears",
+  "m": "Date.IsInPreviousNYears(Date.AddYears(Date.From(DateTime.LocalNow()), -4), 3)",
+  "expect": "false"
+ },
+ {
+  "fn": "Date.IsInPreviousNYears",
+  "m": "Date.IsInPreviousNYears(Date.From(DateTime.LocalNow()), 3)",
+  "expect": "false"
+ },
+ {
+  "fn": "Date.IsInYearToDate",
+  "m": "Date.IsInYearToDate(Date.From(DateTime.LocalNow()))",
+  "expect": "true"
+ },
+ {
+  "fn": "Date.IsInYearToDate",
+  "m": "Date.IsInYearToDate(#date(Date.Year(Date.From(DateTime.LocalNow())), 1, 1))",
+  "expect": "true"
+ },
+ {
+  "fn": "Date.IsInYearToDate",
+  "m": "Date.IsInYearToDate(Date.AddYears(Date.From(DateTime.LocalNow()), -1))",
+  "expect": "false"
+ },
+ {
+  "fn": "DateTime.IsInCurrentHour",
+  "m": "DateTime.IsInCurrentHour(DateTime.LocalNow())",
+  "expect": "true"
+ },
+ {
+  "fn": "DateTime.IsInCurrentHour",
+  "m": "DateTime.IsInCurrentHour(#datetime(2000, 1, 1, 0, 0, 0))",
+  "expect": "false"
+ },
+ {
+  "fn": "DateTime.IsInCurrentMinute",
+  "m": "DateTime.IsInCurrentMinute(DateTime.LocalNow())",
+  "expect": "true"
+ },
+ {
+  "fn": "DateTime.IsInCurrentMinute",
+  "m": "DateTime.IsInCurrentMinute(#datetime(2000, 1, 1, 0, 0, 0))",
+  "expect": "false"
+ },
+ {
+  "fn": "DateTime.IsInCurrentSecond",
+  "m": "DateTime.IsInCurrentSecond(DateTime.LocalNow())",
+  "expect": "true"
+ },
+ {
+  "fn": "DateTime.IsInCurrentSecond",
+  "m": "DateTime.IsInCurrentSecond(#datetime(2000, 1, 1, 0, 0, 0))",
+  "expect": "false"
+ },
+ {
+  "fn": "DateTime.LocalNow",
+  "m": "Date.Year(DateTime.LocalNow()) >= 2025",
+  "expect": "true"
+ },
+ {
+  "fn": "DateTime.FixedLocalNow",
+  "m": "Date.Year(DateTime.FixedLocalNow()) >= 2025",
+  "expect": "true"
+ },
+ {
+  "fn": "Date.IsLeapYear",
+  "m": "Date.IsLeapYear(#date(2024, 2, 1))",
+  "expect": "true"
+ },
+ {
+  "fn": "Date.IsLeapYear",
+  "m": "Date.IsLeapYear(#date(1900, 1, 1))",
+  "expect": "false"
+ },
+ {
+  "fn": "Date.IsLeapYear",
+  "m": "Date.IsLeapYear(#date(2000, 1, 1))",
+  "expect": "true"
+ },
+ {
+  "fn": "Date.IsLeapYear",
+  "m": "Date.IsLeapYear(#date(2023, 1, 1))",
+  "expect": "false"
+ },
+ {
+  "fn": "Date.StartOfWeek",
+  "m": "Date.StartOfWeek(#date(2024, 5, 15))",
+  "expect": "2024-05-12"
+ },
+ {
+  "fn": "Date.StartOfWeek",
+  "m": "Date.StartOfWeek(#date(2024, 5, 15), Day.Monday)",
+  "expect": "2024-05-13"
+ },
+ {
+  "fn": "Date.EndOfWeek",
+  "m": "Date.EndOfWeek(#date(2024, 5, 15))",
+  "expect": "2024-05-18"
+ },
+ {
+  "fn": "Date.EndOfWeek",
+  "m": "Date.EndOfWeek(#date(2024, 5, 15), Day.Monday)",
+  "expect": "2024-05-19"
+ },
+ {
+  "fn": "Date.WeekOfYear",
+  "m": "Date.WeekOfYear(#date(2011, 3, 27))",
+  "expect": "14"
+ },
+ {
+  "fn": "Date.WeekOfYear",
+  "m": "Date.WeekOfYear(#date(2024, 1, 1))",
+  "expect": "1"
+ },
+ {
+  "fn": "Date.WeekOfYear",
+  "m": "Date.WeekOfYear(#date(2024, 1, 7))",
+  "expect": "2"
+ },
+ {
+  "fn": "Date.WeekOfMonth",
+  "m": "Date.WeekOfMonth(#date(2011, 3, 15))",
+  "expect": "3"
+ },
+ {
+  "fn": "Date.WeekOfMonth",
+  "m": "Date.WeekOfMonth(#date(2024, 5, 1))",
+  "expect": "1"
+ },
+ {
+  "fn": "Date.ToText",
+  "m": "Date.ToText(#date(2024, 1, 5))",
+  "expect": "1/5/2024"
+ },
+ {
+  "fn": "Date.ToText",
+  "m": "Date.ToText(#date(2024, 1, 5), \"yyyy-MM-dd\")",
+  "expect": "2024-01-05"
+ },
+ {
+  "fn": "Date.ToText",
+  "m": "Date.ToText(#date(2024, 1, 5), \"MMM d, yyyy\")",
+  "expect": "Jan 5, 2024"
+ },
+ {
+  "fn": "Date.ToText",
+  "m": "Date.ToText(#date(2024, 1, 5), \"dddd\")",
+  "expect": "Friday"
+ },
+ {
+  "fn": "Date.ToText",
+  "m": "Date.ToText(#date(2024, 1, 5), \"MMMM yyyy\")",
+  "expect": "January 2024"
+ },
+ {
+  "fn": "DateTime.ToText",
+  "m": "DateTime.ToText(#datetime(2024, 1, 5, 14, 30, 0), \"yyyy-MM-dd HH:mm:ss\")",
+  "expect": "2024-01-05 14:30:00"
+ },
+ {
+  "fn": "DateTime.ToText",
+  "m": "DateTime.ToText(#datetime(2024, 1, 5, 14, 30, 0), \"h:mm tt\")",
+  "expect": "2:30 PM"
+ },
+ {
+  "fn": "Date.FromText",
+  "m": "Date.FromText(\"2024-01-05\")",
+  "expect": "2024-01-05"
+ },
+ {
+  "fn": "Date.FromText",
+  "m": "Date.FromText(\"1/5/2024\")",
+  "expect": "2024-01-05"
+ },
+ {
+  "fn": "DateTime.FromText",
+  "m": "DateTime.FromText(\"2024-01-05 14:30:00\")",
+  "expect": "2024-01-05 14:30:00"
+ }
+]
