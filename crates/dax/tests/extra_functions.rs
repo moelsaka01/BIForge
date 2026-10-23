@@ -76,7 +76,7 @@ fn linest_and_tocsv() {
     let t2 = &e.query("EVALUATE LINESTX(Pts, Pts[Z], Pts[X], Pts[Y] * Pts[Y])").unwrap()[0];
     assert!(t2.columns.contains(&"[Slope2]".to_string()));
     assert_eq!(t2.rows[0][5 + 0].is_blank(), false);
-    assert_eq!(one(&e, "EVALUATE ROW(\"v\", TOCSV(TOPN(2, Emp, Emp[Id], ASC)))"), Value::str("Id,Boss,Name,Path\n1,,Ann,1\n2,1,Bob,1|2"));
+    assert_eq!(one(&e, "EVALUATE ROW(\"v\", TOCSV(TOPN(2, Emp, Emp[Id], ASC)))"), Value::str("'Emp'[Id],'Emp'[Boss],'Emp'[Name],'Emp'[Path]\n1,,Ann,1\n2,1,Bob,1|2"));
     assert_eq!(one(&e, "EVALUATE ROW(\"v\", TOCSV(SELECTCOLUMNS(Emp, \"a\", Emp[Name]), 1, \";\", FALSE))"), Value::str("Ann"));
 }
 
