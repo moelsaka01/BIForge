@@ -7,7 +7,8 @@ import { addTable, listTables, deleteTable } from "../model/ops";
 import { listDataSources, withLocation, type SourceLocation } from "../data/dataSources";
 import { QueryDraft } from "../queries/draft";
 import type { MApi } from "../queries/types";
-import { calcGroupData, setCalculationGroup, addCalculatedColumn, calculatedColumns, calculatedTables, setCalculatedColumn, setCalculatedTable, setColumnDataType } from "../model/modeling";
+import { addRelationship } from "../model/relationships";
+import { autoDateExpression, finishAutoDate, planAutoDate, calcGroupData, setCalculationGroup, addCalculatedColumn, calculatedColumns, calculatedTables, setCalculatedColumn, setCalculatedTable, setColumnDataType } from "../model/modeling";
 import { applyGroups, applyQueryLoad, expressionExists, listGroups, listQueries, queryTexts, removeExpression, upsertExpression, userMTables } from "../queries/queries";
 import { findTable } from "../model/ops";
 import { ShellStore } from "../shell/shellStore";
@@ -673,6 +674,20 @@ export class Session {
         if (found) setColumnDataType(p, table, c.name, found.biType);
       }
     };
+  }
+
+  /** Auto date/time: a hidden calendar table with a date hierarchy for every date column that has none, related to the column. */
+  async enableAutoDateTime(): Promise<number> {
+    const plans = planAutoDate(this.store.project!);
+    for (const plan of plans) {
+      await this.setCalculatedTable(plan.dateTable, autoDateExpression(plan.table, plan.column));
+      this.store.transact(`Auto date/time for ${plan.table}[${plan.column}]`, (p) => {
+        finishAutoDate(p, plan);
+        addRelationship(p, { fromTable: plan.table, fromColumn: plan.column, toTable: plan.dateTable, toColumn: "Date" });
+      });
+    }
+    this.setMessage(plans.length ? `Created ${plans.length} automatic date table(s).` : "Every date column already has a calendar.");
+    return plans.length;
   }
 
   /** "View as roles": reports and queries run as a member of these roles; null returns to the author's view. */

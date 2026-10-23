@@ -78,6 +78,14 @@ export function registerModelingCommands(r: CommandRegistry<Session>): void {
     s.store.transact(`Field parameter "${name}"`, (p) => mod.markFieldParameter(p, name));
   });
   reg("model.fieldParameterDialog", "Field parameter", (s) => s.shell.openDialog({ kind: "modelDialog", id: "fieldParameter" }));
+  reg("model.autoDateTime", "Auto date/time", async (s) => {
+    await s.enableAutoDateTime();
+  });
+  reg("model.markDateTable", "Mark as date table", (s, a) => {
+    const { table, column } = need<{ table: string; column: string }>(a, ["table", "column"]);
+    s.store.transact(`Mark "${table}" as date table`, (p) => mod.markDateTable(p, table, column));
+  });
+  reg("model.markDateTableDialog", "Mark as date table", (s) => s.shell.openDialog({ kind: "modelDialog", id: "markDateTable", table: s.shell.getSnapshot().selectedTable }));
   reg("model.manageRolesDialog", "Manage roles", (s) => s.shell.openDialog({ kind: "roles" }));
   reg("model.viewAsDialog", "View as", (s) => s.shell.openDialog({ kind: "viewAs" }));
   reg("model.setRole", "Save role", (s, a) => {

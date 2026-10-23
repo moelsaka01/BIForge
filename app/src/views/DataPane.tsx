@@ -5,7 +5,7 @@ import { listTables } from "../core/model/ops";
 import { getTableSource } from "../core/model/tables";
 import type { FieldRef } from "../core/report/fields";
 import { FIELD_MIME, FIELDS_MIME } from "./report/VisualizationsPane";
-import { getProperty, listHierarchies } from "../core/model/modeling";
+import { autoDateHierarchy, getProperty, listHierarchies } from "../core/model/modeling";
 
 export interface FieldUse {
   /** True when the field is used by the selected visual. */
@@ -47,7 +47,7 @@ export function DataPane(p: DataPaneProps) {
       const hierarchies = listHierarchies(p.project, t.name).filter((h) => tableHit || h.name.toLowerCase().includes(needle) || h.levels.some((l) => l.column.toLowerCase().includes(needle)));
       return { ...t, columns, measures, hierarchies, show: needle === "" || tableHit || columns.length > 0 || measures.length > 0 || hierarchies.length > 0 };
     })
-    .filter((t) => t.show);
+    .filter((t) => t.show && !(p.fieldUse && getProperty(p.project, { kind: "table", table: t.name }, "isHidden") === true));
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6, padding: 8, height: "100%", overflow: "auto" }} aria-label="Data pane">
@@ -103,13 +103,43 @@ export function DataPane(p: DataPaneProps) {
                     </Tree>
                   </TreeItem>
                 ))}
-                {t.columns.map((c) => (
-                  <TreeItem key={`c-${c.name}`} itemType="leaf" value={`${t.name}.${c.name}`}>
-                    <TreeItemLayout>
-                      <FieldLabel p={p} field={{ kind: "column", table: t.name, name: c.name }} glyph={typeGlyph(c.dataType)} />
-                    </TreeItemLayout>
-                  </TreeItem>
-                ))}
+                {t.columns.map((c) => {
+                  const auto = c.dataType === "dateTime" ? autoDateHierarchy(p.project, t.name, c.name) : null;
+                  if (auto && p.fieldUse) {
+                    // the column with its automatic date hierarchy (Year > Quarter > Month > Day) underneath
+                    const h = { name: `${c.name} Date Hierarchy`, levels: auto.levels.map((l) => ({ name: l, column: l })) };
+                    return (
+                      <TreeItem key={`c-${c.name}`} itemType="branch" value={`${t.name}.${c.name}`}>
+                        <TreeItemLayout>
+                          <FieldLabel p={p} field={{ kind: "column", table: t.name, name: c.name }} glyph={typeGlyph(c.dataType)} />
+                        </TreeItemLayout>
+                        <Tree>
+                          <TreeItem itemType="branch" value={`${t.name}.${c.name}.<h>`}>
+                            <TreeItemLayout>
+                              <HierarchyLabel p={p} table={auto.dateTable} hierarchy={h} />
+                            </TreeItemLayout>
+                            <Tree>
+                              {h.levels.map((l) => (
+                                <TreeItem key={l.name} itemType="leaf" value={`${t.name}.${c.name}.<h>.${l.name}`}>
+                                  <TreeItemLayout>
+                                    <FieldLabel p={p} field={{ kind: "column", table: auto.dateTable, name: l.column }} glyph="↳" />
+                                  </TreeItemLayout>
+                                </TreeItem>
+                              ))}
+                            </Tree>
+                          </TreeItem>
+                        </Tree>
+                      </TreeItem>
+                    );
+                  }
+                  return (
+                    <TreeItem key={`c-${c.name}`} itemType="leaf" value={`${t.name}.${c.name}`}>
+                      <TreeItemLayout>
+                        <FieldLabel p={p} field={{ kind: "column", table: t.name, name: c.name }} glyph={typeGlyph(c.dataType)} />
+                      </TreeItemLayout>
+                    </TreeItem>
+                  );
+                })}
                 {t.measures.map((m) => (
                   <TreeItem key={`m-${m.name}`} itemType="leaf" value={`${t.name}.[${m.name}]`}>
                     <TreeItemLayout>

@@ -4,7 +4,7 @@ import type { DialogDef } from "../queries/dialogs";
 import type { TableView } from "./ops";
 import { QUICK_MEASURES, quickExpression, quickName, splitColumn, type QuickKind } from "./quickMeasures";
 
-export type ModelDialogId = "newColumn" | "editColumn" | "newCalculatedTable" | "editCalculatedTable" | "newHierarchy" | "quickMeasure" | "whatIf" | "calculationGroup" | "fieldParameter";
+export type ModelDialogId = "newColumn" | "editColumn" | "newCalculatedTable" | "editCalculatedTable" | "newHierarchy" | "quickMeasure" | "whatIf" | "calculationGroup" | "fieldParameter" | "markDateTable";
 
 export interface ModelDialogCtx {
   tables: TableView[];
@@ -72,6 +72,25 @@ export function modelDialogFor(id: ModelDialogId, c: ModelDialogCtx): DialogDef 
           if (!expression) throw new Error("Enter the DAX expression of the table.");
           return { command: "model.setCalculatedTable", args: { name, expression: stripName(name, expression) } };
         },
+      };
+    }
+    case "markDateTable": {
+      const withDates = c.tables.filter((t) => t.columns.some((x) => x.dataType === "dateTime"));
+      if (!withDates.length) throw new Error("No table has a Date/Time column.");
+      const start = withDates.find((t) => t.name === c.table) ?? withDates[0];
+      return {
+        title: "Mark as date table",
+        submitLabel: "OK",
+        fields: [
+          { kind: "select", key: "table", label: "Date table", options: withDates.map((t) => ({ value: t.name, label: t.name })), default: start.name },
+          {
+            kind: "select",
+            key: "column",
+            label: "Date column (unique, no gaps)",
+            options: (v) => (withDates.find((t) => t.name === v.table)?.columns ?? []).filter((x) => x.dataType === "dateTime").map((x) => ({ value: x.name, label: x.name })),
+          },
+        ],
+        build: (v) => ({ command: "model.markDateTable", args: { table: String(v.table), column: String(v.column) } }),
       };
     }
     case "fieldParameter": {

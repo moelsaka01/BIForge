@@ -476,7 +476,7 @@ function tableTabs(): RibbonTab[] {
         { id: "structure", label: "Structure", controls: [{ id: "tableName", label: "Name", icon: "tag", readout: (c) => c.table ?? "", status: "todo" }] },
         relationshipsGroup(),
         modelingCalculations(),
-        { id: "calendars", label: "Calendars", controls: [todo("markDate", "Mark as date table", "calendar", { size: "large" })] },
+        { id: "calendars", label: "Calendars", controls: [cmd("markDate", "Mark as date table", "calendar", "model.markDateTableDialog", { size: "large", keytip: "MD" }), cmd("autoDate", "Auto date/time", "calendar", "model.autoDateTime", { size: "large", keytip: "AD" })] },
       ],
     },
   ];

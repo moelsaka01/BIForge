@@ -416,3 +416,87 @@ export function setCalculationGroup(p: Project, rawName: string, rawColumn: stri
   part.default = { text: "calculationGroup", verbatim: false };
   t.children = [group, nameCol, ordinal, ...t.children.filter((c) => c.kind === "measure"), part];
 }
+
+// ---- date tables ----------------------------------------------------------------------------------------------
+
+/** Marks a table as a date table with `column` as its key (the other columns lose the key flag). */
+export function markDateTable(p: Project, table: string, column: string): void {
+  const t = requireTable(p, table).node;
+  const c = t.children.find((x) => x.kind === "column" && x.name?.toLowerCase() === column.toLowerCase());
+  if (!c) throw new ModelError("not-found", `Column "${table}[${column}]" does not exist.`);
+  if (textProp(c, "dataType") !== "dateTime") throw new ModelError("invalid", `"${column}" is not a Date/Time column.`);
+  for (const x of t.children.filter((y) => y.kind === "column")) x.props = x.props.filter((q) => q.key !== "isKey");
+  c.props.push({ key: "isKey", value: "Flag" });
+  t.props = t.props.filter((q) => q.key !== "dataCategory");
+  t.props.push(text("dataCategory", "Time"));
+}
+
+const AUTO_DATE = "BIForge.AutoDate";
+
+export interface AutoDatePlan {
+  table: string;
+  column: string;
+  /** The hidden table that holds the calendar of this column. */
+  dateTable: string;
+}
+
+/** The date columns that have no automatic date table yet and are not in a marked date table. */
+export function planAutoDate(p: Project): AutoDatePlan[] {
+  const done = new Set(
+    Object.values(p.model.tmdl).flatMap((d) => d.nodes.filter((n) => n.kind === "table").flatMap((n) => n.children.filter((c) => c.kind === "annotation" && c.name === AUTO_DATE).map((c) => c.default?.text.toLowerCase() ?? ""))),
+  );
+  const out: AutoDatePlan[] = [];
+  for (const d of Object.values(p.model.tmdl)) {
+    for (const t of d.nodes) {
+      if (t.kind !== "table" || !t.name) continue;
+      if (t.children.some((c) => c.kind === "annotation" && c.name === AUTO_DATE) || textProp(t, "dataCategory") === "Time") continue;
+      for (const c of t.children.filter((x) => x.kind === "column" && !x.default && textProp(x, "dataType") === "dateTime" && x.name)) {
+        if (done.has(`${t.name}.${c.name}`.toLowerCase()) || c.props.some((x) => x.key === "isKey")) continue;
+        out.push({ table: t.name, column: c.name!, dateTable: `LocalDateTable_${t.name}_${c.name}`.replace(/[^\w]+/g, "_") });
+      }
+    }
+  }
+  return out;
+}
+
+/** The calendar of a date column: whole years from the first to the last date, with the columns of the date hierarchy. */
+export function autoDateExpression(table: string, column: string): string {
+  const ref = `'${table.replace(/'/g, "''")}'[${column}]`;
+  return `ADDCOLUMNS(CALENDAR(DATE(YEAR(MIN(${ref})), 1, 1), DATE(YEAR(MAX(${ref})), 12, 31)), "Year", YEAR([Date]), "MonthNo", MONTH([Date]), "Month", FORMAT([Date], "MMMM"), "QuarterNo", QUARTER([Date]), "Quarter", "Qtr " & QUARTER([Date]), "Day", DAY([Date]))`;
+}
+
+/** Hides the automatic date table, gives it its hierarchy and sort columns, and records which column it belongs to. */
+export function finishAutoDate(p: Project, plan: AutoDatePlan, newId: () => string = () => crypto.randomUUID()): void {
+  const t = requireTable(p, plan.dateTable).node;
+  t.props = t.props.filter((x) => x.key !== "isHidden");
+  t.props.push({ key: "isHidden", value: "Flag" });
+  const a = node("annotation", AUTO_DATE);
+  a.default = { text: `${plan.table}.${plan.column}`, verbatim: false };
+  t.children = t.children.filter((c) => !(c.kind === "annotation" && c.name === AUTO_DATE));
+  t.children.push(a);
+  const col = (n: string) => t.children.find((c) => c.kind === "column" && c.name === n);
+  const sortBy = (n: string, by: string) => {
+    const c = col(n);
+    if (c && !c.props.some((x) => x.key === "sortByColumn")) c.props.push(text("sortByColumn", by));
+  };
+  sortBy("Month", "MonthNo");
+  sortBy("Quarter", "QuarterNo");
+  if (col("Year") && col("Quarter") && col("Month") && col("Day") && !t.children.some((c) => c.kind === "hierarchy")) {
+    t.children.push(node("hierarchy", "Date Hierarchy", [text("lineageTag", newId())], ["Year", "Quarter", "Month", "Day"].map((n) => node("level", n, [text("lineageTag", newId()), text("column", n)]))));
+  }
+}
+
+/** The automatic date hierarchy of a date column, as the Data pane shows it under the column. */
+export function autoDateHierarchy(p: Project, table: string, column: string): { dateTable: string; levels: string[] } | null {
+  for (const d of Object.values(p.model.tmdl)) {
+    for (const t of d.nodes) {
+      if (t.kind !== "table" || !t.name) continue;
+      const a = t.children.find((c) => c.kind === "annotation" && c.name === AUTO_DATE);
+      if (a?.default?.text.toLowerCase() === `${table}.${column}`.toLowerCase()) {
+        const h = t.children.find((c) => c.kind === "hierarchy");
+        return h ? { dateTable: t.name, levels: h.children.filter((l) => l.kind === "level").map((l) => textProp(l, "column") ?? l.name ?? "") } : null;
+      }
+    }
+  }
+  return null;
+}

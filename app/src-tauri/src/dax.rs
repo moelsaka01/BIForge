@@ -263,6 +263,25 @@ mod tests {
         assert_eq!(total(None).unwrap(), "10");
     }
 
+
+    #[test]
+    fn the_automatic_date_table_covers_whole_years_with_the_hierarchy_columns() {
+        let d = tempfile::tempdir().unwrap();
+        let svc = DataService::new(Arc::new(MemoryCredentialStore::default()));
+        svc.open_store(&d.path().to_string_lossy()).unwrap();
+        let csv = d.path().join("o.csv");
+        std::fs::write(&csv, "Id,Day\n1,2023-03-15\n2,2024-11-02\n").unwrap();
+        svc.import("Orders", &SourceSpec::Csv { path: csv.to_string_lossy().into_owned(), delimiter: None, header: None }).unwrap();
+        let model = "table Orders\n\tcolumn Id\n\t\tdataType: int64\n\tcolumn Day\n\t\tdataType: dateTime\n";
+        let docs = vec![biforge_model::tmdl::parse(model).unwrap()];
+        let dax = DaxService { data: &svc };
+        let info = dax.calc_table(&docs, "LocalDateTable_Orders_Day", "ADDCOLUMNS(CALENDAR(DATE(YEAR(MIN('Orders'[Day])), 1, 1), DATE(YEAR(MAX('Orders'[Day])), 12, 31)), \"Year\", YEAR([Date]), \"MonthNo\", MONTH([Date]), \"Month\", FORMAT([Date], \"MMMM\"), \"QuarterNo\", QUARTER([Date]), \"Quarter\", \"Qtr \" & QUARTER([Date]), \"Day\", DAY([Date]))").unwrap();
+        assert_eq!(info.row_count, 731, "2023 and 2024");
+        assert_eq!(info.columns.iter().map(|c| c.name.as_str()).collect::<Vec<_>>(), ["Date", "Year", "MonthNo", "Month", "QuarterNo", "Quarter", "Day"]);
+        let page = svc.fetch_page("LocalDateTable_Orders_Day", 74, 1, None).unwrap();
+        assert_eq!(page.rows[0].iter().map(|c| c.clone().unwrap_or_default()).collect::<Vec<_>>()[1..], ["2023", "3", "March", "1", "Qtr 1", "16"]);
+    }
+
     #[test]
     fn repeated_queries_reuse_the_loaded_engine_until_the_model_or_the_data_change() {
         let (d, svc, docs) = setup();

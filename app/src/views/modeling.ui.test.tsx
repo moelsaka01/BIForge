@@ -4,7 +4,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { installDomStubs } from "../core/testing/domStubs";
 import { col } from "../core/testing/fakeEngine";
-import { calculatedColumns, calculatedTables, getProperty, listHierarchies, listRoles } from "../core/model/modeling";
+import { listRelationships } from "../core/model/relationships";
+import { autoDateHierarchy, calculatedColumns, calculatedTables, getProperty, listHierarchies, listRoles, planAutoDate } from "../core/model/modeling";
 import { PBIP, makeApp } from "./shell/testApp";
 
 installDomStubs();
@@ -129,5 +130,43 @@ describe("security roles and View as", () => {
     await a.dax.query([], "EVALUATE ROW(1)", a.session.shell.getSnapshot().viewAs ?? undefined);
     fireEvent.click(within(screen.getByRole("region", { name: "Viewing as roles" })).getByRole("button", { name: /Stop viewing/ }));
     await waitFor(() => expect(a.session.shell.getSnapshot().viewAs).toBeNull());
+  });
+});
+
+describe("auto date/time and date tables", () => {
+  it("creates a hidden calendar with a date hierarchy for each date column, related to it, once", async () => {
+    const a = await open();
+    const before = planAutoDate(a.session.store.project!).map((p) => `${p.table}.${p.column}`);
+    expect(before.length).toBeGreaterThan(0);
+    for (const key of before) {
+      const [t, c] = key.split(".");
+      const name = `LocalDateTable_${t}_${c}`;
+      a.engine.calcTables.set(name, { name, rowCount: 731, columns: [col("Date", "dateTime"), col("Year", "int64"), col("MonthNo", "int64"), col("Month"), col("QuarterNo", "int64"), col("Quarter"), col("Day", "int64")] });
+    }
+    await act(async () => void a.registry.execute("model.autoDateTime"));
+    const p = a.session.store.project!;
+    for (const key of before) {
+      const [t, c] = key.split(".");
+      const name = `LocalDateTable_${t}_${c}`;
+      expect(a.engine.calls.some((x) => x.startsWith(`calcTable:${name}:`))).toBe(true);
+      expect(getProperty(p, { kind: "table", table: name }, "isHidden")).toBe(true);
+      expect(autoDateHierarchy(p, t, c)?.dateTable).toBe(name);
+    }
+    expect(listRelationships(p).some((r) => r.toTable.startsWith("LocalDateTable_") && r.toColumn === "Date")).toBe(true);
+    // nothing left to do the second time
+    expect(planAutoDate(p)).toEqual([]);
+    a.engine.calls.length = 0;
+    await act(async () => void a.registry.execute("model.autoDateTime"));
+    expect(a.engine.calls.some((x) => x.startsWith("calcTable:"))).toBe(false);
+  });
+
+  it("Mark as date table sets the category and the key column", async () => {
+    const a = await open();
+    await act(async () => void a.registry.execute("model.markDateTable", { table: "Sales", column: "OrderDate" }));
+    const p = a.session.store.project!;
+    expect(getProperty(p, { kind: "table", table: "Sales" }, "dataCategory")).toBe("Time");
+    expect(getProperty(p, { kind: "column", table: "Sales", column: "OrderDate" }, "isKey")).toBe(true);
+    const bad = await a.registry.execute("model.markDateTable", { table: "Sales", column: "Quantity" });
+    expect(bad.ok).toBe(false);
   });
 });
