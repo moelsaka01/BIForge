@@ -114,6 +114,18 @@ describe("import partitions (M source)", () => {
     expect(sourceText(partitionOf(q, "Orders")[0])).not.toContain("Trimmed Column Names");
   });
 
+  it("a web CSV with padded header names gets the same Trimmed Column Names step", () => {
+    const p = sampleProject();
+    const info = { ...cols(["order_id", "int64", "BIGINT"], ["region", "string", "VARCHAR"]), headerPadded: true };
+    applyImport(p, info, { kind: "web", url: "http://x/a.csv", format: "csv" }, ids());
+    const m = sourceText(partitionOf(p, "Orders")[0]);
+    expect(m).toContain('#"Trimmed Column Names" = Table.TransformColumnNames(#"Promoted Headers", Text.Trim)');
+    expect(m).toContain('Table.TransformColumnTypes(#"Trimmed Column Names"');
+    const q = sampleProject();
+    applyImport(q, cols(["order_id", "int64", "BIGINT"]), { kind: "web", url: "http://x/a.csv", format: "csv" }, ids());
+    expect(sourceText(partitionOf(q, "Orders")[0])).not.toContain("Trimmed Column Names");
+  });
+
   it("refresh rebuilds a generated partition but keeps one the user edited", () => {
     const p = sampleProject();
     applyImport(p, cols(["Id", "int64"]), csv, ids());

@@ -354,3 +354,17 @@ fn custom_request_headers_are_sent_and_secret_ones_come_from_the_credential_stor
         assert!(e.import("T", &spec(vec![bad]), &c).is_err());
     }
 }
+
+#[test]
+fn web_csv_with_padded_headers_imports_trimmed_and_reports_the_padding() {
+    let (base, _) = serve(vec![
+        ("/padded.csv", "text/csv", "order_id,  region , unit price\n1,north,1.5\n2,south,8.25\n".into()),
+        ("/clean.csv", "text/csv", "a,b\n1,2\n".into()),
+    ]);
+    let (e, c) = (Engine::in_memory().unwrap(), creds());
+    let t = e.import("Padded", &web(format!("{base}/padded.csv"), None, None), &c).unwrap();
+    assert_eq!(t.columns.iter().map(|x| x.name.as_str()).collect::<Vec<_>>(), ["order_id", "region", "unit price"]);
+    assert!(t.header_padded);
+    let t = e.import("Clean", &web(format!("{base}/clean.csv"), None, None), &c).unwrap();
+    assert!(!t.header_padded);
+}

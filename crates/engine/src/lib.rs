@@ -149,6 +149,7 @@ impl Engine {
     pub fn import(&self, name: &str, spec: &SourceSpec, creds: &dyn CredentialStore) -> Result<TableInfo> {
         check_name(name)?;
         self.conn.execute_batch(&format!("DROP TABLE IF EXISTS {}", q(STAGE)))?;
+        let _ = sources::take_csv_header_padded();
         if let Err(e) = self.build_stage(spec, creds) {
             let _ = self.conn.execute_batch(&format!("DROP TABLE IF EXISTS {}", q(STAGE)));
             return Err(e);
@@ -158,6 +159,10 @@ impl Engine {
             if *header != Some(false) {
                 info.header_padded = sources::csv_header_padded(path, delimiter.as_deref());
             }
+        }
+        // a CSV read from the web (reported by the reader that just ran)
+        if matches!(spec, SourceSpec::Web { .. } | SourceSpec::OData { .. }) {
+            info.header_padded = sources::take_csv_header_padded();
         }
         Ok(info)
     }

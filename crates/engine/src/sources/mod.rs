@@ -139,4 +139,4 @@ pub mod script_src;
 pub mod textinfer;
 pub mod web_src;
 pub mod xml_src;
-pub use dispatch::{csv_header_padded, read_json_file, choices, parse_csv, parse_fixed, preview_page, read_other};
+pub use dispatch::{csv_header_padded, take_csv_header_padded, read_json_file, choices, parse_csv, parse_fixed, preview_page, read_other};

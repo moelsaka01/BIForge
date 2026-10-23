@@ -40,7 +40,36 @@ pub fn parse_csv(bytes: &[u8]) -> RawTable {
     let header = rows.remove(0);
     let width = header.len();
     let data = rows.into_iter().map(|r| (0..width).map(|i| r.get(i).map_or(Cell::Null, |s| Cell::Text(s.clone()))).collect()).collect();
-    textinfer::infer(RawTable { columns: clean_names(header), rows: data })
+    textinfer::infer(RawTable { columns: promoted_names(header), rows: data })
+}
+
+/// Header names as Table.PromoteHeaders gives them: the text as written (spaces are kept, like Power Query), an empty name
+/// becomes "ColumnN" and a repeated name gets ".1", ".2". Importers that show trimmed names call `clean_names` on the result.
+fn promoted_names(names: Vec<String>) -> Vec<String> {
+    let mut seen = std::collections::HashSet::new();
+    names
+        .into_iter()
+        .enumerate()
+        .map(|(i, n)| {
+            let base = if n.is_empty() { format!("Column{}", i + 1) } else { n };
+            let mut name = base.clone();
+            let mut k = 1;
+            while !seen.insert(name.clone()) {
+                name = format!("{base}.{k}");
+                k += 1;
+            }
+            name
+        })
+        .collect()
+}
+
+thread_local! {
+    static CSV_HEADER_PADDED: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// True (once) when the last CSV read by `read_other` on this thread had header names with leading or trailing spaces.
+pub fn take_csv_header_padded() -> bool {
+    CSV_HEADER_PADDED.with(|c| c.replace(false))
 }
 
 /// Text with columns at fixed character positions.
@@ -183,7 +212,13 @@ fn read_other_n(spec: &SourceSpec, creds: &dyn CredentialStore, limit: Option<us
         SourceSpec::Web { .. } | SourceSpec::OData { .. } => {
             let f = web_src::load(spec, creds)?;
             match &f.csv {
-                Some(b) => Ok(parse_csv(b)),
+                Some(b) => {
+                    // the table shows trimmed names; the generated M trims them in an explicit step (Power Query keeps the spaces)
+                    let mut t = parse_csv(b);
+                    CSV_HEADER_PADDED.with(|c| c.set(t.columns.iter().any(|n| n != n.trim())));
+                    t.columns = clean_names(t.columns);
+                    Ok(t)
+                }
                 None => web_src::pick(spec, f),
             }
         }
@@ -256,6 +291,14 @@ mod tests {
         assert_eq!(t.rows[1][1], Cell::Text("say \"hi\"".into()));
         assert_eq!(t.rows[1][2], Cell::Text(String::new()));
         assert!(parse_csv(b"").columns.is_empty());
+    }
+
+    #[test]
+    fn csv_header_names_keep_their_spaces_like_power_query() {
+        let t = parse_csv(b"id,  region , unit price,,id\n1,n,2,3,4\n");
+        assert_eq!(t.columns, vec!["id", "  region ", " unit price", "Column4", "id.1"]);
+        // the importers that show trimmed names clean them afterwards
+        assert_eq!(clean_names(t.columns), vec!["id", "region", "unit price", "Column4", "id.1"]);
     }
 
     #[test]

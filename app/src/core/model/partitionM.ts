@@ -119,7 +119,7 @@ function webContents(source: Extract<SourceSpec, { kind: "web" }>): string {
   return `Web.Contents(${mText(source.url)}${opt})`;
 }
 
-function webSteps(source: Extract<SourceSpec, { kind: "web" }>, columns: ColumnInfo[], steps: Step[]): void {
+function webSteps(source: Extract<SourceSpec, { kind: "web" }>, columns: ColumnInfo[], steps: Step[], headerPadded = false): void {
   const url = mText(source.url);
   const wc = webContents(source);
   const prev = () => steps[steps.length - 1].name;
@@ -134,6 +134,7 @@ function webSteps(source: Extract<SourceSpec, { kind: "web" }>, columns: ColumnI
     case "csv":
       steps.push(step("Source", `Csv.Document(${wc}, [Delimiter=",", Encoding=65001, QuoteStyle=QuoteStyle.Csv])`));
       steps.push(step('#"Promoted Headers"', `Table.PromoteHeaders(${prev()}, [PromoteAllScalars=true])`));
+      if (headerPadded) steps.push(step('#"Trimmed Column Names"', `Table.TransformColumnNames(${prev()}, Text.Trim)`));
       steps.push(typeStep(prev(), columns));
       return;
     case "xml":
@@ -279,7 +280,7 @@ export function partitionM(source: SourceSpec, columns: ColumnInfo[], opts: { he
       break;
     }
     case "web":
-      webSteps(source, columns, steps);
+      webSteps(source, columns, steps, opts.headerPadded);
       break;
     case "inline": {
       const type = source.columns.map((c) => `#${mText(c.name)} = ${INLINE_TYPE[c.type] ?? "text"}`).join(", ");
