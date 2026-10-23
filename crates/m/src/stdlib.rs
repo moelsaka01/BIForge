@@ -521,7 +521,7 @@ fn aggregate(name: &str, v: &Value) -> R<Value> {
 pub const NOT_SUPPORTED: &[&str] = &[
     "Web.Contents", "Sql.Database", "PostgreSQL.Database", "OData.Feed",
     "Table.ExpandRecordColumn", "Table.ExpandListColumn",
-    "Table.Profile", "#time", "#duration", "Splitter.SplitTextByEachDelimiter",
+    "Table.Profile", "Splitter.SplitTextByEachDelimiter",
     "Splitter.SplitTextByCharacterTransition",
 ];
 

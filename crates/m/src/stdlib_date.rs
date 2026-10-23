@@ -15,6 +15,10 @@ pub const DATE_FNS: &[&str] = &[
     "Date.IsInYearToDate", "DateTime.IsInCurrentHour", "DateTime.IsInCurrentMinute", "DateTime.IsInCurrentSecond",
     "DateTime.LocalNow", "DateTime.FixedLocalNow", "Date.IsLeapYear", "Date.StartOfWeek", "Date.EndOfWeek", "Date.WeekOfYear",
     "Date.WeekOfMonth", "Date.ToText", "DateTime.ToText", "Date.FromText", "DateTime.FromText",
+    "#duration", "Duration.Days", "Duration.Hours", "Duration.Minutes", "Duration.Seconds", "Duration.TotalDays", "Duration.TotalHours",
+    "Duration.TotalMinutes", "Duration.TotalSeconds", "Duration.From", "Duration.ToText", "Duration.FromText", "#time", "Time.From",
+    "Time.FromText", "Time.StartOfHour", "Time.ToText", "DateTimeZone.UtcNow", "DateTimeZone.FixedUtcNow", "DateTimeZone.LocalNow",
+    "DateTimeZone.FixedLocalNow",
 ];
 
 const NOW: &str = "CAST(current_localtimestamp() AS TIMESTAMP)";
@@ -141,6 +145,64 @@ fn dispatch(ev: &Ev, name: &str, a: &[Value]) -> R<Value> {
             sql(format!("(date_trunc('{unit}', CAST({} AS TIMESTAMP)) = date_trunc('{unit}', {NOW}))", s(0)?))
         }
         "DateTime.LocalNow" | "DateTime.FixedLocalNow" => sql(NOW.into()),
+        "DateTimeZone.UtcNow" | "DateTimeZone.FixedUtcNow" | "DateTimeZone.LocalNow" | "DateTimeZone.FixedLocalNow" => sql("now()".into()),
+        // durations are DuckDB intervals; times are TIME values
+        "#duration" => sql(format!(
+            "(to_days(CAST({} AS INTEGER)) + to_hours(CAST({} AS BIGINT)) + to_minutes(CAST({} AS BIGINT)) + to_microseconds(CAST(round({} * 1000000) AS BIGINT)))",
+            s(0)?, s(1)?, s(2)?, s(3)?
+        )),
+        "Duration.From" => sql(format!("to_microseconds(CAST(round({} * 86400000000) AS BIGINT))", s(0)?)),
+        "Duration.TotalDays" => sql(format!("(epoch({}) / 86400)", s(0)?)),
+        "Duration.TotalHours" => sql(format!("(epoch({}) / 3600)", s(0)?)),
+        "Duration.TotalMinutes" => sql(format!("(epoch({}) / 60)", s(0)?)),
+        "Duration.TotalSeconds" => sql(format!("epoch({})", s(0)?)),
+        "Duration.Days" | "Duration.Hours" | "Duration.Minutes" | "Duration.Seconds" | "Duration.ToText" => {
+            let e = format!("epoch({})", s(0)?);
+            let days = format!("trunc({e} / 86400)");
+            let hours = format!("trunc(({e} - {days} * 86400) / 3600)");
+            let minutes = format!("trunc(({e} - {days} * 86400 - {hours} * 3600) / 60)");
+            let seconds = format!("({e} - {days} * 86400 - {hours} * 3600 - {minutes} * 60)");
+            match name {
+                "Duration.Days" => sql(format!("CAST({days} AS BIGINT)")),
+                "Duration.Hours" => sql(format!("CAST({hours} AS BIGINT)")),
+                "Duration.Minutes" => sql(format!("CAST({minutes} AS BIGINT)")),
+                "Duration.Seconds" => sql(seconds),
+                _ => sql(format!(
+                    "((CASE WHEN {days} <> 0 THEN CAST(CAST({days} AS BIGINT) AS VARCHAR) || '.' ELSE '' END) || lpad(CAST(CAST({hours} AS BIGINT) AS VARCHAR), 2, '0') || ':' || lpad(CAST(CAST({minutes} AS BIGINT) AS VARCHAR), 2, '0') || ':' || lpad(CAST(CAST(trunc({seconds}) AS BIGINT) AS VARCHAR), 2, '0'))"
+                )),
+            }
+        }
+        "Duration.FromText" => {
+            let Value::Text(t) = arg(0)? else {
+                return Err(MError::unsupported("Duration.FromText works on a text value here, not on a column."));
+            };
+            let (days, rest) = match t.trim().split_once('.') {
+                Some((d, r)) if !d.contains(':') => (d.parse::<f64>().map_err(|_| MError::expr("We couldn't parse the duration."))?, r),
+                _ => (0.0, t.trim()),
+            };
+            let parts: Vec<&str> = rest.split(':').collect();
+            if parts.len() != 3 {
+                return Err(MError::expr("We couldn't parse the duration; use d.hh:mm:ss."));
+            }
+            let n = |i: usize| parts[i].parse::<f64>().map_err(|_| MError::expr("We couldn't parse the duration."));
+            let micros = ((days * 86400.0 + n(0)? * 3600.0 + n(1)? * 60.0 + n(2)?) * 1_000_000.0).round() as i64;
+            sql(format!("to_microseconds(CAST({micros} AS BIGINT))"))
+        }
+        "#time" => sql(format!("make_time(CAST({} AS BIGINT), CAST({} AS BIGINT), CAST({} AS DOUBLE))", s(0)?, s(1)?, s(2)?)),
+        "Time.From" => sql(format!("CAST({} AS TIME)", s(0)?)),
+        "Time.FromText" => {
+            let t = format!("trim({})", s(0)?);
+            sql(format!("COALESCE(TRY_CAST({t} AS TIME), CAST(try_strptime({t}, '%I:%M %p') AS TIME), CAST(try_strptime({t}, '%I:%M:%S %p') AS TIME), error('We couldn''t parse the text as a time.'))"))
+        }
+        "Time.StartOfHour" => sql(format!("make_time(hour({t}), 0, 0)", t = s(0)?)),
+        "Time.ToText" => {
+            let fmt = match a.get(1) {
+                Some(Value::Text(f)) => strftime_of(f),
+                None | Some(Value::Null) => "%-I:%M %p".into(),
+                _ => return Err(MError::unsupported("Time.ToText needs the format as a text value.")),
+            };
+            sql(format!("strftime(CAST('1970-01-01' AS DATE) + CAST({} AS TIME), '{fmt}')", s(0)?))
+        }
         "Date.IsLeapYear" => {
             let y = format!("year({})", s(0)?);
             sql(format!("({y} % 4 = 0 AND ({y} % 100 <> 0 OR {y} % 400 = 0))"))

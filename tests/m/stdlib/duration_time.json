@@ -1,0 +1,164 @@
+[
+ {
+  "fn": "#duration",
+  "m": "Duration.TotalSeconds(#duration(2, 3, 4, 5))",
+  "expect": "183845",
+  "mode": "cell"
+ },
+ {
+  "fn": "#duration",
+  "m": "Duration.TotalSeconds(#duration(0, 0, 0, 0.5))",
+  "expect": "0.5",
+  "mode": "cell"
+ },
+ {
+  "fn": "Duration.Days",
+  "m": "Duration.Days(#duration(2, 3, 4, 5))",
+  "expect": "2",
+  "mode": "cell"
+ },
+ {
+  "fn": "Duration.Hours",
+  "m": "Duration.Hours(#duration(2, 3, 4, 5))",
+  "expect": "3",
+  "mode": "cell"
+ },
+ {
+  "fn": "Duration.Minutes",
+  "m": "Duration.Minutes(#duration(2, 3, 4, 5))",
+  "expect": "4",
+  "mode": "cell"
+ },
+ {
+  "fn": "Duration.Seconds",
+  "m": "Duration.Seconds(#duration(2, 3, 4, 5))",
+  "expect": "5",
+  "mode": "cell"
+ },
+ {
+  "fn": "Duration.TotalDays",
+  "m": "Duration.TotalDays(#duration(1, 12, 0, 0))",
+  "expect": "1.5",
+  "mode": "cell"
+ },
+ {
+  "fn": "Duration.TotalHours",
+  "m": "Duration.TotalHours(#duration(1, 0, 0, 0))",
+  "expect": "24",
+  "mode": "cell"
+ },
+ {
+  "fn": "Duration.TotalMinutes",
+  "m": "Duration.TotalMinutes(#duration(0, 1, 30, 0))",
+  "expect": "90",
+  "mode": "cell"
+ },
+ {
+  "fn": "Duration.TotalSeconds",
+  "m": "Duration.TotalSeconds(#duration(0, 0, 1, 30))",
+  "expect": "90",
+  "mode": "cell"
+ },
+ {
+  "fn": "Duration.From",
+  "m": "Duration.TotalHours(Duration.From(1.5))",
+  "expect": "36",
+  "mode": "cell"
+ },
+ {
+  "fn": "Duration.ToText",
+  "m": "Duration.ToText(#duration(1, 2, 3, 4))",
+  "expect": "1.02:03:04",
+  "mode": "cell"
+ },
+ {
+  "fn": "Duration.ToText",
+  "m": "Duration.ToText(#duration(0, 2, 3, 4))",
+  "expect": "02:03:04",
+  "mode": "cell"
+ },
+ {
+  "fn": "Duration.FromText",
+  "m": "Duration.TotalSeconds(Duration.FromText(\"1.02:03:04\"))",
+  "expect": "93784",
+  "mode": "cell"
+ },
+ {
+  "fn": "Duration.FromText",
+  "m": "Duration.TotalMinutes(Duration.FromText(\"00:45:00\"))",
+  "expect": "45",
+  "mode": "cell"
+ },
+ {
+  "fn": "#time",
+  "m": "Time.Hour(#time(14, 30, 0))",
+  "expect": "14",
+  "mode": "cell"
+ },
+ {
+  "fn": "Time.From",
+  "m": "Time.Minute(Time.From(\"14:30:00\"))",
+  "expect": "30",
+  "mode": "cell"
+ },
+ {
+  "fn": "Time.FromText",
+  "m": "Time.Hour(Time.FromText(\"14:30:00\"))",
+  "expect": "14",
+  "mode": "cell"
+ },
+ {
+  "fn": "Time.FromText",
+  "m": "Time.Hour(Time.FromText(\"2:30 PM\"))",
+  "expect": "14",
+  "mode": "cell"
+ },
+ {
+  "fn": "Time.StartOfHour",
+  "m": "Time.Minute(Time.StartOfHour(#time(14, 30, 15)))",
+  "expect": "0",
+  "mode": "cell"
+ },
+ {
+  "fn": "Time.StartOfHour",
+  "m": "Time.Hour(Time.StartOfHour(#time(14, 30, 15)))",
+  "expect": "14",
+  "mode": "cell"
+ },
+ {
+  "fn": "Time.ToText",
+  "m": "Time.ToText(#time(14, 30, 0))",
+  "expect": "2:30 PM",
+  "mode": "cell"
+ },
+ {
+  "fn": "Time.ToText",
+  "m": "Time.ToText(#time(14, 30, 5), \"HH:mm:ss\")",
+  "expect": "14:30:05",
+  "mode": "cell"
+ },
+ {
+  "fn": "DateTimeZone.UtcNow",
+  "m": "Date.Year(DateTimeZone.UtcNow()) >= 2025",
+  "expect": "true",
+  "mode": "cell"
+ },
+ {
+  "fn": "DateTimeZone.FixedUtcNow",
+  "m": "Date.Year(DateTimeZone.FixedUtcNow()) >= 2025",
+  "expect": "true",
+  "mode": "cell"
+ },
+ {
+  "fn": "DateTimeZone.LocalNow",
+  "m": "Date.Year(DateTimeZone.LocalNow()) >= 2025",
+  "expect": "true",
+  "mode": "cell"
+ },
+ {
+  "fn": "DateTimeZone.FixedLocalNow",
+  "m": "Date.Year(DateTimeZone.FixedLocalNow()) >= 2025",
+  "expect": "true",
+  "mode": "cell"
+ }
+]

@@ -175,8 +175,8 @@ Last updated: 2026-10-17, after the scope-change session was completed (see PROG
 | Accessibility and platform | 12 | 1 | 1 | 10 |
 | Format pane cards per visual | 1264 | 256 | 309 | 699 |
 | DAX functions | 317 | 297 | 0 | 20 |
-| M standard library | 652 | 339 | 0 | 313 |
-| **Total** | **3008** | **1182** | **345** | **1481** |
+| M standard library | 652 | 358 | 0 | 294 |
+| **Total** | **3008** | **1201** | **345** | **1462** |
 <!-- inventory-status:end -->
 
 ## Online track (Publish & Share; plan in docs/ONLINE_PLAN.md)
