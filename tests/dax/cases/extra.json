@@ -1,0 +1,95 @@
+{
+ "description": "Financial, parent-child, TOCSV, LINEST, window functions and NAMEOF. No expected results yet: they wait for a recording from Power BI Desktop (tools/dax-record).",
+ "cases": [
+  {
+   "id": "extra.fin.fv",
+   "query": "EVALUATE ROW(\"v\", FV(0.05, 10, -100))",
+   "source": "pending"
+  },
+  {
+   "id": "extra.fin.pv",
+   "query": "EVALUATE ROW(\"v\", PV(0.05, 10, -100))",
+   "source": "pending"
+  },
+  {
+   "id": "extra.fin.pmt",
+   "query": "EVALUATE ROW(\"v\", PMT(0.05, 10, 1000))",
+   "source": "pending"
+  },
+  {
+   "id": "extra.fin.pmt.begin",
+   "query": "EVALUATE ROW(\"v\", PMT(0.05, 10, 1000, 0, 1))",
+   "source": "pending"
+  },
+  {
+   "id": "extra.fin.nper",
+   "query": "EVALUATE ROW(\"v\", NPER(0.05, -129.5045749654567, 1000))",
+   "source": "pending"
+  },
+  {
+   "id": "extra.fin.rate",
+   "query": "EVALUATE ROW(\"v\", RATE(10, -129.5045749654567, 1000))",
+   "source": "pending"
+  },
+  {
+   "id": "extra.fin.xirr",
+   "query": "EVALUATE ROW(\"v\", XIRR(DATATABLE(\"d\", DATETIME, \"v\", DOUBLE, {{\"2023-01-01\", -1000}, {\"2024-01-01\", 1100}}), [v], [d]))",
+   "source": "pending"
+  },
+  {
+   "id": "extra.fin.xnpv",
+   "query": "EVALUATE ROW(\"v\", XNPV(DATATABLE(\"d\", DATETIME, \"v\", DOUBLE, {{\"2023-01-01\", -1000}, {\"2024-01-01\", 1100}}), [v], [d], 0.1))",
+   "source": "pending"
+  },
+  {
+   "id": "extra.path.item",
+   "query": "EVALUATE ROW(\"v\", PATHITEM(\"1|2|5\", 2), \"i\", PATHITEM(\"1|2|5\", 2, INTEGER), \"r\", PATHITEMREVERSE(\"1|2|5\", 1), \"x\", PATHITEM(\"1|2|5\", 4))",
+   "source": "pending"
+  },
+  {
+   "id": "extra.path.length",
+   "query": "EVALUATE ROW(\"v\", PATHLENGTH(\"1|2|5\"), \"c\", PATHCONTAINS(\"1|2|5\", 2), \"n\", PATHCONTAINS(\"1|2|5\", 3))",
+   "source": "pending"
+  },
+  {
+   "id": "extra.tocsv",
+   "query": "EVALUATE ROW(\"v\", TOCSV(TOPN(2, Product, Product[ProductKey], ASC)))",
+   "source": "pending"
+  },
+  {
+   "id": "extra.linest",
+   "query": "EVALUATE LINEST(Sales[UnitPrice], Sales[Quantity])",
+   "source": "pending"
+  },
+  {
+   "id": "extra.window.offset",
+   "query": "DEFINE MEASURE Sales[T] = SUM(Sales[Quantity])\nEVALUATE SUMMARIZECOLUMNS(Date[Year], Date[MonthNumber], \"prev\", CALCULATE([T], OFFSET(-1, ALLSELECTED(Date[Year], Date[MonthNumber]), ORDERBY(Date[MonthNumber]), PARTITIONBY(Date[Year])))) ORDER BY Date[Year], Date[MonthNumber]",
+   "source": "pending"
+  },
+  {
+   "id": "extra.window.rank",
+   "query": "DEFINE MEASURE Sales[T] = SUM(Sales[Quantity])\nEVALUATE SUMMARIZECOLUMNS(Product[Category], \"t\", [T], \"rank\", RANK(SKIP, ALLSELECTED(Product[Category]), ORDERBY([T], DESC))) ORDER BY Product[Category]",
+   "source": "pending"
+  },
+  {
+   "id": "extra.window.rownumber",
+   "query": "DEFINE MEASURE Sales[T] = SUM(Sales[Quantity])\nEVALUATE SUMMARIZECOLUMNS(Product[Category], \"n\", ROWNUMBER(ALLSELECTED(Product[Category]), ORDERBY(Product[Category]))) ORDER BY Product[Category]",
+   "source": "pending"
+  },
+  {
+   "id": "extra.window.index",
+   "query": "DEFINE MEASURE Sales[T] = SUM(Sales[Quantity])\nEVALUATE SUMMARIZECOLUMNS(Product[Category], \"first\", CALCULATE([T], INDEX(1, ALLSELECTED(Product[Category]), ORDERBY(Product[Category])))) ORDER BY Product[Category]",
+   "source": "pending"
+  },
+  {
+   "id": "extra.window.window",
+   "query": "DEFINE MEASURE Sales[T] = SUM(Sales[Quantity])\nEVALUATE SUMMARIZECOLUMNS(Product[Category], \"running\", CALCULATE([T], WINDOW(1, ABS, 0, REL, ALLSELECTED(Product[Category]), ORDERBY(Product[Category])))) ORDER BY Product[Category]",
+   "source": "pending"
+  },
+  {
+   "id": "extra.nameof",
+   "query": "EVALUATE ROW(\"v\", NAMEOF(Sales[Quantity]))",
+   "source": "pending"
+  }
+ ]
+}

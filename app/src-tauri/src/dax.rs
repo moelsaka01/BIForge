@@ -313,8 +313,8 @@ East,100
         let dax = DaxService { data: &svc };
         let e = dax.query(&docs, "EVALUATE ROW(\"v\", SUM(Sales[Nope]))").unwrap_err();
         assert!(e.contains("Nope"), "{e}");
-        let e = dax.query(&docs, "EVALUATE ROW(\"v\", XIRR(Sales, Sales[Qty], Sales[Qty]))").unwrap_err();
-        assert!(e.contains("XIRR") && e.contains("not implemented"), "{e}");
+        let e = dax.query(&docs, "EVALUATE ROW(\"v\", TOJSON(Sales))").unwrap_err();
+        assert!(e.contains("TOJSON") && e.contains("not implemented"), "{e}");
         // no project open
         let none = DataService::new(Arc::new(MemoryCredentialStore::default()));
         assert!(DaxService { data: &none }.query(&docs, "EVALUATE ROW(\"v\", 1)").unwrap_err().contains("No project is open"));

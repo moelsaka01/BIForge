@@ -7,7 +7,7 @@ use crate::eval::{Env, Evaluator, Val};
 use crate::functions::err;
 use crate::value::{VResult, Value};
 
-pub const NAMES: &[&str] = &["SELECTEDMEASURE", "SELECTEDMEASURENAME", "ISSELECTEDMEASURE", "NAMEOF"];
+pub const NAMES: &[&str] = &["SELECTEDMEASURE", "SELECTEDMEASURENAME", "ISSELECTEDMEASURE", "NAMEOF", "ISINSCOPE"];
 
 pub fn call<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], env: &Env<'a>) -> Option<VResult<Val>> {
     if !NAMES.contains(&name) {
@@ -17,6 +17,13 @@ pub fn call<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], env: &Env<
 }
 
 fn run<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], env: &Env<'a>) -> VResult<Value> {
+    // ISINSCOPE(column): the query groups by the column at the current level
+    if name == "ISINSCOPE" {
+        return match args.first().and_then(|a| a.col()) {
+            Some(c) => Ok(Value::Bool(env.filter.scope.contains(&c))),
+            None => Err(err(ErrorCode::InvalidParameter, "ISINSCOPE expects a column reference.")),
+        };
+    }
     // NAMEOF(Table[Column]) or NAMEOF([Measure]): the name of a field as text, for field parameters
     if name == "NAMEOF" {
         let q = |t: &str| t.replace('\x27', "''");

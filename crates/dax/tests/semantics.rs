@@ -508,8 +508,8 @@ fn unknown_names_and_unimplemented_functions_are_reported() {
     assert_eq!(e.eval_scalar("SUM(Nope[Qty])").unwrap_err().code, ErrorCode::UnrecognizedIdentifier);
     assert_eq!(e.eval_scalar("FOO(1)").unwrap_err().code, ErrorCode::UnrecognizedIdentifier);
     assert_eq!(e.eval_scalar("[No Measure]").unwrap_err().code, ErrorCode::UnrecognizedIdentifier);
-    let err = e.eval_scalar("XIRR(Sales, Sales[Qty], Sales[OrderDate])").unwrap_err();
+    let err = e.eval_scalar("TOJSON(Sales)").unwrap_err();
     assert_eq!(err.code, ErrorCode::NotImplemented);
-    assert!(err.message.contains("XIRR"));
+    assert!(err.message.contains("TOJSON"));
     assert_eq!(e.eval_scalar("SUM(1)").unwrap_err().code, ErrorCode::InvalidParameter);
 }

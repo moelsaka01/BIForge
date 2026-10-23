@@ -182,7 +182,7 @@ mod tests {
     #[test]
     fn unimplemented_functions_are_warnings() {
         let m = model();
-        let d = check_expression(&m, "XIRR(Sales, Sales[Qty], Sales[Qty])");
+        let d = check_expression(&m, "TOJSON(Sales)");
         assert_eq!(d.len(), 1);
         assert_eq!(d[0].severity, "warning");
         assert_eq!(d[0].code, ErrorCode::NotImplemented);
@@ -195,7 +195,7 @@ mod tests {
         let get = |n: &str| c.iter().find(|f| f.name == n).unwrap();
         assert!(get("CALCULATE").implemented);
         assert!(get("TOTALYTD").implemented);
-        assert!(!get("XIRR").implemented);
+        assert!(!get("TOJSON").implemented);
         assert!(get("SUM").returns_table == false);
         assert!(get("FILTER").returns_table);
     }

@@ -14,6 +14,8 @@ pub mod fn_logic;
 pub mod fn_math;
 pub mod fn_stats;
 pub mod fn_calcgroup;
+pub mod fn_extra;
+pub mod fn_window;
 pub mod fn_table;
 pub mod fn_text;
 pub mod fn_time;

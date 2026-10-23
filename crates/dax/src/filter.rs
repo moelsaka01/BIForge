@@ -131,6 +131,8 @@ pub struct FilterCtx {
     /// The filters in force before the innermost group-by / context transition began: the "outer" selection
     /// that ALLSELECTED restores.
     pub shadow: Option<Rc<Vec<Filter>>>,
+    /// The columns the query groups by at this level (ISINSCOPE).
+    pub scope: Rc<Vec<ColId>>,
 }
 
 thread_local! {
@@ -148,6 +150,13 @@ fn next_id() -> u64 {
 impl FilterCtx {
     pub fn empty() -> FilterCtx {
         FilterCtx::default()
+    }
+
+    /// This context with `cols` in scope: the group-by columns of the current row of a query.
+    pub fn with_scope(&self, cols: &[ColId]) -> FilterCtx {
+        let mut c = self.clone();
+        c.scope = Rc::new(cols.to_vec());
+        c
     }
 
     fn touched(mut self) -> FilterCtx {
@@ -192,23 +201,23 @@ impl FilterCtx {
                 }
             }
         }
-        FilterCtx { filters: Rc::new(out), rels: self.rels.clone(), id: 0, shadow: self.shadow.clone() }.touched()
+        FilterCtx { filters: Rc::new(out), rels: self.rels.clone(), id: 0, shadow: self.shadow.clone(), scope: self.scope.clone() }.touched()
     }
 
     pub fn clear(&self) -> FilterCtx {
-        FilterCtx { filters: Rc::new(vec![]), rels: self.rels.clone(), id: 0, shadow: self.shadow.clone() }.touched()
+        FilterCtx { filters: Rc::new(vec![]), rels: self.rels.clone(), id: 0, shadow: self.shadow.clone(), scope: self.scope.clone() }.touched()
     }
 
     pub fn push(&self, f: Filter) -> FilterCtx {
         let mut v = (*self.filters).clone();
         v.push(f);
-        FilterCtx { filters: Rc::new(v), rels: self.rels.clone(), id: 0, shadow: self.shadow.clone() }.touched()
+        FilterCtx { filters: Rc::new(v), rels: self.rels.clone(), id: 0, shadow: self.shadow.clone(), scope: self.scope.clone() }.touched()
     }
 
     pub fn set_rel(&self, rel: usize, st: RelState) -> FilterCtx {
         let mut v: Vec<(usize, RelState)> = self.rels.iter().filter(|(r, _)| *r != rel).cloned().collect();
         v.push((rel, st));
-        FilterCtx { filters: self.filters.clone(), rels: Rc::new(v), id: 0, shadow: self.shadow.clone() }.touched()
+        FilterCtx { filters: self.filters.clone(), rels: Rc::new(v), id: 0, shadow: self.shadow.clone(), scope: self.scope.clone() }.touched()
     }
 
     /// Marks the current filters as the outer selection (only the outermost call counts).
@@ -216,15 +225,15 @@ impl FilterCtx {
         if self.shadow.is_some() {
             return self.clone();
         }
-        FilterCtx { filters: self.filters.clone(), rels: self.rels.clone(), id: self.id, shadow: Some(self.filters.clone()) }
+        FilterCtx { filters: self.filters.clone(), rels: self.rels.clone(), id: self.id, shadow: Some(self.filters.clone()), scope: self.scope.clone() }
     }
 
     /// ALLSELECTED: for the given columns (None = all), replaces the current filters with the outer selection.
     pub fn restore_selected(&self, data: &ModelData, graph: &Graph, cols: Option<&HashSet<ColId>>) -> FilterCtx {
         let Some(shadow) = &self.shadow else { return self.clone() };
-        let shadow_ctx = FilterCtx { filters: shadow.clone(), rels: self.rels.clone(), id: 0, shadow: None };
+        let shadow_ctx = FilterCtx { filters: shadow.clone(), rels: self.rels.clone(), id: 0, shadow: None, scope: Rc::new(vec![]) };
         match cols {
-            None => FilterCtx { filters: shadow.clone(), rels: self.rels.clone(), id: 0, shadow: self.shadow.clone() }.touched(),
+            None => FilterCtx { filters: shadow.clone(), rels: self.rels.clone(), id: 0, shadow: self.shadow.clone(), scope: self.scope.clone() }.touched(),
             Some(cols) => {
                 let mut ctx = self.remove_columns(data, graph, cols);
                 for f in shadow.iter() {

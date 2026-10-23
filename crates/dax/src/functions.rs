@@ -48,10 +48,10 @@ pub fn implemented_names() -> Vec<&'static str> {
 }
 
 /// Names implemented by the tranche modules (each module owns its list).
-const MODULE_NAMES: &[&[&str]] = &[crate::fn_agg::NAMES, crate::fn_logic::NAMES, crate::fn_math::NAMES, crate::fn_text::NAMES, crate::fn_date::NAMES, crate::fn_table::NAMES, crate::fn_time::NAMES, crate::fn_stats::NAMES, crate::fn_calcgroup::NAMES];
+const MODULE_NAMES: &[&[&str]] = &[crate::fn_agg::NAMES, crate::fn_logic::NAMES, crate::fn_math::NAMES, crate::fn_text::NAMES, crate::fn_date::NAMES, crate::fn_table::NAMES, crate::fn_time::NAMES, crate::fn_stats::NAMES, crate::fn_calcgroup::NAMES, crate::fn_extra::NAMES, crate::fn_window::NAMES];
 
 type ModuleFn = for<'a> fn(&'a Evaluator<'a>, &str, &'a [BExpr], &Env<'a>) -> Option<VResult<Val>>;
-const MODULES: &[ModuleFn] = &[crate::fn_agg::call, crate::fn_logic::call, crate::fn_math::call, crate::fn_text::call, crate::fn_date::call, crate::fn_table::call, crate::fn_time::call, crate::fn_stats::call, crate::fn_calcgroup::call];
+const MODULES: &[ModuleFn] = &[crate::fn_agg::call, crate::fn_logic::call, crate::fn_math::call, crate::fn_text::call, crate::fn_date::call, crate::fn_table::call, crate::fn_time::call, crate::fn_stats::call, crate::fn_calcgroup::call, crate::fn_extra::call, crate::fn_window::call];
 
 /// Evaluates every argument to a scalar; an omitted argument (a gap in the list) is None.
 pub(crate) fn eval_args<'a>(ev: &'a Evaluator<'a>, args: &'a [BExpr], env: &Env<'a>) -> VResult<Vec<Option<Value>>> {
@@ -691,7 +691,7 @@ fn summarize_columns<'a>(ev: &'a Evaluator<'a>, args: &'a [BExpr], env: &Env<'a>
         for (k, &c) in order.iter().enumerate() {
             c2 = c2.push(Filter::single(c, combo[k].key()));
         }
-        let e2 = Env { filter: c2, rows: None, vars: env.vars.clone() };
+        let e2 = Env { filter: c2.with_scope(&order), rows: None, vars: env.vars.clone() };
         let key: Vec<Key> = combo.iter().map(|v| v.key()).collect();
         let vals = pairs
             .iter()
@@ -763,7 +763,7 @@ fn summarize<'a>(ev: &'a Evaluator<'a>, args: &'a [BExpr], env: &Env<'a>) -> VRe
         for (k, &c) in cols.iter().enumerate() {
             c2 = c2.push(Filter::single(c, vals[k].key()));
         }
-        let e2 = Env { filter: c2, rows: None, vars: env.vars.clone() };
+        let e2 = Env { filter: c2.with_scope(&cols), rows: None, vars: env.vars.clone() };
         for (_, x) in &pairs {
             vals.push(ev.scalar(x, &e2)?);
         }
