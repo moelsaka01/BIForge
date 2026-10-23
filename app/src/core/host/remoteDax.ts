@@ -9,10 +9,10 @@ export function routedDax(session: Session, local: DaxApi): DaxApi {
   return {
     catalog: () => local.catalog(),
     check: (documents, expression) => local.check(documents, expression),
-    query(documents, query) {
+    query(documents, query, viewAs) {
       const snap = session.getSnapshot();
       const server = snap.viewing?.server ?? (snap.coedit?.server ? { connectionId: snap.coedit.server.connectionId, workspaceId: snap.coedit.server.workspaceId, reportId: snap.coedit.server.reportId } : undefined);
-      if (!server || !session.host) return local.query(documents, query);
+      if (!server || !session.host) return local.query(documents, query, viewAs ?? session.shell.getSnapshot().viewAs ?? undefined);
       return session.host.op<QueryOutcome>(server.connectionId, "query", { workspace: server.workspaceId, report: server.reportId, query });
     },
   };

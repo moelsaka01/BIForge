@@ -229,3 +229,60 @@ export function pruneHierarchies(p: Project, table: string): void {
   for (const h of t.children.filter((c) => c.kind === "hierarchy")) h.children = h.children.filter((l) => l.kind !== "level" || cols.has((textProp(l, "column") ?? "").toLowerCase()));
   t.children = t.children.filter((c) => c.kind !== "hierarchy" || c.children.filter((l) => l.kind === "level").length >= 2);
 }
+
+// ---- security roles (row-level security) -----------------------------------------------------------------------
+
+export interface RoleView {
+  name: string;
+  /** One DAX filter per table: a row is visible when the expression is TRUE. */
+  filters: { table: string; expression: string }[];
+}
+
+function roleNodes(p: Project): { key: string; node: TmdlNode }[] {
+  return Object.entries(p.model.tmdl).flatMap(([key, d]) => d.nodes.filter((n) => n.kind === "role").map((node) => ({ key, node })));
+}
+
+export function listRoles(p: Project): RoleView[] {
+  return roleNodes(p).map(({ node: n }) => ({
+    name: n.name ?? "",
+    filters: n.children.filter((c) => c.kind === "tablePermission").map((c) => ({ table: c.name ?? "", expression: c.default?.text ?? "" })),
+  }));
+}
+
+/** Creates or replaces a role. `oldName` is given when an existing role is edited (and possibly renamed). */
+export function setRole(p: Project, role: RoleView, oldName?: string): void {
+  const name = checkName(role.name, "Role");
+  const existing = roleNodes(p);
+  const found = oldName ? existing.find((r) => r.node.name?.toLowerCase() === oldName.toLowerCase()) : undefined;
+  if (existing.some((r) => r !== found && r.node.name?.toLowerCase() === name.toLowerCase())) throw new ModelError("duplicate-name", `A role named "${name}" already exists.`);
+  const seen = new Set<string>();
+  const perms = role.filters.map((f) => {
+    const t = requireTable(p, f.table).node;
+    if (seen.has(t.name!.toLowerCase())) throw new ModelError("duplicate-name", `The role has two filters for the table "${t.name}".`);
+    seen.add(t.name!.toLowerCase());
+    if (f.expression.trim() === "") throw new ModelError("invalid", `Enter the filter expression for the table "${t.name}".`);
+    const c = node("tablePermission", t.name!);
+    c.default = exprOf(f.expression);
+    return c;
+  });
+  const n = found?.node ?? node("role", name, [text("modelPermission", "read")]);
+  n.name = name;
+  n.children = perms;
+  if (found) return;
+  const key = `roles/${name.replace(/[\/:*?"<>|]/g, "_")}.tmdl`;
+  p.model.tmdl[key] = { nodes: [n] };
+  const model = p.model.tmdl["model.tmdl"];
+  if (model) {
+    const kinds = model.nodes.map((x) => x.kind);
+    const at = Math.max(kinds.lastIndexOf("ref role"), kinds.lastIndexOf("ref table"));
+    model.nodes.splice(at === -1 ? model.nodes.length : at + 1, 0, node("ref role", name));
+  }
+}
+
+export function removeRole(p: Project, name: string): void {
+  const found = roleNodes(p).find((r) => r.node.name?.toLowerCase() === name.toLowerCase());
+  if (!found) throw new ModelError("not-found", `Role "${name}" does not exist.`);
+  delete p.model.tmdl[found.key];
+  const model = p.model.tmdl["model.tmdl"];
+  if (model) model.nodes = model.nodes.filter((x) => !(x.kind === "ref role" && x.name?.toLowerCase() === name.toLowerCase()));
+}

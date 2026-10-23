@@ -124,3 +124,22 @@ describe("hierarchies", () => {
     expect(() => mod.removeHierarchy(p, "Sales", "Geography")).toThrow("does not exist");
   });
 });
+
+describe("security roles", () => {
+  it("creates, edits, renames and removes a role with one filter per table", () => {
+    const p = fresh();
+    mod.setRole(p, { name: "East", filters: [{ table: "Sales", expression: "Sales[Region] = \"East\"" }] });
+    expect(mod.listRoles(p)).toEqual([{ name: "East", filters: [{ table: "Sales", expression: "Sales[Region] = \"East\"" }] }]);
+    expect(p.model.tmdl["model.tmdl"].nodes.some((n) => n.kind === "ref role" && n.name === "East")).toBe(true);
+    mod.setRole(p, { name: "Eastern", filters: [{ table: "Sales", expression: "TRUE()" }] }, "East");
+    expect(mod.listRoles(p).map((r) => r.name)).toEqual(["Eastern"]);
+    mod.setRole(p, { name: "All", filters: [] });
+    expect(() => mod.setRole(p, { name: "all", filters: [] })).toThrow("already exists");
+    expect(() => mod.setRole(p, { name: "X", filters: [{ table: "Nope", expression: "1" }] })).toThrow("does not exist");
+    expect(() => mod.setRole(p, { name: "X", filters: [{ table: "Sales", expression: " " }] })).toThrow("filter expression");
+    expect(() => mod.setRole(p, { name: "X", filters: [{ table: "Sales", expression: "1" }, { table: "sales", expression: "2" }] })).toThrow("two filters");
+    mod.removeRole(p, "Eastern");
+    expect(mod.listRoles(p).map((r) => r.name)).toEqual(["All"]);
+    expect(() => mod.removeRole(p, "Eastern")).toThrow("does not exist");
+  });
+});

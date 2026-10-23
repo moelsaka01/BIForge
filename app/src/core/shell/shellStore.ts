@@ -12,6 +12,8 @@ export type DialogRequest =
   | { kind: "newProject"; /** create the sample project instead of a blank one */ sample?: boolean; /** open the import dialog (for this source) right after the project exists */ thenImport?: string | true }
   | { kind: "import"; source?: string }
   | { kind: "newTable" }
+  | { kind: "roles" }
+  | { kind: "viewAs" }
   | { kind: "modelDialog"; id: ModelDialogId; table?: string | null; column?: string }
   | { kind: "unsaved"; /** the command to run again (with discard: true) once the user has decided */ resume: { id: string; args?: Record<string, unknown> } }
   | { kind: "options"; page?: string }
@@ -51,6 +53,8 @@ export interface ShellState {
   systemDark: boolean;
   /** Bumped by the TMDL ribbon's Apply so the TMDL view applies its edits. */
   applyTmdlTick: number;
+  /** "View as roles": the report is shown as a member of these roles would see it (null = as the author). */
+  viewAs: { roles: string[]; identity: string } | null;
 }
 
 const INITIAL: ShellState = {
@@ -68,6 +72,7 @@ const INITIAL: ShellState = {
   sideTab: "visualizations",
   systemDark: false,
   applyTmdlTick: 0,
+  viewAs: null,
 };
 
 /** Transient UI state of the app frame (which screen, which view, which dialog) plus the persisted settings. */
@@ -180,6 +185,10 @@ export class ShellStore {
 
   requestRunQuery(): void {
     this.set({ view: "dax", daxTab: "query", screen: "workspace", runQueryTick: this.snap.runQueryTick + 1 });
+  }
+
+  setViewAs(v: { roles: string[]; identity: string } | null): void {
+    this.set({ viewAs: v && v.roles.length ? v : null });
   }
 
   requestNewMeasure(): void {

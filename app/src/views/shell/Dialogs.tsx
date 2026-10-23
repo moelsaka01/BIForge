@@ -7,6 +7,7 @@ import { dirname, joinPath } from "../../core/session/session";
 import type { DialogRequest } from "../../core/shell/shellStore";
 import { OptionsDialog } from "./OptionsDialog";
 import { FormDialog } from "../pq/FormDialog";
+import { RolesDialog, ViewAsDialog } from "./RolesDialogs";
 import { modelDialogFor } from "../../core/model/modelDialogs";
 import { calculatedColumns, calculatedTables } from "../../core/model/modeling";
 import { listTables } from "../../core/model/ops";
@@ -493,6 +494,10 @@ export function Dialogs() {
       return <ImportHost request={dialog} />;
     case "newTable":
       return <NewTableDialog />;
+    case "roles":
+      return <RolesDialog />;
+    case "viewAs":
+      return <ViewAsDialog />;
     case "modelDialog":
       return <ModelDialogHost request={dialog} />;
     case "unsaved":

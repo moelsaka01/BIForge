@@ -675,6 +675,12 @@ export class Session {
     };
   }
 
+  /** "View as roles": reports and queries run as a member of these roles; null returns to the author's view. */
+  setViewAs(v: { roles: string[]; identity: string } | null): void {
+    this.shell.setViewAs(v);
+    this.set({ dataEpoch: this.snap.dataEpoch + 1 });
+  }
+
   /** Adds a calculated column: the engine computes it first, so a formula that fails changes nothing. */
   async addCalculatedColumn(table: string, name: string, expression: string): Promise<void> {
     const engine = this.requireEngine();

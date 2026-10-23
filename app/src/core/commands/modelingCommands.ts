@@ -66,6 +66,20 @@ export function registerModelingCommands(r: CommandRegistry<Session>): void {
   reg("model.whatIfDialog", "New parameter", (s) => {
     s.shell.openDialog({ kind: "modelDialog", id: "whatIf" });
   });
+  reg("model.manageRolesDialog", "Manage roles", (s) => s.shell.openDialog({ kind: "roles" }));
+  reg("model.viewAsDialog", "View as", (s) => s.shell.openDialog({ kind: "viewAs" }));
+  reg("model.setRole", "Save role", (s, a) => {
+    const { role, oldName } = need<{ role: mod.RoleView; oldName?: string }>(a, ["role"]);
+    s.store.transact(`Role "${role.name}"`, (p) => mod.setRole(p, role, oldName));
+  });
+  reg("model.removeRole", "Delete role", (s, a) => {
+    const { name } = need<{ name: string }>(a, ["name"]);
+    s.store.transact(`Delete role "${name}"`, (p) => mod.removeRole(p, name));
+  });
+  reg("model.viewAs", "View as roles", (s, a) => {
+    const { roles, identity } = (a ?? {}) as { roles?: string[]; identity?: string };
+    s.setViewAs(roles?.length ? { roles, identity: identity ?? "" } : null);
+  });
   reg("model.quickMeasureDialog", "Quick measure", (s) => {
     s.shell.openDialog({ kind: "modelDialog", id: "quickMeasure", table: s.shell.getSnapshot().selectedTable });
   });

@@ -278,6 +278,22 @@ impl DaxCache {
         Ok(engine)
     }
 
+    /// Like [`DaxCache::get`], for an engine that `build` makes itself (for example one that only sees the rows of some
+    /// roles); `key` must include whatever `build` depends on besides the data.
+    pub fn get_built(&self, key: u64, store: &Engine, build: impl FnOnce() -> Result<biforge_dax::Engine, String>) -> Result<std::sync::Arc<biforge_dax::Engine>, String> {
+        let stamp = store.data_stamp();
+        let mut slot = self.slot.lock().map_err(|_| "The DAX cache is unavailable.".to_string())?;
+        if let Some(s) = slot.as_ref() {
+            if s.model_key == key && s.stamp == stamp {
+                return Ok(s.engine.clone());
+            }
+        }
+        let engine = std::sync::Arc::new(build()?);
+        self.loads.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        *slot = Some(CacheSlot { model_key: key, stamp, engine: engine.clone() });
+        Ok(engine)
+    }
+
     /// How many times an engine was loaded (cache misses).
     pub fn loads(&self) -> u64 {
         self.loads.load(std::sync::atomic::Ordering::Relaxed)

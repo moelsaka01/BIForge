@@ -41,8 +41,14 @@ export interface QueryOutcome {
 }
 
 /** The DAX engine as the UI sees it. The real implementation calls Tauri commands; tests use a fake. */
+export interface ViewAs {
+  roles: string[];
+  identity: string;
+}
+
 export interface DaxApi {
   catalog(): Promise<FunctionInfo[]>;
   check(documents: TmdlDocument[], expression: string): Promise<EditorDiagnostic[]>;
-  query(documents: TmdlDocument[], query: string): Promise<QueryOutcome>;
+  /** `viewAs`: the engine only sees what these roles allow (row-level security), for this user name. */
+  query(documents: TmdlDocument[], query: string, viewAs?: ViewAs): Promise<QueryOutcome>;
 }

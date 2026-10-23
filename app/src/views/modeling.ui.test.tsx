@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { installDomStubs } from "../core/testing/domStubs";
 import { col } from "../core/testing/fakeEngine";
-import { calculatedColumns, calculatedTables, getProperty, listHierarchies } from "../core/model/modeling";
+import { calculatedColumns, calculatedTables, getProperty, listHierarchies, listRoles } from "../core/model/modeling";
 import { PBIP, makeApp } from "./shell/testApp";
 
 installDomStubs();
@@ -103,5 +103,31 @@ describe("Model view: hierarchies and editable properties", () => {
     expect(list.textContent).toContain("ProductKey > Quantity");
     fireEvent.click(within(list).getByRole("button", { name: /Delete hierarchy/ }));
     await waitFor(() => expect(listHierarchies(a.session.store.project!, "Sales")).toEqual([]));
+  });
+});
+
+describe("security roles and View as", () => {
+  it("Manage roles saves a role; View as makes the report queries carry the roles", async () => {
+    const a = await open();
+    await act(async () => void a.registry.execute("model.manageRolesDialog"));
+    const dlg = await dialog();
+    fireEvent.change(within(dlg).getByLabelText("Role name"), { target: { value: "East" } });
+    fireEvent.click(within(dlg).getByRole("button", { name: "Add table filter" }));
+    fireEvent.change(within(dlg).getByLabelText("Filter expression 1"), { target: { value: 'Sales[Quantity] > 0' } });
+    fireEvent.click(within(dlg).getByRole("button", { name: "Save role" }));
+    await waitFor(() => expect(listRoles(a.session.store.project!)).toEqual([{ name: "East", filters: [{ table: "Sales", expression: "Sales[Quantity] > 0" }] }]));
+    fireEvent.click(within(dlg).getByRole("button", { name: "Close" }));
+    // View as
+    await act(async () => void a.registry.execute("model.viewAsDialog"));
+    const v = await dialog();
+    fireEvent.click(within(v).getByLabelText("East"));
+    fireEvent.change(within(v).getByLabelText("User name"), { target: { value: "ann@x.com" } });
+    fireEvent.click(within(v).getByRole("button", { name: "OK" }));
+    await waitFor(() => expect(a.session.shell.getSnapshot().viewAs).toEqual({ roles: ["East"], identity: "ann@x.com" }));
+    expect(await screen.findByRole("region", { name: "Viewing as roles" })).toBeTruthy();
+    // a query now carries the roles, and Stop returns to the author's view
+    await a.dax.query([], "EVALUATE ROW(1)", a.session.shell.getSnapshot().viewAs ?? undefined);
+    fireEvent.click(within(screen.getByRole("region", { name: "Viewing as roles" })).getByRole("button", { name: /Stop viewing/ }));
+    await waitFor(() => expect(a.session.shell.getSnapshot().viewAs).toBeNull());
   });
 });

@@ -1,5 +1,5 @@
 // Test double for DaxApi. It does not evaluate DAX: tests program the answers.
-import type { Cell, DaxApi, EditorDiagnostic, FunctionInfo, QueryOutcome, QueryResult } from "../dax/types";
+import type { Cell, DaxApi, EditorDiagnostic, FunctionInfo, QueryOutcome, QueryResult, ViewAs } from "../dax/types";
 import type { TmdlDocument } from "../model/types";
 
 export const fn = (name: string, signature: string, implemented = true): FunctionInfo => ({
@@ -37,8 +37,10 @@ export class FakeDax implements DaxApi {
     this.checkedDocuments.push(documents);
     return this.diagnostics.get(expression) ?? [];
   }
-  async query(_documents: TmdlDocument[], query: string): Promise<QueryOutcome> {
+  viewAsSeen: (ViewAs | undefined)[] = [];
+  async query(_documents: TmdlDocument[], query: string, viewAs?: ViewAs): Promise<QueryOutcome> {
     this.calls.push(`query:${query}`);
+    this.viewAsSeen.push(viewAs);
     const h = this.handler?.(query);
     if (h instanceof Error) throw h;
     if (h) return h;

@@ -25,6 +25,7 @@ import { TitleBar } from "./TitleBar";
 import { TmdlView } from "./TmdlView";
 import { ViewSwitcher } from "./ViewSwitcher";
 import { ViewingBar } from "./ViewingBar";
+import { ViewAsBar } from "./RolesDialogs";
 import { eventToShortcut } from "../../core/commands/registry";
 
 /** A Data pane docked to the side the shell prefers, remembering its width and whether it is open. */
@@ -326,6 +327,7 @@ export function Frame({ spec }: { spec: ShellSpec }) {
           </div>
         </>
       )}
+      {inWorkspace && <ViewAsBar />}
       {inWorkspace && <StatusBar text={statusText} scale={st.view === "report" ? scale : null} zoom={st.zoom} />}
       {queriesOpen && <PowerQueryEditor session={session} registry={registry} />}
       <Dialogs />

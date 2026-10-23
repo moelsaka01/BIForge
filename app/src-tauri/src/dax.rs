@@ -32,6 +32,33 @@ fn model_key(documents: &[Document]) -> u64 {
     h.finish()
 }
 
+/// "View as": the engine only sees what these roles allow, for this user name (USERNAME() returns it).
+#[derive(Debug, Clone, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ViewAs {
+    pub roles: Vec<String>,
+    #[serde(default)]
+    pub identity: String,
+}
+
+/// The roles of the model: `role` objects with one `tablePermission` per table.
+pub fn roles_of(documents: &[Document]) -> Vec<biforge_dax::security::Role> {
+    documents
+        .iter()
+        .flat_map(|d| d.nodes.iter())
+        .filter(|n| n.kind == "role")
+        .map(|n| biforge_dax::security::Role {
+            name: n.name.clone().unwrap_or_default(),
+            filters: n
+                .children
+                .iter()
+                .filter(|c| c.kind == "tablePermission")
+                .map(|c| biforge_dax::security::TableFilter { table: c.name.clone().unwrap_or_default(), expression: c.default.as_ref().map(|e| e.text.clone()).unwrap_or_default() })
+                .collect(),
+        })
+        .collect()
+}
+
 pub struct DaxService<'a> {
     pub data: &'a DataService,
 }
@@ -78,10 +105,30 @@ impl DaxService<'_> {
 
     /// Runs a DAX query (`DEFINE ... EVALUATE ...`) over the project's model and data.
     pub fn query(&self, documents: &[Document], query: &str) -> Result<QueryOutcome, String> {
+        self.query_as(documents, query, None)
+    }
+
+    /// Like `query`; with `view_as` the data is pruned by the roles first (row-level security as a member of them would see it).
+    pub fn query_as(&self, documents: &[Document], query: &str, view_as: Option<&ViewAs>) -> Result<QueryOutcome, String> {
         self.data.with_store(|store| {
             let started = Instant::now();
-            let engine = self.data.dax_cache.get(model_key(documents), store, || model_of(documents))?;
-            let tables = engine.query_with(query, Some(store)).map_err(|e| e.message)?;
+            let engine = match view_as.filter(|v| !v.roles.is_empty()) {
+                None => self.data.dax_cache.get(model_key(documents), store, || model_of(documents))?,
+                Some(v) => {
+                    let all = roles_of(documents);
+                    let chosen: Vec<&biforge_dax::security::Role> = v.roles.iter().map(|n| all.iter().find(|r| r.name.eq_ignore_ascii_case(n)).ok_or_else(|| format!("The role \"{n}\" does not exist."))).collect::<Result<_, _>>()?;
+                    let key = {
+                        use std::hash::{Hash, Hasher};
+                        let mut h = std::collections::hash_map::DefaultHasher::new();
+                        (model_key(documents), "view-as", &v.roles, &v.identity).hash(&mut h);
+                        h.finish()
+                    };
+                    self.data.dax_cache.get_built(key, store, || biforge_dax::Engine::new_secured(model_of(documents)?, store, &chosen, &v.identity))?
+                }
+            };
+            // a pruned engine must not push aggregations to the store: SQL would read the rows the roles hide
+            let secured = view_as.is_some_and(|v| !v.roles.is_empty());
+            let tables = engine.query_with(query, if secured { None } else { Some(store) }).map_err(|e| e.message)?;
             Ok(QueryOutcome { results: tables.iter().map(result_dto).collect(), elapsed_ms: started.elapsed().as_millis() as u64 })
         })
     }
@@ -98,8 +145,8 @@ pub fn dax_check(state: tauri::State<DataService>, documents: Vec<Document>, exp
 }
 
 #[tauri::command]
-pub fn dax_query(state: tauri::State<DataService>, documents: Vec<Document>, query: String) -> Result<QueryOutcome, String> {
-    DaxService { data: &state }.query(&documents, &query)
+pub fn dax_query(state: tauri::State<DataService>, documents: Vec<Document>, query: String, view_as: Option<ViewAs>) -> Result<QueryOutcome, String> {
+    DaxService { data: &state }.query_as(&documents, &query, view_as.as_ref())
 }
 
 #[tauri::command]
@@ -197,6 +244,23 @@ mod tests {
         let q = |s: &str| dax.query(&docs2, s).unwrap().results[0].rows[0][0].v.clone();
         assert_eq!(q("EVALUATE ROW(\"v\", [Discount Value])"), "10", "nothing selected: the default");
         assert_eq!(q("EVALUATE CALCULATETABLE(ROW(\"v\", [Discount Value]), 'Discount'[Discount] = 25)"), "25");
+    }
+
+
+    #[test]
+    fn view_as_a_role_prunes_the_data_for_the_queries_of_the_report() {
+        let (_d, svc, docs) = setup();
+        let dax = DaxService { data: &svc };
+        let model = format!("{MODEL}\nrole EastOnly\n\tmodelPermission: read\n\ttablePermission Sales = Sales[Region] = \"East\"\n\nrole Me\n\ttablePermission Sales = Sales[Region] = USERNAME()\n");
+        let docs2 = vec![biforge_model::tmdl::parse(&model).unwrap()];
+        assert_eq!(roles_of(&docs2).len(), 2);
+        let total = |v: Option<ViewAs>| dax.query_as(&docs2, "EVALUATE ROW(\"v\", [Total])", v.as_ref()).map(|o| o.results[0].rows[0][0].v.clone());
+        assert_eq!(total(None).unwrap(), "10");
+        assert_eq!(total(Some(ViewAs { roles: vec!["EastOnly".into()], identity: String::new() })).unwrap(), "7");
+        assert_eq!(total(Some(ViewAs { roles: vec!["Me".into()], identity: "West".into() })).unwrap(), "3");
+        assert!(total(Some(ViewAs { roles: vec!["Nope".into()], identity: String::new() })).unwrap_err().contains("does not exist"));
+        // after viewing as a role, the unrestricted engine is back
+        assert_eq!(total(None).unwrap(), "10");
     }
 
     #[test]

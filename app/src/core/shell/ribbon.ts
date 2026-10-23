@@ -237,7 +237,7 @@ const relationshipsGroup = (): RibbonGroup => ({
 const securityGroup = (): RibbonGroup => ({
   id: "security",
   label: "Security",
-  controls: [todo("manageRoles", "Manage roles", "roles", { size: "large" }), todo("viewAs", "View as", "viewAs", { size: "large" })],
+  controls: [cmd("manageRoles", "Manage roles", "roles", "model.manageRolesDialog", { size: "large", keytip: "MR2" }), cmd("viewAs", "View as", "viewAs", "model.viewAsDialog", { size: "large", keytip: "VA" })],
 });
 
 const shareGroup = (): RibbonGroup => ({
