@@ -17,6 +17,15 @@ export interface ProjectQuery {
   loaded: boolean;
   /** true: BIForge wrote the M from an import source and the user has not edited it. */
   generated: boolean;
+  /** The query group (folder) of the query. */
+  group: string | null;
+}
+
+const GROUP_PROP = "queryGroup";
+
+function groupOf(n: TmdlNode): string | null {
+  const p = n.props.find((x) => x.key === GROUP_PROP);
+  return p && typeof p.value === "object" && "Text" in p.value ? p.value.Text : null;
 }
 
 function isMPartition(c: TmdlNode): boolean {
@@ -42,12 +51,43 @@ export function listQueries(p: Project): ProjectQuery[] {
     if (n.kind === "table" && n.name) {
       const part = n.children.find(isMPartition);
       const src = part ? sourceOf(part) : null;
-      if (part && src !== null) out.push({ name: n.name, text: src, loaded: true, generated: isGenerated(part) });
+      if (part && src !== null) out.push({ name: n.name, text: src, loaded: true, generated: isGenerated(part), group: groupOf(n) });
     } else if (n.kind === "expression" && n.name && n.default) {
-      out.push({ name: n.name, text: n.default.text, loaded: false, generated: false });
+      out.push({ name: n.name, text: n.default.text, loaded: false, generated: false, group: groupOf(n) });
     }
   }
   return out;
+}
+
+/** The query groups of the model, in order (the `queryGroup` objects of model.tmdl). */
+export function listGroups(p: Project): string[] {
+  const model = p.model.tmdl["model.tmdl"]?.nodes.find((n) => n.kind === "model");
+  return (model?.children ?? []).filter((c) => c.kind === "queryGroup" && c.name).map((c) => c.name!);
+}
+
+/** Writes the query groups and which query is in which group (a query missing from `assign` keeps its group). */
+export function applyGroups(p: Project, groups: string[], assign: Record<string, string | null>): void {
+  for (const n of allNodes(p)) {
+    if (!n.name || !(n.name in assign) || (n.kind !== "table" && n.kind !== "expression")) continue;
+    n.props = n.props.filter((x) => x.key !== GROUP_PROP);
+    const g = assign[n.name];
+    if (g) n.props.push(text(GROUP_PROP, g));
+  }
+  const model = p.model.tmdl["model.tmdl"]?.nodes.find((n) => n.kind === "model");
+  if (!model) return;
+  const old = new Map(model.children.filter((c) => c.kind === "queryGroup").map((c) => [c.name, c]));
+  model.children = model.children.filter((c) => c.kind !== "queryGroup");
+  const fresh = groups.map((g, i) => {
+    const n = old.get(g) ?? node("queryGroup", g);
+    n.children = n.children.filter((a) => !(a.kind === "annotation" && a.name === "PBI_QueryGroupOrder"));
+    const ann = node("annotation", "PBI_QueryGroupOrder");
+    ann.default = { text: String(i), verbatim: false };
+    n.children.push(ann);
+    return n;
+  });
+  // the groups come before the first annotation or ref of the model
+  const at = model.children.findIndex((c) => c.kind === "annotation" || c.kind.startsWith("ref"));
+  model.children.splice(at === -1 ? model.children.length : at, 0, ...fresh);
 }
 
 export function queryTexts(p: Project): Record<string, string> {

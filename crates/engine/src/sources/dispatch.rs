@@ -215,7 +215,7 @@ pub fn preview_page(spec: &SourceSpec, creds: &dyn CredentialStore, limit: usize
         .map(|(n, t)| ColumnInfo { name: n.clone(), bi_type: crate::types::BiType::from_duckdb(t), duckdb_type: (*t).into() })
         .collect();
     let rows = raw.rows.iter().map(|r| r.iter().map(to_text).collect()).collect();
-    Ok(RowPage { columns, rows, total: raw.rows.len() as u64 })
+    Ok(RowPage { columns, rows, total: raw.rows.len() as u64, error_cells: vec![] })
 }
 
 #[cfg(test)]

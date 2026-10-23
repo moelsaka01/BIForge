@@ -177,6 +177,59 @@ describe("ribbon", () => {
     expect(item("type.int64").action.type === "transform" && (item("type.int64").action as { build: (c: RibbonContext) => unknown }).build(rc({ selected: ["Name"] }))).toEqual({ kind: "changeType", changes: [{ column: "Name", type: "int64" }] });
   });
 
+  it("Count Rows, Statistics, Keep Duplicates and the error buttons build their transforms", () => {
+    const run = (id: string, selected: string[] = ["Amount"]) => {
+      const a = item(id).action;
+      if (a.type !== "transform") throw new Error(`${id} is not a transform`);
+      return a.build(rc({ selected }));
+    };
+    expect(run("t.count")).toEqual({ kind: "countRows" });
+    expect(run("t.stats.sum")).toEqual({ kind: "columnStatistic", column: "Amount", op: "sum" });
+    expect(run("t.stats.countDistinct")).toEqual({ kind: "columnStatistic", column: "Amount", op: "countDistinct" });
+    expect(run("a.stats.average", ["Id", "Amount"])).toEqual({ kind: "rowStatistic", columns: ["Id", "Amount"], op: "average", newName: "Average" });
+    expect(run("keep.dups", ["Id", "Name"])).toEqual({ kind: "keepDuplicates", columns: ["Id", "Name"] });
+    expect(run("keep.errors", [])).toEqual({ kind: "keepErrors", columns: [] });
+    expect(run("remove.errors", ["Id"])).toEqual({ kind: "removeErrors", columns: ["Id"] });
+    const detect = item("t.detect").action;
+    expect(detect.type === "command" && detect.id === "query.detectTypes" && detect.argsFor?.(rc({ selected: ["Id", "Name"] }))).toEqual({ columns: ["Id", "Name"] });
+    // Replace Errors: text for a text column, a number for a number column, null on request
+    expect(transformOf(build("replaceErrors", { columns: ["Name"], value: "n/a" }))).toEqual({ kind: "replaceErrors", columns: ["Name"], value: "n/a", valueType: "text" });
+    expect(transformOf(build("replaceErrors", { columns: ["Amount"], value: "0.5" }))).toEqual({ kind: "replaceErrors", columns: ["Amount"], value: 0.5, valueType: "number" });
+    expect(() => build("replaceErrors", { columns: ["Amount"], value: "x" })).toThrow("must be a number");
+    expect(transformOf(build("replaceErrors", { columns: ["Name"], asNull: true }))).toEqual({ kind: "replaceErrors", columns: ["Name"], value: null });
+    expect(() => build("replaceErrors", { columns: [] })).toThrow("at least one");
+  });
+
+  it("parameter and group dialogs build commands and refuse bad input", () => {
+    const baseCtx = ctx;
+    const cmd = (kind: DialogKind, v: Record<string, unknown>, ctx: Partial<DialogContext> = {}) => {
+      const a = build(kind, v, { ...baseCtx, ...ctx });
+      if (!("command" in a)) throw new Error("not a command");
+      return a;
+    };
+    expect(cmd("newParameter", { name: "Region", type: "Text", suggested: "list", list: "North\nSouth\n", required: true, current: "North", defaultValue: "South" })).toEqual({
+      command: "query.setParameter",
+      args: { name: "Region", def: { description: "", required: true, type: "Text", list: ["North", "South"], defaultValue: "South", current: "North" } },
+    });
+    expect(() => cmd("newParameter", { name: "", type: "Text", suggested: "any", current: "x" })).toThrow("Enter a name");
+    expect(() => cmd("newParameter", { name: "Cust", type: "Text", suggested: "any", current: "x" })).toThrow("already exists");
+    expect(() => cmd("newParameter", { name: "N", type: "WholeNumber", suggested: "any", current: "1.5" })).toThrow("whole number");
+    expect(() => cmd("newParameter", { name: "N", type: "Text", suggested: "list", list: "", current: "x" })).toThrow("at least one");
+    expect(() => cmd("newParameter", { name: "N", type: "Text", suggested: "list", list: "a", current: "b" })).toThrow("one of the suggested");
+    // editing keeps the name and starts from the parameter's values
+    const parameter = { name: "Top", def: { description: "d", required: false, type: "WholeNumber" as const, list: [], defaultValue: "", current: "5" } };
+    const edit = dialogFor("editParameter", { ...baseCtx, parameter });
+    expect(edit.fields.map((f) => ("default" in f ? f.default : undefined))).toEqual(["Top", "d", false, "WholeNumber", "any", "", "", "5"]);
+    expect(() => dialogFor("editParameter", baseCtx)).toThrow("Select a parameter");
+    expect(() => cmd("editParameter", { name: "Other", type: "WholeNumber", suggested: "any", current: "5" }, { parameter })).toThrow("Rename the parameter");
+    // groups
+    expect(cmd("newGroup", { name: "Staging" }, { query: "Orders" })).toEqual({ command: "query.group.add", args: { name: "Staging", query: "Orders" } });
+    expect(cmd("moveToGroup", { group: "Staging" }, { query: "Orders", groups: ["Staging"] })).toEqual({ command: "query.setGroup", args: { query: "Orders", group: "Staging" } });
+    expect(() => dialogFor("moveToGroup", baseCtx)).toThrow("no groups");
+    expect(cmd("renameGroup", { group: "A", name: "B" }, { groups: ["A"] })).toEqual({ command: "query.group.rename", args: { old: "A", to: "B" } });
+    expect(cmd("deleteGroup", { group: "A" }, { groups: ["A"] })).toEqual({ command: "query.group.remove", args: { name: "A" } });
+  });
+
   it("the new transforms: reverse, transpose, alternate rows, merge, extract, date and number functions", () => {
     const run = (id: string, selected: string[] = ["Name"]) => {
       const a = item(id).action;
@@ -221,7 +274,7 @@ describe("ribbon", () => {
     expect(itemState(item("dataType"), rc()).enabled).toBe(false);
     expect(itemState(item("dataType"), rc({ selected: ["Id"] })).enabled).toBe(true);
     const todo = all().filter((i) => i.notImplemented);
-    expect(todo.length).toBeGreaterThan(10);
+    expect(todo.length).toBeGreaterThan(0);
     expect(todo.every((i) => !itemState(i, rc({ selected: ["Id"] })).enabled)).toBe(true);
   });
 });

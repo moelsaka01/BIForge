@@ -211,12 +211,32 @@ impl Engine {
     pub fn m_preview(&self, queries: &BTreeMap<String, String>, query: &str, step: Option<&str>, limit: usize) -> Result<RowPage> {
         let t = self.m_table_sql(queries, query, step, Some(limit))?;
         let n = t.columns.len();
-        let sel: Vec<String> = t.columns.iter().map(|c| format!("CAST({} AS VARCHAR)", q(&c.name))).collect();
-        let sql = if sel.is_empty() { "SELECT 0 WHERE FALSE".to_string() } else { format!("SELECT {} FROM ({}) AS p", sel.join(", "), t.sql) };
+        let mut sel: Vec<String> = t.columns.iter().map(|c| format!("CAST({} AS VARCHAR)", q(&c.name))).collect();
+        // the error flags of the columns that have them follow the visible columns
+        let flagged: Vec<usize> = t.columns.iter().enumerate().filter(|(_, c)| t.flagged.contains(&c.name)).map(|(i, _)| i).collect();
+        for &i in &flagged {
+            sel.push(format!("coalesce({}, false)", q(&biforge_m::value::err_col(&t.columns[i].name))));
+        }
+        let source = t.flags_sql.as_deref().unwrap_or(&t.sql);
+        let sql = if sel.is_empty() { "SELECT 0 WHERE FALSE".to_string() } else { format!("SELECT {} FROM ({}) AS p", sel.join(", "), source) };
         let mut st = self.conn.prepare(&sql)?;
-        let rows = st
-            .query_map([], |r| (0..n).map(|i| r.get::<_, Option<String>>(i)).collect::<std::result::Result<Vec<_>, _>>())?
+        let all = st
+            .query_map([], |r| {
+                let cells = (0..n).map(|i| r.get::<_, Option<String>>(i)).collect::<std::result::Result<Vec<_>, _>>()?;
+                let flags = (0..flagged.len()).map(|k| r.get::<_, bool>(n + k)).collect::<std::result::Result<Vec<_>, _>>()?;
+                Ok((cells, flags))
+            })?
             .collect::<std::result::Result<Vec<_>, _>>()?;
+        let mut error_cells = Vec::new();
+        let mut rows = Vec::with_capacity(all.len());
+        for (ri, (cells, flags)) in all.into_iter().enumerate() {
+            for (k, &ci) in flagged.iter().enumerate() {
+                if flags[k] {
+                    error_cells.push((ri, ci));
+                }
+            }
+            rows.push(cells);
+        }
         let total = if rows.len() < limit {
             rows.len() as u64
         } else {
@@ -224,7 +244,7 @@ impl Engine {
             self.conn.query_row(&format!("SELECT count(*) FROM ({}) AS c", full.sql), [], |r| r.get::<_, i64>(0))? as u64
         };
         let columns = t.columns.iter().map(col_info).collect();
-        Ok(RowPage { columns, rows, total })
+        Ok(RowPage { columns, rows, total, error_cells })
     }
 
     /// Statistics of every column of a step, over its first `limit` rows (all rows when `limit` is None): Power Query's
@@ -237,25 +257,32 @@ impl Engine {
             let bi = BiType::from_duckdb(&c.duckdb_type);
             let text = bi == BiType::String;
             let numeric = matches!(bi, BiType::Int64 | BiType::Double | BiType::Decimal);
-            let src = format!("(SELECT {col} AS v FROM ({}) AS p) AS s", t.sql);
-            let empty_expr = if text { "count(*) FILTER (WHERE v IS NULL OR CAST(v AS VARCHAR) = '')" } else { "count(*) FILTER (WHERE v IS NULL)" };
+            // an error cell is NULL with a flag: it counts as an error, not as empty
+            let has_flag = t.flagged.contains(&c.name);
+            let flag = q(&biforge_m::value::err_col(&c.name));
+            let src = if has_flag {
+                format!("(SELECT {col} AS v, coalesce({flag}, false) AS e FROM ({}) AS p) AS s", t.flags_sql.as_deref().unwrap_or(&t.sql))
+            } else {
+                format!("(SELECT {col} AS v, false AS e FROM ({}) AS p) AS s", t.sql)
+            };
+            let empty_expr = if text { "count(*) FILTER (WHERE NOT e AND (v IS NULL OR CAST(v AS VARCHAR) = ''))" } else { "count(*) FILTER (WHERE NOT e AND v IS NULL)" };
             let stats = if numeric { "avg(CAST(v AS DOUBLE)), stddev_samp(CAST(v AS DOUBLE))" } else { "CAST(NULL AS DOUBLE), CAST(NULL AS DOUBLE)" };
             let sql = format!(
-                "SELECT count(*), {empty_expr}, count(DISTINCT v), CAST(min(v) AS VARCHAR), CAST(max(v) AS VARCHAR), {stats} FROM {src}"
+                "SELECT count(*), {empty_expr}, count(DISTINCT v), CAST(min(v) AS VARCHAR), CAST(max(v) AS VARCHAR), {stats}, count(*) FILTER (WHERE e) FROM {src}"
             );
-            let (rows, empty, distinct, min, max, average, std_dev) = self.conn.query_row(&sql, [], |r| {
-                Ok((r.get::<_, i64>(0)?, r.get::<_, i64>(1)?, r.get::<_, i64>(2)?, r.get::<_, Option<String>>(3)?, r.get::<_, Option<String>>(4)?, r.get::<_, Option<f64>>(5)?, r.get::<_, Option<f64>>(6)?))
+            let (rows, empty, distinct, min, max, average, std_dev, errors) = self.conn.query_row(&sql, [], |r| {
+                Ok((r.get::<_, i64>(0)?, r.get::<_, i64>(1)?, r.get::<_, i64>(2)?, r.get::<_, Option<String>>(3)?, r.get::<_, Option<String>>(4)?, r.get::<_, Option<f64>>(5)?, r.get::<_, Option<f64>>(6)?, r.get::<_, i64>(7)?))
             })?;
-            let unique = self.conn.query_row(&format!("SELECT count(*) FROM (SELECT v FROM {src} WHERE v IS NOT NULL GROUP BY v HAVING count(*) = 1)"), [], |r| r.get::<_, i64>(0))?;
+            let unique = self.conn.query_row(&format!("SELECT count(*) FROM (SELECT v FROM {src} WHERE v IS NOT NULL AND NOT e GROUP BY v HAVING count(*) = 1)"), [], |r| r.get::<_, i64>(0))?;
             let mut st = self.conn.prepare(&format!("SELECT CAST(v AS VARCHAR), count(*) AS c FROM {src} GROUP BY v ORDER BY c DESC, v LIMIT 20"))?;
             let top = st.query_map([], |r| Ok((r.get::<_, Option<String>>(0)?, r.get::<_, i64>(1)? as u64)))?.collect::<std::result::Result<Vec<_>, _>>()?;
             out.push(ColumnProfile {
                 name: c.name.clone(),
                 duckdb_type: c.duckdb_type.clone(),
                 rows: rows as u64,
-                valid: (rows - empty) as u64,
+                valid: (rows - empty - errors) as u64,
                 empty: empty as u64,
-                error: 0,
+                error: errors as u64,
                 distinct: distinct as u64,
                 unique: unique as u64,
                 min,
@@ -278,4 +305,18 @@ impl Engine {
 
 fn col_info(c: &ColumnOut) -> ColumnInfo {
     ColumnInfo { name: c.name.clone(), duckdb_type: c.duckdb_type.clone(), bi_type: BiType::from_duckdb(&c.duckdb_type) }
+}
+
+impl Engine {
+    /// The data type each text column of a step fits (see `biforge_m::run::detect_types`).
+    pub fn m_detect_types(&self, queries: &BTreeMap<String, String>, query: &str, step: Option<&str>, columns: &[String]) -> Result<Vec<(String, String)>> {
+        let be = MBackend::new(self);
+        biforge_m::run::detect_types(&be, queries, query, step, columns).map_err(|e| EngineError::Source(e.to_string()))
+    }
+
+    /// The value of a query or step that is not a table (a parameter, a count, a statistic, a list).
+    pub fn m_value(&self, queries: &BTreeMap<String, String>, query: &str, step: Option<&str>) -> Result<biforge_m::run::ValueOut> {
+        let be = MBackend::new(self);
+        biforge_m::run::value_out(&be, queries, query, step).map_err(|e| EngineError::Source(e.to_string()))
+    }
 }

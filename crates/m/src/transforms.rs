@@ -130,6 +130,20 @@ pub enum Transform {
     Round { columns: Vec<String>, digits: i64 },
     ReverseRows,
     Transpose,
+    /// Table.RowCount: the step returns one number.
+    CountRows,
+    /// One statistic of a column (sum, min, max, median, average, standardDeviation, count, countDistinct): a number.
+    ColumnStatistic { column: String, op: String },
+    /// A new column with the statistic across the given columns of each row.
+    RowStatistic { columns: Vec<String>, op: String, new_name: String },
+    /// Rows whose values in the columns occur more than once.
+    KeepDuplicates { columns: Vec<String> },
+    /// Error cells (a failed type conversion): rows with errors in the columns (all columns when empty) are removed...
+    RemoveErrors { columns: Vec<String> },
+    /// ... or kept ...
+    KeepErrors { columns: Vec<String> },
+    /// ... or the error cells get a value (None = null).
+    ReplaceErrors { columns: Vec<String>, #[serde(default)] value: Option<serde_json::Value>, #[serde(default)] value_type: Option<String> },
     /// Removes `remove` rows after skipping `offset`, keeps `keep`, and repeats.
     RemoveAlternateRows { offset: u64, remove: u64, keep: u64 },
     MergeColumns { columns: Vec<String>, delimiter: String, new_name: String },
@@ -210,6 +224,21 @@ fn field(c: &str) -> String {
     } else {
         format!("[#\"{}\"]", c.replace('"', "\"\""))
     }
+}
+
+/// The M function and the step label of a statistic.
+fn statistic(op: &str) -> Result<(&'static str, &'static str), String> {
+    Ok(match op {
+        "sum" => ("List.Sum", "Sum"),
+        "min" => ("List.Min", "Minimum"),
+        "max" => ("List.Max", "Maximum"),
+        "median" => ("List.Median", "Median"),
+        "average" => ("List.Average", "Average"),
+        "standardDeviation" => ("List.StandardDeviation", "Standard Deviation"),
+        "count" => ("List.Count", "Count"),
+        "countDistinct" => ("List.Count", "Count Distinct"),
+        other => return Err(format!("Unknown statistic \"{other}\".")),
+    })
 }
 
 fn condition(c: &Condition) -> Result<String, String> {
@@ -443,6 +472,48 @@ impl Transform {
                 step("Rounded Off", format!("Table.TransformColumns({p}, {{{}}})", items.join(", ")))
             }
             ReverseRows => step("Reversed Rows", format!("Table.ReverseRows({p})")),
+            CountRows => step("Counted Rows", format!("Table.RowCount({p})")),
+            ColumnStatistic { column, op } => {
+                let (func, label) = statistic(op)?;
+                let col = format!("{p}{}", field(column));
+                let expr = if op == "countDistinct" { format!("List.Count(List.Distinct({col}))") } else { format!("{func}({col})") };
+                step(&format!("Calculated {label}"), expr)
+            }
+            RowStatistic { columns, op, new_name } => {
+                if columns.is_empty() {
+                    return Err("Choose the columns to calculate the statistic across.".into());
+                }
+                if op == "countDistinct" {
+                    return Err("Count Distinct Values is available for a single column only.".into());
+                }
+                let (func, label) = statistic(op)?;
+                let items: Vec<String> = columns.iter().map(|c| field(c)).collect();
+                let ty = if op == "count" { "Int64.Type" } else { "type number" };
+                step(&format!("Inserted {label}"), format!("Table.AddColumn({p}, {}, each {func}({{{}}}), {ty})", m_text(new_name), items.join(", ")))
+            }
+            KeepDuplicates { columns } => {
+                if columns.is_empty() {
+                    return Err("Choose the columns that identify a duplicate.".into());
+                }
+                let names = list_text(columns);
+                step(
+                    "Kept Duplicates",
+                    format!(
+                        "let\n        columnNames = {names},\n        addCount = Table.Group({p}, columnNames, {{{{\"Count\", Table.RowCount, type number}}}}),\n        selectDuplicates = Table.SelectRows(addCount, each [Count] > 1),\n        removeCount = Table.RemoveColumns(selectDuplicates, \"Count\")\n    in\n        Table.Join({p}, columnNames, removeCount, columnNames, JoinKind.Inner)"
+                    ),
+                )
+            }
+            RemoveErrors { columns } => step("Removed Errors", if columns.is_empty() { format!("Table.RemoveRowsWithErrors({p})") } else { format!("Table.RemoveRowsWithErrors({p}, {})", list_text(columns)) }),
+            KeepErrors { columns } => step("Kept Errors", if columns.is_empty() { format!("Table.SelectRowsWithErrors({p})") } else { format!("Table.SelectRowsWithErrors({p}, {})", list_text(columns)) }),
+            ReplaceErrors { columns, value, value_type } => {
+                if columns.is_empty() {
+                    return Err("Choose the columns whose errors are replaced.".into());
+                }
+                let null = serde_json::Value::Null;
+                let lit = literal(value.as_ref().unwrap_or(&null), value_type.as_deref())?;
+                let items: Vec<String> = columns.iter().map(|c| format!("{{{}, {lit}}}", m_text(c))).collect();
+                step("Replaced Errors", format!("Table.ReplaceErrorValues({p}, {{{}}})", items.join(", ")))
+            }
             Transpose => step("Transposed Table", format!("Table.Transpose({p})")),
             RemoveAlternateRows { offset, remove, keep } => {
                 if *remove == 0 || *keep == 0 {

@@ -91,6 +91,73 @@ describe("Power Query editor", () => {
     expect((screen.getByRole("button", { name: /Column From Examples/ }) as HTMLButtonElement).disabled).toBe(true);
   });
 
+  it("a step that returns one value (Count Rows) shows the value instead of a grid, and cannot be loaded", async () => {
+    const { m, session } = await setup((fake) => {
+      fake.values.set("Orders/CountRows", { kind: "number", text: "3", items: [] });
+      fake.values.set("Orders/", { kind: "number", text: "3", items: [] });
+    });
+    fireEvent.click(screen.getByRole("tab", { name: "Transform" }));
+    fireEvent.click(screen.getByRole("button", { name: "Count Rows" }));
+    await waitFor(() => expect(m.calls).toContain("transform:countRows:end"));
+    expect((await screen.findByTestId("value-text")).textContent).toBe("3");
+    expect(screen.queryByRole("table", { name: "Data preview" })).toBeNull();
+    expect(m.calls).toContain("value:Orders:CountRows");
+    // the table buttons need a table
+    expect((screen.getByRole("button", { name: "Group By" }) as HTMLButtonElement).disabled).toBe(true);
+    // the query is a value now: loading it into the model is not offered
+    const load = screen.getByRole("checkbox", { name: "Enable load" }) as HTMLInputElement;
+    await waitFor(() => expect(load.disabled).toBe(true));
+    expect(load.checked).toBe(false);
+    expect(session.queries.dirty).toBe(true);
+  });
+
+  it("a list result lists its items", async () => {
+    await setup((fake) => {
+      fake.values.set("Orders/Promoted Headers", { kind: "list", text: "List (2 items)", items: ["first", "second"] });
+    });
+    fireEvent.click(settings().getByText("Promoted Headers"));
+    const pane = await screen.findByTestId("value-pane");
+    expect(within(pane).getAllByRole("listitem").map((x) => x.textContent)).toEqual(["first", "second"]);
+    expect(pane.textContent).toContain("List (2 items)");
+  });
+
+  it("error cells are drawn as errors, and the error buttons send their transforms", async () => {
+    const { m } = await setup((fake) => {
+      fake.tables.get("Orders")!.errorCells = [[1, 2]];
+    });
+    const cell = (await screen.findAllByText("Error"))[0];
+    expect(cell.getAttribute("data-error")).toBe("true");
+    // Home > Remove Rows > Remove Errors, Keep Rows > Keep Errors
+    fireEvent.click(screen.getByRole("button", { name: /Remove Rows/ }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Remove Errors" }));
+    await waitFor(() => expect(m.calls).toContain("transform:removeErrors:end"));
+    fireEvent.click(screen.getByRole("button", { name: /Keep Rows/ }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Keep Errors" }));
+    await waitFor(() => expect(m.calls).toContain("transform:keepErrors:RemoveErrors"));
+    // Transform > Replace Errors asks for the value
+    fireEvent.click(screen.getByRole("tab", { name: "Transform" }));
+    fireEvent.click(headerOf("Score"));
+    fireEvent.click(screen.getByRole("button", { name: "Replace Errors" }));
+    const dlg = await screen.findByRole("dialog", { name: "Replace Errors", hidden: true });
+    fireEvent.change(within(dlg).getByLabelText("Value"), { target: { value: "abc" } });
+    fireEvent.click(within(dlg).getByRole("button", { name: "OK" }));
+    expect(await within(dlg).findByText(/must be a number/)).toBeTruthy();
+    fireEvent.change(within(dlg).getByLabelText("Value"), { target: { value: "0" } });
+    fireEvent.click(within(dlg).getByRole("button", { name: "OK" }));
+    await waitFor(() => expect(m.calls).toContain("transform:replaceErrors:KeepErrors"));
+  });
+
+  it("Detect Data Type asks the engine and changes the type of the columns that fit", async () => {
+    const { m } = await setup((fake) => {
+      fake.detected.set("Name", "int64");
+    });
+    fireEvent.click(headerOf("Name"));
+    fireEvent.click(screen.getByRole("tab", { name: "Transform" }));
+    fireEvent.click(screen.getByRole("button", { name: "Detect Data Type" }));
+    await waitFor(() => expect(m.calls).toContain("detectTypes:Orders:end:Name"));
+    await waitFor(() => expect(m.calls).toContain("transform:changeType:end"));
+  });
+
   it("the filter dialog validates input and sends the transform", async () => {
     const { m } = await setup();
     fireEvent.click(screen.getByRole("button", { name: "Filter Rows" }));

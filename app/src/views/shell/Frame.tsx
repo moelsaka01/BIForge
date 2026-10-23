@@ -10,9 +10,8 @@ import type { ViewId } from "../../core/shell/shellStore";
 import { DataView } from "../DataView";
 import { MeasureEditor } from "../MeasureEditor";
 import { ModelView } from "../ModelView";
-import { PowerQueryEditor } from "../pq/PowerQueryEditor";
 import { canvasOptionsOf } from "../../core/report/canvasOptions";
-import { ReportView } from "../report/ReportView";
+import { PowerQueryEditor, ReportView } from "./lazyViews";
 import { DataPaneHost } from "./DataPaneHost";
 import { DaxQueryView } from "./DaxQueryView";
 import { Dialogs } from "./Dialogs";
@@ -167,6 +166,7 @@ export function Frame({ spec }: { spec: ShellSpec }) {
   const st = useShellState();
   const settings = useSettings();
   const report = useSyncExternalStore(session.report.subscribe, session.report.getSnapshot);
+  const queriesOpen = useSyncExternalStore(session.queries.subscribe, session.queries.getSnapshot).open;
   const [scale, setScale] = useState<number | null>(null);
   const layout = settings.layouts[spec.kind];
   const project = doc.project;
@@ -327,7 +327,7 @@ export function Frame({ spec }: { spec: ShellSpec }) {
         </>
       )}
       {inWorkspace && <StatusBar text={statusText} scale={st.view === "report" ? scale : null} zoom={st.zoom} />}
-      <PowerQueryEditor session={session} registry={registry} />
+      {queriesOpen && <PowerQueryEditor session={session} registry={registry} />}
       <Dialogs />
     </div>
   );

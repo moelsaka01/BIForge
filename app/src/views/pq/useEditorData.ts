@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { RowPage } from "../../core/data/types";
 import type { DraftSnapshot } from "../../core/queries/draft";
-import type { MApi, ParsedStep, StepColumn, StepResult } from "../../core/queries/types";
+import type { MApi, ParsedStep, StepColumn, StepResult, ValueOut } from "../../core/queries/types";
 
 export interface StepView {
   name: string;
@@ -21,11 +21,13 @@ export interface EditorData {
   columns: StepColumn[];
   page: RowPage | null;
   previewError: string | null;
+  /** The step does not return a table: its value (a parameter, a count, a statistic, a list). */
+  value: ValueOut | null;
   loading: boolean;
   output: string;
 }
 
-const empty: EditorData = { steps: [], parseError: null, active: null, columns: [], page: null, previewError: null, loading: false, output: "" };
+const empty: EditorData = { steps: [], parseError: null, active: null, columns: [], page: null, previewError: null, value: null, loading: false, output: "" };
 
 const PREVIEW_ROWS = 1000;
 
@@ -65,9 +67,15 @@ export function useEditorData(m: MApi, snap: DraftSnapshot, texts: Record<string
       const cur = steps.find((s) => s.name === active);
       let page: RowPage | null = null;
       let previewError: string | null = null;
+      let value: ValueOut | null = null;
       if (cur?.error) previewError = cur.error;
-      else if (cur && cur.kind !== "table") previewError = `This step returns ${cur.kind === "error" ? "an error" : `a ${cur.kind}`}, not a table.`;
-      else {
+      else if (cur && cur.kind !== "table") {
+        try {
+          value = await m.value(texts, snap.selected!, snap.step);
+        } catch (e) {
+          previewError = e instanceof Error ? e.message : String(e);
+        }
+      } else {
         try {
           page = await m.preview(texts, snap.selected!, snap.step, PREVIEW_ROWS);
         } catch (e) {
@@ -75,7 +83,7 @@ export function useEditorData(m: MApi, snap: DraftSnapshot, texts: Record<string
         }
       }
       if (!live) return;
-      setData({ steps, parseError, active, columns: cur?.columns ?? page?.columns.map((c) => ({ name: c.name, duckdbType: c.duckdbType })) ?? [], page, previewError, loading: false, output: parsed?.output ?? "" });
+      setData({ steps, parseError, active, columns: cur?.columns ?? page?.columns.map((c) => ({ name: c.name, duckdbType: c.duckdbType })) ?? [], page, previewError, value, loading: false, output: parsed?.output ?? "" });
     })();
     return () => {
       live = false;

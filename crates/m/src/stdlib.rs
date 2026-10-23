@@ -300,6 +300,12 @@ pub fn call(ev: &Ev, name: &str, args: Vec<Value>) -> R<Value> {
         },
         // ---- lists and aggregates ----
         "List.Sum" | "List.Count" | "List.NonNullCount" | "List.Min" | "List.Max" | "List.Average" | "List.StandardDeviation" | "List.Median" => {
+            // a list of values computed from the columns of a row ({[A], [B]}): aggregated across the row in SQL
+            if let Value::List(items) = arg(a, 0, name)? {
+                if items.iter().any(|i| i.is_symbolic()) {
+                    return row_aggregate(ev, name, items);
+                }
+            }
             aggregate(name, arg(a, 0, name)?)
         }
         "List.Distinct" => match arg(a, 0, name)? {
@@ -426,6 +432,29 @@ pub fn call(ev: &Ev, name: &str, args: Vec<Value>) -> R<Value> {
     }
 }
 
+/// List.Sum({[A], [B]}) and friends where some items are SQL expressions of the current row.
+fn row_aggregate(ev: &Ev, name: &str, items: &[Value]) -> R<Value> {
+    if name == "List.Count" {
+        return Ok(Value::Num(items.len() as f64));
+    }
+    let parts: R<Vec<String>> = items.iter().map(|i| ev.to_sql(i)).collect();
+    let parts = parts?;
+    if name == "List.NonNullCount" {
+        let cases: Vec<String> = parts.iter().map(|p| format!("(CASE WHEN {p} IS NULL THEN 0 ELSE 1 END)")).collect();
+        return Ok(Value::Sql(format!("({})", cases.join(" + "))));
+    }
+    let agg = match name {
+        "List.Sum" => "sum",
+        "List.Min" => "min",
+        "List.Max" => "max",
+        "List.Average" => "avg",
+        "List.StandardDeviation" => "stddev_samp",
+        _ => "median",
+    };
+    let list: Vec<String> = parts.iter().map(|p| format!("CAST({p} AS DOUBLE)")).collect();
+    Ok(Value::Sql(format!("list_aggr([{}], '{agg}')", list.join(", "))))
+}
+
 fn aggregate(name: &str, v: &Value) -> R<Value> {
     match v {
         Value::ColList { sql, distinct } => {
@@ -484,8 +513,8 @@ fn aggregate(name: &str, v: &Value) -> R<Value> {
 
 /// Functions the library knows by name but that BIForge's engine reports as not supported.
 pub const NOT_SUPPORTED: &[&str] = &[
-    "Web.Contents", "Sql.Database", "PostgreSQL.Database", "OData.Feed", "Table.RemoveRowsWithErrors", "Table.SelectRowsWithErrors",
-    "Table.ReplaceErrorValues", "Table.ExpandRecordColumn", "Table.ExpandListColumn",
+    "Web.Contents", "Sql.Database", "PostgreSQL.Database", "OData.Feed",
+    "Table.ExpandRecordColumn", "Table.ExpandListColumn",
     "Table.Profile", "Table.TransformColumnNames", "#time", "#duration", "Splitter.SplitTextByEachDelimiter",
     "Splitter.SplitTextByCharacterTransition",
 ];

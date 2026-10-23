@@ -53,6 +53,8 @@ const httpM: MApi = {
   analyze: (queries, query) => post("/m/analyze", { queries, query }),
   preview: (queries, query, step, limit) => post("/m/preview", { queries, query, step, limit }),
   profile: (queries, query, step, limit) => post("/m/profile", { queries, query, step, limit }),
+  detectTypes: (queries, query, step, columns) => post("/m/detectTypes", { queries, query, step, columns }),
+  value: (queries, query, step) => post("/m/value", { queries, query, step }),
   load: (queries, query, table) => post("/m/load", { queries, query, table }),
   queryKinds: (queries) => post("/m/queryKinds", { queries }),
 };

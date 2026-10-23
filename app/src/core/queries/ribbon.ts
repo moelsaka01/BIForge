@@ -1,7 +1,7 @@
 // The Power Query editor ribbon as data: tabs, groups and buttons (labels follow the editor's command inventory in
 // research/ui-ribbon-commands.md). A button either opens a dialog, runs a transform on the selected columns, runs a
 // command, or is listed as not implemented (shown disabled with a tooltip so the gap is visible).
-import type { DataTypeName, StepColumn, Transform } from "./types";
+import type { DataTypeName, StatisticOp, StepColumn, Transform } from "./types";
 import { DATA_TYPES, isTextType, valueTypeOf, type DialogKind } from "./dialogs";
 
 export interface RibbonContext {
@@ -12,16 +12,18 @@ export interface RibbonContext {
   /** A query is selected and the editor can change it. */
   hasQuery: boolean;
   dirty: boolean;
+  /** The selected query is a parameter. */
+  parameter?: boolean;
 }
 
 export type RibbonAction =
   | { type: "transform"; build: (c: RibbonContext) => Transform }
   | { type: "dialog"; dialog: DialogKind }
-  | { type: "command"; id: string; args?: unknown }
+  | { type: "command"; id: string; args?: unknown; argsFor?: (c: RibbonContext) => unknown }
   | { type: "ui"; what: "advanced" | "dependencies" | "settings" | "formulaBar" | "refresh" | "close" | "quality" | "distribution" | "profile" }
   | { type: "none" };
 
-export type Need = "none" | "table" | "column" | "columns" | "textColumn" | "numberColumn";
+export type Need = "none" | "table" | "column" | "columns" | "textColumn" | "numberColumn" | "parameter";
 
 export interface RibbonItem {
   id: string;
@@ -55,6 +57,33 @@ const colFn = (id: string, label: string, fn: string, step: string, valueType: D
   action: tf((c) => ({ kind: "transformColumn", columns: c.selected, function: fn, valueType, label: step })),
 });
 const todo = (id: string, label: string, need: Need = "table"): RibbonItem => ({ id, label, need, action: { type: "none" }, notImplemented: true });
+
+const STATISTICS: [StatisticOp, string][] = [
+  ["sum", "Sum"],
+  ["min", "Minimum"],
+  ["max", "Maximum"],
+  ["median", "Median"],
+  ["average", "Average"],
+  ["standardDeviation", "Standard Deviation"],
+  ["count", "Count Values"],
+  ["countDistinct", "Count Distinct Values"],
+];
+
+/** Transform > Statistics: one value computed from the selected column. */
+const columnStatistics: RibbonItem[] = STATISTICS.map(([op, label]) => ({
+  id: `t.stats.${op}`,
+  label,
+  need: "column" as const,
+  action: tf((c) => ({ kind: "columnStatistic", column: c.selected[0], op })),
+}));
+
+/** Add Column > Statistics: a new column with the statistic across the selected columns of each row. */
+const rowStatistics: RibbonItem[] = STATISTICS.filter(([op]) => op !== "countDistinct").map(([op, label]) => ({
+  id: `a.stats.${op}`,
+  label,
+  need: "columns" as const,
+  action: tf((c) => ({ kind: "rowStatistic", columns: c.selected, op, newName: label })),
+}));
 
 const typeMenu: RibbonItem[] = DATA_TYPES.map((t) => ({
   id: `type.${t.type}`,
@@ -120,6 +149,22 @@ export const RIBBON: RibbonTab[] = [
         ],
       },
       {
+        id: "parameters",
+        label: "Parameters",
+        items: [
+          {
+            id: "manageParameters",
+            label: "Manage Parameters",
+            need: "none",
+            action: { type: "none" },
+            menu: [
+              { id: "param.new", label: "New Parameter...", need: "none", action: dlg("newParameter") },
+              { id: "param.edit", label: "Edit Parameter...", need: "parameter", action: dlg("editParameter") },
+            ],
+          },
+        ],
+      },
+      {
         id: "query",
         label: "Query",
         items: [
@@ -162,8 +207,8 @@ export const RIBBON: RibbonTab[] = [
               { id: "keep.top", label: "Keep Top Rows", need: "table", action: dlg("keepTop") },
               { id: "keep.bottom", label: "Keep Bottom Rows", need: "table", action: dlg("keepBottom") },
               { id: "keep.range", label: "Keep Range of Rows", need: "table", action: dlg("keepRange") },
-              { id: "keep.dups", label: "Keep Duplicates", need: "columns", action: { type: "none" }, notImplemented: true },
-              { id: "keep.errors", label: "Keep Errors", need: "table", action: { type: "none" }, notImplemented: true },
+              { id: "keep.dups", label: "Keep Duplicates", need: "columns", action: tf((c) => ({ kind: "keepDuplicates", columns: c.selected })) },
+              { id: "keep.errors", label: "Keep Errors", need: "table", action: tf((c) => ({ kind: "keepErrors", columns: c.selected })) },
             ],
           },
           {
@@ -182,7 +227,7 @@ export const RIBBON: RibbonTab[] = [
                 need: "table",
                 action: tf((c) => ({ kind: "removeBlankRows", textColumns: c.columns.filter((x) => isTextType(x.duckdbType)).map((x) => x.name), otherColumns: c.columns.filter((x) => !isTextType(x.duckdbType)).map((x) => x.name) })),
               },
-              { id: "remove.errors", label: "Remove Errors", need: "table", action: { type: "none" }, notImplemented: true },
+              { id: "remove.errors", label: "Remove Errors", need: "table", action: tf((c) => ({ kind: "removeErrors", columns: c.selected })) },
             ],
           },
           { id: "filterRows", label: "Filter Rows", need: "table", action: dlg("filter") },
@@ -224,7 +269,7 @@ export const RIBBON: RibbonTab[] = [
           { id: "t.demote", label: "Use Headers as First Row", need: "table", action: tf(() => ({ kind: "demoteHeaders" })) },
           { id: "t.transpose", label: "Transpose", need: "table", action: tf(() => ({ kind: "transpose" })) },
           { id: "t.reverse", label: "Reverse Rows", need: "table", action: tf(() => ({ kind: "reverseRows" })) },
-          todo("t.count", "Count Rows"),
+          { id: "t.count", label: "Count Rows", need: "table", action: tf(() => ({ kind: "countRows" })) },
         ],
       },
       {
@@ -232,9 +277,9 @@ export const RIBBON: RibbonTab[] = [
         label: "Any Column",
         items: [
           { id: "t.type", label: "Data Type", need: "columns", action: { type: "none" }, menu: typeMenu },
-          todo("t.detect", "Detect Data Type", "columns"),
+          { id: "t.detect", label: "Detect Data Type", need: "columns", action: { type: "command", id: "query.detectTypes", argsFor: (c) => ({ columns: c.selected }) } },
           { id: "t.replace", label: "Replace Values", need: "columns", action: dlg("replace") },
-          todo("t.errors", "Replace Errors", "columns"),
+          { id: "t.errors", label: "Replace Errors", need: "table", action: dlg("replaceErrors") },
           {
             id: "t.fill",
             label: "Fill",
@@ -290,7 +335,7 @@ export const RIBBON: RibbonTab[] = [
         label: "Number Column",
         items: [
           { id: "t.round", label: "Round", need: "numberColumn", action: dlg("round") },
-          todo("t.stats", "Statistics", "numberColumn"),
+          { id: "t.stats", label: "Statistics", need: "numberColumn", action: { type: "none" }, menu: columnStatistics },
           {
             id: "t.standard",
             label: "Standard",
@@ -401,7 +446,7 @@ export const RIBBON: RibbonTab[] = [
       {
         id: "fromNumber",
         label: "From Number",
-        items: [todo("a.numstats", "Statistics", "numberColumn"), todo("a.numstandard", "Standard", "numberColumn")],
+        items: [{ id: "a.numstats", label: "Statistics", need: "columns", action: { type: "none" }, menu: rowStatistics }, todo("a.numstandard", "Standard", "numberColumn")],
       },
       {
         id: "fromDate",
@@ -465,6 +510,7 @@ export function itemState(item: RibbonItem, c: RibbonContext): { enabled: boolea
 
 function reasonFor(need: Need, c: RibbonContext): string | undefined {
   if (need === "none") return undefined;
+  if (need === "parameter") return c.parameter ? undefined : "Select a parameter in the Queries pane.";
   if (!c.hasQuery) return "Select a query first.";
   if (!c.hasTable) return "The selected step is not a table (or has an error).";
   if (need === "table") return undefined;

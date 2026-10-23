@@ -12,6 +12,21 @@ use std::sync::{Arc, OnceLock};
 /// Loads base (non-calculated) columns of a table, in the model's column order, column-major.
 pub trait DataSource {
     fn load_table(&self, model: &Model, table: TableId) -> Result<Vec<Vec<Value>>, String>;
+
+    /// Number of rows of the table (the default loads it).
+    fn row_count(&self, model: &Model, table: TableId) -> Result<usize, String> {
+        Ok(self.load_table(model, table)?.first().map(|c| c.len()).unwrap_or(0))
+    }
+
+    /// One stored column, by its index among the table's model columns (the default loads the whole table).
+    fn load_column(&self, model: &Model, table: TableId, column: usize) -> Result<Vec<Value>, String> {
+        let pos = model.tables[table].columns.iter().take(column).filter(|c| c.expression.is_none()).count();
+        let mut cols = self.load_table(model, table)?;
+        if pos >= cols.len() {
+            return Err(format!("Table '{}' has no stored column at position {column}.", model.tables[table].name));
+        }
+        Ok(cols.swap_remove(pos))
+    }
 }
 
 /// Row-major test/data source keyed by table name (case-insensitive).
@@ -51,47 +66,10 @@ impl DataSource for MemorySource {
 
 pub struct TableData {
     pub nrows: usize,
-    /// One entry per model column (calculated columns filled in after evaluation).
-    pub columns: Vec<Arc<Vec<Value>>>,
+    /// One slot per model column: filled when the column is first read (a model loaded lazily) or at load time;
+    /// calculated columns are filled in after evaluation.
+    columns: Vec<OnceLock<Arc<Vec<Value>>>>,
     dup_groups: OnceLock<Vec<Arc<Vec<u32>>>>,
-}
-
-impl TableData {
-    pub fn value(&self, col: usize, row: u32) -> &Value {
-        static BLANK: Value = Value::Blank;
-        if row as usize >= self.nrows {
-            &BLANK
-        } else {
-            &self.columns[col][row as usize]
-        }
-    }
-
-    /// Rows with identical values in every column, per row (context transition filters by value, so
-    /// duplicate rows are selected together).
-    pub fn dup_group(&self, row: u32) -> Arc<Vec<u32>> {
-        let groups = self.dup_groups.get_or_init(|| {
-            let mut by_key: HashMap<Vec<Key>, Arc<Vec<u32>>> = HashMap::new();
-            let mut members: HashMap<Vec<Key>, Vec<u32>> = HashMap::new();
-            let key = |r: usize| self.columns.iter().map(|c| c[r].key()).collect::<Vec<_>>();
-            for r in 0..self.nrows {
-                members.entry(key(r)).or_default().push(r as u32);
-            }
-            let mut out = vec![Arc::new(Vec::new()); self.nrows];
-            for (k, rows) in members {
-                let a = Arc::new(rows);
-                for &r in a.iter() {
-                    out[r as usize] = a.clone();
-                }
-                by_key.insert(k, a);
-            }
-            out
-        });
-        if row as usize >= self.nrows {
-            Arc::new(vec![row])
-        } else {
-            groups[row as usize].clone()
-        }
-    }
 }
 
 /// Lookup indexes for one relationship.
@@ -112,6 +90,10 @@ pub struct ModelData {
     blank_rows: OnceLock<Vec<bool>>,
     /// What USERNAME() and USERPRINCIPALNAME() return (set by the host for row-level security).
     pub identity: String,
+    /// Where columns are read from when first used (None: everything was loaded up front).
+    source: Option<Arc<dyn DataSource + Send + Sync>>,
+    /// The first error a lazy column load hit (its values are BLANK); the query that used it reports it.
+    load_error: std::sync::Mutex<Option<String>>,
 }
 
 /// The Windows user name, used for USERNAME() when no identity is set (desktop use, no sign-in).
@@ -130,27 +112,98 @@ impl ModelData {
             let mut columns = Vec::with_capacity(def.columns.len());
             for c in &def.columns {
                 if c.expression.is_some() {
-                    columns.push(Arc::new(vec![Value::Blank; nrows]));
+                    columns.push(OnceLock::from(Arc::new(vec![Value::Blank; nrows])));
                 } else {
                     let mut v = base.next().ok_or_else(|| format!("Table '{}' is missing data for column '{}'.", def.name, c.name))?;
                     if v.len() != nrows {
                         return Err(format!("Column '{}'[{}] has {} values; expected {nrows}.", def.name, c.name, v.len()));
                     }
                     unify_text_case(&mut v);
-                    columns.push(Arc::new(v));
+                    columns.push(OnceLock::from(Arc::new(v)));
                 }
             }
             tables.push(TableData { nrows, columns, dup_groups: OnceLock::new() });
         }
         let rel_index = (0..model.relationships.len()).map(|_| OnceLock::new()).collect();
-        Ok(ModelData { model, tables, rel_index, blank_rows: OnceLock::new(), identity: default_identity() })
+        Ok(ModelData { model, tables, rel_index, blank_rows: OnceLock::new(), identity: default_identity(), source: None, load_error: std::sync::Mutex::new(None) })
+    }
+
+    /// Like `load`, but a column is read from `source` the first time it is used: a query that touches 4 of the 10
+    /// columns of a 10 million row table reads those 4. Only the row counts are read here.
+    pub fn load_lazy(model: Model, source: Arc<dyn DataSource + Send + Sync>) -> Result<ModelData, String> {
+        let mut tables = Vec::with_capacity(model.tables.len());
+        for (t, def) in model.tables.iter().enumerate() {
+            let nrows = source.row_count(&model, t)?;
+            let columns = def.columns.iter().map(|c| if c.expression.is_some() { OnceLock::from(Arc::new(vec![Value::Blank; nrows])) } else { OnceLock::new() }).collect();
+            tables.push(TableData { nrows, columns, dup_groups: OnceLock::new() });
+        }
+        let rel_index = (0..model.relationships.len()).map(|_| OnceLock::new()).collect();
+        Ok(ModelData { model, tables, rel_index, blank_rows: OnceLock::new(), identity: default_identity(), source: Some(source), load_error: std::sync::Mutex::new(None) })
+    }
+
+    /// The values of a column (read from the source on first use).
+    pub fn column_values(&self, c: ColId) -> &Arc<Vec<Value>> {
+        let t = &self.tables[c.table];
+        t.columns[c.col].get_or_init(|| {
+            let loaded = match &self.source {
+                Some(s) => s.load_column(&self.model, c.table, c.col),
+                None => Err("The column was not loaded.".to_string()),
+            };
+            match loaded {
+                Ok(mut v) if v.len() == t.nrows => {
+                    unify_text_case(&mut v);
+                    Arc::new(v)
+                }
+                other => {
+                    let msg = match other {
+                        Ok(v) => format!("Column {} has {} values; expected {}.", self.model.column_name(c), v.len(), t.nrows),
+                        Err(e) => e,
+                    };
+                    if let Ok(mut g) = self.load_error.lock() {
+                        g.get_or_insert(msg);
+                    }
+                    Arc::new(vec![Value::Blank; t.nrows])
+                }
+            }
+        })
+    }
+
+    /// Takes the first error a lazy column load hit, if any.
+    pub fn take_load_error(&self) -> Option<String> {
+        self.load_error.lock().ok().and_then(|mut g| g.take())
+    }
+
+    /// Rows with identical values in every column, per row (context transition filters by value, so
+    /// duplicate rows are selected together).
+    pub fn dup_group(&self, table: TableId, row: u32) -> Arc<Vec<u32>> {
+        let t = &self.tables[table];
+        let groups = t.dup_groups.get_or_init(|| {
+            let cols: Vec<&Arc<Vec<Value>>> = (0..t.columns.len()).map(|col| self.column_values(ColId { table, col })).collect();
+            let mut members: HashMap<Vec<Key>, Vec<u32>> = HashMap::new();
+            for r in 0..t.nrows {
+                members.entry(cols.iter().map(|c| c[r].key()).collect::<Vec<_>>()).or_default().push(r as u32);
+            }
+            let mut out = vec![Arc::new(Vec::new()); t.nrows];
+            for (_, rows) in members {
+                let a = Arc::new(rows);
+                for &r in a.iter() {
+                    out[r as usize] = a.clone();
+                }
+            }
+            out
+        });
+        if row as usize >= t.nrows {
+            Arc::new(vec![row])
+        } else {
+            groups[row as usize].clone()
+        }
     }
 
     /// Replaces a calculated column's values (used while processing calculated columns).
     pub fn set_column(&mut self, c: ColId, values: Vec<Value>) {
         let mut values = values;
         unify_text_case(&mut values);
-        self.tables[c.table].columns[c.col] = Arc::new(values);
+        self.tables[c.table].columns[c.col] = OnceLock::from(Arc::new(values));
         self.tables[c.table].dup_groups = OnceLock::new();
         for i in &mut self.rel_index {
             *i = OnceLock::new();
@@ -163,7 +216,12 @@ impl ModelData {
     }
 
     pub fn value(&self, c: ColId, row: u32) -> &Value {
-        self.tables[c.table].value(c.col, row)
+        static BLANK: Value = Value::Blank;
+        if row as usize >= self.tables[c.table].nrows {
+            &BLANK
+        } else {
+            &self.column_values(c)[row as usize]
+        }
     }
 
     pub fn rel(&self, r: usize) -> Arc<RelIndex> {

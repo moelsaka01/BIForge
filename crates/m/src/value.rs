@@ -41,6 +41,14 @@ pub fn ql(s: &str) -> String {
 pub const ORD: &str = "__ord";
 /// Type tag of a column that holds a not yet expanded nested table.
 pub const NESTED_TY: &str = "NESTED";
+/// Prefix of the hidden BOOLEAN column that marks the cells of column `x` that are errors (a failed type conversion):
+/// `__err__x` is true where the cell of `x` is an error (its value is NULL). Steps that keep the rows and the column
+/// carry it along; any other step drops it, so the cell is a plain null from there on.
+pub const ERR_PREFIX: &str = "__err__";
+
+pub fn err_col(name: &str) -> String {
+    format!("{ERR_PREFIX}{name}")
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Col {
@@ -68,12 +76,28 @@ pub struct Rel {
     pub nested: Vec<Nested>,
 }
 
+impl Col {
+    pub fn is_flag(&self) -> bool {
+        self.name.starts_with(ERR_PREFIX)
+    }
+}
+
 impl Rel {
+    /// The visible columns (no pending nested-table column, no error flag).
     pub fn plain_cols(&self) -> impl Iterator<Item = &Col> {
-        self.cols.iter().filter(|c| c.ty != NESTED_TY)
+        self.cols.iter().filter(|c| c.ty != NESTED_TY && !c.is_flag())
     }
     pub fn col_names(&self) -> Vec<String> {
-        self.cols.iter().map(|c| c.name.clone()).collect()
+        self.cols.iter().filter(|c| !c.is_flag()).map(|c| c.name.clone()).collect()
+    }
+    /// Name of the error-flag column of `column`, when the table has one.
+    pub fn flag_of(&self, column: &str) -> Option<String> {
+        let f = err_col(column);
+        self.cols.iter().any(|c| c.name == f).then_some(f)
+    }
+    /// Names of the columns that have error flags.
+    pub fn flagged(&self) -> Vec<String> {
+        self.cols.iter().filter(|c| c.is_flag()).map(|c| c.name[ERR_PREFIX.len()..].to_string()).filter(|n| self.col(n).is_some()).collect()
     }
     pub fn col(&self, name: &str) -> Option<&Col> {
         self.cols.iter().find(|c| c.name == name)
@@ -88,6 +112,14 @@ impl Rel {
     /// Complete statement for the table's rows in order.
     pub fn to_sql(&self, limit: Option<usize>) -> String {
         let cols: Vec<String> = self.plain_cols().map(|c| qi(&c.name)).collect();
+        let list = if cols.is_empty() { "1 AS \"__none\"".to_string() } else { cols.join(", ") };
+        let lim = limit.map(|n| format!(" LIMIT {n}")).unwrap_or_default();
+        format!("{}SELECT {} FROM {} ORDER BY {}{}", self.prefix(), list, qi(&self.name), qi(ORD), lim)
+    }
+    /// Like `to_sql`, with the error-flag columns after the visible ones (for the preview and the profile).
+    pub fn to_sql_flags(&self, limit: Option<usize>) -> String {
+        let mut cols: Vec<String> = self.plain_cols().map(|c| qi(&c.name)).collect();
+        cols.extend(self.flagged().iter().map(|n| qi(&err_col(n))));
         let list = if cols.is_empty() { "1 AS \"__none\"".to_string() } else { cols.join(", ") };
         let lim = limit.map(|n| format!(" LIMIT {n}")).unwrap_or_default();
         format!("{}SELECT {} FROM {} ORDER BY {}{}", self.prefix(), list, qi(&self.name), qi(ORD), lim)

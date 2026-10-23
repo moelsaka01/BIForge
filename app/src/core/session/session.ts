@@ -7,7 +7,7 @@ import { listTables, deleteTable } from "../model/ops";
 import { listDataSources, withLocation, type SourceLocation } from "../data/dataSources";
 import { QueryDraft } from "../queries/draft";
 import type { MApi } from "../queries/types";
-import { applyQueryLoad, expressionExists, listQueries, queryTexts, removeExpression, upsertExpression, userMTables } from "../queries/queries";
+import { applyGroups, applyQueryLoad, expressionExists, listGroups, listQueries, queryTexts, removeExpression, upsertExpression, userMTables } from "../queries/queries";
 import { findTable } from "../model/ops";
 import { ShellStore } from "../shell/shellStore";
 import type { OpenedPackage, PublishApi } from "../publish/types";
@@ -584,7 +584,7 @@ export class Session {
   openQueryEditor(select?: string | null): void {
     const p = this.store.project;
     if (!p) throw new Error("Open or create a project first.");
-    this.queries.open(listQueries(p), select);
+    this.queries.open(listQueries(p), select, listGroups(p));
   }
 
   /**
@@ -605,7 +605,15 @@ export class Session {
       seen.add(name);
       return (deps[name] ?? []).some((d) => changed.has(d) || usesChanged(d, seen));
     };
-    const toLoad = snap.queries.filter((q) => q.loaded && (changed.has(q.name) || usesChanged(q.name)));
+    let kinds: Record<string, string> = {};
+    try {
+      kinds = await m.queryKinds(texts);
+    } catch {
+      /* the result type annotation falls back to Table */
+    }
+    // only a table can be loaded: a query that now returns a value (a count, a parameter) is stored as an expression
+    const isTable = (name: string) => (kinds[name] ?? "table") === "table";
+    const toLoad = snap.queries.filter((q) => q.loaded && isTable(q.name) && (changed.has(q.name) || usesChanged(q.name)));
     const loaded: { name: string; info: Awaited<ReturnType<MApi["load"]>> }[] = [];
     const failures: { query: string; error: string }[] = [];
     for (const q of toLoad) {
@@ -615,30 +623,32 @@ export class Session {
         failures.push({ query: q.name, error: errText(e) });
       }
     }
-    let kinds: Record<string, string> = {};
-    try {
-      kinds = await m.queryKinds(texts);
-    } catch {
-      /* the result type annotation falls back to Table */
-    }
     const resultType = (k: string | undefined) => ({ table: "Table", number: "Number", text: "Text", function: "Function", list: "List", record: "Record", logical: "Logical" })[k ?? "table"] ?? "Table";
     const removedDone: string[] = [];
-    const applied = snap.queries.filter((q) => !q.loaded && changed.has(q.name)).map((q) => q.name);
+    const applied = snap.queries.filter((q) => (!q.loaded || !isTable(q.name)) && changed.has(q.name)).map((q) => q.name);
+    // a query that only moved to another group is written with its group, nothing is run
+    const regrouped = snap.queries.filter((q) => !loaded.some((l) => l.name === q.name) && !applied.includes(q.name) && q.original && q.original.group !== q.group).map((q) => q.name);
     this.store.transact("Apply query changes", (p) => {
       for (const { name, info } of loaded) applyQueryLoad(p, info, texts[name]);
-      for (const q of snap.queries) if (!q.loaded && changed.has(q.name)) upsertExpression(p, q.name, q.text, resultType(kinds[q.name]));
+      for (const q of snap.queries) if ((!q.loaded || !isTable(q.name)) && changed.has(q.name)) upsertExpression(p, q.name, q.text, resultType(kinds[q.name]));
       for (const r of snap.removed) {
         if (expressionExists(p, r)) removeExpression(p, r);
         else if (findTable(p, r)) deleteTable(p, r);
         removedDone.push(r);
       }
     });
+    // groups: written after the queries exist (the model object is edited in the same step as the queries above)
+    this.store.transact("Apply query groups", (p) => {
+      const assign: Record<string, string | null> = {};
+      for (const q of snap.queries) assign[q.name] = q.group;
+      applyGroups(p, snap.groups, assign);
+    });
     for (const r of removedDone) {
       if (!snap.queries.some((q) => q.name === r)) await engine.dropTable(r).catch(() => undefined);
       this.set({ dataTables: this.snap.dataTables.filter((t) => t.toLowerCase() !== r.toLowerCase()), dataEpoch: this.snap.dataEpoch + 1 });
     }
     for (const { name } of loaded) this.markLoaded(name);
-    draft.markApplied([...loaded.map((l) => l.name), ...applied], removedDone);
+    draft.markApplied([...loaded.map((l) => l.name), ...applied, ...regrouped], removedDone);
     this.setMessage(
       failures.length
         ? `Applied ${loaded.length} of ${toLoad.length} loaded quer${toLoad.length === 1 ? "y" : "ies"}. Failed: ${failures.map((f) => `${f.query} (${f.error})`).join("; ")}`

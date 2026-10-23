@@ -49,6 +49,8 @@ export type StepEdit =
 
 export type DataTypeName = "text" | "int64" | "number" | "decimal" | "percentage" | "date" | "datetime" | "time" | "datetimezone" | "logical" | "any";
 
+export type StatisticOp = "sum" | "min" | "max" | "median" | "average" | "standardDeviation" | "count" | "countDistinct";
+
 export type FilterOp = "eq" | "ne" | "gt" | "ge" | "lt" | "le" | "contains" | "notContains" | "startsWith" | "endsWith" | "isNull" | "isNotNull";
 
 export interface Condition {
@@ -127,6 +129,13 @@ export type Transform =
   | { kind: "transpose" }
   | { kind: "removeAlternateRows"; offset: number; remove: number; keep: number }
   | { kind: "mergeColumns"; columns: string[]; delimiter: string; newName: string }
+  | { kind: "countRows" }
+  | { kind: "columnStatistic"; column: string; op: StatisticOp }
+  | { kind: "rowStatistic"; columns: string[]; op: StatisticOp; newName: string }
+  | { kind: "keepDuplicates"; columns: string[] }
+  | { kind: "removeErrors"; columns: string[] }
+  | { kind: "keepErrors"; columns: string[] }
+  | { kind: "replaceErrors"; columns: string[]; value: string | number | boolean | null; valueType?: "text" | "number" | "logical" }
   | { kind: "transformColumn"; columns: string[]; function: string; args?: (string | number)[]; valueType?: DataTypeName; label: string }
   | { kind: "custom"; name: string; expr: string };
 
@@ -138,7 +147,7 @@ export interface ColumnProfile {
   rows: number;
   valid: number;
   empty: number;
-  /** Always 0: BIForge's query engine has no cell-level errors. */
+  /** Cells that are errors (a failed type conversion). */
   error: number;
   distinct: number;
   unique: number;
@@ -149,6 +158,13 @@ export interface ColumnProfile {
   /** The most frequent values, most frequent first (null = a null value). */
   top: [string | null, number][];
   rowsLimited: boolean;
+}
+
+/** A step or query whose value is not a table (a parameter, a count, a statistic, a list). */
+export interface ValueOut {
+  kind: string;
+  text: string;
+  items: string[];
 }
 
 export interface MApi {
@@ -162,6 +178,10 @@ export interface MApi {
   preview(queries: Record<string, string>, query: string, step: string | null, limit: number): Promise<RowPage>;
   /** Column statistics of a step over its first `limit` rows (all rows when null). */
   profile(queries: Record<string, string>, query: string, step: string | null, limit: number | null): Promise<ColumnProfile[]>;
+  /** The data type each of the text columns can be converted to without a conversion error (the others keep their type). */
+  detectTypes(queries: Record<string, string>, query: string, step: string | null, columns: string[]): Promise<{ column: string; type: DataTypeName }[]>;
+  /** The value of a step (or the whole query) that is not a table. */
+  value(queries: Record<string, string>, query: string, step: string | null): Promise<ValueOut>;
   load(queries: Record<string, string>, query: string, table: string): Promise<TableInfo>;
   queryKinds(queries: Record<string, string>): Promise<Record<string, string>>;
 }

@@ -97,6 +97,8 @@ fn main() {
             pq::m_analyze,
             pq::m_preview,
             pq::m_profile,
+            pq::m_value,
+            pq::m_detect_types,
             pq::m_load,
             pq::m_query_kinds,
             data::engine_open_store,

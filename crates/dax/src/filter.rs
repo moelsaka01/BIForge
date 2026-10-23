@@ -18,6 +18,7 @@ use crate::model::{Cardinality, ColId, CrossFilter, TableId};
 use crate::value::Key;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
+use std::sync::Arc;
 
 /// Bit set over the rows of one table plus its blank row (index `nrows`).
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -353,6 +354,21 @@ impl Graph {
         Some(r)
     }
 
+    /// A resolved path from `from` to `target` for following many rows (the indexes are looked up once, not per row).
+    pub fn follower(&self, data: &ModelData, from: TableId, target: TableId) -> Option<Follower> {
+        let path = self.path(from, target)?;
+        let mut hops = Vec::with_capacity(path.len());
+        let mut cur = from;
+        for h in path {
+            let rel = &data.model.relationships[h.rel];
+            let idx = data.rel(h.rel);
+            let next = if h.forward { rel.to.table } else { rel.from.table };
+            hops.push((idx, h.forward, data.nrows(cur), data.nrows(next) as u32));
+            cur = next;
+        }
+        Some(Follower { hops })
+    }
+
     pub fn value_through<'d>(&self, data: &'d ModelData, from: TableId, row: u32, c: ColId) -> &'d crate::value::Value {
         static BLANK: crate::value::Value = crate::value::Value::Blank;
         match self.follow(data, from, row, c.table) {
@@ -368,6 +384,31 @@ impl Graph {
             }
             Filter::Values { cols, .. } => cols.iter().all(|c| self.reaches(t, c.table)),
         }
+    }
+}
+
+/// See [`Graph::follower`]: the same result as [`Graph::follow`].
+pub struct Follower {
+    /// (index of the relationship, forward, rows of the table the hop starts at, blank row of the table it reaches)
+    hops: Vec<(Arc<crate::data::RelIndex>, bool, usize, u32)>,
+}
+
+impl Follower {
+    #[inline]
+    pub fn follow(&self, row: u32) -> u32 {
+        let mut r = row;
+        for (idx, forward, n_cur, blank_next) in &self.hops {
+            r = if (r as usize) < *n_cur {
+                if *forward {
+                    idx.fwd[r as usize]
+                } else {
+                    idx.rev[r as usize]
+                }
+            } else {
+                *blank_next
+            };
+        }
+        r
     }
 }
 
@@ -440,9 +481,39 @@ fn apply_filter(data: &ModelData, graph: &Graph, f: &Filter, t: TableId, rows: &
     let candidates: Vec<u32> = rows.iter().collect();
     match f {
         Filter::Rows { table, rows: allowed, .. } => {
+            if *table == t {
+                for r in candidates {
+                    if !allowed.get(r) {
+                        rows.set(r, false);
+                    }
+                }
+            } else {
+                let follower = graph.follower(data, t, *table);
+                for r in candidates {
+                    if !follower.as_ref().is_some_and(|f| allowed.get(f.follow(r))) {
+                        rows.set(r, false);
+                    }
+                }
+            }
+        }
+        // the columns all belong to one other table: decide once per row of that table, then look every row of `t` up
+        Filter::Values { cols, set } if cols.iter().all(|c| c.table == cols[0].table) && cols[0].table != t && graph.reaches(t, cols[0].table) => {
+            let ct = cols[0].table;
+            let n = data.nrows(ct);
+            let mut key = Vec::with_capacity(cols.len());
+            // the extra last entry is the virtual blank row (all values BLANK)
+            let allowed: Vec<bool> = (0..=n as u32)
+                .map(|r| {
+                    key.clear();
+                    for c in cols {
+                        key.push(data.value(*c, r).key());
+                    }
+                    set.contains(&key)
+                })
+                .collect();
+            let follower = graph.follower(data, t, ct).expect("the filter applies to the table");
             for r in candidates {
-                let target = if *table == t { Some(r) } else { graph.follow(data, t, r, *table) };
-                if !target.is_some_and(|x| allowed.get(x)) {
+                if !allowed[follower.follow(r) as usize] {
                     rows.set(r, false);
                 }
             }

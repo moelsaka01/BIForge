@@ -1,11 +1,13 @@
 // Test double for MApi. It does not evaluate M: it understands the canonical `let` layout the real tools write
 // (four-space indented steps) well enough to exercise the editor's state handling, and returns tables that tests register.
 import type { ColumnInfo, RowPage, TableInfo } from "../data/types";
-import type { Applied, ColumnProfile, MApi, MDiagnostic, ParsedQuery, ParsedStep, StepEdit, StepResult, Transform } from "../queries/types";
+import type { Applied, ColumnProfile, MApi, MDiagnostic, ParsedQuery, ParsedStep, StepEdit, StepResult, Transform, ValueOut, DataTypeName } from "../queries/types";
 
 export interface FakeTable {
   columns: ColumnInfo[];
   rows: (string | null)[][];
+  /** (row, column) of error cells */
+  errorCells?: [number, number][];
 }
 
 const rawName = (n: string) => (/^[A-Za-z_]\w*$/.test(n) ? n : `#"${n}"`);
@@ -112,6 +114,7 @@ export class FakeM implements MApi {
       const names = this.stepColumns.get(query)?.get(s.name) ?? table?.columns.map((c) => c.name) ?? [];
       return err
         ? { name: s.name, kind: "error", columns: [], error: { reason: "Expression.Error", message: err } }
+        : this.values.has(`${query}/${s.name}`) ? { name: s.name, kind: this.values.get(`${query}/${s.name}`)!.kind, columns: [], error: null }
         : { name: s.name, kind: "table", columns: names.map((n) => ({ name: n, duckdbType: duckType(table?.columns.find((c) => c.name === n)?.biType) })), error: null };
     });
   };
@@ -122,7 +125,7 @@ export class FakeM implements MApi {
     if (err) throw new Error(err);
     const t = this.tables.get(query);
     if (!t) throw new Error(`The query "${query}" does not exist.`);
-    return { columns: t.columns, rows: t.rows.slice(0, limit), total: t.rows.length };
+    return { columns: t.columns, rows: t.rows.slice(0, limit), total: t.rows.length, ...(t.errorCells ? { errorCells: t.errorCells } : {}) };
   };
 
   profile = async (queries: Record<string, string>, query: string, step: string | null, limit: number | null): Promise<ColumnProfile[]> => {
@@ -165,5 +168,23 @@ export class FakeM implements MApi {
     return { name: table, columns: t.columns, rowCount: t.rows.length };
   };
 
-  queryKinds = async (queries: Record<string, string>): Promise<Record<string, string>> => Object.fromEntries(Object.keys(queries).map((k) => [k, "table"]));
+  /** What detectTypes answers, by column name (columns not listed keep "text"). */
+  detected = new Map<string, DataTypeName>();
+
+  detectTypes = async (queries: Record<string, string>, query: string, step: string | null, columns: string[]) => {
+    this.calls.push(`detectTypes:${query}:${step ?? "end"}:${columns.join("|")}`);
+    return columns.map((column) => ({ column, type: this.detected.get(column) ?? ("text" as DataTypeName) }));
+  };
+
+  /** Steps ("query/step") and whole queries ("query/") whose value is not a table. */
+  values = new Map<string, ValueOut>();
+
+  value = async (queries: Record<string, string>, query: string, step: string | null): Promise<ValueOut> => {
+    this.calls.push(`value:${query}:${step ?? "end"}`);
+    const v = this.values.get(`${query}/${step ?? ""}`) ?? this.values.get(`${query}/`);
+    if (!v) throw new Error("The value is a table.");
+    return v;
+  };
+
+  queryKinds = async (queries: Record<string, string>): Promise<Record<string, string>> => Object.fromEntries(Object.keys(queries).map((k) => [k, this.values.get(`${k}/`)?.kind ?? "table"]));
 }

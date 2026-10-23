@@ -149,8 +149,8 @@ fn compare(actual: &ResultTable, expected: &Json, ordered: bool) -> Outcome {
     Outcome::Pass
 }
 
-fn run_case(dax: &biforge_dax::Engine, case: &Json) -> Outcome {
-    let out = run_case_inner(dax, case);
+fn run_case(dax: &biforge_dax::Engine, sql: Option<&dyn biforge_dax::sql::SqlExecutor>, case: &Json) -> Outcome {
+    let out = run_case_inner(dax, sql, case);
     match (out, case["knownDifference"].as_str()) {
         (Outcome::Fail(m), Some(reason)) => Outcome::Known(format!("{reason} [{m}]")),
         (Outcome::Pass, Some(_)) => Outcome::Fail("matches now: remove knownDifference from the case".into()),
@@ -158,14 +158,14 @@ fn run_case(dax: &biforge_dax::Engine, case: &Json) -> Outcome {
     }
 }
 
-fn run_case_inner(dax: &biforge_dax::Engine, case: &Json) -> Outcome {
+fn run_case_inner(dax: &biforge_dax::Engine, sql: Option<&dyn biforge_dax::sql::SqlExecutor>, case: &Json) -> Outcome {
     let expected = &case["expected"];
     let query = case["query"].as_str().unwrap_or("");
     if expected.is_null() {
-        return Outcome::Pending(dax.query(query).err().map(|e| e.message));
+        return Outcome::Pending(dax.query_with(query, sql).err().map(|e| e.message));
     }
     let ordered = case["ordered"].as_bool().unwrap_or_else(|| query.to_ascii_uppercase().contains("ORDER BY"));
-    let result = dax.query(query);
+    let result = dax.query_with(query, sql);
     if expected.get("error").is_some() {
         return match result {
             Err(e) if e.code == ErrorCode::NotImplemented => Outcome::Skip(e.message),
@@ -206,18 +206,30 @@ fn comparison_rules() {
 
 #[test]
 fn conformance_cases() {
-    run_suite("conformance", cases_dir(), "BIFORGE_DAX_REPORT");
+    run_suite("conformance", cases_dir(), "BIFORGE_DAX_REPORT", false);
+}
+
+/// The same recorded cases with aggregations compiled to DuckDB SQL wherever the semantics allow: the answers must not change.
+#[test]
+fn conformance_cases_with_sql() {
+    run_suite("conformance (sql)", cases_dir(), "BIFORGE_DAX_SQL_REPORT", true);
+}
+
+#[test]
+fn holdout_cases_with_sql() {
+    run_suite("holdout (sql)", holdout_dir(), "BIFORGE_HOLDOUT_SQL_REPORT", true);
 }
 
 /// The holdout set: cases written without looking at the engine and recorded afterwards. Its pass rate is
 /// reported on its own; set BIFORGE_HOLDOUT_REPORT_ONLY=1 to print the numbers (and failures) without failing.
 #[test]
 fn holdout_cases() {
-    run_suite("holdout", holdout_dir(), "BIFORGE_HOLDOUT_REPORT");
+    run_suite("holdout", holdout_dir(), "BIFORGE_HOLDOUT_REPORT", false);
 }
 
-fn run_suite(label: &str, dir: PathBuf, report_var: &str) {
-    let (_store, dax) = fixture::setup();
+fn run_suite(label: &str, dir: PathBuf, report_var: &str, use_sql: bool) {
+    let (store, dax) = fixture::setup();
+    let sql: Option<&dyn biforge_dax::sql::SqlExecutor> = if use_sql { Some(&store) } else { None };
     let mut files: Vec<PathBuf> = std::fs::read_dir(dir).map(|d| d.filter_map(|e| e.ok()).map(|e| e.path()).filter(|p| p.extension().is_some_and(|x| x == "json")).collect()).unwrap_or_default();
     files.sort();
     let verbose = std::env::var("BIFORGE_DAX_VERBOSE").is_ok();
@@ -229,7 +241,7 @@ fn run_suite(label: &str, dir: PathBuf, report_var: &str) {
         let doc: Json = serde_json::from_str(&std::fs::read_to_string(f).unwrap()).unwrap_or_else(|e| panic!("{}: {e}", f.display()));
         for case in doc["cases"].as_array().cloned().unwrap_or_default() {
             let id = case["id"].as_str().unwrap_or("?").to_string();
-            let out = run_case(&dax, &case);
+            let out = run_case(&dax, sql, &case);
             if verbose {
                 println!("{id}: {out:?}");
             }
@@ -264,7 +276,7 @@ fn run_suite(label: &str, dir: PathBuf, report_var: &str) {
     if let Ok(path) = std::env::var(report_var) {
         let _ = std::fs::write(path, format!("{pass} {recorded} {} {skip} {pending}\n", failures.len()));
     }
-    if label == "holdout" && std::env::var("BIFORGE_HOLDOUT_REPORT_ONLY").is_ok() {
+    if label.starts_with("holdout") && std::env::var("BIFORGE_HOLDOUT_REPORT_ONLY").is_ok() {
         for f in &failures {
             println!("  FAIL {f}");
         }

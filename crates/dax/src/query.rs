@@ -95,6 +95,9 @@ fn run_query(engine: &Engine, q: &Query, sql: Option<&dyn SqlExecutor>) -> VResu
     for (main, keys, start) in &bound.evaluates {
         out.push(evaluate_one(&ev, main, keys, start, &env)?);
     }
+    if let Some(e) = engine.data.take_load_error() {
+        return Err(EvalError::eval(format!("The data engine failed: {e}")));
+    }
     Ok(out)
 }
 

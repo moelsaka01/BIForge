@@ -7,8 +7,10 @@ export interface DraftQuery {
   loaded: boolean;
   /** Not in the project yet. */
   isNew: boolean;
-  /** Text and load flag in the project (null for a new query). */
-  original: { text: string; loaded: boolean } | null;
+  /** Query group (a folder in the Queries pane) or null. */
+  group: string | null;
+  /** Text, load flag and group in the project (null for a new query). */
+  original: { text: string; loaded: boolean; group: string | null } | null;
   /** BIForge wrote the M and it is unchanged. */
   generated: boolean;
 }
@@ -19,6 +21,10 @@ export interface DraftSnapshot {
   selected: string | null;
   /** Selected applied step of the selected query; null = the last step. */
   step: string | null;
+  /** Query groups, in order (a group can be empty). */
+  groups: string[];
+  /** The groups in the project. */
+  originalGroups: string[];
   /** Queries the user removed (existing in the project). */
   removed: string[];
   /** Bumped by every change, so views reload their previews. */
@@ -26,7 +32,7 @@ export interface DraftSnapshot {
   message: string | null;
 }
 
-const empty: DraftSnapshot = { open: false, queries: [], selected: null, step: null, removed: [], version: 0, message: null };
+const empty: DraftSnapshot = { open: false, queries: [], selected: null, step: null, groups: [], originalGroups: [], removed: [], version: 0, message: null };
 
 export class QueryDraft {
   private snap: DraftSnapshot = empty;
@@ -44,17 +50,19 @@ export class QueryDraft {
     this.listeners.forEach((l) => l());
   }
 
-  open(queries: ProjectQuery[], select?: string | null): void {
+  open(queries: ProjectQuery[], select?: string | null, groups: string[] = []): void {
     const qs = queries.map<DraftQuery>((q) => ({
       name: q.name,
       text: q.text,
       loaded: q.loaded,
       isNew: false,
-      original: { text: q.text, loaded: q.loaded },
+      group: q.group ?? null,
+      original: { text: q.text, loaded: q.loaded, group: q.group ?? null },
       generated: q.generated,
     }));
+    const all = [...new Set([...groups, ...qs.map((q) => q.group).filter((g): g is string => !!g)])];
     const selected = select && qs.some((q) => q.name === select) ? select : (qs.find((q) => q.loaded) ?? qs[0])?.name ?? null;
-    this.set({ open: true, queries: qs, selected, step: null, removed: [], message: null });
+    this.set({ open: true, queries: qs, selected, step: null, groups: all, originalGroups: all, removed: [], message: null });
   }
 
   close(): void {
@@ -71,11 +79,49 @@ export class QueryDraft {
   }
 
   isChanged(q: DraftQuery): boolean {
-    return q.isNew || !q.original || q.original.text !== q.text || q.original.loaded !== q.loaded;
+    return q.isNew || !q.original || q.original.text !== q.text || q.original.loaded !== q.loaded || q.original.group !== q.group;
+  }
+
+  get groupsChanged(): boolean {
+    const a = this.snap.groups;
+    const b = this.snap.originalGroups;
+    return a.length !== b.length || a.some((g, i) => g !== b[i]);
   }
 
   get dirty(): boolean {
-    return this.snap.removed.length > 0 || this.snap.queries.some((q) => this.isChanged(q));
+    return this.snap.removed.length > 0 || this.groupsChanged || this.snap.queries.some((q) => this.isChanged(q));
+  }
+
+  private checkGroup(name: string, except?: string): string {
+    const n = name.trim();
+    if (n === "") throw new Error("A group name cannot be empty.");
+    if (/[\r\n\t\\]/.test(n)) throw new Error("A group name cannot contain line breaks, tabs or backslashes.");
+    if (this.snap.groups.some((g) => g.toLowerCase() === n.toLowerCase() && g !== except)) throw new Error(`A group named "${n}" already exists.`);
+    return n;
+  }
+
+  addGroup(name: string): string {
+    const n = this.checkGroup(name);
+    this.set({ groups: [...this.snap.groups, n] });
+    return n;
+  }
+
+  renameGroup(old: string, to: string): void {
+    if (!this.snap.groups.includes(old)) throw new Error(`The group "${old}" does not exist.`);
+    const n = this.checkGroup(to, old);
+    this.set({ groups: this.snap.groups.map((g) => (g === old ? n : g)), queries: this.snap.queries.map((q) => (q.group === old ? { ...q, group: n } : q)) });
+  }
+
+  /** Deletes a group; its queries are ungrouped, not deleted. */
+  removeGroup(name: string): void {
+    if (!this.snap.groups.includes(name)) throw new Error(`The group "${name}" does not exist.`);
+    this.set({ groups: this.snap.groups.filter((g) => g !== name), queries: this.snap.queries.map((q) => (q.group === name ? { ...q, group: null } : q)) });
+  }
+
+  setGroup(query: string, group: string | null): void {
+    if (!this.get(query)) throw new Error(`The query "${query}" does not exist.`);
+    if (group !== null && !this.snap.groups.includes(group)) throw new Error(`The group "${group}" does not exist.`);
+    this.set({ queries: this.snap.queries.map((q) => (q.name === query ? { ...q, group } : q)) });
   }
 
   select(query: string, step: string | null = null): void {
@@ -115,7 +161,7 @@ export class QueryDraft {
 
   add(name: string, text: string, loaded: boolean): string {
     const n = this.checkName(name);
-    const q: DraftQuery = { name: n, text, loaded, isNew: true, original: null, generated: false };
+    const q: DraftQuery = { name: n, text, loaded, isNew: true, group: null, original: null, generated: false };
     this.set({ queries: [...this.snap.queries, q], selected: n, step: null });
     return n;
   }
@@ -161,7 +207,8 @@ export class QueryDraft {
   /** After a successful apply the applied queries become the new baseline. */
   markApplied(names: string[], removedDone: string[]): void {
     this.set({
-      queries: this.snap.queries.map((q) => (names.includes(q.name) ? { ...q, isNew: false, original: { text: q.text, loaded: q.loaded }, generated: false } : q)),
+      queries: this.snap.queries.map((q) => (names.includes(q.name) ? { ...q, isNew: false, original: { text: q.text, loaded: q.loaded, group: q.group }, generated: false } : q)),
+      originalGroups: this.snap.groups,
       removed: this.snap.removed.filter((r) => !removedDone.includes(r)),
     });
   }

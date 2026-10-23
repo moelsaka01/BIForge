@@ -62,7 +62,18 @@ fn compare(actual: &ResultTable, expected: &Json, ordered: bool) -> Result<(), S
 
 #[test]
 fn generated_report_queries_match_the_fixture_data() {
-    let (_store, dax) = fixture::setup();
+    check_all(false);
+}
+
+/// The same queries with aggregations (and whole group-bys) compiled to SQL, as the app runs them.
+#[test]
+fn generated_report_queries_match_the_fixture_data_through_sql() {
+    check_all(true);
+}
+
+fn check_all(use_sql: bool) {
+    let (store, dax) = fixture::setup();
+    let sql: Option<&dyn biforge_dax::sql::SqlExecutor> = if use_sql { Some(&store) } else { None };
     let g = golden();
     let cases = g["cases"].as_array().unwrap();
     assert!(cases.len() >= 20, "golden file looks empty");
@@ -71,7 +82,7 @@ fn generated_report_queries_match_the_fixture_data() {
         let id = c["id"].as_str().unwrap();
         let q = c["dax"].as_str().unwrap();
         let ordered = c["ordered"].as_bool().unwrap_or(true);
-        match dax.query(q) {
+        match dax.query_with(q, sql) {
             Err(e) => failures.push(format!("{id}: query failed: {}\n   {q}", e.message)),
             Ok(tables) => {
                 let expected = c["expected"].as_array().unwrap();

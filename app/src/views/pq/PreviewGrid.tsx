@@ -30,6 +30,7 @@ const GLYPH: Record<string, string> = { number: "123", text: "ABC", date: "📅"
 /** Read-only preview of the first rows of a step. Clicking a header selects the column (Ctrl toggles, Shift selects a range). */
 export function PreviewGrid({ page, columns, selected, onSelect, menu, onMenu, profiles, showQuality, showDistribution }: PreviewGridProps) {
   const typeOf = (i: number) => columns[i]?.duckdbType ?? page.columns[i].duckdbType;
+  const errors = new Set((page.errorCells ?? []).map(([r, c]) => `${r},${c}`));
   return (
     <div style={{ overflow: "auto", flex: 1, minHeight: 0, border: "1px solid #e1dfdd", background: "#fff" }}>
       <table aria-label="Data preview" style={{ borderCollapse: "collapse", fontSize: 13, minWidth: "100%" }}>
@@ -97,6 +98,13 @@ export function PreviewGrid({ page, columns, selected, onSelect, menu, onMenu, p
               <td style={{ color: "#8a8886", textAlign: "right", padding: "2px 6px", borderRight: "1px solid #e1dfdd" }}>{ri + 1}</td>
               {r.map((cell, ci) => {
                 const num = valueTypeOf(typeOf(ci)) === "number";
+                if (errors.has(`${ri},${ci}`)) {
+                  return (
+                    <td key={ci} data-error="true" title="This value could not be converted to the column's data type" style={{ padding: "2px 8px", textAlign: "left", borderRight: "1px solid #f3f2f1", color: "#a4262c", background: "#fde7e9", whiteSpace: "nowrap" }}>
+                      Error
+                    </td>
+                  );
+                }
                 return (
                   <td key={ci} style={{ padding: "2px 8px", textAlign: num ? "right" : "left", borderRight: "1px solid #f3f2f1", color: cell === null ? "#8a8886" : undefined, whiteSpace: "nowrap" }}>
                     {cell === null ? "null" : formatCell(cell, page.columns[ci].biType)}

@@ -254,25 +254,28 @@ impl Engine {
     /// One page of rows, optionally sorted. Stable: ties are broken by physical row order.
     pub fn fetch_page(&self, name: &str, offset: u64, limit: u64, sort: Option<&SortSpec>) -> Result<RowPage> {
         let info = self.table_info(name)?;
-        let order = match sort {
+        let select: Vec<String> = info.columns.iter().map(|c| format!("CAST({} AS VARCHAR)", q(&c.name))).collect();
+        let sql = match sort {
             Some(s) => {
                 self.require_column(&info, &s.column)?;
                 format!(
-                    "ORDER BY {} {} NULLS LAST, rowid",
+                    "SELECT {} FROM {} ORDER BY {} {} NULLS LAST, rowid LIMIT {limit} OFFSET {offset}",
+                    select.join(", "),
+                    q(name),
                     q(&s.column),
                     if s.descending { "DESC" } else { "ASC" }
                 )
             }
-            None => "ORDER BY rowid".to_string(),
+            // a table is rebuilt by CREATE TABLE AS, so its row ids are 0..n-1: a range scan reads only the page
+            // (ORDER BY rowid LIMIT/OFFSET would read the whole table, seconds on 10 million rows)
+            None => format!("SELECT {} FROM {} WHERE rowid >= {offset} AND rowid < {} ORDER BY rowid", select.join(", "), q(name), offset.saturating_add(limit)),
         };
-        let select: Vec<String> = info.columns.iter().map(|c| format!("CAST({} AS VARCHAR)", q(&c.name))).collect();
-        let sql = format!("SELECT {} FROM {} {order} LIMIT {limit} OFFSET {offset}", select.join(", "), q(name));
         let n = info.columns.len();
         let mut st = self.conn.prepare(&sql)?;
         let rows = st
             .query_map([], |r| (0..n).map(|i| r.get::<_, Option<String>>(i)).collect::<std::result::Result<Vec<_>, _>>())?
             .collect::<std::result::Result<Vec<_>, _>>()?;
-        Ok(RowPage { total: info.row_count, columns: info.columns, rows })
+        Ok(RowPage { total: info.row_count, columns: info.columns, rows, error_cells: vec![] })
     }
 
     /// (rows, non-null count, distinct non-null count)

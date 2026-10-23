@@ -2,6 +2,7 @@
 // or a command. No React here, so every dialog's output can be tested.
 import type { StepColumn, Transform, DataTypeName, Condition, FilterOp } from "./types";
 import { m_text } from "./mText";
+import { PARAMETER_TYPES, parameterText, type ParameterDef, type ParameterType } from "./parameters";
 
 export type Values = Record<string, unknown>;
 export interface Option {
@@ -40,13 +41,19 @@ export interface DialogContext {
   queryColumns: Record<string, string[]>;
   /** Sheet names of the workbook chosen in the new-Excel dialog. */
   sheets?: string[];
+  /** The selected query when it is a parameter. */
+  parameter?: { name: string; def: ParameterDef } | null;
+  /** The query groups and the group of the selected query. */
+  groups?: string[];
+  group?: string | null;
 }
 
 export type DialogKind =
   | "filter" | "keepTop" | "keepBottom" | "keepRange" | "removeTop" | "removeBottom" | "replace" | "split" | "group" | "merge"
   | "append" | "conditional" | "custom" | "chooseColumns" | "pivot" | "round" | "rename" | "newCsv" | "newExcel" | "newFolder"
   | "enterData" | "customStep" | "indexCustom" | "removeAlt" | "mergeColumns" | "extractFirst" | "extractLast" | "extractRange"
-  | "extractBefore" | "extractAfter" | "extractBetween";
+  | "extractBefore" | "extractAfter" | "extractBetween" | "replaceErrors" | "newParameter" | "editParameter"
+  | "newGroup" | "moveToGroup" | "renameGroup" | "deleteGroup";
 
 const NUMERIC = /^(TINYINT|SMALLINT|INTEGER|BIGINT|HUGEINT|UTINYINT|USMALLINT|UINTEGER|UBIGINT|FLOAT|DOUBLE|DECIMAL)/i;
 
@@ -249,6 +256,116 @@ export function dialogFor(kind: DialogKind, c: DialogContext): DialogDef {
             return { transform: { kind: "replaceValues", columns, find: find === null ? null : Number(find), replace: Number(rep), mode: "value", valueType: "number" } };
           }
           return { transform: { kind: "replaceValues", columns, find, replace: rep, mode: v.entire || find === null ? "value" : "text" } };
+        },
+      };
+    case "newParameter":
+    case "editParameter": {
+      const editing = kind === "editParameter";
+      if (editing && !c.parameter) throw new Error("Select a parameter in the Queries pane first.");
+      const p = editing ? c.parameter!.def : null;
+      return {
+        title: editing ? "Edit Parameter" : "New Parameter",
+        submitLabel: "OK",
+        fields: [
+          { kind: "text", key: "name", label: "Name", default: editing ? c.parameter!.name : "Parameter1" },
+          { kind: "text", key: "description", label: "Description", default: p?.description ?? "" },
+          { kind: "check", key: "required", label: "Required", default: p?.required ?? true },
+          { kind: "select", key: "type", label: "Type", options: PARAMETER_TYPES.map((t) => ({ value: t.type, label: t.label })), default: p?.type ?? "Text" },
+          {
+            kind: "select",
+            key: "suggested",
+            label: "Suggested Values",
+            options: [
+              { value: "any", label: "Any value" },
+              { value: "list", label: "List of values" },
+            ],
+            default: p && p.list.length ? "list" : "any",
+          },
+          { kind: "textarea", key: "list", label: "List of values (one per line)", rows: 4, default: p?.list.join("\n") ?? "" },
+          { kind: "text", key: "defaultValue", label: "Default Value", default: p?.defaultValue ?? "" },
+          { kind: "text", key: "current", label: "Current Value", default: p?.current ?? "" },
+        ],
+        build: (v) => {
+          const name = String(v.name ?? "").trim();
+          if (!name) throw new Error("Enter a name for the parameter.");
+          if (editing && name !== c.parameter!.name) throw new Error("Rename the parameter in the Queries pane.");
+          if (!editing && c.queries.concat(c.query).some((q) => q.toLowerCase() === name.toLowerCase())) throw new Error(`A query named "${name}" already exists.`);
+          const list = v.suggested === "list" ? String(v.list ?? "").split(/\r?\n/).map((x) => x.trim()).filter((x) => x !== "") : [];
+          if (v.suggested === "list" && list.length === 0) throw new Error("Enter at least one suggested value.");
+          const def: ParameterDef = {
+            description: String(v.description ?? ""),
+            required: !!v.required,
+            type: String(v.type ?? "Text") as ParameterType,
+            list,
+            defaultValue: String(v.defaultValue ?? ""),
+            current: String(v.current ?? ""),
+          };
+          parameterText(def); // validates the values against the type
+          if (list.length && !list.includes(def.current)) throw new Error("The current value must be one of the suggested values.");
+          if (list.length && def.defaultValue && !list.includes(def.defaultValue)) throw new Error("The default value must be one of the suggested values.");
+          return { command: "query.setParameter", args: { name, def } };
+        },
+      };
+    }
+    case "newGroup":
+      return {
+        title: "New Group",
+        submitLabel: "OK",
+        fields: [{ kind: "text", key: "name", label: "Name" }],
+        build: (v) => ({ command: "query.group.add", args: { name: String(v.name ?? ""), query: c.query || undefined } }),
+      };
+    case "moveToGroup": {
+      const groups = c.groups ?? [];
+      if (!groups.length) throw new Error("There are no groups yet. Create a group first.");
+      return {
+        title: "Move to Group",
+        submitLabel: "OK",
+        fields: [{ kind: "select", key: "group", label: "Group", options: groups.map((g) => ({ value: g, label: g })), default: c.group && groups.includes(c.group) ? c.group : groups[0] }],
+        build: (v) => ({ command: "query.setGroup", args: { query: c.query, group: String(v.group ?? "") } }),
+      };
+    }
+    case "renameGroup": {
+      const groups = c.groups ?? [];
+      if (!groups.length) throw new Error("There are no groups to rename.");
+      return {
+        title: "Rename Group",
+        submitLabel: "OK",
+        fields: [
+          { kind: "select", key: "group", label: "Group", options: groups.map((g) => ({ value: g, label: g })), default: c.group && groups.includes(c.group) ? c.group : groups[0] },
+          { kind: "text", key: "name", label: "New name" },
+        ],
+        build: (v) => ({ command: "query.group.rename", args: { old: String(v.group ?? ""), to: String(v.name ?? "") } }),
+      };
+    }
+    case "deleteGroup": {
+      const groups = c.groups ?? [];
+      if (!groups.length) throw new Error("There are no groups to delete.");
+      return {
+        title: "Delete Group",
+        submitLabel: "Delete",
+        fields: [{ kind: "select", key: "group", label: "Group (its queries are kept, ungrouped)", options: groups.map((g) => ({ value: g, label: g })), default: c.group && groups.includes(c.group) ? c.group : groups[0] }],
+        build: (v) => ({ command: "query.group.remove", args: { name: String(v.group ?? "") } }),
+      };
+    }
+    case "replaceErrors":
+      return {
+        title: "Replace Errors",
+        submitLabel: "OK",
+        fields: [
+          { kind: "multi", key: "columns", label: "In columns", options: cols, default: c.selected.length ? c.selected : first ? [first] : [] },
+          { kind: "check", key: "asNull", label: "Replace errors with null" },
+          { kind: "text", key: "value", label: "Value" },
+        ],
+        build: (v) => {
+          const columns = (v.columns as string[]) ?? [];
+          if (!columns.length) throw new Error("Choose at least one column.");
+          if (v.asNull) return { transform: { kind: "replaceErrors", columns, value: null } };
+          const text = String(v.value ?? "");
+          if (columns.every((n) => valueTypeOf(typeOfColumn(c, n)) === "number")) {
+            if (!looksNumeric(text)) throw new Error("These columns hold numbers: the replacement must be a number.");
+            return { transform: { kind: "replaceErrors", columns, value: Number(text), valueType: "number" } };
+          }
+          return { transform: { kind: "replaceErrors", columns, value: text, valueType: "text" } };
         },
       };
     case "split":

@@ -51,30 +51,90 @@ fn to_value(v: ValueRef<'_>) -> Value {
     }
 }
 
+/// The stored name of a table (case-insensitive match) and its column names, or None when the store has no such table.
+fn stored_table(conn: &duckdb::Connection, name: &str) -> Result<Option<(String, Vec<String>)>, String> {
+    let found: Option<String> = conn
+        .query_row("SELECT table_name FROM information_schema.tables WHERE table_schema = 'main' AND lower(table_name) = lower(?) LIMIT 1", [name], |r| r.get(0))
+        .ok();
+    let Some(stored) = found else { return Ok(None) };
+    let mut st = conn.prepare(&format!("DESCRIBE {}", q(&stored))).map_err(|e| e.to_string())?;
+    let cols = st.query_map([], |r| r.get::<_, String>(0)).map_err(|e| e.to_string())?.collect::<Result<Vec<_>, _>>().map_err(|e| e.to_string())?;
+    Ok(Some((stored, cols)))
+}
+
+/// Reads stored columns of a model table in model order (only model column `only` when given). A model table with no
+/// data in the store loads empty. Rows come in insertion order (DuckDB keeps it for a plain scan).
+fn read_columns(conn: &duckdb::Connection, model: &Model, table: TableId, only: Option<usize>) -> Result<Vec<Vec<Value>>, String> {
+    let t = &model.tables[table];
+    let base: Vec<&str> = t
+        .columns
+        .iter()
+        .enumerate()
+        .filter(|(i, c)| c.expression.is_none() && only.is_none_or(|o| o == *i))
+        .map(|(_, c)| c.name.as_str())
+        .collect();
+    let Some((stored, have)) = stored_table(conn, &t.name)? else { return Ok(vec![Vec::new(); base.len()]) };
+    let mut select = Vec::with_capacity(base.len());
+    for c in &base {
+        let found = have.iter().find(|x| x.eq_ignore_ascii_case(c)).ok_or_else(|| format!("Column '{}'[{c}] has no data in the store; refresh the table.", t.name))?;
+        select.push(q(found));
+    }
+    let rows_hint: i64 = conn.query_row(&format!("SELECT count(*) FROM {}", q(&stored)), [], |r| r.get(0)).map_err(|e| e.to_string())?;
+    let sql = format!("SELECT {} FROM {}", if select.is_empty() { "1".into() } else { select.join(", ") }, q(&stored));
+    let mut st = conn.prepare(&sql).map_err(|e| e.to_string())?;
+    let mut rows = st.query([]).map_err(|e| e.to_string())?;
+    let mut cols = vec![Vec::with_capacity(rows_hint as usize); base.len()];
+    while let Some(r) = rows.next().map_err(|e| e.to_string())? {
+        for (i, col) in cols.iter_mut().enumerate() {
+            col.push(to_value(r.get_ref(i).map_err(|e| e.to_string())?));
+        }
+    }
+    Ok(cols)
+}
+
+fn stored_row_count(conn: &duckdb::Connection, model: &Model, table: TableId) -> Result<usize, String> {
+    let Some((stored, _)) = stored_table(conn, &model.tables[table].name)? else { return Ok(0) };
+    let n: i64 = conn.query_row(&format!("SELECT count(*) FROM {}", q(&stored)), [], |r| r.get(0)).map_err(|e| e.to_string())?;
+    Ok(n as usize)
+}
+
 impl biforge_dax::DataSource for Engine {
-    /// Reads the table's stored columns in model order. A model table with no data in the store loads empty.
     fn load_table(&self, model: &Model, table: TableId) -> Result<Vec<Vec<Value>>, String> {
-        let t = &model.tables[table];
-        let base: Vec<&str> = t.columns.iter().filter(|c| c.expression.is_none()).map(|c| c.name.as_str()).collect();
-        if !self.has_table(&t.name).map_err(|e| e.to_string())? {
-            return Ok(vec![Vec::new(); base.len()]);
-        }
-        let info = self.table_info(&t.name).map_err(|e| e.to_string())?;
-        let mut select = Vec::with_capacity(base.len());
-        for c in &base {
-            let found = info.columns.iter().find(|x| x.name.eq_ignore_ascii_case(c)).ok_or_else(|| format!("Column '{}'[{c}] has no data in the store; refresh the table.", t.name))?;
-            select.push(q(&found.name));
-        }
-        let sql = format!("SELECT {} FROM {} ORDER BY rowid", if select.is_empty() { "1".into() } else { select.join(", ") }, q(&info.name));
-        let mut st = self.conn().prepare(&sql).map_err(|e| e.to_string())?;
-        let mut rows = st.query([]).map_err(|e| e.to_string())?;
-        let mut cols = vec![Vec::with_capacity(info.row_count as usize); base.len()];
-        while let Some(r) = rows.next().map_err(|e| e.to_string())? {
-            for (i, col) in cols.iter_mut().enumerate() {
-                col.push(to_value(r.get_ref(i).map_err(|e| e.to_string())?));
-            }
-        }
-        Ok(cols)
+        read_columns(self.conn(), model, table, None)
+    }
+    fn row_count(&self, model: &Model, table: TableId) -> Result<usize, String> {
+        stored_row_count(self.conn(), model, table)
+    }
+    fn load_column(&self, model: &Model, table: TableId, column: usize) -> Result<Vec<Value>, String> {
+        Ok(read_columns(self.conn(), model, table, Some(column))?.pop().unwrap_or_default())
+    }
+}
+
+/// Reads columns for a DAX engine that outlives the call that made it: it owns its own connection to the same
+/// database, so the DAX engine can read a column the first time a query uses it (see `ModelData::load_lazy`).
+pub struct StoreLoader {
+    conn: std::sync::Mutex<duckdb::Connection>,
+}
+
+impl StoreLoader {
+    pub fn new(store: &Engine) -> Result<StoreLoader, String> {
+        Ok(StoreLoader { conn: std::sync::Mutex::new(store.conn().try_clone().map_err(|e| e.to_string())?) })
+    }
+    fn with<T>(&self, f: impl FnOnce(&duckdb::Connection) -> Result<T, String>) -> Result<T, String> {
+        let g = self.conn.lock().map_err(|_| "The data store is unavailable.".to_string())?;
+        f(&g)
+    }
+}
+
+impl biforge_dax::DataSource for StoreLoader {
+    fn load_table(&self, model: &Model, table: TableId) -> Result<Vec<Vec<Value>>, String> {
+        self.with(|c| read_columns(c, model, table, None))
+    }
+    fn row_count(&self, model: &Model, table: TableId) -> Result<usize, String> {
+        self.with(|c| stored_row_count(c, model, table))
+    }
+    fn load_column(&self, model: &Model, table: TableId, column: usize) -> Result<Vec<Value>, String> {
+        Ok(self.with(|c| read_columns(c, model, table, Some(column)))?.pop().unwrap_or_default())
     }
 }
 
@@ -86,6 +146,17 @@ impl SqlExecutor for Engine {
             Some(r) => Ok(to_value(r.get_ref(0).map_err(|e| e.to_string())?)),
             None => Ok(Value::Blank),
         }
+    }
+
+    fn query_rows(&self, sql: &str) -> Result<Vec<Vec<Value>>, String> {
+        let mut st = self.conn().prepare(sql).map_err(|e| e.to_string())?;
+        let mut rows = st.query([]).map_err(|e| e.to_string())?;
+        let n = rows.as_ref().map(|s| s.column_count()).unwrap_or(0);
+        let mut out = Vec::new();
+        while let Some(r) = rows.next().map_err(|e| e.to_string())? {
+            out.push((0..n).map(|i| r.get_ref(i).map(to_value)).collect::<Result<Vec<_>, _>>().map_err(|e| e.to_string())?);
+        }
+        Ok(out)
     }
 }
 
@@ -114,7 +185,8 @@ impl DaxCache {
                 return Ok(s.engine.clone());
             }
         }
-        let engine = std::sync::Arc::new(biforge_dax::Engine::new(build()?, store)?);
+        let loader: std::sync::Arc<dyn biforge_dax::DataSource + Send + Sync> = std::sync::Arc::new(StoreLoader::new(store)?);
+        let engine = std::sync::Arc::new(biforge_dax::Engine::new_lazy(build()?, loader)?);
         self.loads.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         *slot = Some(CacheSlot { model_key, stamp, engine: engine.clone() });
         Ok(engine)

@@ -49,6 +49,7 @@ impl DataService {
         }
         let mut slot = self.engine.lock().map_err(|_| "The data store is unavailable.".to_string())?;
         // Release the previous store first: DuckDB allows one connection owner per file, so re-opening the same project must not conflict with ourselves.
+        self.dax_cache.clear(); // the cached DAX engine holds its own connection to the file
         *slot = None;
         let engine = Engine::open(&dir.join("data.duckdb")).map_err(msg)?;
         let names = engine.table_names().map_err(msg)?;
@@ -61,6 +62,7 @@ impl DataService {
     pub fn copy_store(&self, src_root: &str, dst_root: &str) -> Result<Vec<String>, String> {
         {
             let mut slot = self.engine.lock().map_err(|_| "The data store is unavailable.".to_string())?;
+            self.dax_cache.clear();
             *slot = None;
         }
         let from = Path::new(src_root).join(".biforge").join("data.duckdb");

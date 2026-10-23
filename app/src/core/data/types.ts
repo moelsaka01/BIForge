@@ -61,6 +61,8 @@ export interface RowPage {
   columns: ColumnInfo[];
   rows: (string | null)[][];
   total: number;
+  /** (row, column) of the cells that are errors (a failed type conversion); Power Query previews only. */
+  errorCells?: [number, number][];
 }
 
 export type Cardinality = "oneToMany" | "manyToOne" | "oneToOne" | "manyToMany";

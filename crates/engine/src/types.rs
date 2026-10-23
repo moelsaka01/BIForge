@@ -313,6 +313,10 @@ pub struct RowPage {
     pub columns: Vec<ColumnInfo>,
     pub rows: Vec<Vec<Option<String>>>,
     pub total: u64,
+    /// (row, column) of the cells that are errors (a failed type conversion; the cell text is None). Power Query
+    /// previews only.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub error_cells: Vec<(usize, usize)>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

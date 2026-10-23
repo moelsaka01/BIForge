@@ -3,6 +3,7 @@
 import type { CommandRegistry } from "./registry";
 import type { Session } from "../session/session";
 import type { StepEdit, Transform } from "../queries/types";
+import { parameterText, type ParameterDef } from "../queries/parameters";
 
 const hasProject = (s: Session) => s.store.project !== null && s.m !== null;
 const editorOpen = (s: Session) => hasProject(s) && s.queries.getSnapshot().open;
@@ -55,6 +56,17 @@ export function registerQueryCommands(r: CommandRegistry<Session>): void {
     const { q, step } = selected(s, args.query);
     const after = args.after === undefined ? step : args.after;
     const out = await api(s).applyTransform(q.text, after, args.transform);
+    s.queries.setText(q.name, out.text, out.added[out.added.length - 1] ?? null);
+  });
+
+  reg("query.detectTypes", "Detect data type", async (s, a) => {
+    const { columns } = need<{ columns: string[] }>(a, ["columns"]);
+    const { q, step } = selected(s);
+    if (!columns.length) throw new Error("Select the columns to detect the data type of.");
+    const found = await api(s).detectTypes(s.queries.texts(), q.name, step, columns);
+    const changes = found.filter((f) => f.type !== "text");
+    if (!changes.length) throw new Error("No column holds values that fit another data type than text.");
+    const out = await api(s).applyTransform(q.text, step, { kind: "changeType", changes: changes.map((f) => ({ column: f.column, type: f.type })) });
     s.queries.setText(q.name, out.text, out.added[out.added.length - 1] ?? null);
   });
 
@@ -120,6 +132,33 @@ export function registerQueryCommands(r: CommandRegistry<Session>): void {
     const q = s.queries.get(name);
     if (!q) throw new Error(`The query "${name}" does not exist.`);
     s.queries.add(s.queries.uniqueName(name), q.text, true);
+  });
+
+  reg("query.setParameter", "Save parameter", (s, a) => {
+    const { name, def } = need<{ name: string; def: ParameterDef }>(a, ["name", "def"]);
+    const text = parameterText(def);
+    if (s.queries.get(name)) {
+      s.queries.setText(name, text, null);
+      s.queries.setLoaded(name, false);
+    } else s.queries.add(name, text, false);
+  });
+
+  reg("query.group.add", "New group", (s, a) => {
+    const { name, query } = need<{ name: string; query?: string }>(a, ["name"]);
+    const g = s.queries.addGroup(name);
+    if (query) s.queries.setGroup(query, g);
+  });
+  reg("query.group.rename", "Rename group", (s, a) => {
+    const { old, to } = need<{ old: string; to: string }>(a, ["old", "to"]);
+    s.queries.renameGroup(old, to);
+  });
+  reg("query.group.remove", "Delete group", (s, a) => {
+    const { name } = need<{ name: string }>(a, ["name"]);
+    s.queries.removeGroup(name);
+  });
+  reg("query.setGroup", "Move to group", (s, a) => {
+    const args = need<{ query: string; group: string | null }>(a, ["query"]);
+    s.queries.setGroup(args.query, args.group ?? null);
   });
 
   reg("query.setLoad", "Enable load", (s, a) => {

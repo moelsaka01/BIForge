@@ -130,6 +130,19 @@ impl<'a> Ev<'a> {
         rel.plain_cols().map(|c| qi(&c.name)).collect::<Vec<_>>().join(", ")
     }
 
+    /// The visible columns followed by the error flags of the columns that have one: for steps that keep every
+    /// column and only select, order or add rows or columns.
+    fn col_list_keep(rel: &Rel) -> String {
+        let mut cols: Vec<String> = rel.plain_cols().map(|c| qi(&c.name)).collect();
+        cols.extend(rel.flagged().iter().map(|n| qi(&err_col(n))));
+        cols.join(", ")
+    }
+
+    /// The error flags of the columns named in `keep`, as select items (`"__err__a"`).
+    fn flags_of(rel: &Rel, keep: &[String]) -> Vec<String> {
+        keep.iter().filter_map(|n| rel.flag_of(n)).map(|f| qi(&f)).collect()
+    }
+
     fn need(&self, rel: &Rel, names: &[String]) -> R<()> {
         for n in names {
             if rel.col(n).is_none() {
@@ -148,6 +161,36 @@ impl<'a> Ev<'a> {
             return Value::Bool(s == "true");
         }
         Value::Text(s)
+    }
+
+    /// `List.Sum(Table[Col])`, `List.Max`, ... computed by one SQL aggregate (None for other functions or a missing column).
+    pub fn table_aggregate(&self, func: &str, rel: &Rel, column: &str) -> R<Option<Value>> {
+        let Some(col) = rel.col(column) else { return Ok(None) };
+        if col.ty == NESTED_TY || !rel.nested.is_empty() {
+            return Ok(None);
+        }
+        let c = qi(column);
+        let agg = match func {
+            "List.Sum" => format!("sum({c})"),
+            "List.Count" => "count(*)".to_string(),
+            "List.NonNullCount" => format!("count({c})"),
+            "List.Min" => format!("min({c})"),
+            "List.Max" => format!("max({c})"),
+            "List.Average" => format!("avg({c})"),
+            "List.StandardDeviation" => format!("stddev_samp({c})"),
+            "List.Median" => format!("median({c})"),
+            // List.Count(List.Distinct(...)): null counts as a value
+            "List.CountDistinct" => format!("count(DISTINCT {c}) + (CASE WHEN count(*) > count({c}) THEN 1 ELSE 0 END)"),
+            _ => return Ok(None),
+        };
+        let sql = format!("{}SELECT CAST({agg} AS VARCHAR) FROM {}", rel.prefix(), qi(&rel.name));
+        let rows = self.be.rows(&sql, 1).map_err(MError::expr)?;
+        let cell = rows.into_iter().next().and_then(|mut r| r.remove(0));
+        let ty = match func {
+            "List.Min" | "List.Max" | "List.Median" => col.ty.as_str(),
+            _ => "DOUBLE",
+        };
+        Ok(Some(Self::cell_value(ty, cell)))
     }
 
     pub fn column_list(&self, rel: &Rel, name: &str) -> R<Value> {
@@ -428,11 +471,9 @@ impl<'a> Ev<'a> {
             "Table.NestedJoin" => self.nested_join(a)?,
             "Table.ExpandTableColumn" => self.expand_table_column(a)?,
             "Table.Join" => self.join(a)?,
-            "Table.RemoveRowsWithErrors" | "Table.SelectRowsWithErrors" | "Table.ReplaceErrorValues" => {
-                return Err(MError::unsupported(format!(
-                    "{name} is not supported: BIForge's query engine has no cell-level errors (a failed conversion fails the whole step)."
-                )))
-            }
+            "Table.RemoveRowsWithErrors" => self.rows_with_errors(a, true)?,
+            "Table.SelectRowsWithErrors" => self.rows_with_errors(a, false)?,
+            "Table.ReplaceErrorValues" => self.replace_errors(a)?,
             "Table.ReverseRows" => self.reverse_rows(a)?,
             "Table.AlternateRows" => self.alternate_rows(a)?,
             "Table.Transpose" => self.transpose(a)?,
@@ -628,7 +669,9 @@ impl<'a> Ev<'a> {
             if mode == 0 {
                 self.need(&t, &names)?;
             }
-            let keep: Vec<String> = t.plain_cols().filter(|c| !present.contains(&c.name)).map(|c| qi(&c.name)).collect();
+            let mut keep: Vec<String> = t.plain_cols().filter(|c| !present.contains(&c.name)).map(|c| qi(&c.name)).collect();
+            let kept_names: Vec<String> = t.plain_cols().filter(|c| !present.contains(&c.name)).map(|c| c.name.clone()).collect();
+            keep.extend(Self::flags_of(&t, &kept_names));
             let mut nested = t.nested.clone();
             nested.retain(|n| !present.contains(&n.name));
             self.no_nested(&Rel { nested, ..t.clone() })?;
@@ -652,6 +695,7 @@ impl<'a> Ev<'a> {
                 return Err(missing_col(n));
             }
         }
+        sel.extend(Self::flags_of(&t, &names));
         let body = if sel.is_empty() {
             format!("SELECT {} FROM {}", qi(ORD), qi(&t.name))
         } else {
@@ -670,7 +714,9 @@ impl<'a> Ev<'a> {
             .plain_cols()
             .map(|c| if names.contains(&c.name) { order.next().cloned().unwrap() } else { c.name.clone() })
             .collect();
-        let body = format!("SELECT {}, {} FROM {}", qi(ORD), cols.iter().map(|c| qi(c)).collect::<Vec<_>>().join(", "), qi(&t.name));
+        let mut list: Vec<String> = cols.iter().map(|c| qi(c)).collect();
+        list.extend(Self::flags_of(&t, &cols));
+        let body = format!("SELECT {}, {} FROM {}", qi(ORD), list.join(", "), qi(&t.name));
         Ok(Value::Table(self.derive(&[&t], body)?))
     }
 
@@ -691,6 +737,13 @@ impl<'a> Ev<'a> {
         let mut out_names: Vec<String> = Vec::new();
         let mut sel = Vec::new();
         for c in t.cols.iter() {
+            if c.is_flag() {
+                // the flag follows its column
+                let base = &c.name[ERR_PREFIX.len()..];
+                let new_base = map.iter().find(|(o, _)| o == base).map(|(_, n)| n.clone()).unwrap_or_else(|| base.to_string());
+                sel.push(format!("{} AS {}", qi(&c.name), qi(&err_col(&new_base))));
+                continue;
+            }
             let new = map.iter().find(|(o, _)| *o == c.name).map(|(_, n)| n.clone()).unwrap_or_else(|| c.name.clone());
             if out_names.contains(&new) {
                 return Err(MError::expr(format!("The name '{new}' is used by more than one column.")));
@@ -740,7 +793,7 @@ impl<'a> Ev<'a> {
         if t.col(new).is_some() {
             return Err(MError::expr(format!("The column '{new}' already exists in the table.")));
         }
-        let body = format!("SELECT {}, {}, {} AS {} FROM {}", qi(ORD), Self::col_list_sql(&t), qi(src), qi(new), qi(&t.name));
+        let body = format!("SELECT {}, {}, {} AS {} FROM {}", qi(ORD), Self::col_list_keep(&t), qi(src), qi(new), qi(&t.name));
         Ok(Value::Table(self.derive(&[&t], body)?))
     }
 
@@ -768,16 +821,39 @@ impl<'a> Ev<'a> {
             conv.push((c.clone(), self.type_of(ty)?));
         }
         let mut sel = Vec::new();
+        let mut flags = Vec::new();
         for c in t.plain_cols() {
             let expr = match conv.iter().rev().find(|(n, _)| *n == c.name) {
                 Some((_, ty)) => self.convert_sql(&qi(&c.name), &c.ty, ty)?,
                 None => None,
             };
-            sel.push(match expr {
-                Some(e) => format!("{e} AS {}", qi(&c.name)),
-                None => qi(&c.name),
-            });
+            let old_flag = t.flag_of(&c.name);
+            match expr {
+                Some(e) => {
+                    // a value that cannot be converted becomes an error cell: NULL plus a flag (not a failure of the step)
+                    let tried = e.replace("CAST(", "TRY_CAST(").replace("strptime(", "try_strptime(");
+                    let x = qi(&c.name);
+                    if is_text_ty(&c.ty) {
+                        let fresh = format!("({tried} IS NULL AND NULLIF(trim({x}), '') IS NOT NULL)");
+                        let flag = match &old_flag {
+                            Some(f) => format!("(coalesce({}, false) OR {fresh})", qi(f)),
+                            None => fresh,
+                        };
+                        flags.push(format!("{flag} AS {}", qi(&err_col(&c.name))));
+                    } else if let Some(f) = &old_flag {
+                        flags.push(qi(f));
+                    }
+                    sel.push(format!("{tried} AS {}", qi(&c.name)));
+                }
+                None => {
+                    sel.push(qi(&c.name));
+                    if let Some(f) = &old_flag {
+                        flags.push(qi(f));
+                    }
+                }
+            }
         }
+        sel.extend(flags);
         let body = format!("SELECT {}, {} FROM {}", qi(ORD), sel.join(", "), qi(&t.name));
         Ok(Value::Table(self.derive(&[&t], body)?))
     }
@@ -845,7 +921,75 @@ impl<'a> Ev<'a> {
             Value::Sql(s) => s,
             other => return Err(MError::expr(format!("The condition must be logical, found {}.", other.type_name()))),
         };
-        let body = format!("SELECT {}, {} FROM {} WHERE {}", qi(ORD), Self::col_list_sql(&t), qi(&t.name), where_sql);
+        let body = format!("SELECT {}, {} FROM {} WHERE {}", qi(ORD), Self::col_list_keep(&t), qi(&t.name), where_sql);
+        Ok(Value::Table(self.derive(&[&t], body)?))
+    }
+
+    /// The columns an error function looks at: the named ones (which must exist) or every column that has errors.
+    fn error_columns(&self, t: &Rel, v: Option<&Value>, fname: &str) -> R<Vec<String>> {
+        match v {
+            None | Some(Value::Null) => Ok(t.flagged()),
+            Some(v) => {
+                let names = match v {
+                    Value::Text(s) => vec![s.clone()],
+                    other => text_list(other, "The column names")?,
+                };
+                self.need(t, &names).map_err(|e| MError::expr(format!("{fname}: {}", e.message)))?;
+                Ok(names)
+            }
+        }
+    }
+
+    /// Table.RemoveRowsWithErrors (remove = true) and Table.SelectRowsWithErrors: rows with an error cell in the columns.
+    fn rows_with_errors(&self, a: &[Value], remove: bool) -> R<Value> {
+        let fname = if remove { "Table.RemoveRowsWithErrors" } else { "Table.SelectRowsWithErrors" };
+        let t = table_arg(a, 0, fname)?;
+        self.no_nested(&t)?;
+        let cols = self.error_columns(&t, a.get(1), fname)?;
+        let flags: Vec<String> = cols.iter().filter_map(|c| t.flag_of(c)).map(|f| format!("coalesce({}, false)", qi(&f))).collect();
+        let any = if flags.is_empty() { "FALSE".to_string() } else { format!("({})", flags.join(" OR ")) };
+        let (cond, drop) = if remove { (format!("NOT {any}"), cols.clone()) } else { (any, vec![]) };
+        let mut list: Vec<String> = t.plain_cols().map(|c| qi(&c.name)).collect();
+        let kept: Vec<String> = t.flagged().into_iter().filter(|n| !drop.contains(n)).collect();
+        list.extend(kept.iter().map(|n| qi(&err_col(n))));
+        let body = format!("SELECT {}, {} FROM {} WHERE {}", qi(ORD), list.join(", "), qi(&t.name), cond);
+        Ok(Value::Table(self.derive(&[&t], body)?))
+    }
+
+    /// Table.ReplaceErrorValues(table, {{column, value}, ...}): error cells of the columns get the value.
+    fn replace_errors(&self, a: &[Value]) -> R<Value> {
+        let t = table_arg(a, 0, "Table.ReplaceErrorValues")?;
+        self.no_nested(&t)?;
+        let Value::List(items) = arg(a, 1, "Table.ReplaceErrorValues")? else {
+            return Err(MError::expr("Table.ReplaceErrorValues needs a list of {column, value} pairs."));
+        };
+        let pairs: Vec<&[Value]> = if matches!(items.first(), Some(Value::Text(_))) && items.len() == 2 {
+            vec![items.as_slice()]
+        } else {
+            items.iter().map(|i| if let Value::List(p) = i { Ok(p.as_slice()) } else { Err(MError::expr("Each item must be a list of {column, value}.")) }).collect::<R<Vec<_>>>()?
+        };
+        let mut repl: Vec<(String, String)> = Vec::new();
+        for p in pairs {
+            let (Some(Value::Text(c)), Some(v)) = (p.first(), p.get(1)) else {
+                return Err(MError::expr("Each item must be {column name, value}."));
+            };
+            let col = t.col(c).ok_or_else(|| missing_col(c))?;
+            let lit = self.to_sql(v)?;
+            repl.push((c.clone(), format!("CAST({lit} AS {})", col.ty)));
+        }
+        let mut sel = Vec::new();
+        for c in t.plain_cols() {
+            match (repl.iter().find(|(n, _)| *n == c.name), t.flag_of(&c.name)) {
+                (Some((_, lit)), Some(f)) => sel.push(format!("(CASE WHEN coalesce({}, false) THEN {lit} ELSE {} END) AS {}", qi(&f), qi(&c.name), qi(&c.name))),
+                _ => sel.push(qi(&c.name)),
+            }
+        }
+        for n in t.flagged() {
+            if !repl.iter().any(|(r, _)| *r == n) {
+                sel.push(qi(&err_col(&n)));
+            }
+        }
+        let body = format!("SELECT {}, {} FROM {}", qi(ORD), sel.join(", "), qi(&t.name));
         Ok(Value::Table(self.derive(&[&t], body)?))
     }
 
@@ -890,7 +1034,7 @@ impl<'a> Ev<'a> {
             order.join(", "),
             qi(ORD),
             qi(ORD),
-            Self::col_list_sql(&t),
+            Self::col_list_keep(&t),
             qi(&t.name)
         );
         Ok(Value::Table(self.derive(&[&t], body)?))
@@ -941,7 +1085,7 @@ impl<'a> Ev<'a> {
         let body = format!(
             "SELECT {}, {} FROM (SELECT *, row_number() OVER (ORDER BY {}) AS \"__rn\", count(*) OVER () AS \"__cnt\" FROM {}) AS w WHERE {}",
             qi(ORD),
-            Self::col_list_sql(&t),
+            Self::col_list_keep(&t),
             qi(ORD),
             qi(&t.name),
             cond
@@ -952,7 +1096,7 @@ impl<'a> Ev<'a> {
     fn reverse_rows(&self, a: &[Value]) -> R<Value> {
         let t = table_arg(a, 0, "Table.ReverseRows")?;
         self.no_nested(&t)?;
-        let body = format!("SELECT row_number() OVER (ORDER BY {o} DESC) AS {o}, {} FROM {}", Self::col_list_sql(&t), qi(&t.name), o = qi(ORD));
+        let body = format!("SELECT row_number() OVER (ORDER BY {o} DESC) AS {o}, {} FROM {}", Self::col_list_keep(&t), qi(&t.name), o = qi(ORD));
         Ok(Value::Table(self.derive(&[&t], body)?))
     }
 
@@ -974,7 +1118,7 @@ impl<'a> Ev<'a> {
         let body = format!(
             "SELECT {o}, {cols} FROM (SELECT *, row_number() OVER (ORDER BY {o}) AS \"__rn\" FROM {t}) AS w WHERE \"__rn\" <= {offset} OR ((\"__rn\" - {offset} - 1) % {period}) >= {skip}",
             o = qi(ORD),
-            cols = Self::col_list_sql(&t),
+            cols = Self::col_list_keep(&t),
             t = qi(&t.name),
             period = skip + take
         );
@@ -1055,7 +1199,7 @@ impl<'a> Ev<'a> {
         let body = format!(
             "SELECT {}, {} FROM {} QUALIFY row_number() OVER (PARTITION BY {} ORDER BY {}) = 1",
             qi(ORD),
-            Self::col_list_sql(&t),
+            Self::col_list_keep(&t),
             qi(&t.name),
             part,
             qi(ORD)
@@ -1211,7 +1355,7 @@ impl<'a> Ev<'a> {
                 e = c;
             }
         }
-        let body = format!("SELECT {}, {}, {} AS {} FROM {}", qi(ORD), Self::col_list_sql(&t), e, qi(name), qi(&t.name));
+        let body = format!("SELECT {}, {}, {} AS {} FROM {}", qi(ORD), Self::col_list_keep(&t), e, qi(name), qi(&t.name));
         Ok(Value::Table(self.derive(&[&t], body)?))
     }
 
@@ -1244,7 +1388,7 @@ impl<'a> Ev<'a> {
         };
         let body = format!(
             "SELECT {o}, {}, (row_number() OVER (ORDER BY {o}) - 1) * {step} + {start} AS {} FROM {}",
-            Self::col_list_sql(&t),
+            Self::col_list_keep(&t),
             qi(name),
             qi(&t.name),
             o = qi(ORD)
@@ -1548,9 +1692,8 @@ impl<'a> Ev<'a> {
             4 => {
                 let right_sel: Vec<String> = new_names.iter().map(|nn| format!("NULL AS {}", qi(nn))).collect();
                 format!(
-                    "SELECT l.{o}, {}, {} FROM {} AS l WHERE NOT EXISTS (SELECT 1 FROM {} AS r WHERE {})",
-                    left_sel.join(", "),
-                    right_sel.join(", "),
+                    "SELECT l.{o}, {} FROM {} AS l WHERE NOT EXISTS (SELECT 1 FROM {} AS r WHERE {})",
+                    [left_sel.clone(), right_sel].concat().join(", "),
                     qi(&t.name),
                     qi(&n.right.name),
                     on,
@@ -1585,9 +1728,8 @@ impl<'a> Ev<'a> {
                     left_sel.clone()
                 };
                 format!(
-                    "SELECT row_number() OVER (ORDER BY l.{o} NULLS LAST, r.{o} NULLS LAST) AS {o}, {}, {} FROM {} AS l {} {} AS r ON {}",
-                    left_sel2.join(", "),
-                    right_sel.join(", "),
+                    "SELECT row_number() OVER (ORDER BY l.{o} NULLS LAST, r.{o} NULLS LAST) AS {o}, {} FROM {} AS l {} {} AS r ON {}",
+                    [left_sel2, right_sel].concat().join(", "),
                     qi(&t.name),
                     jt,
                     qi(&n.right.name),
@@ -1607,12 +1749,14 @@ impl<'a> Ev<'a> {
         self.no_nested(&r)?;
         let rk = text_list(arg(a, 3, "Table.Join")?, "The right key columns")?;
         let kind = self.join_kind(a.get(4), 0)?;
+        // a key column named the same on both sides appears once in the result (as in the Table.Join documentation)
+        let same_key = |n: &str| lk.iter().zip(rk.iter()).any(|(a, b)| a == n && b == n);
         for c in r.plain_cols() {
-            if l.col(&c.name).is_some() {
+            if l.col(&c.name).is_some() && !same_key(&c.name) {
                 return Err(MError::expr(format!("The column '{}' is in both tables; rename it first (Table.Join needs distinct column names).", c.name)));
             }
         }
-        let names: Vec<String> = r.plain_cols().map(|c| c.name.clone()).collect();
+        let names: Vec<String> = r.plain_cols().filter(|c| !same_key(&c.name)).map(|c| c.name.clone()).collect();
         let nj = self.nested_join(&[
             Value::Table(l),
             Value::List(lk.into_iter().map(Value::Text).collect()),

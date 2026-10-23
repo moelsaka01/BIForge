@@ -183,6 +183,31 @@ impl<'a> Ev<'a> {
             }
             Expr::Invoke(callee, args) => {
                 let f = self.eval(callee, scope)?;
+                // List.Sum(Source[Col]) and the like aggregate in SQL instead of reading the whole column
+                if let (Value::Builtin(fname), [only]) = (&f, args.as_slice()) {
+                    match only {
+                        Expr::Field(base, col, false) => {
+                            if let Value::Table(rel) = self.eval(base, scope)? {
+                                if let Some(v) = self.table_aggregate(fname, &rel, col.as_str())? {
+                                    return Ok(v);
+                                }
+                            }
+                        }
+                        // List.Count(List.Distinct(Table[Col]))
+                        Expr::Invoke(inner, inner_args) if fname == "List.Count" => {
+                            if let (Value::Builtin(d), [Expr::Field(base, col, false)]) = (self.eval(inner, scope)?, inner_args.as_slice()) {
+                                if d == "List.Distinct" {
+                                    if let Value::Table(rel) = self.eval(base, scope)? {
+                                        if let Some(v) = self.table_aggregate("List.CountDistinct", &rel, col.as_str())? {
+                                            return Ok(v);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        _ => {}
+                    }
+                }
                 let mut vs = Vec::new();
                 for a in args {
                     vs.push(self.eval(a, scope)?);

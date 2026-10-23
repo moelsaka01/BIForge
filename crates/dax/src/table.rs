@@ -59,7 +59,7 @@ impl TableVal {
 
     pub fn value(&self, data: &ModelData, row: usize, col: usize) -> Value {
         match self {
-            TableVal::Base { table, rows } => data.tables[*table].value(col, rows[row]).clone(),
+            TableVal::Base { table, rows } => data.value(ColId { table: *table, col }, rows[row]).clone(),
             TableVal::Mat(m) => m.rows[row][col].clone(),
         }
     }

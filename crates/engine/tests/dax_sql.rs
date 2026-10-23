@@ -47,6 +47,19 @@ fn sql_compiled_aggregations_match_the_engine() {
         "COUNTROWS(Promotion)",
         "SUM(Budget[BudgetAmount])",
         "COUNTROWS(Customer)",
+        // row expressions of the iterators compile too (BLANK acts as 0 in + and -, BLANK * x is BLANK)
+        "SUMX(Sales, Sales[Quantity] * Sales[UnitPrice] * (1 - Sales[Discount]))",
+        "SUMX(Sales, Sales[Quantity] + Sales[Discount])",
+        "SUMX(Sales, Sales[Discount] - Sales[Quantity])",
+        "SUMX(Sales, RELATED(Product[ListPrice]) - Sales[UnitPrice])",
+        "SUMX(Sales, -Sales[Quantity] * 2 + 0.5)",
+        "AVERAGEX(Sales, Sales[UnitPrice] - Sales[Discount])",
+        "MAXX(Sales, Sales[Quantity] * 2)",
+        "MINX(Sales, Sales[Quantity] / 2)",
+        "SUMX(Sales, DIVIDE(Sales[Quantity], Sales[Discount]))",
+        "DISTINCTCOUNT(Sales[CustomerKey])",
+        "DISTINCTCOUNT(Sales[Channel])",
+        "DISTINCTCOUNT(Sales[Discount])",
     ];
     let contexts = [
         "",
@@ -91,7 +104,49 @@ fn sql_compiled_aggregations_match_the_engine() {
     assert_eq!(used("CALCULATE(SUM(Sales[Quantity]), Product[Category] = \"Bikes\")"), 1);
     assert_eq!(used("CALCULATE(SUM(Sales[Quantity]), FILTER(Product, Product[ListPrice] > 100))"), 0);
     assert_eq!(used("CALCULATE(COUNTROWS(Promotion), Sales[Quantity] > 3)"), 0, "bidirectional cross-filter must not compile");
-    assert_eq!(used("SUMX(Sales, Sales[Quantity])"), 0);
+    assert_eq!(used("SUMX(Sales, Sales[Quantity])"), 1);
+    assert_eq!(used("SUMX(Sales, IF(Sales[Quantity] > 3, 1, 0))"), 0, "a condition is evaluated by the engine");
+    assert_eq!(used("SUMX(Sales, Sales[Quantity] / Sales[UnitPrice])"), 0, "a division by a column is evaluated by the engine");
+}
+
+/// Queries the report layer and the harness use: a whole GROUP BY in one SQL statement must give exactly the rows the
+/// engine gives combination by combination.
+#[test]
+fn grouped_queries_in_sql_match_the_engine() {
+    let (store, dax) = setup();
+    let measures = "\"q\", SUM(Sales[Quantity]), \"o\", COUNTROWS(Sales), \"p\", AVERAGE(Sales[UnitPrice]), \"a\", SUMX(Sales, Sales[Quantity] * Sales[UnitPrice] * (1 - Sales[Discount])), \"d\", DISTINCTCOUNT(Sales[CustomerKey]), \"mx\", MAX(Sales[OrderDate])";
+    let groups = [
+        "Product[Category]",
+        "Customer[Country], Product[Category]",
+        "'Date'[Year], 'Date'[Month]",
+        "Sales[Channel]",
+        "Promotion[Promotion], Sales[Channel]",
+        "Customer[Segment]",
+        "Product[Color], Customer[City]",
+        "Sales[Quantity]",
+    ];
+    let filters = ["", "Customer[Country] IN {\"France\", \"Germany\"}, ", "FILTER(ALL(Product[Category]), Product[Category] <> \"Bikes\"), ", "TREATAS({(\"Bikes\", \"France\")}, Product[Category], Customer[Country]), "];
+    let mut sql_runs = 0;
+    for g in groups {
+        for f in filters {
+            let q = format!("EVALUATE SUMMARIZECOLUMNS({g}, {f}{measures}) ORDER BY {g}");
+            let plain = dax.query_with(&q, None).unwrap_or_else(|e| panic!("{q}: {}", e.message));
+            let viasql = dax.query_with(&q, Some(&store)).unwrap_or_else(|e| panic!("{q} (sql): {}", e.message));
+            assert_eq!(plain.len(), viasql.len());
+            for (a, b) in plain.iter().zip(&viasql) {
+                assert_eq!(a.rows.len(), b.rows.len(), "{q}: row count");
+                for (ra, rb) in a.rows.iter().zip(&b.rows) {
+                    assert!(ra.iter().zip(rb).all(|(x, y)| same(x, y)), "{q}: engine {ra:?} vs SQL {rb:?}");
+                }
+            }
+            sql_runs += 1;
+        }
+    }
+    assert_eq!(sql_runs, groups.len() * filters.len());
+    // the batch really runs: one statement per fact table, not one per combination
+    let (v, hits) = dax.eval_scalar_with("COUNTROWS(SUMMARIZECOLUMNS(Product[Category], Customer[Country], \"q\", SUM(Sales[Quantity])))", Some(&store)).unwrap();
+    assert!(matches!(v, Value::Int(n) if n > 5));
+    assert_eq!(hits, 1, "the whole group-by should be one SQL statement");
 }
 
 #[test]

@@ -10,11 +10,13 @@ import { itemState, RIBBON, type RibbonContext, type RibbonItem } from "../../co
 import type { StepColumn } from "../../core/queries/types";
 import { Ribbon } from "./Ribbon";
 import { QueriesPane, StepsPane } from "./Panes";
+import { parseParameter } from "../../core/queries/parameters";
 import { PreviewGrid, type HeaderMenuEntry } from "./PreviewGrid";
 import { ProfilePane } from "./ProfilePane";
 import { useProfiles } from "./useProfiles";
 import { FormDialog } from "./FormDialog";
 import { AdvancedEditor } from "./AdvancedEditor";
+import { ValuePane } from "./ValuePane";
 import { DependenciesView } from "./DependenciesView";
 import { useEditorData } from "./useEditorData";
 
@@ -69,6 +71,9 @@ export function PowerQueryEditor({ session, registry, factory = createMMonacoEdi
   const [sheets, setSheets] = useState<string[] | undefined>(undefined);
   const [formula, setFormula] = useState("");
 
+  const parameterNames = new Set(snap.queries.filter((q) => parseParameter(q.text) !== null).map((q) => q.name));
+  const selectedQuery = snap.queries.find((q) => q.name === snap.selected);
+  const selectedParameter = selectedQuery && parseParameter(selectedQuery.text) ? { name: selectedQuery.name, def: parseParameter(selectedQuery.text)! } : null;
   const activeName = snap.step ?? data.active;
   const activeStep = data.steps.find((s) => s.name === activeName);
   const prof = useProfiles(m!, snap.selected, snap.step, texts, showQuality || showDistribution || showProfile, profileAll, snap.version, reloadKey, !!data.page && !data.previewError);
@@ -103,6 +108,7 @@ export function PowerQueryEditor({ session, registry, factory = createMMonacoEdi
     hasTable: !!data.page && !data.previewError,
     hasQuery: !!snap.selected,
     dirty: session.queries.dirty,
+    parameter: !!selectedParameter,
   });
 
   const dialogCtx = (): DialogContext => ({
@@ -112,6 +118,9 @@ export function PowerQueryEditor({ session, registry, factory = createMMonacoEdi
     queries: snap.queries.filter((q) => q.name !== snap.selected).map((q) => q.name),
     queryColumns: otherCols,
     sheets,
+    parameter: selectedParameter,
+    groups: snap.groups,
+    group: snap.queries.find((q) => q.name === snap.selected)?.group ?? null,
   });
 
   const openDialog = async (kind: DialogKind, after?: string | null) => {
@@ -133,6 +142,12 @@ export function PowerQueryEditor({ session, registry, factory = createMMonacoEdi
       setOtherCols(cols);
     }
     setSheets(undefined);
+    try {
+      dialogFor(kind, dialogCtx()); // a dialog that cannot open says why instead of failing while it draws
+    } catch (e) {
+      setMessage({ intent: "error", text: errText(e) });
+      return;
+    }
     setDialog({ kind, after });
   };
 
@@ -156,7 +171,7 @@ export function PowerQueryEditor({ session, registry, factory = createMMonacoEdi
     } else if (a.type === "dialog") {
       void openDialog(a.dialog);
     } else if (a.type === "command") {
-      void run(a.id, a.args);
+      void run(a.id, a.argsFor ? a.argsFor(ctx) : a.args);
     } else if (a.type === "ui") {
       if (a.what === "advanced") setAdvanced(true);
       else if (a.what === "dependencies") setDeps(true);
@@ -235,7 +250,13 @@ export function PowerQueryEditor({ session, registry, factory = createMMonacoEdi
     else await run("query.setLoad", { name, loaded: !!extra });
   };
 
-  const changedCount = snap.queries.filter((q) => session.queries.isChanged(q)).length + snap.removed.length;
+  const groupAction = (action: "new" | "move" | "ungroup" | "rename" | "delete") => {
+    if (action === "ungroup") {
+      if (snap.selected) void run("query.setGroup", { query: snap.selected, group: null });
+    } else void openDialog(action === "new" ? "newGroup" : action === "move" ? "moveToGroup" : action === "rename" ? "renameGroup" : "deleteGroup");
+  };
+
+  const changedCount = snap.queries.filter((q) => session.queries.isChanged(q)).length + snap.removed.length + (session.queries.groupsChanged ? 1 : 0);
   const loadedSet = new Set(snap.queries.filter((q) => q.loaded).map((q) => q.name));
   const mCtx = { columns: data.columns.map((c) => c.name), queries: snap.queries.filter((q) => q.name !== snap.selected).map((q) => q.name), steps: data.steps.map((s) => s.name) };
   const total = data.page?.total ?? 0;
@@ -255,7 +276,7 @@ export function PowerQueryEditor({ session, registry, factory = createMMonacoEdi
       <div style={{ display: "grid", gridTemplateColumns: `220px 1fr ${showSettings ? "260px" : ""}`, flex: 1, minHeight: 0 }}>
         <div style={{ borderRight: "1px solid #d1d1d1", display: "flex", minHeight: 0 }}>
           <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
-            <QueriesPane queries={snap.queries} changed={(q) => session.queries.isChanged(q)} selected={snap.selected} kinds={kinds} onSelect={(n) => void run("query.select", { query: n })} onAction={(a, n, x) => void queryAction(a, n, x)} />
+            <QueriesPane queries={snap.queries} changed={(q) => session.queries.isChanged(q)} selected={snap.selected} kinds={kinds} groups={snap.groups} parameters={parameterNames} onGroup={groupAction} onSelect={(n) => void run("query.select", { query: n })} onAction={(a, n, x) => void queryAction(a, n, x)} />
           </div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0, padding: 6, gap: 6 }}>
@@ -284,6 +305,7 @@ export function PowerQueryEditor({ session, registry, factory = createMMonacoEdi
             </MessageBar>
           )}
           {!snap.selected && <div style={{ color: "#605e5c" }}>There are no queries. Use New Source on the Home tab.</div>}
+          {data.value && !data.previewError && <ValuePane value={data.value} />}
           {data.page && !data.previewError && <PreviewGrid page={data.page} columns={data.columns} selected={selCols} onSelect={selectColumn} menu={headerMenu} onMenu={onHeaderMenu} profiles={prof.profiles} showQuality={showQuality} showDistribution={showDistribution} />}
           {showProfile && data.page && !data.previewError && <ProfilePane profile={selCols.length ? (prof.profiles[selCols[selCols.length - 1]] ?? null) : null} all={profileAll} onAll={setProfileAll} loading={prof.loading} error={prof.error} />}
           <div role="status" style={{ fontSize: 12, color: "#605e5c" }}>

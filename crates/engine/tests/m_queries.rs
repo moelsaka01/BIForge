@@ -161,7 +161,10 @@ fn change_types_follow_power_query_conversions() {
     let m2 = "let Source = #table({\"N\",\"D\"}, {{1.5, #date(2024,1,2)},{2, #date(2024,12,31)}}),\n T = Table.TransformColumnTypes(Source, {{\"N\", type text}, {\"D\", type text}}) in T";
     let (_, r) = run(m2);
     assert_eq!(r, t(&[&["1.5", "1/2/2024"], &["2", "12/31/2024"]]));
-    assert!(fails("let Source = #table({\"A\"}, {{\"x\"}}), T = Table.TransformColumnTypes(Source, {{\"A\", Int64.Type}}) in T").len() > 5);
+    // a value that cannot be converted is an error cell, not a failed step (see m_phase9.rs)
+    let e = engine();
+    let page = e.m_preview(&queries(&[("Q", "let Source = #table({\"A\"}, {{\"x\"}}), T = Table.TransformColumnTypes(Source, {{\"A\", Int64.Type}}) in T")]), "Q", None, 10).unwrap();
+    assert_eq!(page.error_cells, [(0, 0)]);
     assert!(fails("let Source = #table({\"A\"}, {{\"1\"}}), T = Table.TransformColumnTypes(Source, {{\"B\", Int64.Type}}) in T").contains("'B'"));
 }
 
@@ -322,7 +325,6 @@ fn step_references_functions_and_errors() {
 fn unsupported_things_say_so() {
     assert!(fails("let S = Web.Contents(\"http://x\") in S").contains("not supported"));
     assert!(fails(&people("  S = Table.Profile(Source)", "S")).contains("not supported"));
-    assert!(fails(&people("  S = Table.RemoveRowsWithErrors(Source)", "S")).contains("not supported"));
     assert!(fails(&people("  S = Table.Group(Source, {\"City\"}, {{\"N\", each Table.RowCount(_)}}, GroupKind.Local)", "S")).contains("GroupKind.Local"));
 }
 
@@ -452,8 +454,11 @@ fn desktop_check_cases_give_what_the_readme_says() {
         assert_eq!(c, *cols, "{q}");
         assert_eq!(r, t(rows), "{q}");
     }
-    // Table.Join of two tables that both have a column "k" is refused
-    assert!(fails("let A = #table({\"k\"}, {{1}}), B = #table({\"k\",\"v\"}, {{1,\"z\"}}), J = Table.Join(A, {\"k\"}, B, {\"k\"}, JoinKind.LeftOuter) in J").contains("both tables"));
+    // Table.Join: a key column with the same name in both tables appears once (the documentation's example); any other clash is refused
+    let (c, r) = run("let A = #table({\"k\"}, {{1}}), B = #table({\"k\",\"v\"}, {{1,\"z\"}}), J = Table.Join(A, {\"k\"}, B, {\"k\"}, JoinKind.LeftOuter) in J");
+    assert_eq!(c, ["k", "v"]);
+    assert_eq!(r, t(&[&["1", "z"]]));
+    assert!(fails("let A = #table({\"k\",\"v\"}, {{1,\"a\"}}), B = #table({\"k\",\"v\"}, {{1,\"z\"}}), J = Table.Join(A, {\"k\"}, B, {\"k\"}, JoinKind.LeftOuter) in J").contains("both tables"));
 }
 
 #[test]

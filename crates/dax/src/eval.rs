@@ -181,6 +181,14 @@ impl<'e> Evaluator<'e> {
             .map_err(|e| e.clone())
     }
 
+    /// The bound expression of a measure (None when it does not bind).
+    pub(crate) fn measure_body(&self, m: MeasureRef) -> Option<&BExpr> {
+        match m {
+            MeasureRef::Model(i) => self.model_measure(i).ok(),
+            MeasureRef::Query(i) => self.query_measures.get(i).map(|q| &q.expr),
+        }
+    }
+
     pub fn measure_name(&self, m: MeasureRef) -> String {
         match m {
             MeasureRef::Model(i) => self.data.model.measures[i].name.clone(),
@@ -412,7 +420,7 @@ impl<'e> Evaluator<'e> {
             let (filters, cols): (Vec<Filter>, HashSet<ColId>) = match f {
                 RowRef::Base { table, row } => {
                     let own: Vec<ColId> = self.data.model.columns_of(*table).collect();
-                    let group = self.data.tables[*table].dup_group(*row);
+                    let group = self.data.dup_group(*table, *row);
                     let rows = RowSet::from_rows(self.data.nrows(*table) + 1, group.iter().copied());
                     (vec![Filter::Rows { table: *table, rows: Rc::new(rows), cols: own.clone() }], own.into_iter().collect())
                 }
@@ -746,6 +754,15 @@ pub struct Engine {
 impl Engine {
     pub fn new(model: Model, source: &dyn DataSource) -> Result<Engine, String> {
         let data = ModelData::load(model, source)?;
+        let mut eng = Engine { data, column_errors: vec![] };
+        eng.process_calculated_columns();
+        Ok(eng)
+    }
+
+    /// Like [`Engine::new`], but the stored columns are read the first time a query uses them (see
+    /// [`ModelData::load_lazy`]); `source` must stay usable for as long as the engine lives.
+    pub fn new_lazy(model: Model, source: std::sync::Arc<dyn DataSource + Send + Sync>) -> Result<Engine, String> {
+        let data = ModelData::load_lazy(model, source)?;
         let mut eng = Engine { data, column_errors: vec![] };
         eng.process_calculated_columns();
         Ok(eng)

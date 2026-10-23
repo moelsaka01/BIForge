@@ -309,7 +309,7 @@ pub fn call<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], whole: &'a
                 } else {
                     // DISTINCT(table) drops duplicate rows
                     let mut seen = HashSet::new();
-                    rows.into_iter().filter(|r| seen.insert(ev.data.tables[tb].dup_group(*r)[0])).collect()
+                    rows.into_iter().filter(|r| seen.insert(ev.data.dup_group(tb, *r)[0])).collect()
                 };
                 return t(TableVal::Base { table: tb, rows: Rc::new(rows) });
             }
@@ -486,12 +486,22 @@ pub fn call<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], whole: &'a
         }
         "DISTINCTCOUNT" | "DISTINCTCOUNTNOBLANK" => {
             let c = col_arg(name, args, 0)?;
+            if name == "DISTINCTCOUNT" {
+                if let Some(v) = crate::sql::try_distinct_count(ev, c, env)? {
+                    return s(v);
+                }
+            }
             // recorded from Power BI: the virtual blank row is not counted (an empty text value is)
             let vals = distinct_values(ev, c, env, false);
             let n = if name == "DISTINCTCOUNT" { vals.len() } else { vals.iter().filter(|v| !v.is_blank()).count() };
             s(as_count(n))
         }
         "SUMX" | "AVERAGEX" | "MINX" | "MAXX" | "COUNTX" | "COUNTAX" => {
+            if let Some(tb) = args[0].table() {
+                if let Some(v) = crate::sql::try_iterator(ev, name, tb, &args[1], env)? {
+                    return s(v);
+                }
+            }
             let src = ev.table(&args[0], env)?;
             let mut vals = Vec::with_capacity(src.nrows());
             for_each_row(ev, &src, env, |_, e2| {
@@ -653,10 +663,25 @@ fn summarize_columns<'a>(ev: &'a Evaluator<'a>, args: &'a [BExpr], env: &Env<'a>
         combos = next;
         order.extend(cols.iter().copied());
     }
+    // one SQL GROUP BY per fact table gives the plain aggregates of every combination at once
+    let exprs: Vec<&BExpr> = pairs.iter().map(|(_, x)| *x).collect();
+    let batch = crate::sql::try_batch(ev, &ctx, &order, &exprs)?;
+    let all_batched = !pairs.is_empty() && batch.iter().all(|b| b.is_some());
     let mut out_rows = Vec::new();
     for combo in combos {
         if pairs.is_empty() {
             out_rows.push(combo);
+            continue;
+        }
+        if all_batched {
+            let key: Vec<Key> = combo.iter().map(|v| v.key()).collect();
+            let vals: Vec<Value> = batch.iter().map(|b| b.as_ref().and_then(|m| m.get(&key)).cloned().unwrap_or(Value::Blank)).collect();
+            if vals.iter().all(|v| v.is_blank()) {
+                continue;
+            }
+            let mut r = combo;
+            r.extend(vals);
+            out_rows.push(r);
             continue;
         }
         // the group values are added to the filter arguments (intersected, not substituted): a filter argument that
@@ -667,7 +692,15 @@ fn summarize_columns<'a>(ev: &'a Evaluator<'a>, args: &'a [BExpr], env: &Env<'a>
             c2 = c2.push(Filter::single(c, combo[k].key()));
         }
         let e2 = Env { filter: c2, rows: None, vars: env.vars.clone() };
-        let vals = pairs.iter().map(|(_, x)| ev.scalar(x, &e2)).collect::<VResult<Vec<_>>>()?;
+        let key: Vec<Key> = combo.iter().map(|v| v.key()).collect();
+        let vals = pairs
+            .iter()
+            .enumerate()
+            .map(|(j, (_, x))| match &batch[j] {
+                Some(m) => Ok(m.get(&key).cloned().unwrap_or(Value::Blank)),
+                None => ev.scalar(x, &e2),
+            })
+            .collect::<VResult<Vec<_>>>()?;
         if vals.iter().all(|v| v.is_blank()) {
             continue;
         }

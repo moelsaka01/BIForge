@@ -16,6 +16,13 @@ pub struct MDiagnostic {
     pub message: String,
 }
 
+/// The data type a column converts to without errors ("text" = no change).
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct DetectedType {
+    pub column: String,
+    pub r#type: String,
+}
+
 #[derive(Debug, Clone, Deserialize)]
 #[serde(tag = "op", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum StepEdit {
@@ -75,6 +82,16 @@ impl DataService {
     pub fn m_load(&self, queries: &BTreeMap<String, String>, query: &str, table: &str) -> Result<TableInfo, String> {
         self.with_store(|e| e.m_load(queries, query, table).map_err(|e| e.to_string()))
     }
+    pub fn m_value(&self, queries: &BTreeMap<String, String>, query: &str, step: Option<&str>) -> Result<biforge_m::run::ValueOut, String> {
+        self.with_store(|e| e.m_value(queries, query, step).map_err(|e| e.to_string()))
+    }
+    pub fn m_detect_types(&self, queries: &BTreeMap<String, String>, query: &str, step: Option<&str>, columns: &[String]) -> Result<Vec<DetectedType>, String> {
+        self.with_store(|e| {
+            e.m_detect_types(queries, query, step, columns)
+                .map(|v| v.into_iter().map(|(column, kind)| DetectedType { column, r#type: kind }).collect())
+                .map_err(|e| e.to_string())
+        })
+    }
     pub fn m_query_kinds(&self, queries: &BTreeMap<String, String>) -> Result<BTreeMap<String, String>, String> {
         self.with_store(|e| Ok(queries.keys().map(|k| (k.clone(), e.m_query_kind(queries, k))).collect()))
     }
@@ -125,6 +142,14 @@ pub fn m_profile(state: tauri::State<DataService>, queries: BTreeMap<String, Str
 #[tauri::command]
 pub fn m_load(state: tauri::State<DataService>, queries: BTreeMap<String, String>, query: String, table: String) -> Result<TableInfo, String> {
     state.m_load(&queries, &query, &table)
+}
+#[tauri::command]
+pub fn m_value(state: tauri::State<DataService>, queries: BTreeMap<String, String>, query: String, step: Option<String>) -> Result<biforge_m::run::ValueOut, String> {
+    state.m_value(&queries, &query, step.as_deref())
+}
+#[tauri::command]
+pub fn m_detect_types(state: tauri::State<DataService>, queries: BTreeMap<String, String>, query: String, step: Option<String>, columns: Vec<String>) -> Result<Vec<DetectedType>, String> {
+    state.m_detect_types(&queries, &query, step.as_deref(), &columns)
 }
 #[tauri::command]
 pub fn m_query_kinds(state: tauri::State<DataService>, queries: BTreeMap<String, String>) -> Result<BTreeMap<String, String>, String> {

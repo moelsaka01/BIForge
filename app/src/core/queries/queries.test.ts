@@ -6,7 +6,7 @@ import { FakeEngine, col } from "../testing/fakeEngine";
 import { FakeM } from "../testing/fakeM";
 import { listTables } from "../model/ops";
 import { importedTables } from "../model/tables";
-import { listQueries, userMTables } from "./queries";
+import { expressionExists, listGroups, listQueries, userMTables } from "./queries";
 
 async function setup() {
   const engine = new FakeEngine();
@@ -24,6 +24,66 @@ async function setup() {
 }
 
 const loadedOrders = { columns: [col("Id", "int64"), col("Name"), col("Big", "boolean")], rows: [["1", "a", "false"]] };
+
+describe("query groups and parameters", () => {
+  it("a group made in the editor is written by Apply and read back; deleting it ungroups its queries", async () => {
+    const { session, run } = await setup();
+    await run("query.editor.open", { query: "Orders" });
+    await run("query.group.add", { name: "Staging", query: "Orders" });
+    expect(session.queries.getSnapshot().queries[0].group).toBe("Staging");
+    expect(session.queries.dirty).toBe(true);
+    await expect(run("query.group.add", { name: "staging" })).rejects.toThrow("already exists");
+    await run("query.apply");
+    const p = session.store.project!;
+    expect(listGroups(p)).toEqual(["Staging"]);
+    expect(listQueries(p)[0].group).toBe("Staging");
+    expect(session.queries.dirty).toBe(false);
+    // the TMDL objects: a queryGroup under the model and the property on the table
+    const model = p.model.tmdl["model.tmdl"].nodes.find((n) => n.kind === "model")!;
+    expect(model.children.find((c) => c.kind === "queryGroup")!.name).toBe("Staging");
+    expect(p.model.tmdl["tables/Orders.tmdl"].nodes[0].props.find((x) => x.key === "queryGroup")?.value).toEqual({ Text: "Staging" });
+    // opened again, the group is there; renaming and deleting
+    await run("query.editor.close");
+    await run("query.editor.open", { query: "Orders" });
+    expect(session.queries.getSnapshot().groups).toEqual(["Staging"]);
+    await run("query.group.rename", { old: "Staging", to: "Raw" });
+    expect(session.queries.getSnapshot().queries[0].group).toBe("Raw");
+    await run("query.group.add", { name: "Other" });
+    await run("query.setGroup", { query: "Orders", group: "Other" });
+    await run("query.apply");
+    expect(listGroups(session.store.project!)).toEqual(["Raw", "Other"]);
+    expect(listQueries(session.store.project!)[0].group).toBe("Other");
+    await run("query.group.remove", { name: "Other" });
+    expect(session.queries.getSnapshot().queries[0].group).toBeNull();
+    await run("query.apply");
+    expect(listGroups(session.store.project!)).toEqual(["Raw"]);
+    expect(listQueries(session.store.project!)[0].group).toBeNull();
+    expect(session.store.project!.model.tmdl["tables/Orders.tmdl"].nodes[0].props.some((x) => x.key === "queryGroup")).toBe(false);
+  });
+
+  it("a parameter is a query that is not loaded; Apply stores it as a named expression with its result type", async () => {
+    const { session, m, run } = await setup();
+    await run("query.editor.open", { query: "Orders" });
+    const def = { description: "", required: true, type: "WholeNumber", list: [], defaultValue: "", current: "5" };
+    await run("query.setParameter", { name: "Top", def });
+    const q = session.queries.get("Top")!;
+    expect(q).toMatchObject({ loaded: false, isNew: true });
+    expect(q.text).toBe('5 meta [IsParameterQuery=true, Type="Number", IsParameterQueryRequired=true]');
+    m.values.set("Top/", { kind: "number", text: "5", items: [] });
+    await run("query.apply");
+    const p = session.store.project!;
+    expect(expressionExists(p, "Top")).toBe(true);
+    const node = p.model.tmdl["expressions.tmdl"].nodes.find((n) => n.name === "Top")!;
+    expect(node.children.find((c) => c.name === "PBI_ResultType")?.default?.text).toBe("Number");
+    // editing the parameter changes its text in place
+    await run("query.setParameter", { name: "Top", def: { ...def, current: "9" } });
+    expect(session.queries.get("Top")!.text).toContain("9 meta");
+    expect(session.queries.get("Top")!.isNew).toBe(false);
+    expect(listQueries(p).find((x) => x.name === "Top")!.text).toContain("5 meta");
+    // a parameter cannot be loaded
+    await expect(run("query.setParameter", { name: "Bad", def: { ...def, current: "x" } })).rejects.toThrow("whole number");
+  });
+});
 
 describe("queries of a project", () => {
   it("an imported table is a generated loaded query with the M BIForge wrote", async () => {

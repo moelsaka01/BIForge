@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button, Checkbox, Input } from "@fluentui/react-components";
+import { Button, Checkbox, Input, Menu, MenuItem, MenuList, MenuPopover, MenuTrigger } from "@fluentui/react-components";
 import type { DraftQuery } from "../../core/queries/draft";
 import type { StepView } from "./useEditorData";
 
@@ -13,51 +13,79 @@ export interface QueriesPaneProps {
   kinds: Record<string, string>;
   onSelect(name: string): void;
   onAction(action: "new" | "duplicate" | "delete" | "rename" | "setLoad", name: string, extra?: unknown): void;
+  /** Query groups (folders), in order. */
+  groups?: string[];
+  /** Queries that are parameters. */
+  parameters?: Set<string>;
+  onGroup?(action: "new" | "move" | "ungroup" | "rename" | "delete"): void;
 }
 
-export function QueriesPane({ queries, changed, selected, kinds, onSelect, onAction }: QueriesPaneProps) {
+export function QueriesPane({ queries, changed, selected, kinds, onSelect, onAction, groups = [], parameters, onGroup }: QueriesPaneProps) {
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [renaming, setRenaming] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const sel = queries.find((q) => q.name === selected);
   const renameAllowed = !!sel && (!sel.loaded || sel.isNew);
+  const sections: { group: string | null; items: DraftQuery[] }[] = [
+    { group: null, items: queries.filter((q) => !q.group || !groups.includes(q.group)) },
+    ...groups.map((g) => ({ group: g as string | null, items: queries.filter((q) => q.group === g) })),
+  ];
+  const row = (q: DraftQuery, indent: boolean) => (
+    <li
+      key={q.name}
+      role="option"
+      aria-selected={q.name === selected}
+      tabIndex={0}
+      onClick={() => onSelect(q.name)}
+      onKeyDown={(e) => e.key === "Enter" && onSelect(q.name)}
+      title={q.loaded ? "Loaded into the model" : "Not loaded into the model"}
+      style={{ padding: "4px 8px", paddingLeft: indent ? 24 : 8, cursor: "pointer", background: q.name === selected ? "#e6f2fb" : undefined, fontStyle: q.loaded ? undefined : "italic", display: "flex", gap: 6 }}
+    >
+      <span aria-hidden style={{ color: "#605e5c", width: 18 }}>
+        {parameters?.has(q.name) ? "(p)" : kinds[q.name] === "table" || kinds[q.name] === undefined ? "▦" : kinds[q.name] === "error" ? "⚠" : "fx"}
+      </span>
+      {renaming === q.name ? (
+        <Input
+          size="small"
+          aria-label="New query name"
+          autoFocus
+          value={draft}
+          onChange={(_, d) => setDraft(d.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              onAction("rename", q.name, draft);
+              setRenaming(null);
+            } else if (e.key === "Escape") setRenaming(null);
+          }}
+        />
+      ) : (
+        <span style={{ flex: 1 }}>
+          {q.name}
+          {changed(q) ? " *" : ""}
+        </span>
+      )}
+    </li>
+  );
   return (
     <div style={paneStyle} aria-label="Queries">
       <div style={titleStyle}>Queries [{queries.length}]</div>
       <ul role="listbox" aria-label="Query list" style={{ listStyle: "none", margin: 0, padding: 0, overflow: "auto", flex: 1 }}>
-        {queries.map((q) => (
-          <li
-            key={q.name}
-            role="option"
-            aria-selected={q.name === selected}
-            tabIndex={0}
-            onClick={() => onSelect(q.name)}
-            onKeyDown={(e) => e.key === "Enter" && onSelect(q.name)}
-            title={q.loaded ? "Loaded into the model" : "Not loaded into the model"}
-            style={{ padding: "4px 8px", cursor: "pointer", background: q.name === selected ? "#e6f2fb" : undefined, fontStyle: q.loaded ? undefined : "italic", display: "flex", gap: 6 }}
-          >
-            <span aria-hidden style={{ color: "#605e5c", width: 18 }}>
-              {kinds[q.name] === "table" || kinds[q.name] === undefined ? "▦" : kinds[q.name] === "error" ? "⚠" : "fx"}
-            </span>
-            {renaming === q.name ? (
-              <Input
-                size="small"
-                aria-label="New query name"
-                autoFocus
-                value={draft}
-                onChange={(_, d) => setDraft(d.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    onAction("rename", q.name, draft);
-                    setRenaming(null);
-                  } else if (e.key === "Escape") setRenaming(null);
-                }}
-              />
-            ) : (
-              <span style={{ flex: 1 }}>
-                {q.name}
-                {changed(q) ? " *" : ""}
-              </span>
+        {sections.map((s) => (
+          <li key={s.group ?? "(ungrouped)"} role="presentation" style={{ listStyle: "none" }}>
+            {s.group !== null && (
+              <div
+                role="button"
+                tabIndex={0}
+                aria-expanded={!collapsed.has(s.group)}
+                aria-label={`Group ${s.group}`}
+                onClick={() => setCollapsed((c) => { const n = new Set(c); if (n.has(s.group!)) n.delete(s.group!); else n.add(s.group!); return n; })}
+                onKeyDown={(e) => e.key === "Enter" && setCollapsed((c) => { const n = new Set(c); if (n.has(s.group!)) n.delete(s.group!); else n.add(s.group!); return n; })}
+                style={{ padding: "4px 8px", fontWeight: 600, cursor: "pointer", background: "#f3f2f1" }}
+              >
+                {collapsed.has(s.group) ? "▸" : "▾"} {s.group} [{s.items.length}]
+              </div>
             )}
+            {(s.group === null || !collapsed.has(s.group)) && <ul role="presentation" style={{ listStyle: "none", margin: 0, padding: 0 }}>{s.items.map((q) => row(q, s.group !== null))}</ul>}
           </li>
         ))}
       </ul>
@@ -84,7 +112,31 @@ export function QueriesPane({ queries, changed, selected, kinds, onSelect, onAct
         <Button size="small" disabled={!sel} onClick={() => sel && onAction("delete", sel.name)}>
           Delete
         </Button>
-        {sel && <Checkbox label="Enable load" checked={sel.loaded} onChange={(_, d) => onAction("setLoad", sel.name, !!d.checked)} />}
+        {onGroup && (
+          <Menu>
+            <MenuTrigger disableButtonEnhancement>
+              <Button size="small">Group ▾</Button>
+            </MenuTrigger>
+            <MenuPopover>
+              <MenuList>
+                <MenuItem onClick={() => onGroup("new")}>New Group...</MenuItem>
+                <MenuItem disabled={!sel || groups.length === 0} onClick={() => onGroup("move")}>
+                  Move to Group...
+                </MenuItem>
+                <MenuItem disabled={!sel?.group} onClick={() => onGroup("ungroup")}>
+                  Remove from Group
+                </MenuItem>
+                <MenuItem disabled={groups.length === 0} onClick={() => onGroup("rename")}>
+                  Rename Group...
+                </MenuItem>
+                <MenuItem disabled={groups.length === 0} onClick={() => onGroup("delete")}>
+                  Delete Group...
+                </MenuItem>
+              </MenuList>
+            </MenuPopover>
+          </Menu>
+        )}
+        {sel && <Checkbox label="Enable load" disabled={!!kinds[sel.name] && kinds[sel.name] !== "table"} title={kinds[sel.name] && kinds[sel.name] !== "table" ? "Only a table can be loaded into the model." : undefined} checked={sel.loaded && (!kinds[sel.name] || kinds[sel.name] === "table")} onChange={(_, d) => onAction("setLoad", sel.name, !!d.checked)} />}
       </div>
     </div>
   );
