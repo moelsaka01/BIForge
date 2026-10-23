@@ -23,7 +23,7 @@ if (!("ResizeObserver" in globalThis)) {
 
 const failingFactory: EditorFactory = () => Promise.reject(new Error("no editor in tests"));
 
-async function setup(extra: (m: FakeM, engine: FakeEngine) => void = () => undefined) {
+async function setup(extra: (m: FakeM, engine: FakeEngine) => void = () => undefined, options: Record<string, boolean | number | string> = {}) {
   const engine = new FakeEngine();
   const m = new FakeM();
   const dialogs = new FakeDialogs();
@@ -37,6 +37,7 @@ async function setup(extra: (m: FakeM, engine: FakeEngine) => void = () => undef
     rows: [["1", "Ann", "2.50"], ["2", "Bob", null], ["3", "Cy", "7"]],
   });
   extra(m, engine);
+  for (const [k, v] of Object.entries(options)) session.shell.settings.setOption(k, v);
   session.openQueryEditor("Orders");
   const view = render(<PowerQueryEditor session={session} registry={registry} factory={failingFactory} />);
   await screen.findByText("Ann");
@@ -46,6 +47,56 @@ async function setup(extra: (m: FakeM, engine: FakeEngine) => void = () => undef
 const headerOf = (name: string) => screen.getByRole("columnheader", { name: new RegExp(`^.*${name}`) });
 const settings = () => within(screen.getByLabelText("Query settings"));
 const stepNames = () => settings().getAllByRole("option").map((x) => x.textContent);
+
+describe("Power Query editor options (Options > Power Query Editor)", () => {
+  it("Display the formula bar: on by default, off hides it; the View tab still toggles it", async () => {
+    await setup();
+    expect(screen.getByLabelText("Formula bar")).toBeTruthy();
+    cleanup();
+    await setup(undefined, { "pq.formulaBar": false });
+    expect(screen.queryByLabelText("Formula bar")).toBeNull();
+    fireEvent.click(screen.getByRole("tab", { name: "View" }));
+    fireEvent.click(screen.getByRole("button", { name: "Formula Bar" }));
+    expect(await screen.findByLabelText("Formula bar")).toBeTruthy();
+  });
+
+  it("Display text in monospace font changes the data preview font", async () => {
+    await setup();
+    expect(screen.getByRole("table", { name: "Data preview" }).getAttribute("data-monospace")).toBeNull();
+    cleanup();
+    await setup(undefined, { "pq.monospace": true });
+    const t = screen.getByRole("table", { name: "Data preview" });
+    expect(t.getAttribute("data-monospace")).toBe("true");
+    expect(t.style.fontFamily).toMatch(/monospace/);
+  });
+
+  it("Show whitespace draws spaces as dots and tabs as arrows in the preview", async () => {
+    const rows = (m: FakeM) => m.tables.set("Orders", { columns: [col("Id", "int64"), col("Name")], rows: [["1", " Ann  Lee	"], ["2", "Ann"]] });
+    await setup(rows);
+    expect(screen.getByText(" Ann  Lee	", { normalizer: (s) => s })).toBeTruthy();
+    cleanup();
+    await setup(rows, { "pq.whitespace": true });
+    expect(screen.getByText("·Ann··Lee→")).toBeTruthy();
+  });
+
+  it("Rows in the preview sets how many rows the editor asks for, and says so", async () => {
+    const asked: number[] = [];
+    await setup((m) => {
+      const p = m.preview.bind(m);
+      m.preview = (...a: Parameters<FakeM["preview"]>) => {
+        asked.push(a[3] as number);
+        return p(...a);
+      };
+    }, { "pq.previewRows": 250 });
+    expect(asked.at(-1)).toBe(250);
+    expect(screen.getByText(/the preview shows at most 250 rows/)).toBeTruthy();
+  });
+
+  it("Show Query dependencies when the editor opens", async () => {
+    await setup(undefined, { "pq.dependencies": true });
+    expect(await screen.findByRole("dialog", { name: /dependencies/i })).toBeTruthy();
+  });
+});
 
 describe("Power Query editor", () => {
   it("shows the queries, the applied steps of the selected query and a preview of its rows", async () => {

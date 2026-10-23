@@ -19,7 +19,7 @@ import { FormDialog } from "./FormDialog";
 import { AdvancedEditor } from "./AdvancedEditor";
 import { ValuePane } from "./ValuePane";
 import { DependenciesView } from "./DependenciesView";
-import { useEditorData } from "./useEditorData";
+import { DEFAULT_PREVIEW_ROWS, useEditorData } from "./useEditorData";
 
 export interface PowerQueryEditorProps {
   session: Session;
@@ -51,12 +51,15 @@ export function PowerQueryEditor({ session, registry, factory = createMMonacoEdi
   const m = session.m;
   const texts = useMemo(() => session.queries.texts(), [session, snap.queries]);
   const [reloadKey, setReloadKey] = useState(0);
-  const data = useEditorData(m!, snap, texts, reloadKey);
+  const pqOptions = session.shell.settings.getSnapshot().options;
+  const previewRows = typeof pqOptions["pq.previewRows"] === "number" ? Math.min(10000, Math.max(100, pqOptions["pq.previewRows"] as number)) : DEFAULT_PREVIEW_ROWS;
+  const data = useEditorData(m!, snap, texts, reloadKey, previewRows);
   const [selCols, setSelCols] = useState<string[]>([]);
   const [anchor, setAnchor] = useState<string | null>(null);
   const [dialog, setDialog] = useState<DialogState>(null);
   const [advanced, setAdvanced] = useState(false);
-  const [deps, setDeps] = useState(false);
+  // Options > Power Query Editor > Show Query dependencies when the editor opens
+  const [deps, setDeps] = useState(session.shell.settings.getSnapshot().options["pq.dependencies"] === true);
   const [examplesOpen, setExamplesOpen] = useState(false);
   const [confirmClose, setConfirmClose] = useState(false);
   const [showSettings, setShowSettings] = useState(true);
@@ -309,10 +312,10 @@ export function PowerQueryEditor({ session, registry, factory = createMMonacoEdi
           )}
           {!snap.selected && <div style={{ color: "#605e5c" }}>There are no queries. Use New Source on the Home tab.</div>}
           {data.value && !data.previewError && <ValuePane value={data.value} />}
-          {data.page && !data.previewError && <PreviewGrid page={data.page} columns={data.columns} selected={selCols} onSelect={selectColumn} menu={headerMenu} onMenu={onHeaderMenu} profiles={prof.profiles} showQuality={showQuality} showDistribution={showDistribution} />}
+          {data.page && !data.previewError && <PreviewGrid page={data.page} columns={data.columns} selected={selCols} onSelect={selectColumn} menu={headerMenu} onMenu={onHeaderMenu} profiles={prof.profiles} showQuality={showQuality} showDistribution={showDistribution} monospace={pqOptions["pq.monospace"] === true} showWhitespace={pqOptions["pq.whitespace"] === true} />}
           {showProfile && data.page && !data.previewError && <ProfilePane profile={selCols.length ? (prof.profiles[selCols[selCols.length - 1]] ?? null) : null} all={profileAll} onAll={setProfileAll} loading={prof.loading} error={prof.error} />}
           <div role="status" style={{ fontSize: 12, color: "#605e5c" }}>
-            {data.page && !data.previewError ? `${data.columns.length} columns, ${total > data.page.rows.length ? `${data.page.rows.length}+ (of ${total.toLocaleString("en-US")})` : total.toLocaleString("en-US")} rows — the preview shows at most ${data.page.rows.length > 0 ? "1000" : "1000"} rows` : ""}
+            {data.page && !data.previewError ? `${data.columns.length} columns, ${total > data.page.rows.length ? `${data.page.rows.length}+ (of ${total.toLocaleString("en-US")})` : total.toLocaleString("en-US")} rows — the preview shows at most ${previewRows} rows` : ""}
           </div>
         </div>
         {showSettings && (

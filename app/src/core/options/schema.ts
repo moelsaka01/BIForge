@@ -67,12 +67,12 @@ export const OPTION_PAGES: OptionPage[] = [
     id: "g.pq", scope: "global", label: "Power Query Editor",
     settings: [
       b("pq.formulaBar", "Display the formula bar", true, true),
-      b("pq.monospace", "Display text in monospace font", false),
-      b("pq.whitespace", "Show whitespace", false),
+      b("pq.monospace", "Display text in monospace font", false, true),
+      b("pq.whitespace", "Show whitespace", false, true, "Spaces show as a middle dot and tabs as an arrow in the data preview."),
       b("pq.nativeQuery", "Show native queries", false),
       b("pq.parameterizedSource", "Always allow parameterized data source and native queries", false),
-      b("pq.dependencies", "Show Query dependencies when the editor opens", false),
-      n("pq.previewRows", "Rows in the preview", 1000, 100, 10000),
+      b("pq.dependencies", "Show Query dependencies when the editor opens", false, true),
+      n("pq.previewRows", "Rows in the preview", 1000, 100, 10000, true),
     ],
   },
   {

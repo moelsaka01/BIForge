@@ -242,8 +242,8 @@ N | View native query
 N | Context menus on columns (right-click)
 N | Drag to reorder columns
 N | Reference / duplicate query
-N | Monospace font display and whitespace display
-N | Display the formula bar toggle
+D | Monospace font display and whitespace display
+D | Display the formula bar toggle
 N | Go to column
 N | Column header filter menu with value list
 N | New Power Query experience (Modern)
@@ -395,12 +395,12 @@ N | Time intelligence: auto date/time for new files
 N | Column name suffix for duplicate names
 N | Null value handling
 ### Power Query Editor
-N | Display the formula bar
-N | Display monospace font
-N | Display whitespace
+D | Display the formula bar
+D | Display monospace font
+D | Display whitespace
 N | Show native queries
 N | Always allow parameterized data source
-N | Show Query dependencies on open
+D | Show Query dependencies on open
 N | Allow data preview to download in the background
 ### DirectQuery
 N | Use the latest schema

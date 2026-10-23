@@ -29,10 +29,10 @@ export interface EditorData {
 
 const empty: EditorData = { steps: [], parseError: null, active: null, columns: [], page: null, previewError: null, value: null, loading: false, output: "" };
 
-const PREVIEW_ROWS = 1000;
+export const DEFAULT_PREVIEW_ROWS = 1000;
 
 /** Loads the steps (with their columns and errors) and the preview of the selected step of the selected query. */
-export function useEditorData(m: MApi, snap: DraftSnapshot, texts: Record<string, string>, reloadKey: number): EditorData {
+export function useEditorData(m: MApi, snap: DraftSnapshot, texts: Record<string, string>, reloadKey: number, previewRows = DEFAULT_PREVIEW_ROWS): EditorData {
   const [data, setData] = useState<EditorData>(empty);
   const text = snap.selected ? texts[snap.selected] : undefined;
 
@@ -77,7 +77,7 @@ export function useEditorData(m: MApi, snap: DraftSnapshot, texts: Record<string
         }
       } else {
         try {
-          page = await m.preview(texts, snap.selected!, snap.step, PREVIEW_ROWS);
+          page = await m.preview(texts, snap.selected!, snap.step, previewRows);
         } catch (e) {
           previewError = e instanceof Error ? e.message : String(e);
         }
@@ -90,7 +90,7 @@ export function useEditorData(m: MApi, snap: DraftSnapshot, texts: Record<string
     };
     // texts changes whenever the draft version changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [m, snap.selected, snap.step, snap.version, text, reloadKey]);
+  }, [m, snap.selected, snap.step, snap.version, text, reloadKey, previewRows]);
 
   return data;
 }

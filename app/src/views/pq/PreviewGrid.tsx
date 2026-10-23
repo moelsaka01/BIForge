@@ -23,17 +23,23 @@ export interface PreviewGridProps {
   profiles?: Record<string, ColumnProfile>;
   showQuality?: boolean;
   showDistribution?: boolean;
+  /** Options > Power Query Editor: monospace font and visible whitespace. */
+  monospace?: boolean;
+  showWhitespace?: boolean;
 }
 
 const GLYPH: Record<string, string> = { number: "123", text: "ABC", date: "📅", logical: "T/F" };
 
 /** Read-only preview of the first rows of a step. Clicking a header selects the column (Ctrl toggles, Shift selects a range). */
-export function PreviewGrid({ page, columns, selected, onSelect, menu, onMenu, profiles, showQuality, showDistribution }: PreviewGridProps) {
+/** Makes spaces and tabs visible: a space becomes a middle dot, a tab an arrow. */
+export const visibleWhitespace = (s: string): string => s.replace(/ /g, "\u00b7").replace(/\t/g, "\u2192");
+
+export function PreviewGrid({ page, columns, selected, onSelect, menu, onMenu, profiles, showQuality, showDistribution, monospace, showWhitespace }: PreviewGridProps) {
   const typeOf = (i: number) => columns[i]?.duckdbType ?? page.columns[i].duckdbType;
   const errors = new Set((page.errorCells ?? []).map(([r, c]) => `${r},${c}`));
   return (
     <div style={{ overflow: "auto", flex: 1, minHeight: 0, border: "1px solid #e1dfdd", background: "#fff" }}>
-      <table aria-label="Data preview" style={{ borderCollapse: "collapse", fontSize: 13, minWidth: "100%" }}>
+      <table aria-label="Data preview" data-monospace={monospace ? "true" : undefined} style={{ borderCollapse: "collapse", fontSize: 13, minWidth: "100%", ...(monospace ? { fontFamily: "Consolas, 'Cascadia Mono', monospace" } : {}) }}>
         <thead>
           <tr>
             <th style={{ position: "sticky", top: 0, background: "#f3f2f1", width: 40, borderBottom: "1px solid #c8c6c4" }} />
@@ -107,7 +113,7 @@ export function PreviewGrid({ page, columns, selected, onSelect, menu, onMenu, p
                 }
                 return (
                   <td key={ci} style={{ padding: "2px 8px", textAlign: num ? "right" : "left", borderRight: "1px solid #f3f2f1", color: cell === null ? "#8a8886" : undefined, whiteSpace: "nowrap" }}>
-                    {cell === null ? "null" : formatCell(cell, page.columns[ci].biType)}
+                    {cell === null ? "null" : showWhitespace ? visibleWhitespace(formatCell(cell, page.columns[ci].biType)) : formatCell(cell, page.columns[ci].biType)}
                   </td>
                 );
               })}
