@@ -288,17 +288,46 @@ fn append_and_merge() {
 }
 
 #[test]
-fn promoted_headers_are_trimmed_so_the_changed_type_step_finds_them() {
-    // a header written with spaces around the name ("  region ") must be the column "region" for every later step
-    let src = "#table({\"Column1\",\"Column2\",\"Column3\"}, {{\"order_id\",\"  region \",\" unit price\"},{\"1\",\"north\",\"1.5\"},{\"2\",\"south\",\"8.25\"}})";
-    let m = format!("let Source = {src}, P = Table.PromoteHeaders(Source, [PromoteAllScalars=true]), T = Table.TransformColumnTypes(P, {{{{\"order_id\", Int64.Type}}, {{\"region\", type text}}, {{\"unit price\", type number}}}}) in T");
-    let (c, r) = run(&m);
+fn padded_csv_headers_are_kept_by_promote_headers_and_trimmed_by_an_explicit_step() {
+    // Power Query keeps the spaces of a header ("  region "); a Table.TransformColumnNames(.., Text.Trim) step removes them,
+    // after which the "Changed Type" step finds the trimmed names. The M behaves the same in BIForge and Power BI Desktop.
+    let dir = tempfile::tempdir().unwrap();
+    let csv = dir.path().join("padded.csv");
+    std::fs::write(&csv, "order_id,  region , unit price\n1,north,1.5\n2,south,8.25\n").unwrap();
+    let path = csv.to_string_lossy().replace('\\', "/");
+    let src = format!("Csv.Document(File.Contents({path:?}), [Delimiter=\",\", Encoding=65001, QuoteStyle=QuoteStyle.Csv])");
+    let promoted = format!("let Source = {src}, P = Table.PromoteHeaders(Source, [PromoteAllScalars=true]) in P");
+    let (c, _) = run(&promoted);
+    assert_eq!(c, ["order_id", "  region ", " unit price"], "PromoteHeaders must keep header whitespace like Power Query");
+    // without the trim step the type step cannot find "region"
+    let untrimmed = format!("let Source = {src}, P = Table.PromoteHeaders(Source, [PromoteAllScalars=true]), T = Table.TransformColumnTypes(P, {{{{\"region\", type text}}}}) in T");
+    assert!(fails(&untrimmed).contains("region"));
+    // with the step (as the generated M writes it) it works
+    let trimmed = format!("let Source = {src}, P = Table.PromoteHeaders(Source, [PromoteAllScalars=true]), #\"Trimmed Column Names\" = Table.TransformColumnNames(P, Text.Trim), T = Table.TransformColumnTypes(#\"Trimmed Column Names\", {{{{\"order_id\", Int64.Type}}, {{\"region\", type text}}, {{\"unit price\", type number}}}}) in T");
+    let (c, r) = run(&trimmed);
     assert_eq!(c, ["order_id", "region", "unit price"]);
     assert_eq!(r, t(&[&["1", "north", "1.5"], &["2", "south", "8.25"]]));
-    // a header that is only spaces counts as empty
-    let blank = "#table({\"Column1\",\"Column2\"}, {{\"a\",\"   \"},{\"1\",\"2\"}})";
-    let (c, _) = run(&format!("let Source = {blank}, P = Table.PromoteHeaders(Source) in P"));
-    assert_eq!(c, ["a", "Column2"]);
+    // the engine tells the importer that the header was padded, so the generated M gets the step
+    let e = engine();
+    let spec = SourceSpec::Csv { path: csv.to_string_lossy().into_owned(), delimiter: None, header: None };
+    let info = e.import("Padded", &spec, &MemoryCredentialStore::default()).unwrap();
+    assert!(info.header_padded);
+    assert_eq!(info.columns.iter().map(|c| c.name.as_str()).collect::<Vec<_>>(), ["order_id", "region", "unit price"]);
+    let clean = dir.path().join("clean.csv");
+    std::fs::write(&clean, "a,b\n1,2\n").unwrap();
+    let info = e.import("Clean", &SourceSpec::Csv { path: clean.to_string_lossy().into_owned(), delimiter: None, header: None }, &MemoryCredentialStore::default()).unwrap();
+    assert!(!info.header_padded);
+}
+
+#[test]
+fn transform_column_names_with_a_function() {
+    let src = "#table({\"a b\",\"C\"}, {{\"1\",\"2\"}})";
+    let (c, r) = run(&format!("let Source = {src}, T = Table.TransformColumnNames(Source, Text.Upper) in T"));
+    assert_eq!(c, ["A B", "C"]);
+    assert_eq!(r, t(&[&["1", "2"]]));
+    let (c, _) = run(&format!("let Source = {src}, T = Table.TransformColumnNames(Source, each Text.Replace(_, \" \", \"_\")) in T"));
+    assert_eq!(c, ["a_b", "C"]);
+    assert!(fails(&format!("let Source = {src}, T = Table.TransformColumnNames(Source, each \"x\") in T")).contains("more than one"));
 }
 
 #[test]

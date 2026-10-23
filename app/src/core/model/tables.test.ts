@@ -93,6 +93,27 @@ describe("import partitions (M source)", () => {
     );
   });
 
+  it("a CSV whose header names have spaces gets an explicit Trimmed Column Names step before the type step", () => {
+    const p = sampleProject();
+    const info = { ...cols(["order_id", "int64", "BIGINT"], ["region", "string", "VARCHAR"]), headerPadded: true };
+    applyImport(p, info, csv, ids());
+    expect(sourceText(partitionOf(p, "Orders")[0])).toBe(
+      [
+        "let",
+        '\tSource = Csv.Document(File.Contents("C:' + "\\data\\a" + ' ""q"".csv"), [Delimiter=",", Columns=2, Encoding=65001, QuoteStyle=QuoteStyle.Csv]),',
+        '\t#"Promoted Headers" = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),',
+        '\t#"Trimmed Column Names" = Table.TransformColumnNames(#"Promoted Headers", Text.Trim),',
+        '\t#"Changed Type" = Table.TransformColumnTypes(#"Trimmed Column Names", {{"order_id", Int64.Type}, {"region", type text}}, "en-US")',
+        "in",
+        '\t#"Changed Type"',
+      ].join("\n"),
+    );
+    // no padding, no extra step
+    const q = sampleProject();
+    applyImport(q, cols(["order_id", "int64", "BIGINT"], ["region", "string", "VARCHAR"]), csv, ids());
+    expect(sourceText(partitionOf(q, "Orders")[0])).not.toContain("Trimmed Column Names");
+  });
+
   it("refresh rebuilds a generated partition but keeps one the user edited", () => {
     const p = sampleProject();
     applyImport(p, cols(["Id", "int64"]), csv, ids());

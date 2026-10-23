@@ -129,6 +129,32 @@ pub fn read_json_file(path: &str, table: Option<&str>) -> Result<Option<RawTable
     Ok(Some(web_src::json_rows_with(&items, true)))
 }
 
+/// True when the header row of a CSV file has a name with leading or trailing white space (DuckDB trims it, Power Query does not).
+pub fn csv_header_padded(path: &str, delimiter: Option<&str>) -> bool {
+    let Ok(mut f) = std::fs::File::open(path) else { return false };
+    let mut buf = vec![0u8; 64 * 1024];
+    let n = std::io::Read::read(&mut f, &mut buf).unwrap_or(0);
+    let text = String::from_utf8_lossy(&buf[..n]);
+    let text = text.trim_start_matches('\u{feff}');
+    let first = text.lines().next().unwrap_or("");
+    let delim = delimiter
+        .and_then(|d| d.chars().next())
+        .unwrap_or_else(|| [',', ';', '\t', '|'].into_iter().max_by_key(|d| first.matches(*d).count()).unwrap_or(','));
+    let (mut cur, mut quoted, mut padded) = (String::new(), false, false);
+    let mut check = |s: &str| padded |= s != s.trim();
+    for c in text.chars() {
+        match (c, quoted) {
+            ('"', _) => quoted = !quoted,
+            (c, false) if c == delim => check(&std::mem::take(&mut cur)),
+            ('\r', false) => {}
+            ('\n', false) => break,
+            (c, _) => cur.push(c),
+        }
+    }
+    check(&cur);
+    padded
+}
+
 fn read_file(path: &str) -> Result<Vec<u8>> {
     std::fs::read(path).map_err(|_| EngineError::FileNotFound(path.into()))
 }

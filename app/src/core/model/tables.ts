@@ -35,13 +35,13 @@ export function columnNode(name: string, t: BiType, newId: () => string, existin
 const GENERATED_ANNOTATION = "BIForge.GeneratedM";
 
 /** The import partition: M source that Power BI Desktop can run to load the same data. */
-function generatedPartition(table: string, source: SourceSpec, columns: ColumnInfo[]): TmdlNode {
+function generatedPartition(table: string, source: SourceSpec, columns: ColumnInfo[], headerPadded = false): TmdlNode {
   const marker = node("annotation", GENERATED_ANNOTATION);
   marker.default = { text: "true", verbatim: false };
   const p = node(
     "partition",
     table,
-    [text("mode", "import"), { key: "source", value: { Expr: { text: partitionM(source, columns), verbatim: false } } }],
+    [text("mode", "import"), { key: "source", value: { Expr: { text: partitionM(source, columns, { headerPadded }), verbatim: false } } }],
     [marker],
   );
   p.default = { text: "m", verbatim: false };
@@ -80,7 +80,7 @@ export function applyImport(
   const columns = info.columns.map((c) => columnNode(c.name, c.biType, newId, oldColumns.get(c.name.toLowerCase())));
   const ann = node("annotation", SOURCE_ANNOTATION);
   ann.default = { text: JSON.stringify(source), verbatim: false };
-  const partitions = others.some(isOwnPartition) ? [] : [generatedPartition(info.name, source, info.columns)];
+  const partitions = others.some(isOwnPartition) ? [] : [generatedPartition(info.name, source, info.columns, info.headerPadded)];
   t.children = [...columns, ...others, ...partitions, ann];
   const removedRelationships = removeRelationshipsOnColumns(p, info.name, gone);
   return { created, removedRelationships };

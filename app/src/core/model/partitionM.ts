@@ -183,7 +183,7 @@ function inlineValue(ty: string, v: string | null): string {
  * The M query for `source` that yields `columns`. Throws when the source cannot be expressed.
  * File formats whose M connector returns typed columns on its own (Parquet, databases) get no type step.
  */
-export function partitionM(source: SourceSpec, columns: ColumnInfo[]): string {
+export function partitionM(source: SourceSpec, columns: ColumnInfo[], opts: { headerPadded?: boolean } = {}): string {
   const steps: Step[] = [];
   const prev = () => steps[steps.length - 1].name;
   switch (source.kind) {
@@ -195,8 +195,12 @@ export function partitionM(source: SourceSpec, columns: ColumnInfo[]): string {
           `Csv.Document(File.Contents(${mText(source.path)}), [Delimiter=${mText(delim)}, Columns=${columns.length}, Encoding=65001, QuoteStyle=QuoteStyle.Csv])`,
         ),
       );
-      if (source.header !== false) steps.push(step('#"Promoted Headers"', `Table.PromoteHeaders(${prev()}, [PromoteAllScalars=true])`));
-      else
+      if (source.header !== false) {
+        steps.push(step('#"Promoted Headers"', `Table.PromoteHeaders(${prev()}, [PromoteAllScalars=true])`));
+        // Power Query keeps the spaces of a header like "  region "; the imported column list has them trimmed, so the type step
+        // below needs the same names. There is no Power Query command for this step, so it is named after "Trimmed Text".
+        if (opts.headerPadded) steps.push(step('#"Trimmed Column Names"', `Table.TransformColumnNames(${prev()}, Text.Trim)`));
+      } else
         steps.push(step('#"Renamed Columns"', `Table.RenameColumns(${prev()}, {${columns.map((c, i) => `{"Column${i + 1}", ${mText(c.name)}}`).join(", ")}})`));
       steps.push(typeStep(prev(), columns));
       break;

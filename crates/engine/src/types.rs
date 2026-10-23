@@ -296,6 +296,10 @@ pub struct TableInfo {
     pub name: String,
     pub columns: Vec<ColumnInfo>,
     pub row_count: u64,
+    /// A CSV import whose header row has names with leading or trailing spaces (the column names above are trimmed;
+    /// Power Query keeps the spaces, so the generated M trims them in an explicit step).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub header_padded: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

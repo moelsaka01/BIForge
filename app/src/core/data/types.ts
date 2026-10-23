@@ -51,6 +51,8 @@ export interface TableInfo {
   name: string;
   columns: ColumnInfo[];
   rowCount: number;
+  /** A CSV whose header row has names with leading or trailing spaces; the generated M then trims them in an explicit step. */
+  headerPadded?: boolean;
 }
 
 export interface SortSpec {

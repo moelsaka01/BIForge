@@ -482,7 +482,8 @@ impl<'a> Ev<'a> {
             "Table.AlternateRows" => self.alternate_rows(a)?,
             "Table.Transpose" => self.transpose(a)?,
             "Table.CombineColumns" => self.combine_columns(a)?,
-            "Table.ExpandRecordColumn" | "Table.ExpandListColumn" | "Table.Profile" | "Table.TransformColumnNames" => {
+            "Table.TransformColumnNames" => self.transform_column_names(a)?,
+            "Table.ExpandRecordColumn" | "Table.ExpandListColumn" | "Table.Profile" => {
                 return Err(MError::unsupported(format!("{name} is not supported yet.")))
             }
             _ => return Ok(None),
@@ -614,9 +615,8 @@ impl<'a> Ev<'a> {
         };
         let mut names: Vec<String> = Vec::new();
         for (i, cell) in first.into_iter().enumerate() {
-            // header text is trimmed, like the column list the import dialog shows (a header written as "  region " is the column "region")
             let base = match cell {
-                Some(s) if !s.trim().is_empty() => s.trim().to_string(),
+                Some(s) if !s.is_empty() => s,
                 _ => format!("Column{}", i + 1),
             };
             let mut n = base.clone();
@@ -784,6 +784,37 @@ impl<'a> Ev<'a> {
             }
         }
         Ok(out)
+    }
+
+    /// Table.TransformColumnNames(table, nameGenerator): every column name goes through the function (`Text.Trim`, `each Text.Upper(_)`).
+    /// The options argument (MaxLength, Comparer) is not supported.
+    fn transform_column_names(&self, a: &[Value]) -> R<Value> {
+        let t = table_arg(a, 0, "Table.TransformColumnNames")?;
+        let f = arg(a, 1, "Table.TransformColumnNames")?;
+        if a.get(2).is_some_and(|o| !matches!(o, Value::Null)) {
+            return Err(MError::unsupported("The options of Table.TransformColumnNames are not supported."));
+        }
+        let mut pairs: Vec<Value> = Vec::new();
+        for c in t.plain_cols() {
+            let new = match self.apply(f, vec![Value::Text(c.name.clone())])? {
+                Value::Text(s) => s,
+                other => {
+                    let sql = self.to_sql(&other)?;
+                    let rows = self.be.rows(&format!("SELECT {sql}"), 1).map_err(MError::expr)?;
+                    match rows.into_iter().next().and_then(|r| r.into_iter().next()).flatten() {
+                        Some(s) => s,
+                        None => return Err(MError::expr("The name generator must return text.")),
+                    }
+                }
+            };
+            if new != c.name {
+                pairs.push(Value::List(vec![Value::Text(c.name.clone()), Value::Text(new)]));
+            }
+        }
+        if pairs.is_empty() {
+            return Ok(Value::Table(t));
+        }
+        self.rename_columns(&[Value::Table(t), Value::List(pairs)])
     }
 
     fn duplicate_column(&self, a: &[Value]) -> R<Value> {

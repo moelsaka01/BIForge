@@ -17,7 +17,7 @@ A table is a chain of SQL common table expressions over DuckDB. Every CTE carrie
 
 ## Table functions
 Folded: `PromoteHeaders` (reads the first row; duplicate names get `.1`, `.2`), `DemoteHeaders`, `SelectColumns`, `RemoveColumns`, `ReorderColumns`, `RenameColumns`, `DuplicateColumn`, `TransformColumnTypes`, `TransformColumns`, `SelectRows`, `Sort`, `FirstN`, `LastN`, `Skip`/`RemoveFirstN`, `RemoveLastN`, `Range`, `RemoveRows`, `Distinct`, `ReplaceValue`, `SplitColumn`, `AddColumn`, `AddIndexColumn`, `Group`, `Pivot`, `Unpivot`, `UnpivotOtherColumns`, `FillDown`, `FillUp`, `Combine`, `NestedJoin` + `ExpandTableColumn`, `Join`, `Buffer`, `#table`, `FromRows`, plus `ColumnNames`, `RowCount`, `Column`, `IsEmpty` (these run a small query and return values).
-Not supported: `Transpose`, `CombineColumns`, `ExpandRecordColumn`, `ExpandListColumn`, `Profile`, `TransformColumnNames`, error handling functions (`RemoveRowsWithErrors`, `ReplaceErrorValues`: there are no cell-level errors; a failed conversion fails the step), `GroupKind.Local`, nested tables in `Table.Group` (`each _`), `FirstN`/`Skip` with a condition, `Table.Distinct` with a comparer.
+Not supported: `Transpose`, `CombineColumns`, `ExpandRecordColumn`, `ExpandListColumn`, `Profile`, error handling functions (`RemoveRowsWithErrors`, `ReplaceErrorValues`: there are no cell-level errors; a failed conversion fails the step), `GroupKind.Local`, nested tables in `Table.Group` (`each _`), `FirstN`/`Skip` with a condition, `Table.Distinct` with a comparer.
 
 ## Readings that are *assumed* (check against Desktop)
 1. **Comparison with null.** `=` and `<>` are null-safe (`null = null` is true, `null <> 5` is true). `<`, `>`, `<=`, `>=` with a null operand give null, and a row whose filter is null is dropped. Not verified that M's relational operators return null (rather than false).
@@ -36,3 +36,5 @@ Not supported: `Transpose`, `CombineColumns`, `ExpandRecordColumn`, `ExpandListC
 
 ## What the editor writes
 Step names and M text follow what Power Query writes for the same action (`Changed Type`, `Filtered Rows`, `Removed Columns`, `Grouped Rows`, ...; names stay unique with a numeric suffix). Rebuilding a query after a step edit rewrites the `let` text in canonical form (comments between steps are not kept); an edit of the formula bar or the Advanced Editor keeps the text as typed.
+
+`Table.TransformColumnNames(table, f)` is supported without its options (MaxLength, Comparer): each name goes through `f` (`Text.Trim`, `each ...`) and the result is renamed like `Table.RenameColumns`. `Table.PromoteHeaders` keeps header whitespace like Power Query; the CSV import adds an explicit `Trimmed Column Names` step (`Table.TransformColumnNames(.., Text.Trim)`) when the header row has padded names, because the imported column list is trimmed.

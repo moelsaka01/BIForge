@@ -107,7 +107,7 @@ impl Engine {
             })?
             .collect::<std::result::Result<Vec<_>, _>>()?;
         let row_count: i64 = self.conn.query_row(&format!("SELECT count(*) FROM {}", q(name)), [], |r| r.get(0))?;
-        Ok(TableInfo { name: name.into(), columns, row_count: row_count as u64 })
+        Ok(TableInfo { name: name.into(), columns, row_count: row_count as u64, header_padded: false })
     }
 
     /// Writes the chosen columns of a table to a Parquet file (the publishing snapshot).
@@ -153,7 +153,13 @@ impl Engine {
             let _ = self.conn.execute_batch(&format!("DROP TABLE IF EXISTS {}", q(STAGE)));
             return Err(e);
         }
-        self.swap_stage(name)
+        let mut info = self.swap_stage(name)?;
+        if let SourceSpec::Csv { path, delimiter, header } = spec {
+            if *header != Some(false) {
+                info.header_padded = sources::csv_header_padded(path, delimiter.as_deref());
+            }
+        }
+        Ok(info)
     }
 
     fn swap_stage(&self, name: &str) -> Result<TableInfo> {
