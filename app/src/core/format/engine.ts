@@ -206,7 +206,7 @@ export function generalCards(visualType: string, ctx?: CardContext): CardDef[] {
       if (c) out.push(c);
       continue;
     }
-    const c = cardFrom(visualType, object, props, ctx);
+    const c = cardFrom(visualType, object, props, ctx, object === "visualLink" ? { label: "Action" } : {});
     if (c) out.push(c);
   }
   return out;

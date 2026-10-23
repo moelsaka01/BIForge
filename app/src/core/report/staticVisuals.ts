@@ -160,7 +160,7 @@ export function shapeSvg(m: ShapeModel, w: number, h: number): { tag: "rect" | "
 
 // ---- buttons and the page navigator ------------------------------------------------------
 
-export type ActionType = "None" | "Back" | "Bookmark" | "PageNavigation" | "WebUrl";
+export type ActionType = "None" | "Back" | "Bookmark" | "PageNavigation" | "WebUrl" | "Drillthrough";
 export interface ButtonAction {
   type: ActionType;
   page?: string;
@@ -177,7 +177,8 @@ export function readAction(json: J): ButtonAction {
     const l = getFormat(json, "visualLink", k);
     return l?.t === "string" && l.v !== "" ? l.v : undefined;
   };
-  return { type: ["Back", "Bookmark", "PageNavigation", "WebUrl"].includes(t) ? t : "None", page: str("navigationSection"), bookmark: str("bookmark"), url: str("webUrl") };
+  const type2 = ["Back", "Bookmark", "PageNavigation", "WebUrl", "Drillthrough"].includes(t) ? t : "None";
+  return { type: type2, page: type2 === "Drillthrough" ? str("drillthroughSection") : str("navigationSection"), bookmark: str("bookmark"), url: str("webUrl") };
 }
 
 /** Why an action cannot run now (an empty target, an unsafe address), or null when it can. */
@@ -185,6 +186,8 @@ export function actionProblem(a: ButtonAction, pageNames: string[], bookmarkIds:
   switch (a.type) {
     case "PageNavigation":
       return !a.page ? "No page is chosen for this button." : pageNames.includes(a.page) ? null : "The page this button goes to no longer exists.";
+    case "Drillthrough":
+      return !a.page ? "No drillthrough page is chosen." : pageNames.includes(a.page) ? null : "The drillthrough page no longer exists.";
     case "Bookmark":
       return !a.bookmark ? "No bookmark is chosen for this button." : bookmarkIds.includes(a.bookmark) ? null : "The bookmark this button applies no longer exists.";
     case "WebUrl":

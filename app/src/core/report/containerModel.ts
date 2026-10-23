@@ -5,6 +5,7 @@ import type { CSSProperties } from "react";
 import { cssFont, opacityOf, readFont } from "../format/styles";
 import type { FormatReader } from "./formatReader";
 import type { Theme } from "./theme";
+import { linkModel, type LinkModel } from "./linkModel";
 import { tooltipLook, type TooltipLook } from "./tooltipLook";
 
 export interface TextBlock {
@@ -33,6 +34,8 @@ export interface ContainerModel {
   /** type: "Default" or "Canvas" (a report page is the tooltip). */
   tooltip: { show: boolean; type: string; section: string; look: TooltipLook };
   lockAspect: boolean;
+  /** The Action card: what Ctrl+click on the visual does, and its tooltips. */
+  link: LinkModel;
 }
 
 export interface ContainerInput {
@@ -154,5 +157,6 @@ export function buildContainer(inp: ContainerInput): ContainerModel {
     },
     tooltip: { show: f.bool("visualTooltip", "show", true), type: f.str("visualTooltip", "type", "Default"), section: f.str("visualTooltip", "section", ""), look: tooltipLook(f) },
     lockAspect: f.bool("lockAspect", "show", false),
+    link: linkModel(f),
   };
 }

@@ -5,7 +5,9 @@ import { FormatReader } from "../../core/report/formatReader";
 import { resolveInteraction, supportsHighlight } from "../../core/report/interactions";
 import type { PageModel, Position, VisualModel } from "../../core/report/visualDoc";
 import { visualType } from "../../core/report/visualTypes";
-import { rotationOf } from "../../core/report/staticVisuals";
+import { actionProblem, readAction, rotationOf } from "../../core/report/staticVisuals";
+import { linkTooltip } from "../../core/report/linkModel";
+import { listBookmarks } from "../../core/report/bookmarks";
 import { effectivelyHidden } from "../../core/report/groups";
 import { personalizeOn } from "../../core/report/reportOps";
 import { PersonalizePanel } from "./PersonalizePanel";
@@ -74,6 +76,11 @@ export function VisualFrame(p: FrameProps) {
   const isCard = fam === "card" || fam === "kpi" || fam === "slicer";
   const model = buildContainer({ f, theme: c.theme, autoTitle: autoTitle(visual), titleByDefault: !isCard, noAutoText: fam === "table" || fam === "matrix" });
   const titleText = model.title?.text ?? "";
+  // the Action card: Ctrl+click follows the link; the hover text says what it does (or why it cannot)
+  const action = readAction(visual.json);
+  const linked = action.type !== "None" && visual.visualType !== "actionButton";
+  const linkProblem = linked ? actionProblem(action, c.pages.map((x) => x.name), listBookmarks(c.project).map((b) => b.id)) : null;
+  const linkTitle = linked ? linkTooltip(model.link, linkProblem) : "";
   const showTitle = model.title !== null;
   const cats = (visual.roles.Category ?? []).map((x) => x.field);
   const drill = c.snap.drill[visual.name];
@@ -162,7 +169,12 @@ export function VisualFrame(p: FrameProps) {
       aria-label={`Visual: ${model.altText || titleText || type?.label || visual.visualType}`}
       data-visual={visual.name}
       data-selected={p.selected}
+      data-link={linked ? action.type : undefined}
+      title={linkTitle || undefined}
       style={outer}
+      onClick={(e) => {
+        if (linked && (e.ctrlKey || e.metaKey)) c.dispatch("report.button.run", { page: page.name, visual: visual.name });
+      }}
       onPointerEnter={() => setHover(true)}
       onPointerLeave={() => setHover(false)}
       onPointerDown={(e) => {

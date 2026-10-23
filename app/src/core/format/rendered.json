@@ -74,6 +74,20 @@
    "show",
    "transparency"
   ],
+  "visualLink": [
+   "bookmark",
+   "disabledTooltip",
+   "drillthroughSection",
+   "enabledTooltip",
+   "navigationSection",
+   "show",
+   "showDefaultTooltip",
+   "suppressDefaultTooltip",
+   "tooltip",
+   "tooltipPlaceholderText",
+   "type",
+   "webUrl"
+  ],
   "visualTooltip": [
    "background",
    "bold",

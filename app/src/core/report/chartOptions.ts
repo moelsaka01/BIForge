@@ -15,6 +15,7 @@ import { seriesColor, type Theme } from "./theme";
 import type { VisualModel } from "./visualDoc";
 import { visualType } from "./visualTypes";
 import { gazetteer } from "./geo";
+import { linkModel } from "./linkModel";
 import { tooltipLook } from "./tooltipLook";
 import { bubbleMap, filledMap } from "./mapOptions";
 
@@ -904,7 +905,9 @@ function styleTooltip(option: O, f: FormatReader): void {
   const t = option.tooltip;
   if (!t) return;
   const k = tooltipLook(f);
-  if (!k.show) {
+  const link = linkModel(f);
+  // a linked visual can hide its own hover tooltip (Action card: suppress the default tooltip)
+  if (!k.show || (link.type !== "None" && link.suppressVisualTooltip)) {
     option.tooltip = { show: false };
     return;
   }

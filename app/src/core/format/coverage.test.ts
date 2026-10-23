@@ -93,6 +93,8 @@ const ENABLE: Record<string, Record<string, Lit>> = {
   dropShadow: { show: lit.bool(true) },
   divider: { show: lit.bool(true) },
   spacing: { customizeSpacing: lit.bool(true) },
+  // the link needs an action for its switch and tooltips to matter
+  visualLink: { type: lit.str("WebUrl") },
   fill: { show: lit.bool(true) },
   outline: { show: lit.bool(true) },
   text: { show: lit.bool(true), text: lit.str("Go") },
@@ -122,6 +124,12 @@ const WITH: Record<string, Record<string, Record<string, Lit>>> = {
   labels: { labelDisplayUnits: { labelPrecision: lit.num(2) } },
   mapControls: { zoomLevel: { autoZoom: lit.bool(false) } },
   smallMultiplesLayout: { columnCount: { layoutType: lit.str("custom") }, rowCount: { layoutType: lit.str("custom") } },
+  visualLink: {
+    webUrl: { type: lit.str("WebUrl") },
+    bookmark: { type: lit.str("Bookmark") },
+    navigationSection: { type: lit.str("PageNavigation") },
+    drillthroughSection: { type: lit.str("Drillthrough") },
+  },
 };
 
 // ---- what to render, per visual type -------------------------------------------------------------------------
@@ -324,7 +332,7 @@ function computeAll(): Coverage {
   let common: Record<string, string[]> | null = null;
   for (const vt of VISUAL_TYPES) {
     if (!visualObjects(vt.id)) continue;
-    const m = measure(containerScenario, vt.id, containerNames.filter((o) => o !== "visualLink" && o !== "stylePreset" && o !== "visualHeaderTooltip"));
+    const m = measure(containerScenario, vt.id, containerNames.filter((o) => o !== "stylePreset" && o !== "visualHeaderTooltip"));
     if (!common) common = m;
     else for (const o of Object.keys(common)) common[o] = (common[o] ?? []).filter((p) => m[o]?.includes(p));
     if (vt.id === "clusteredColumnChart") break; // the container model does not depend on the type

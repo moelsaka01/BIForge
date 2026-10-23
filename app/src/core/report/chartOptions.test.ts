@@ -295,3 +295,18 @@ describe("small multiples", () => {
     expect(visualType("lineClusteredColumnComboChart")!.roles.map((r) => r.name)).not.toContain("Rows");
   });
 });
+
+describe("the Action card on a chart", () => {
+  const rows = [[c("Accessories"), c(30)], [c("Bikes"), c(50)]];
+  const tooltipShown = (props: [string, ReturnType<typeof lit.str> | ReturnType<typeof lit.bool>][]) => {
+    const v = visualOf("clusteredColumnChart", { Category: [Cat], Y: [Qty] });
+    for (const [p, val] of props) setFormat(v.json, "visualLink", p, val);
+    return (build(v, grouped(v, rows)).option as { tooltip: { show?: boolean } }).tooltip.show !== false;
+  };
+  it("suppressing the default tooltip hides the chart's own tooltip, but only when the visual has a link", () => {
+    expect(tooltipShown([])).toBe(true);
+    expect(tooltipShown([["suppressDefaultTooltip", lit.bool(true)]])).toBe(true);
+    expect(tooltipShown([["type", lit.str("WebUrl")], ["webUrl", lit.str("https://example.com")], ["suppressDefaultTooltip", lit.bool(true)]])).toBe(false);
+    expect(tooltipShown([["type", lit.str("WebUrl")], ["webUrl", lit.str("https://example.com")]])).toBe(true);
+  });
+});

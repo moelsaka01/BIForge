@@ -8,7 +8,7 @@ import { FakeDax } from "../../core/testing/fakeDax";
 import { FakeDialogs, FakeIO } from "../../core/testing/fakes";
 import { Session } from "../../core/session/session";
 import { fixtureProject } from "../../core/report/testFixture";
-import { parsePage } from "../../core/report/visualDoc";
+import { listPageNames, parsePage } from "../../core/report/visualDoc";
 import { dragGroup } from "./PageCanvas";
 import { ReportView, plainDocks } from "./ReportView";
 
@@ -164,6 +164,32 @@ describe("selecting several visuals on the canvas", () => {
     expect(t.session.report.getSnapshot().selection).not.toBeNull();
     fireEvent.keyDown(region, { key: "C", ctrlKey: true, shiftKey: true });
     await waitFor(() => expect(t.session.report.getSnapshot().selection).toBeNull());
+  });
+
+  it("the Action card on any visual: Ctrl+click follows the link, the hover text says what it does or why it cannot", async () => {
+    const t = setup();
+    const a = await t.add(10, 10);
+    await t.run("report.page.add");
+    const pages = () => listPageNames(t.session.store.project!);
+    const second = pages()!.find((n) => n !== "page1")!;
+    t.session.report.goToPage("page1");
+    const fmt = (prop: string, v: unknown) => t.run("report.format.set", { page: "page1", visual: a, object: "visualLink", prop, value: v });
+    render(<t.Host />);
+    await waitFor(() => expect(t.frame(a)).toBeTruthy());
+    expect(t.frame(a).getAttribute("data-link")).toBeNull();
+    await fmt("type", { t: "string", v: "PageNavigation" });
+    // no page chosen yet: the tooltip says why the action cannot run, and Ctrl+click does nothing
+    await waitFor(() => expect(t.frame(a).getAttribute("title")).toBe("No page is chosen for this button."));
+    fireEvent.click(t.frame(a), { ctrlKey: true });
+    expect(t.session.report.getSnapshot().page).toBe("page1");
+    await fmt("navigationSection", { t: "string", v: second });
+    await waitFor(() => expect(t.frame(a).getAttribute("title")).toBe("Ctrl+click to go to the page"));
+    await fmt("enabledTooltip", { t: "string", v: "Open the details page" });
+    await waitFor(() => expect(t.frame(a).getAttribute("title")).toBe("Open the details page"));
+    fireEvent.click(t.frame(a));
+    expect(t.session.report.getSnapshot().page).toBe("page1"); // a plain click only selects
+    fireEvent.click(t.frame(a), { ctrlKey: true });
+    await waitFor(() => expect(t.session.report.getSnapshot().page).toBe(second));
   });
 
   it("a rubber band over empty canvas selects the visuals it touches; Shift adds to the selection", async () => {

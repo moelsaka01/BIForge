@@ -168,6 +168,7 @@ export function registerReportCommands(r: CommandRegistry<Session>): void {
       if (problem) throw new Error(problem);
       switch (act.type) {
         case "PageNavigation":
+        case "Drillthrough":
           s.report.goToPage(act.page!);
           if (!s.store.getSnapshot().readOnly) edit(s, "Switch page", (d) => ops.setActivePage(d, act.page!));
           break;
