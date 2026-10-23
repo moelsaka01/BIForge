@@ -19,6 +19,10 @@ pub const TABLE_FNS: &[&str] = &[
     "Web.Contents", "Sql.Database", "PostgreSQL.Database", "OData.Feed",
 ];
 
+#[path = "fold_ext.rs"]
+mod ext;
+pub use ext::TABLE_EXT_FNS;
+
 type R<T> = MResult<T>;
 
 fn text_list(v: &Value, what: &str) -> R<Vec<String>> {

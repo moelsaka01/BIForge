@@ -4,5 +4,215 @@
   "m": "Table.ColumnNames(Table.TransformColumnNames(#table({\"a b\",\"C\"}, {{1, 2}}), Text.Upper))",
   "expect": "{A B,C}",
   "mode": "value"
+ },
+ {
+  "fn": "Table.ColumnCount",
+  "m": "Table.ColumnCount(#table({\"a\", \"b\"}, {{1, \"x\"}, {2, \"y\"}, {3, \"z\"}}))",
+  "expect": "2",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.First",
+  "m": "Table.First(#table({\"a\", \"b\"}, {{1, \"x\"}, {2, \"y\"}, {3, \"z\"}}))",
+  "expect": "[a: 1,b: x]",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.First",
+  "m": "Table.First(Table.FirstN(#table({\"a\", \"b\"}, {{1, \"x\"}, {2, \"y\"}, {3, \"z\"}}), 0), \"none\")",
+  "expect": "none",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.Last",
+  "m": "Table.Last(#table({\"a\", \"b\"}, {{1, \"x\"}, {2, \"y\"}, {3, \"z\"}}))",
+  "expect": "[a: 3,b: z]",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.Row",
+  "m": "Table.Row(#table({\"a\", \"b\"}, {{1, \"x\"}, {2, \"y\"}, {3, \"z\"}}), 1)",
+  "expect": "[a: 2,b: y]",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.FirstValue",
+  "m": "Table.FirstValue(#table({\"a\", \"b\"}, {{1, \"x\"}, {2, \"y\"}, {3, \"z\"}}))",
+  "expect": "1",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.ToRecords",
+  "m": "List.Count(Table.ToRecords(#table({\"a\", \"b\"}, {{1, \"x\"}, {2, \"y\"}, {3, \"z\"}})))",
+  "expect": "3",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.ToRecords",
+  "m": "Record.FieldValues(List.Last(Table.ToRecords(#table({\"a\", \"b\"}, {{1, \"x\"}, {2, \"y\"}, {3, \"z\"}}))))",
+  "expect": "{3,z}",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.ToRows",
+  "m": "List.Last(List.First(Table.ToRows(#table({\"a\", \"b\"}, {{1, \"x\"}, {2, \"y\"}, {3, \"z\"}}))))",
+  "expect": "x",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.ToColumns",
+  "m": "List.First(Table.ToColumns(#table({\"a\", \"b\"}, {{1, \"x\"}, {2, \"y\"}, {3, \"z\"}})))",
+  "expect": "{1,2,3}",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.Max",
+  "m": "Table.Max(#table({\"a\", \"b\"}, {{1, \"x\"}, {2, \"y\"}, {3, \"z\"}}), \"a\")",
+  "expect": "[a: 3,b: z]",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.Min",
+  "m": "Table.Min(#table({\"a\", \"b\"}, {{1, \"x\"}, {2, \"y\"}, {3, \"z\"}}), \"a\")",
+  "expect": "[a: 1,b: x]",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.Contains",
+  "m": "Table.Contains(#table({\"a\", \"b\"}, {{1, \"x\"}, {2, \"y\"}, {3, \"z\"}}), [a = 2, b = \"y\"])",
+  "expect": "true",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.Contains",
+  "m": "Table.Contains(#table({\"a\", \"b\"}, {{1, \"x\"}, {2, \"y\"}, {3, \"z\"}}), [a = 2, b = \"z\"])",
+  "expect": "false",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.ContainsAll",
+  "m": "Table.ContainsAll(#table({\"a\", \"b\"}, {{1, \"x\"}, {2, \"y\"}, {3, \"z\"}}), {[a = 1], [a = 2]})",
+  "expect": "true",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.ContainsAll",
+  "m": "Table.ContainsAll(#table({\"a\", \"b\"}, {{1, \"x\"}, {2, \"y\"}, {3, \"z\"}}), {[a = 1], [a = 9]})",
+  "expect": "false",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.ContainsAny",
+  "m": "Table.ContainsAny(#table({\"a\", \"b\"}, {{1, \"x\"}, {2, \"y\"}, {3, \"z\"}}), {[a = 9], [a = 2]})",
+  "expect": "true",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.HasColumns",
+  "m": "Table.HasColumns(#table({\"a\", \"b\"}, {{1, \"x\"}, {2, \"y\"}, {3, \"z\"}}), {\"a\", \"b\"})",
+  "expect": "true",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.HasColumns",
+  "m": "Table.HasColumns(#table({\"a\", \"b\"}, {{1, \"x\"}, {2, \"y\"}, {3, \"z\"}}), {\"c\"})",
+  "expect": "false",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.IsDistinct",
+  "m": "Table.IsDistinct(#table({\"a\", \"b\"}, {{1, \"x\"}, {2, \"y\"}, {3, \"z\"}}))",
+  "expect": "true",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.IsDistinct",
+  "m": "Table.IsDistinct(Table.Combine({#table({\"a\", \"b\"}, {{1, \"x\"}, {2, \"y\"}, {3, \"z\"}}), #table({\"a\", \"b\"}, {{1, \"x\"}, {2, \"y\"}, {3, \"z\"}})}))",
+  "expect": "false",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.PositionOf",
+  "m": "Table.PositionOf(#table({\"a\", \"b\"}, {{1, \"x\"}, {2, \"y\"}, {3, \"z\"}}), [a = 2])",
+  "expect": "1",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.PositionOf",
+  "m": "Table.PositionOf(#table({\"a\", \"b\"}, {{1, \"x\"}, {2, \"y\"}, {3, \"z\"}}), [a = 9])",
+  "expect": "-1",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.FromColumns",
+  "m": "Table.RowCount(Table.FromColumns({{1, 2}, {\"x\", \"y\"}}, {\"n\", \"s\"}))",
+  "expect": "2",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.FromColumns",
+  "m": "Table.ColumnNames(Table.FromColumns({{1, 2}, {\"x\", \"y\"}}, {\"n\", \"s\"}))",
+  "expect": "{n,s}",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.FromColumns",
+  "m": "Table.FirstValue(Table.FromColumns({{1, 2}, {\"x\", \"y\"}}, {\"n\", \"s\"}))",
+  "expect": "1",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.FromList",
+  "m": "Table.ColumnNames(Table.FromList({\"a\", \"b\"}))",
+  "expect": "{Column1}",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.FromList",
+  "m": "Table.RowCount(Table.FromList({\"a\", \"b\"}))",
+  "expect": "2",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.FromValue",
+  "m": "Table.FirstValue(Table.FromValue(5))",
+  "expect": "5",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.FromValue",
+  "m": "Table.RowCount(Table.FromValue({1, 2, 3}))",
+  "expect": "3",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.PrefixColumns",
+  "m": "Table.ColumnNames(Table.PrefixColumns(#table({\"a\", \"b\"}, {{1, \"x\"}, {2, \"y\"}, {3, \"z\"}}), \"p\"))",
+  "expect": "{p.a,p.b}",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.Repeat",
+  "m": "Table.RowCount(Table.Repeat(#table({\"a\", \"b\"}, {{1, \"x\"}, {2, \"y\"}, {3, \"z\"}}), 2))",
+  "expect": "6",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.InsertRows",
+  "m": "Table.Column(Table.InsertRows(#table({\"a\", \"b\"}, {{1, \"x\"}, {2, \"y\"}, {3, \"z\"}}), 1, {[a = 9, b = \"q\"]}), \"a\")",
+  "expect": "{1,9,2,3}",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.SplitAt",
+  "m": "Table.RowCount(List.First(Table.SplitAt(#table({\"a\", \"b\"}, {{1, \"x\"}, {2, \"y\"}, {3, \"z\"}}), 1)))",
+  "expect": "1",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.SplitAt",
+  "m": "Table.RowCount(List.Last(Table.SplitAt(#table({\"a\", \"b\"}, {{1, \"x\"}, {2, \"y\"}, {3, \"z\"}}), 1)))",
+  "expect": "2",
+  "mode": "value"
  }
 ]
