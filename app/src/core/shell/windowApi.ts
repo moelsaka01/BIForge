@@ -6,6 +6,8 @@ export interface WindowApi {
   minimize(): Promise<void>;
   toggleMaximize(): Promise<void>;
   isMaximized(): Promise<boolean>;
+  /** Full screen on or off (F11). */
+  toggleFullscreen(): Promise<void>;
   /** Closes the window for good (no further close request). */
   destroy(): Promise<void>;
   /** Calls `handler` instead of closing when the user closes the window; the handler decides what happens next. */
@@ -17,6 +19,7 @@ export const noWindow: WindowApi = {
   minimize: async () => undefined,
   toggleMaximize: async () => undefined,
   isMaximized: async () => false,
+  toggleFullscreen: async () => undefined,
   destroy: async () => undefined,
   onCloseRequested: async () => () => undefined,
 };

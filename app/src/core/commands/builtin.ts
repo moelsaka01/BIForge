@@ -47,7 +47,6 @@ export function createRegistry(session: Session): CommandRegistry<Session> {
     id: "file.new",
     label: "New project",
     category: "File",
-    shortcut: "Ctrl+N",
     async run(s, args) {
       const { name } = argsOf<{ name: string }>(args, ["name"]);
       const folder = (args as { folder?: string }).folder ?? (await s.dialogs.pickFolder());

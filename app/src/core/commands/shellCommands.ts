@@ -16,8 +16,8 @@ export function registerShellCommands(r: CommandRegistry<Session>): void {
   r.register({ id: "app.showStart", label: "File", category: "File", run: (s) => s.shell.showStart() });
   r.register({ id: "app.backToDocument", label: "Back to the report", category: "File", isEnabled: hasProject, run: (s) => s.shell.setView(s.shell.getSnapshot().view) });
 
-  r.register({ id: "file.newBlank", label: "Blank report", category: "File", run: (s) => s.shell.openDialog({ kind: "newProject" }) });
-  r.register({ id: "file.saveAs", label: "Save as", category: "File", isEnabled: hasProject, run: (s) => s.shell.openDialog({ kind: "saveAs" }) });
+  r.register({ id: "file.newBlank", label: "Blank report", category: "File", shortcut: "Ctrl+N", run: (s) => s.shell.openDialog({ kind: "newProject" }) });
+  r.register({ id: "file.saveAs", label: "Save as", category: "File", shortcut: "Ctrl+Shift+S", isEnabled: hasProject, run: (s) => s.shell.openDialog({ kind: "saveAs" }) });
   r.register({
     id: "file.saveAs.run",
     label: "Save the project under a new name or in a new folder",
@@ -189,6 +189,7 @@ export function registerShellCommands(r: CommandRegistry<Session>): void {
     },
   });
   r.register({ id: "app.about", label: "About", category: "Help", run: (s) => s.shell.openDialog({ kind: "about" }) });
+  r.register({ id: "view.fullScreen", label: "Full screen", category: "View", shortcut: "F11", run: (s) => s.shell.window.toggleFullscreen() });
   r.register({ id: "app.shortcuts", label: "Keyboard shortcuts", category: "Help", run: (s) => s.shell.openDialog({ kind: "shortcuts" }) });
 
   r.register({

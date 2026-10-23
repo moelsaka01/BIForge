@@ -170,13 +170,13 @@ Last updated: 2026-10-17, after the scope-change session was completed (see PROG
 | Options dialog: Global | 61 | 4 | 2 | 55 |
 | Options dialog: Current File | 23 | 0 | 0 | 23 |
 | Dialogs | 48 | 12 | 0 | 36 |
-| Keyboard shortcuts | 37 | 6 | 0 | 31 |
+| Keyboard shortcuts | 37 | 19 | 0 | 18 |
 | Export, print and file formats | 15 | 2 | 0 | 13 |
 | Accessibility and platform | 12 | 1 | 1 | 10 |
 | Format pane cards per visual | 1264 | 256 | 309 | 699 |
 | DAX functions | 317 | 297 | 0 | 20 |
 | M standard library | 652 | 148 | 0 | 504 |
-| **Total** | **3008** | **978** | **345** | **1685** |
+| **Total** | **3008** | **991** | **345** | **1672** |
 <!-- inventory-status:end -->
 
 ## Online track (Publish & Share; plan in docs/ONLINE_PLAN.md)

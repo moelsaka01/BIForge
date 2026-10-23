@@ -542,26 +542,26 @@ N | Theme validation errors
 N | Add column from examples
 ## 26. Keyboard shortcuts
 ### Global and file
-N | Ctrl+N new
-N | Ctrl+O open
+D | Ctrl+N new
+D | Ctrl+O open
 D | Ctrl+S save
-N | Ctrl+Shift+S save as
+D | Ctrl+Shift+S save as
 N | Ctrl+P print
-N | Ctrl+Z undo
-N | Ctrl+Y redo
-N | Ctrl+C copy
+D | Ctrl+Z undo
+D | Ctrl+Y redo
+D | Ctrl+C copy
 D | Ctrl+X cut
-N | Ctrl+V paste
-N | Ctrl+A select all
+D | Ctrl+V paste
+D | Ctrl+A select all
 D | Delete delete selection
-N | F11 full screen
+D | F11 full screen
 N | Alt+key tips for tabs and commands
 D | Alt key tips for tabs and main controls
 ### Canvas
-N | Arrow keys move selected visual
+D | Arrow keys move selected visual
 N | Shift+Arrow resize visual
-N | Ctrl+G group / Ctrl+Shift+G ungroup
-N | Ctrl+D duplicate
+D | Ctrl+G group / Ctrl+Shift+G ungroup
+D | Ctrl+D duplicate
 N | Tab cycles visuals
 N | Ctrl+F6 / Shift+Ctrl+F6 move focus between sections
 N | Ctrl+Shift+F11 show visuals as tables
@@ -569,7 +569,7 @@ N | Ctrl+Shift+F10 show/hide tooltip
 N | Alt+Shift+F10 focus visual menu
 N | Ctrl+Space multi-select data points
 N | Ctrl+H show data point details
-N | Ctrl+Shift+C clear data selection
+D | Ctrl+Shift+C clear data selection
 N | Ctrl+Alt+I annotations visibility
 N | Alt+Shift+1 collapse all tables, Alt+Shift+9 expand all tables
 N | Ctrl+Right Arrow enter visual

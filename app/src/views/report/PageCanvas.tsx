@@ -264,7 +264,18 @@ export function PageCanvas(p: PageCanvasProps) {
       c.dispatch("report.visuals.paste", { page: page.name });
       return;
     }
+    // Ctrl+Shift+C clears the selection of data points (cross-highlighting) made by clicking inside visuals
+    if (mod && e.shiftKey && e.key.toLowerCase() === "c") {
+      e.preventDefault();
+      c.dispatch("report.view.clearSelection");
+      return;
+    }
     if (selection.length === 0) return;
+    if (mod && e.key.toLowerCase() === "d") {
+      e.preventDefault();
+      for (const name of selection) if (!page.groups.some((g) => g.name === name)) c.dispatch("report.visual.duplicate", { page: page.name, visual: name });
+      return;
+    }
     if (mod && (e.key.toLowerCase() === "c" || e.key.toLowerCase() === "x")) {
       e.preventDefault();
       c.dispatch(e.key.toLowerCase() === "c" ? "report.visuals.copy" : "report.visuals.cut", { page: page.name, visuals: selection });

@@ -42,6 +42,7 @@ export function fakeWindow() {
     minimize: async () => void calls.push("minimize"),
     toggleMaximize: async () => void calls.push("toggleMaximize"),
     isMaximized: async () => false,
+    toggleFullscreen: async () => void calls.push("toggleFullscreen"),
     destroy: async () => void calls.push("destroy"),
     onCloseRequested: async (h) => {
       handlers.push(h);

@@ -47,7 +47,8 @@ export function eventToShortcut(e: KeyLike): string | null {
   if (e.altKey) parts.push("Alt");
   if (e.shiftKey) parts.push("Shift");
   if (e.metaKey) parts.push("Meta");
-  parts.push(e.key);
+  // the space bar is the key " ", which has no readable name and used to throw "Shortcut has no key"
+  parts.push(e.key === " " ? "Space" : e.key);
   return normalizeShortcut(parts.join("+"));
 }
 

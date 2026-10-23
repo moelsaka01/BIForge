@@ -7,6 +7,10 @@ export const tauriWindow: WindowApi = {
   minimize: () => getCurrentWindow().minimize(),
   toggleMaximize: () => getCurrentWindow().toggleMaximize(),
   isMaximized: () => getCurrentWindow().isMaximized(),
+  toggleFullscreen: async () => {
+    const w = getCurrentWindow();
+    await w.setFullscreen(!(await w.isFullscreen()));
+  },
   destroy: () => getCurrentWindow().destroy(),
   onCloseRequested: (handler) =>
     getCurrentWindow().onCloseRequested(async (event) => {

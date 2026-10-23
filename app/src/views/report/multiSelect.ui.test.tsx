@@ -142,6 +142,30 @@ describe("selecting several visuals on the canvas", () => {
     await waitFor(() => expect(t.vs()).toHaveLength(1));
   });
 
+  it("Ctrl+D duplicates every selected visual", async () => {
+    const t = setup();
+    const a = await t.add(10, 10);
+    const b = await t.add(300, 10);
+    render(<t.Host />);
+    const region = await screen.findByRole("region", { name: /^Page / });
+    act(() => t.session.report.setCanvasSelection([a, b]));
+    fireEvent.keyDown(region, { key: "d", ctrlKey: true });
+    await waitFor(() => expect(t.vs()).toHaveLength(4));
+    await t.run("edit.undo");
+    await waitFor(() => expect(t.vs()).toHaveLength(3));
+  });
+
+  it("Ctrl+Shift+C clears the selected data points", async () => {
+    const t = setup();
+    const a = await t.add(10, 10);
+    render(<t.Host />);
+    const region = await screen.findByRole("region", { name: /^Page / });
+    act(() => t.session.report.select("page1", a, { field: "Product[Category]", value: "Bikes" } as never, false));
+    expect(t.session.report.getSnapshot().selection).not.toBeNull();
+    fireEvent.keyDown(region, { key: "C", ctrlKey: true, shiftKey: true });
+    await waitFor(() => expect(t.session.report.getSnapshot().selection).toBeNull());
+  });
+
   it("a rubber band over empty canvas selects the visuals it touches; Shift adds to the selection", async () => {
     const t = setup();
     const a = await t.add(0, 0);
