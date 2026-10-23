@@ -118,6 +118,7 @@ describe("security roles and View as", () => {
     fireEvent.click(within(dlg).getByRole("button", { name: "Save role" }));
     await waitFor(() => expect(listRoles(a.session.store.project!)).toEqual([{ name: "East", filters: [{ table: "Sales", expression: "Sales[Quantity] > 0" }] }]));
     fireEvent.click(within(dlg).getByRole("button", { name: "Close" }));
+    await waitFor(() => expect(screen.queryByRole("dialog", { hidden: true })).toBeNull());
     // View as
     await act(async () => void a.registry.execute("model.viewAsDialog"));
     const v = await dialog();

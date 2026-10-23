@@ -128,7 +128,7 @@ fn compare(actual: &ResultTable, expected: &Json, ordered: bool) -> Outcome {
     }
     let mut got = actual.rows.clone();
     if want.len() != got.len() {
-        return Outcome::Fail(format!("row count: expected {}, got {}", want.len(), got.len()));
+        return Outcome::Fail(format!("row count: expected {}, got {} ({:?})", want.len(), got.len(), got));
     }
     if !ordered {
         want.sort_by(|a, b| row_cmp(a, b));

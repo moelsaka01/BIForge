@@ -263,7 +263,7 @@ fn linest_table(k: usize, values: Option<Vec<Value>>) -> TableVal {
     let mut names: Vec<String> = (1..=k).map(|i| format!("Slope{i}")).collect();
     names.push("Intercept".into());
     names.extend((1..=k).map(|i| format!("StandardErrorSlope{i}")));
-    names.extend(["StandardErrorIntercept", "CoefficientOfDetermination", "StandardErrorY", "F", "DegreesOfFreedom", "RegressionSumSquares", "ResidualSumSquares"].map(String::from));
+    names.extend(["StandardErrorIntercept", "CoefficientOfDetermination", "StandardError", "FStatistic", "DegreesOfFreedom", "RegressionSumOfSquares", "ResidualSumOfSquares"].map(String::from));
     let cols = names.into_iter().map(|name| TCol { name, lineage: None, renamed: false }).collect();
     TableVal::mat(cols, values.into_iter().collect())
 }
@@ -366,7 +366,7 @@ fn run<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], env: &Env<'a>) 
             let q = |x: &str| if x.contains(&delim) || x.contains('"') || x.contains('\n') { format!("\"{}\"", x.replace('"', "\"\"")) } else { x.to_string() };
             let mut lines = Vec::new();
             if headers {
-                lines.push(t.cols(ev.data).iter().map(|c| q(&c.name)).collect::<Vec<_>>().join(&delim));
+                lines.push(t.cols(ev.data).iter().map(|c| q(&match c.lineage { Some(l) => format!("'{}'[{}]", ev.data.model.tables[l.table].name, c.name), None => format!("[{}]", c.name) })).collect::<Vec<_>>().join(&delim));
             }
             for r in 0..t.nrows().min(max) {
                 lines.push(t.row(ev.data, r).iter().map(|v| q(&v.to_text())).collect::<Vec<_>>().join(&delim));

@@ -66,7 +66,7 @@ fn linest_and_tocsv() {
     let e = engine();
     // Y = 2 X + 1 exactly
     let t = &e.query("EVALUATE LINEST(Pts[Y], Pts[X])").unwrap()[0];
-    assert_eq!(t.columns, ["[Slope1]", "[Intercept]", "[StandardErrorSlope1]", "[StandardErrorIntercept]", "[CoefficientOfDetermination]", "[StandardErrorY]", "[F]", "[DegreesOfFreedom]", "[RegressionSumSquares]", "[ResidualSumSquares]"]);
+    assert_eq!(t.columns, ["[Slope1]", "[Intercept]", "[StandardErrorSlope1]", "[StandardErrorIntercept]", "[CoefficientOfDetermination]", "[StandardError]", "[FStatistic]", "[DegreesOfFreedom]", "[RegressionSumOfSquares]", "[ResidualSumOfSquares]"]);
     near(t.rows[0][0].clone(), 2.0);
     near(t.rows[0][1].clone(), 1.0);
     near(t.rows[0][4].clone(), 1.0);
