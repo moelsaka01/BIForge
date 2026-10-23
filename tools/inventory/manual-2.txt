@@ -140,10 +140,10 @@ N | Query tab: DEFINE COLUMN and FUNCTION
 N | Model-wide Info functions (INFO.VIEW.*)
 ## 17. TMDL view
 D | Text of every model file
-N | Edit TMDL text and apply to model
-N | Undo/redo through TMDL edits
+D | Edit TMDL text and apply to model
+D | Undo/redo through TMDL edits
 N | Script table/column/measure/relationship as TMDL
-N | Syntax errors reported in the editor
+D | Syntax errors reported in the editor
 N | Tabs per object
 N | Drag-drop of objects into the editor
 N | Compare local versus model
@@ -159,9 +159,9 @@ D | Format string (general, number, currency, percent, date) with decimals and u
 D | Summarize by (sum, average, count, min, max, none)
 D | Data categories
 D | Sort by column
-N | Hide / unhide columns, measures, tables
-N | Display folders
-N | Descriptions
+D | Hide / unhide columns, measures, tables
+D | Display folders
+D | Descriptions
 N | Synonyms (Q&A)
 N | Alternate keys
 N | Column from examples (Power Query)

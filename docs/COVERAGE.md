@@ -161,8 +161,8 @@ Last updated: 2026-10-17, after the scope-change session was completed (see PROG
 | Table view | 18 | 4 | 0 | 14 |
 | Model view | 23 | 7 | 0 | 16 |
 | DAX query view | 15 | 2 | 0 | 13 |
-| TMDL view | 8 | 1 | 0 | 7 |
-| Modeling features | 48 | 20 | 1 | 27 |
+| TMDL view | 8 | 4 | 0 | 4 |
+| Modeling features | 48 | 23 | 1 | 24 |
 | DAX language | 15 | 8 | 0 | 7 |
 | Power Query editor: window and ribbon | 94 | 39 | 4 | 51 |
 | M language | 12 | 3 | 0 | 9 |
@@ -176,7 +176,7 @@ Last updated: 2026-10-17, after the scope-change session was completed (see PROG
 | Format pane cards per visual | 1264 | 343 | 280 | 641 |
 | DAX functions | 317 | 297 | 0 | 20 |
 | M standard library | 652 | 377 | 0 | 275 |
-| **Total** | **3008** | **1337** | **313** | **1358** |
+| **Total** | **3008** | **1343** | **313** | **1352** |
 <!-- inventory-status:end -->
 
 ## Online track (Publish & Share; plan in docs/ONLINE_PLAN.md)

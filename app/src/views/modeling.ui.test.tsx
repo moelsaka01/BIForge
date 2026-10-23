@@ -107,6 +107,40 @@ describe("Model view: hierarchies and editable properties", () => {
   });
 });
 
+describe("hide, describe and organize in folders", () => {
+  it("tables, columns and measures can be hidden, described and (columns, measures) put in a display folder from the Properties pane", async () => {
+    const a = await open();
+    await act(async () => void a.registry.execute("model.addMeasure", { table: "Sales", name: "Total", expression: "SUM(Sales[Quantity])" }));
+    await act(async () => void a.registry.execute("view.model"));
+    const pane = await screen.findByLabelText("Properties");
+    const prop = (target: Parameters<typeof getProperty>[1], key: Parameters<typeof getProperty>[2]) => getProperty(a.session.store.project!, target, key);
+    // table
+    fireEvent.click(await screen.findByTestId("card-head-Sales"));
+    fireEvent.click(within(pane).getByLabelText("Hidden"));
+    await waitFor(() => expect(prop({ kind: "table", table: "Sales" }, "isHidden")).toBe(true));
+    fireEvent.change(within(pane).getByLabelText("Description"), { target: { value: "One row per order line" } });
+    fireEvent.blur(within(pane).getByLabelText("Description"));
+    await waitFor(() => expect(prop({ kind: "table", table: "Sales" }, "description")).toBe("One row per order line"));
+    fireEvent.click(within(pane).getByLabelText("Hidden"));
+    await waitFor(() => expect(prop({ kind: "table", table: "Sales" }, "isHidden")).toBe(false));
+    // measure
+    fireEvent.click(await screen.findByTestId("measure-Sales.Total"));
+    fireEvent.click(within(pane).getByLabelText("Hidden"));
+    await waitFor(() => expect(prop({ kind: "measure", table: "Sales", name: "Total" }, "isHidden")).toBe(true));
+    fireEvent.change(within(pane).getByLabelText("Display folder"), { target: { value: "KPIs" } });
+    fireEvent.blur(within(pane).getByLabelText("Display folder"));
+    await waitFor(() => expect(prop({ kind: "measure", table: "Sales", name: "Total" }, "displayFolder")).toBe("KPIs"));
+    // column
+    fireEvent.click(screen.getByTestId("col-Sales.Quantity"));
+    fireEvent.change(within(pane).getByLabelText("Display folder"), { target: { value: "Amounts" } });
+    fireEvent.blur(within(pane).getByLabelText("Display folder"));
+    await waitFor(() => expect(prop({ kind: "column", table: "Sales", column: "Quantity" }, "displayFolder")).toBe("Amounts"));
+    fireEvent.change(within(pane).getByLabelText("Description"), { target: { value: "Units sold" } });
+    fireEvent.blur(within(pane).getByLabelText("Description"));
+    await waitFor(() => expect(prop({ kind: "column", table: "Sales", column: "Quantity" }, "description")).toBe("Units sold"));
+  });
+});
+
 describe("security roles and View as", () => {
   it("Manage roles saves a role; View as makes the report queries carry the roles", async () => {
     const a = await open();
