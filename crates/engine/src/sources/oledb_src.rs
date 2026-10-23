@@ -6,6 +6,7 @@
 //!   environment of the child process; the script itself is passed encoded.
 //! * The provider must be installed on this PC in the bitness of PowerShell (64 bit): Microsoft.ACE.OLEDB.*,
 //!   MSOLEDBSQL, SQLOLEDB, MSOLAP, and so on. A missing provider is reported with the provider's own message.
+//! * Analysis Services falls back to the ADOMD client library when the MSOLAP provider is not registered.
 //! * Windows only.
 
 use super::{clean_names, Cell, RawTable};
@@ -23,9 +24,36 @@ $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 $inv = [System.Globalization.CultureInfo]::InvariantCulture
 function Quote([string]$s) { if ($s -match '[",\r\n]') { return '"' + $s.Replace('"', '""') + '"' } return $s }
+# Analysis Services without the MSOLAP provider: the ADOMD client library (the same one Power BI Desktop and SSMS use),
+# found in the global assembly cache or in the installed Power BI Desktop package, loaded in place as a client.
+function Open-Adomd {
+  $conn = ($env:BIFORGE_CONN -replace '^\s*Provider=MSOLAP[^;]*;', '')
+  $path = $null
+  try { Add-Type -AssemblyName 'Microsoft.AnalysisServices.AdomdClient' } catch { }
+  if (-not ('Microsoft.AnalysisServices.AdomdClient.AdomdConnection' -as [type])) {
+    $pkg = Get-AppxPackage -Name '*PowerBIDesktop*' -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($pkg) {
+      $bin = Join-Path $pkg.InstallLocation 'bin'
+      $dll = Join-Path $bin 'Microsoft.PowerBI.AdomdClient.dll'
+      if (Test-Path $dll) {
+        $script:bin = $bin
+        [System.AppDomain]::CurrentDomain.add_AssemblyResolve({ param($s, $e) $f = Join-Path $script:bin (($e.Name -split ',')[0] + '.dll'); if (Test-Path $f) { return [System.Reflection.Assembly]::LoadFrom($f) }; return $null })
+        $asm = [System.Reflection.Assembly]::LoadFrom($dll)
+        $t = $asm.GetTypes() | Where-Object { $_.Name -eq 'AdomdConnection' } | Select-Object -First 1
+        if ($t) { return [Activator]::CreateInstance($t, @($conn)) }
+      }
+    }
+    throw "The 'MSOLAP' provider is not registered on the local machine, and no ADOMD client library was found (install the Analysis Services OLE DB provider, or Power BI Desktop)"
+  }
+  return New-Object Microsoft.AnalysisServices.AdomdClient.AdomdConnection($conn)
+}
 try {
-  $c = New-Object System.Data.OleDb.OleDbConnection($env:BIFORGE_CONN)
-  $c.Open()
+  try {
+    $c = New-Object System.Data.OleDb.OleDbConnection($env:BIFORGE_CONN)
+    $c.Open()
+  } catch {
+    if ($env:BIFORGE_CONN -match '^\s*Provider=MSOLAP' -and $_.Exception.Message -match 'not registered') { $c = Open-Adomd; $c.Open() } else { throw }
+  }
   if ($env:BIFORGE_MODE -eq 'tables') {
     $t = $c.GetOleDbSchemaTable([System.Data.OleDb.OleDbSchemaGuid]::Tables, $null)
     $w = New-Object System.IO.StreamWriter($env:BIFORGE_OUT, $false, (New-Object System.Text.UTF8Encoding($false)))
@@ -239,8 +267,9 @@ pub fn read_csv(spec: &SourceSpec, creds: &dyn CredentialStore, limit: Option<us
 pub fn list_tables(spec: &SourceSpec, creds: &dyn CredentialStore) -> Result<Vec<String>> {
     let conn = full_connection(spec, creds)?;
     if matches!(spec, SourceSpec::AnalysisServices { .. }) {
-        // a tabular model lists its tables through the schema rowset query of the engine
-        let bytes = run(&conn, "SELECT [TABLE_NAME] FROM $SYSTEM.DBSCHEMA_TABLES WHERE [TABLE_TYPE] = 'TABLE'", "rows", None)?;
+        // a tabular model lists its tables through the schema rowset query of the engine (found against a real Power BI
+        // Desktop instance: the model's tables are 'SYSTEM TABLE' rows, next to '$Name' internal ones that are skipped)
+        let bytes = run(&conn, "SELECT [TABLE_NAME] FROM $SYSTEM.DBSCHEMA_TABLES WHERE [TABLE_TYPE] = 'TABLE' OR [TABLE_TYPE] = 'SYSTEM TABLE'", "rows", None)?;
         let t = super::dispatch::parse_csv(&bytes);
         return Ok(t.rows.iter().filter_map(|r| r.first().and_then(super::to_text)).filter(|n| !n.starts_with('$')).collect());
     }
