@@ -52,6 +52,7 @@ const httpM: MApi = {
   folderQuery: (folder, extension, delimiter) => post("/m/folderQuery", { folder, extension, delimiter }),
   analyze: (queries, query) => post("/m/analyze", { queries, query }),
   preview: (queries, query, step, limit) => post("/m/preview", { queries, query, step, limit }),
+  profile: (queries, query, step, limit) => post("/m/profile", { queries, query, step, limit }),
   load: (queries, query, table) => post("/m/load", { queries, query, table }),
   queryKinds: (queries) => post("/m/queryKinds", { queries }),
 };

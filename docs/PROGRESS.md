@@ -378,3 +378,28 @@ BIForge uses the authorization-code flow with PKCE and a loopback redirect. The 
 2. You: rotate the pasted secrets; connect Google Drive in the app and run `cargo test -p biforge-publish --test storage_live`; open the Power BI report so I can run the Analysis Services connector; give the Cloudflare token for its live test.
 3. Phase 9 remainder (Count Rows, Detect Data Type, errors, Keep Duplicates, Parse, Statistics, Column From Examples, parameters, query groups, profiling, function queries) and checking the assumed M semantics against Desktop.
 4. More "(not drawn yet)" format properties: error bars, small multiples layout, secondary axis on combo charts, visual header buttons, x-axis reference lines, data label parts.
+
+## 2026-10-23 (session 6): v0.1.0 release, Analysis Services live, column profiling
+### v0.1.0 release (done)
+- **CI** had been red since the Python live test (session 5) because the runner has Python without pandas; `ci.yml` now installs pandas. The Transpose test mentioned in the request was already fixed in 1dd606e. CI for the pandas push: green.
+- **Release workflow** (`release-app.yml`): it already built `biforge-server.exe` and `biforge-cli.exe` itself on the runner (nothing depends on files staged on one PC). **Bug found by building locally:** the NSIS installer needs `BIFORGE_TOOLS_DIR`, which neither the workflow nor my shell set, so the NSIS bundle failed; the workflow now sets it. The MSI (WiX) built fine locally, so the "WiX path issue" did not recur. New jobs: **install-test** (installs the MSI with `ADDLOCAL=ALL` on the runner, checks the three files, launches the installed app, opens the sample project and checks the report through `app/e2e/install.mjs`, uninstalls and checks the files are gone) and **release** (creates the GitHub release only after that passes). I did not run the MSI install locally (it needs administrator rights); the runner did it.
+- Old `app-v0.1.0` release and tag deleted; `v0.1.0` tagged; run 39938188711: build, install-test and release all succeeded.
+- **Published release checked:** installers (setup.exe, MSI), `biforge-server.exe`, `biforge-cli.exe`, `latest.json`, `SHA256SUMS` and its signature, `winget-manifest.zip`, `demo.mp4`. `biforge-cli verify-release` with the public key from the repository: signature and hashes correct for all six files. The winget installer hash equals the SHA256SUMS entry. The updater endpoint (`releases/latest/download/latest.json`) answers 200 and its signature uses the same key id as the public key embedded in the app. **Not run:** an installed older version finding the update (there is no older build; this is the first release).
+- README rewritten in the style of ArtCraft's (centered header and tagline, demo, link bar, feature tables with thumbnails, downloads) with a "Why BIForge goes further" table that also says what BIForge lacks; screenshots and the demo video are real captures of the debug build driven by `app/e2e/media.mjs` (frames from the real window, joined by ffmpeg). Release notes (generated) show the GIF, three screenshots and the same section; `demo.mp4` is a release asset.
+- Not done: Windows code signing (SignPath application still pending), winget submission.
+
+### Analysis Services against Power BI Desktop (done)
+- Desktop was open. The **MSOLAP provider is not registered on this PC**, so the connector now falls back to the ADOMD client library (global assembly cache or the installed Desktop package, loaded in place). `analysis_services_live.rs` (skips when no instance) lists the model's tables, reads one and runs an EVALUATE query: passes. It found a real defect: Desktop lists the model's tables as `SYSTEM TABLE` rows, so the table list was empty; fixed. Not run: SSAS server, user/password sign-in, the MSOLAP provider itself.
+
+### Phase 9: column quality, distribution and profile (done)
+- `Engine::m_profile` (valid / empty / distinct / unique / min / max / average / standard deviation / 20 most frequent values per column over the first 1000 rows or all rows), Tauri command `m_profile`, View tab toggles, bars under the headers, a profile pane. Tests: engine, `profileText.test.ts`, `pq.test.tsx`, and a real-window flow (`app/e2e/pq.mjs`, added to `npm run e2e`). Error is always 0 (the query engine has no cell errors); no median or quartiles.
+- Decided against implementing Count Rows / Statistics / Replace-Keep-Remove Errors as ribbon buttons: the first two turn a query into a single value, which the preview and Apply do not support; the error ones have no meaning without cell errors. They stay marked not implemented.
+
+### Numbers
+- **Inventory: 916 Done-tested / 342 Partial / 1750 Not started of 3008** (last: 913 / 343 / 1752): Analysis Services and the three profile items.
+- Frontend 869 passed (1 skipped); Rust workspace passes; real window: pq.mjs 5/5 (the full chain was not rerun this session).
+
+### Next steps
+1. Phase 9 remainder: Detect Data Type, Keep Duplicates, Parse, Column From Examples, Duration, parameters, query groups, function queries; scalar-result queries (Count Rows, Statistics).
+2. Format properties still "not drawn yet": legend title, label parts and number formats, small multiples layout, error bars, secondary axis on combo charts, x-axis reference lines, visual header buttons, `visualTooltip`, `visualLink`.
+3. You: rotate the secrets pasted in session 4; connect Google Drive and run `storage_live`; give the Cloudflare token.

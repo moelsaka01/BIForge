@@ -1,7 +1,7 @@
 // Test double for MApi. It does not evaluate M: it understands the canonical `let` layout the real tools write
 // (four-space indented steps) well enough to exercise the editor's state handling, and returns tables that tests register.
 import type { ColumnInfo, RowPage, TableInfo } from "../data/types";
-import type { Applied, MApi, MDiagnostic, ParsedQuery, ParsedStep, StepEdit, StepResult, Transform } from "../queries/types";
+import type { Applied, ColumnProfile, MApi, MDiagnostic, ParsedQuery, ParsedStep, StepEdit, StepResult, Transform } from "../queries/types";
 
 export interface FakeTable {
   columns: ColumnInfo[];
@@ -123,6 +123,37 @@ export class FakeM implements MApi {
     const t = this.tables.get(query);
     if (!t) throw new Error(`The query "${query}" does not exist.`);
     return { columns: t.columns, rows: t.rows.slice(0, limit), total: t.rows.length };
+  };
+
+  profile = async (queries: Record<string, string>, query: string, step: string | null, limit: number | null): Promise<ColumnProfile[]> => {
+    this.calls.push(`profile:${query}:${step ?? "end"}:${limit ?? "all"}`);
+    const t = this.tables.get(query);
+    if (!t) throw new Error(`The query "${query}" does not exist.`);
+    const rows = limit === null ? t.rows : t.rows.slice(0, limit);
+    return t.columns.map((c, i) => {
+      const vals = rows.map((r) => r[i]);
+      const nonNull = vals.filter((v): v is string => v !== null && v !== "");
+      const counts = new Map<string | null, number>();
+      for (const v of vals) counts.set(v, (counts.get(v) ?? 0) + 1);
+      const nums = nonNull.map(Number).filter((n) => Number.isFinite(n));
+      const numeric = c.biType === "int64" || c.biType === "double" || c.biType === "decimal";
+      return {
+        name: c.name,
+        duckdbType: duckType(c.biType),
+        rows: rows.length,
+        valid: nonNull.length,
+        empty: rows.length - nonNull.length,
+        error: 0,
+        distinct: new Set(vals.filter((v) => v !== null)).size,
+        unique: [...counts.entries()].filter(([k, n]) => k !== null && n === 1).length,
+        min: nonNull.length ? [...nonNull].sort()[0] : null,
+        max: nonNull.length ? [...nonNull].sort().at(-1)! : null,
+        average: numeric && nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : null,
+        stdDev: null,
+        top: [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 20),
+        rowsLimited: limit !== null && t.rows.length > limit,
+      };
+    });
   };
 
   load = async (queries: Record<string, string>, query: string, table: string): Promise<TableInfo> => {

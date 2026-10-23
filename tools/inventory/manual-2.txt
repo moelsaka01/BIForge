@@ -229,7 +229,7 @@ D | Preview grid with column menus
 D | Advanced Editor
 D | Query Dependencies view
 N | Query groups (folders)
-N | Column quality, distribution, profile
+D | Column quality, distribution, profile
 N | Column profiling based on entire data set
 N | Parameters (manage)
 N | Data source settings
@@ -310,7 +310,7 @@ N | Statistics / Standard / Scientific / Trigonometry / Rounding / Information (
 N | Date / Time / Duration (new column)
 ### View tab
 N | Layout: Query Settings pane, formula bar, status bar, monospace, show whitespace
-N | Column quality / distribution / profile toggles
+D | Column quality / distribution / profile toggles
 N | Go to column
 N | Advanced editor / Query dependencies / Parameters / Data source settings
 ### Tools / Help tab
@@ -365,7 +365,7 @@ P | Google BigQuery (ODBC)
 P | Databricks (ODBC)
 D | Generic ODBC
 D | Generic OLE DB
-P | Analysis Services (local multidimensional/tabular)
+D | Analysis Services (local multidimensional/tabular)
 D | Custom SQL query text for any database connector
 P | Native query toggle
 ### Other

@@ -455,3 +455,26 @@ fn desktop_check_cases_give_what_the_readme_says() {
     // Table.Join of two tables that both have a column "k" is refused
     assert!(fails("let A = #table({\"k\"}, {{1}}), B = #table({\"k\",\"v\"}, {{1,\"z\"}}), J = Table.Join(A, {\"k\"}, B, {\"k\"}, JoinKind.LeftOuter) in J").contains("both tables"));
 }
+
+#[test]
+fn column_profile_counts_valid_empty_distinct_unique_and_the_top_values() {
+    let e = engine();
+    let m = r#"let S = #table({"n","s"}, {{1,"a"},{2,"a"},{2,"b"},{null,""},{4,null}}) in S"#;
+    let qs = queries(&[("Q", m)]);
+    let p = e.m_profile(&qs, "Q", None, None).unwrap();
+    assert_eq!(p.len(), 2);
+    let n = &p[0];
+    assert_eq!((n.rows, n.valid, n.empty, n.error, n.distinct, n.unique), (5, 4, 1, 0, 3, 2));
+    assert_eq!((n.min.as_deref(), n.max.as_deref()), (Some("1"), Some("4")));
+    assert!((n.average.unwrap() - 2.25).abs() < 1e-9);
+    assert!((n.std_dev.unwrap() - 1.2583057392117916).abs() < 1e-9);
+    assert_eq!(n.top[0], (Some("2".to_string()), 2));
+    let s = &p[1];
+    // text: empty text counts as empty, like null
+    assert_eq!((s.rows, s.valid, s.empty, s.distinct, s.unique), (5, 3, 2, 3, 2)); // unique: "b" and ""
+    assert_eq!(s.average, None);
+    assert_eq!(s.top[0], (Some("a".to_string()), 2));
+    // a limit reads only the first rows
+    let l = e.m_profile(&qs, "Q", None, Some(2)).unwrap();
+    assert_eq!((l[0].rows, l[0].rows_limited), (2, true));
+}

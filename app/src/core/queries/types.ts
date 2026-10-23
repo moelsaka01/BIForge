@@ -131,6 +131,26 @@ export type Transform =
   | { kind: "custom"; name: string; expr: string };
 
 /** The M engine and M text tools as the UI sees them. The real implementation calls Tauri commands. */
+/** Statistics of one column of a step (View > Column quality / distribution / profile); mirrors the engine's ColumnProfile. */
+export interface ColumnProfile {
+  name: string;
+  duckdbType: string;
+  rows: number;
+  valid: number;
+  empty: number;
+  /** Always 0: BIForge's query engine has no cell-level errors. */
+  error: number;
+  distinct: number;
+  unique: number;
+  min: string | null;
+  max: string | null;
+  average: number | null;
+  stdDev: number | null;
+  /** The most frequent values, most frequent first (null = a null value). */
+  top: [string | null, number][];
+  rowsLimited: boolean;
+}
+
 export interface MApi {
   parseQuery(text: string): Promise<ParsedQuery>;
   check(text: string): Promise<MDiagnostic[]>;
@@ -140,6 +160,8 @@ export interface MApi {
   folderQuery(folder: string, extension: string, delimiter: string): Promise<string>;
   analyze(queries: Record<string, string>, query: string): Promise<StepResult[]>;
   preview(queries: Record<string, string>, query: string, step: string | null, limit: number): Promise<RowPage>;
+  /** Column statistics of a step over its first `limit` rows (all rows when null). */
+  profile(queries: Record<string, string>, query: string, step: string | null, limit: number | null): Promise<ColumnProfile[]>;
   load(queries: Record<string, string>, query: string, table: string): Promise<TableInfo>;
   queryKinds(queries: Record<string, string>): Promise<Record<string, string>>;
 }

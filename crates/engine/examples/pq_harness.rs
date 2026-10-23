@@ -87,6 +87,7 @@ fn handle(engine: &Engine, creds: &MemoryCredentialStore, path: &str, v: &Value)
         "/m/folderQuery" => json!(folder_combine_query(&s(v, "folder")?, &s(v, "extension")?, &s(v, "delimiter")?)),
         "/m/analyze" => serde_json::to_value(engine.m_analyze(&queries(v)?, &s(v, "query")?).map_err(e)?).unwrap(),
         "/m/preview" => serde_json::to_value(engine.m_preview(&queries(v)?, &s(v, "query")?, v["step"].as_str(), v["limit"].as_u64().unwrap_or(1000) as usize).map_err(e)?).unwrap(),
+        "/m/profile" => serde_json::to_value(engine.m_profile(&queries(v)?, &s(v, "query")?, v["step"].as_str(), v["limit"].as_u64().map(|l| l as usize)).map_err(e)?).unwrap(),
         "/m/load" => serde_json::to_value(engine.m_load(&queries(v)?, &s(v, "query")?, &s(v, "table")?).map_err(e)?).unwrap(),
         "/m/queryKinds" => {
             let q = queries(v)?;

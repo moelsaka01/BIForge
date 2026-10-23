@@ -1,6 +1,6 @@
 //! Tauri wrappers for the Power Query editor: M text tools (no data needed) and query evaluation over the project store.
 use crate::data::DataService;
-use biforge_engine::{RowPage, TableInfo};
+use biforge_engine::{ColumnProfile, RowPage, TableInfo};
 use biforge_m::run::StepResult;
 use biforge_m::steps::{self, ParsedQuery};
 use biforge_m::transforms::{apply_transform, folder_combine_query, Applied, Transform};
@@ -69,6 +69,9 @@ impl DataService {
     pub fn m_preview(&self, queries: &BTreeMap<String, String>, query: &str, step: Option<&str>, limit: usize) -> Result<RowPage, String> {
         self.with_store(|e| e.m_preview(queries, query, step, limit.min(5000)).map_err(|e| e.to_string()))
     }
+    pub fn m_profile(&self, queries: &BTreeMap<String, String>, query: &str, step: Option<&str>, limit: Option<usize>) -> Result<Vec<ColumnProfile>, String> {
+        self.with_store(|e| e.m_profile(queries, query, step, limit).map_err(|e| e.to_string()))
+    }
     pub fn m_load(&self, queries: &BTreeMap<String, String>, query: &str, table: &str) -> Result<TableInfo, String> {
         self.with_store(|e| e.m_load(queries, query, table).map_err(|e| e.to_string()))
     }
@@ -114,6 +117,10 @@ pub fn m_preview(
     limit: usize,
 ) -> Result<RowPage, String> {
     state.m_preview(&queries, &query, step.as_deref(), limit)
+}
+#[tauri::command]
+pub fn m_profile(state: tauri::State<DataService>, queries: BTreeMap<String, String>, query: String, step: Option<String>, limit: Option<usize>) -> Result<Vec<ColumnProfile>, String> {
+    state.m_profile(&queries, &query, step.as_deref(), limit)
 }
 #[tauri::command]
 pub fn m_load(state: tauri::State<DataService>, queries: BTreeMap<String, String>, query: String, table: String) -> Result<TableInfo, String> {

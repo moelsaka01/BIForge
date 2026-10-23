@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { RowPage, TableInfo } from "../data/types";
-import type { Applied, MApi, MDiagnostic, ParsedQuery, StepEdit, StepResult, Transform } from "./types";
+import type { Applied, ColumnProfile, MApi, MDiagnostic, ParsedQuery, StepEdit, StepResult, Transform } from "./types";
 
 /** MApi backed by the Rust M engine through Tauri commands. */
 export const tauriM: MApi = {
@@ -12,6 +12,7 @@ export const tauriM: MApi = {
   folderQuery: (folder, extension, delimiter) => invoke<string>("m_folder_query", { folder, extension, delimiter }),
   analyze: (queries, query) => invoke<StepResult[]>("m_analyze", { queries, query }),
   preview: (queries, query, step, limit) => invoke<RowPage>("m_preview", { queries, query, step, limit }),
+  profile: (queries, query, step, limit) => invoke<ColumnProfile[]>("m_profile", { queries, query, step, limit }),
   load: (queries, query, table) => invoke<TableInfo>("m_load", { queries, query, table }),
   queryKinds: (queries) => invoke<Record<string, string>>("m_query_kinds", { queries }),
 };

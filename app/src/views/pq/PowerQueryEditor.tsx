@@ -11,6 +11,8 @@ import type { StepColumn } from "../../core/queries/types";
 import { Ribbon } from "./Ribbon";
 import { QueriesPane, StepsPane } from "./Panes";
 import { PreviewGrid, type HeaderMenuEntry } from "./PreviewGrid";
+import { ProfilePane } from "./ProfilePane";
+import { useProfiles } from "./useProfiles";
 import { FormDialog } from "./FormDialog";
 import { AdvancedEditor } from "./AdvancedEditor";
 import { DependenciesView } from "./DependenciesView";
@@ -56,6 +58,11 @@ export function PowerQueryEditor({ session, registry, factory = createMMonacoEdi
   const [showSettings, setShowSettings] = useState(true);
   // Options > Power Query Editor > Display the formula bar sets the starting state
   const [showFormula, setShowFormula] = useState(session.shell.settings.getSnapshot().options["pq.formulaBar"] !== false);
+  // View > Data Preview: column quality, column distribution, column profile (off until switched on)
+  const [showQuality, setShowQuality] = useState(false);
+  const [showDistribution, setShowDistribution] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
+  const [profileAll, setProfileAll] = useState(false);
   const [message, setMessage] = useState<{ intent: "error" | "info"; text: string } | null>(null);
   const [kinds, setKinds] = useState<Record<string, string>>({});
   const [otherCols, setOtherCols] = useState<Record<string, string[]>>({});
@@ -64,6 +71,7 @@ export function PowerQueryEditor({ session, registry, factory = createMMonacoEdi
 
   const activeName = snap.step ?? data.active;
   const activeStep = data.steps.find((s) => s.name === activeName);
+  const prof = useProfiles(m!, snap.selected, snap.step, texts, showQuality || showDistribution || showProfile, profileAll, snap.version, reloadKey, !!data.page && !data.previewError);
   useEffect(() => setFormula(activeStep?.expr ?? ""), [activeStep?.expr, snap.selected, activeName]);
   useEffect(() => {
     setSelCols((c) => c.filter((n) => data.columns.some((x) => x.name === n)));
@@ -154,6 +162,9 @@ export function PowerQueryEditor({ session, registry, factory = createMMonacoEdi
       else if (a.what === "dependencies") setDeps(true);
       else if (a.what === "settings") setShowSettings((v) => !v);
       else if (a.what === "formulaBar") setShowFormula((v) => !v);
+      else if (a.what === "quality") setShowQuality((v) => !v);
+      else if (a.what === "distribution") setShowDistribution((v) => !v);
+      else if (a.what === "profile") setShowProfile((v) => !v);
       else if (a.what === "refresh") setReloadKey((k) => k + 1);
       else if (a.what === "close") {
         if (session.queries.dirty) setConfirmClose(true);
@@ -235,7 +246,7 @@ export function PowerQueryEditor({ session, registry, factory = createMMonacoEdi
         <span>Power Query Editor — {session.store.project?.name}</span>
         <span>{changedCount > 0 ? `${changedCount} change${changedCount === 1 ? "" : "s"} not applied` : "No unapplied changes"}</span>
       </div>
-      <Ribbon ctx={rc(selCols)} onItem={(i) => onItem(i)} on={new Set([showSettings ? "v.settings" : "", showFormula ? "v.formula" : ""])} />
+      <Ribbon ctx={rc(selCols)} onItem={(i) => onItem(i)} on={new Set([showSettings ? "v.settings" : "", showFormula ? "v.formula" : "", showQuality ? "v.quality" : "", showDistribution ? "v.distribution" : "", showProfile ? "v.profile" : ""])} />
       {message && (
         <MessageBar intent={message.intent}>
           <MessageBarBody>{message.text}</MessageBarBody>
@@ -273,7 +284,8 @@ export function PowerQueryEditor({ session, registry, factory = createMMonacoEdi
             </MessageBar>
           )}
           {!snap.selected && <div style={{ color: "#605e5c" }}>There are no queries. Use New Source on the Home tab.</div>}
-          {data.page && !data.previewError && <PreviewGrid page={data.page} columns={data.columns} selected={selCols} onSelect={selectColumn} menu={headerMenu} onMenu={onHeaderMenu} />}
+          {data.page && !data.previewError && <PreviewGrid page={data.page} columns={data.columns} selected={selCols} onSelect={selectColumn} menu={headerMenu} onMenu={onHeaderMenu} profiles={prof.profiles} showQuality={showQuality} showDistribution={showDistribution} />}
+          {showProfile && data.page && !data.previewError && <ProfilePane profile={selCols.length ? (prof.profiles[selCols[selCols.length - 1]] ?? null) : null} all={profileAll} onAll={setProfileAll} loading={prof.loading} error={prof.error} />}
           <div role="status" style={{ fontSize: 12, color: "#605e5c" }}>
             {data.page && !data.previewError ? `${data.columns.length} columns, ${total > data.page.rows.length ? `${data.page.rows.length}+ (of ${total.toLocaleString("en-US")})` : total.toLocaleString("en-US")} rows — the preview shows at most ${data.page.rows.length > 0 ? "1000" : "1000"} rows` : ""}
           </div>

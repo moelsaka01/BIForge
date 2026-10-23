@@ -96,6 +96,7 @@ fn main() {
             pq::m_folder_query,
             pq::m_analyze,
             pq::m_preview,
+            pq::m_profile,
             pq::m_load,
             pq::m_query_kinds,
             data::engine_open_store,

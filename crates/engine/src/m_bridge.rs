@@ -2,7 +2,7 @@
 //! and the entry points the app uses (analyze steps, preview a step, load a query into a table).
 use crate::error::{EngineError, Result};
 use crate::sources::{self, q};
-use crate::types::{BiType, ColumnInfo, RowPage, TableInfo};
+use crate::types::{BiType, ColumnInfo, ColumnProfile, RowPage, TableInfo};
 use crate::Engine;
 use biforge_m::run::{ColumnOut, StepResult, TableSql};
 use biforge_m::{Backend, SourceRequest};
@@ -225,6 +225,48 @@ impl Engine {
         };
         let columns = t.columns.iter().map(col_info).collect();
         Ok(RowPage { columns, rows, total })
+    }
+
+    /// Statistics of every column of a step, over its first `limit` rows (all rows when `limit` is None): Power Query's
+    /// column quality, distribution and profile.
+    pub fn m_profile(&self, queries: &BTreeMap<String, String>, query: &str, step: Option<&str>, limit: Option<usize>) -> Result<Vec<ColumnProfile>> {
+        let t = self.m_table_sql(queries, query, step, limit)?;
+        let mut out = Vec::new();
+        for c in &t.columns {
+            let col = q(&c.name);
+            let bi = BiType::from_duckdb(&c.duckdb_type);
+            let text = bi == BiType::String;
+            let numeric = matches!(bi, BiType::Int64 | BiType::Double | BiType::Decimal);
+            let src = format!("(SELECT {col} AS v FROM ({}) AS p) AS s", t.sql);
+            let empty_expr = if text { "count(*) FILTER (WHERE v IS NULL OR CAST(v AS VARCHAR) = '')" } else { "count(*) FILTER (WHERE v IS NULL)" };
+            let stats = if numeric { "avg(CAST(v AS DOUBLE)), stddev_samp(CAST(v AS DOUBLE))" } else { "CAST(NULL AS DOUBLE), CAST(NULL AS DOUBLE)" };
+            let sql = format!(
+                "SELECT count(*), {empty_expr}, count(DISTINCT v), CAST(min(v) AS VARCHAR), CAST(max(v) AS VARCHAR), {stats} FROM {src}"
+            );
+            let (rows, empty, distinct, min, max, average, std_dev) = self.conn.query_row(&sql, [], |r| {
+                Ok((r.get::<_, i64>(0)?, r.get::<_, i64>(1)?, r.get::<_, i64>(2)?, r.get::<_, Option<String>>(3)?, r.get::<_, Option<String>>(4)?, r.get::<_, Option<f64>>(5)?, r.get::<_, Option<f64>>(6)?))
+            })?;
+            let unique = self.conn.query_row(&format!("SELECT count(*) FROM (SELECT v FROM {src} WHERE v IS NOT NULL GROUP BY v HAVING count(*) = 1)"), [], |r| r.get::<_, i64>(0))?;
+            let mut st = self.conn.prepare(&format!("SELECT CAST(v AS VARCHAR), count(*) AS c FROM {src} GROUP BY v ORDER BY c DESC, v LIMIT 20"))?;
+            let top = st.query_map([], |r| Ok((r.get::<_, Option<String>>(0)?, r.get::<_, i64>(1)? as u64)))?.collect::<std::result::Result<Vec<_>, _>>()?;
+            out.push(ColumnProfile {
+                name: c.name.clone(),
+                duckdb_type: c.duckdb_type.clone(),
+                rows: rows as u64,
+                valid: (rows - empty) as u64,
+                empty: empty as u64,
+                error: 0,
+                distinct: distinct as u64,
+                unique: unique as u64,
+                min,
+                max,
+                average,
+                std_dev,
+                top,
+                rows_limited: limit.is_some_and(|l| rows as usize >= l),
+            });
+        }
+        Ok(out)
     }
 
     /// Runs the query and stores its result as table `name` (replacing the old data only when the query succeeds).

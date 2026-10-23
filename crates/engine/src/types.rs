@@ -331,3 +331,28 @@ pub struct RelationshipHint {
     pub to_unique: bool,
     pub cardinality: Cardinality,
 }
+
+/// Column statistics of a Power Query step (View > Column quality / distribution / profile). Counts are over the
+/// rows read (the first `limit` rows when `rows_limited`, else all). `error` is always 0: BIForge's query engine has
+/// no cell-level errors (a failed conversion fails the step).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ColumnProfile {
+    pub name: String,
+    pub duckdb_type: String,
+    pub rows: u64,
+    pub valid: u64,
+    /// Null values, and for text columns also empty text.
+    pub empty: u64,
+    pub error: u64,
+    pub distinct: u64,
+    /// Values that occur exactly once.
+    pub unique: u64,
+    pub min: Option<String>,
+    pub max: Option<String>,
+    pub average: Option<f64>,
+    pub std_dev: Option<f64>,
+    /// The most frequent values with their counts, most frequent first (null shown as None).
+    pub top: Vec<(Option<String>, u64)>,
+    pub rows_limited: bool,
+}

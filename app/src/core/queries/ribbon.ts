@@ -18,7 +18,7 @@ export type RibbonAction =
   | { type: "transform"; build: (c: RibbonContext) => Transform }
   | { type: "dialog"; dialog: DialogKind }
   | { type: "command"; id: string; args?: unknown }
-  | { type: "ui"; what: "advanced" | "dependencies" | "settings" | "formulaBar" | "refresh" | "close" }
+  | { type: "ui"; what: "advanced" | "dependencies" | "settings" | "formulaBar" | "refresh" | "close" | "quality" | "distribution" | "profile" }
   | { type: "none" };
 
 export type Need = "none" | "table" | "column" | "columns" | "textColumn" | "numberColumn";
@@ -431,7 +431,11 @@ export const RIBBON: RibbonTab[] = [
       {
         id: "dataPreview",
         label: "Data Preview",
-        items: [todo("v.quality", "Column quality", "none"), todo("v.distribution", "Column distribution", "none"), todo("v.profile", "Column profile", "none")],
+        items: [
+          { id: "v.quality", label: "Column quality", need: "none", action: { type: "ui", what: "quality" } },
+          { id: "v.distribution", label: "Column distribution", need: "none", action: { type: "ui", what: "distribution" } },
+          { id: "v.profile", label: "Column profile", need: "none", action: { type: "ui", what: "profile" } },
+        ],
       },
       {
         id: "advanced",

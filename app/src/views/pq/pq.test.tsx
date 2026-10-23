@@ -233,6 +233,36 @@ describe("Power Query editor", () => {
     await waitFor(() => expect(m.calls).toContain("transform:merge:end"));
   });
 
+  it("View > Column quality, distribution and profile show statistics of the selected step", async () => {
+    const { m } = await setup();
+    fireEvent.click(screen.getByRole("tab", { name: "View" }));
+    // nothing is calculated until one of the three views is switched on
+    expect(m.calls.some((c) => c.startsWith("profile:"))).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: "Column quality" }));
+    await waitFor(() => expect(m.calls).toContain("profile:Orders:end:1000"));
+    // Score has one null of three rows
+    expect((await screen.findByLabelText(/^Quality of Score/)).getAttribute("aria-label")).toBe("Quality of Score: Valid 67%, Error 0%, Empty 33%");
+    expect(screen.getByLabelText(/^Quality of Id/).getAttribute("aria-label")).toBe("Quality of Id: Valid 100%, Error 0%, Empty 0%");
+    expect(screen.queryByLabelText(/^Distribution of/)).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Column distribution" }));
+    expect((await screen.findByLabelText(/^Distribution of Name/)).getAttribute("aria-label")).toBe("Distribution of Name: 3 distinct, 3 unique");
+    // the profile pane waits for a selected column, then lists its statistics and values
+    fireEvent.click(screen.getByRole("button", { name: "Column profile" }));
+    expect((await screen.findByLabelText("Column profile")).textContent).toContain("Select a column");
+    fireEvent.click(headerOf("Score"));
+    const stats = within(await screen.findByLabelText("Column statistics"));
+    expect(stats.getByText("Empty").nextElementSibling?.textContent).toBe("1");
+    expect(stats.getByText("Average").nextElementSibling?.textContent).toBe("4.75");
+    expect(screen.getByLabelText("Value distribution").textContent).toContain("null");
+    expect(screen.getByLabelText("Column profile").textContent).toContain("based on top 1000 rows");
+    // the whole data set on request
+    fireEvent.click(screen.getByRole("switch", { name: /entire data set/ }));
+    await waitFor(() => expect(m.calls).toContain("profile:Orders:end:all"));
+    // switching all three off stops asking
+    for (const n of ["Column quality", "Column distribution", "Column profile"]) fireEvent.click(screen.getByRole("button", { name: n }));
+    await waitFor(() => expect(screen.queryByLabelText(/^Quality of/)).toBeNull());
+  });
+
   it("the dependency view draws queries and what uses them", async () => {
     const { registry } = await setup();
     await registry.execute("query.add", { name: "Lookup", text: "let\n    Source = 1\nin\n    Source", loaded: false });
