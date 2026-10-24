@@ -62,3 +62,17 @@ fn errors_say_what_is_missing() {
     assert!(e.query("EVALUATE ROW(\"v\", OFFSET(1, ORDERBY(T[M])))").unwrap_err().message.contains("relation"));
     assert!(e.query("EVALUATE ROW(\"v\", ORDERBY(T[M]))").unwrap_err().message.contains("window function"));
 }
+
+#[test]
+fn matchby_names_the_columns_that_identify_the_current_row() {
+    let e = engine();
+    let q = "EVALUATE SUMMARIZECOLUMNS(T[Region], T[M], \"prev\", CALCULATE([Total], OFFSET(-1, ALLSELECTED(T[Region], T[M]), ORDERBY(T[M]), PARTITIONBY(T[Region]), MATCHBY(T[M])))) ORDER BY T[Region], T[M]";
+    // SUMMARIZECOLUMNS leaves out the rows where the only measure is blank (the first month of each region)
+    assert_eq!(
+        table(&e, q),
+        rows(&[&["East", "2", "10"], &["East", "3", "30"], &["East", "4", "20"], &["West", "2", "5"]])
+    );
+    // outside a window function it is refused with its name
+    let err = e.query("EVALUATE ROW(\"x\", MATCHBY(T[M]))").unwrap_err();
+    assert!(err.message.contains("MATCHBY"), "{}", err.message);
+}

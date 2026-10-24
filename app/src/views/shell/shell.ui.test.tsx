@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import * as info from "../../core/info";
 import { resolveTheme } from "../../core/report/theme";
@@ -535,6 +537,17 @@ describe("title bar", () => {
     expect(a.shell.settings.getSnapshot().theme).toBe("dark");
     expect(JSON.parse(a.storage.getItem(SETTINGS_KEY)!).theme).toBe("dark");
     expect(screen.getByRole("button", { name: "Switch to the light theme" })).toBeTruthy();
+  });
+
+  it("the title bar is the window's drag region, and the window has a minimum size (tauri.conf.json)", async () => {
+    const a = makeApp();
+    render(a.element);
+    expect(screen.getByRole("banner").hasAttribute("data-tauri-drag-region")).toBe(true);
+    const conf = JSON.parse(readFileSync(resolve(__dirname, "../../../src-tauri/tauri.conf.json"), "utf8"));
+    const w = conf.app.windows[0];
+    expect(w.decorations).toBe(false);
+    expect(w.minWidth).toBeGreaterThanOrEqual(800);
+    expect(w.minHeight).toBeGreaterThanOrEqual(500);
   });
 
   it("has window buttons when the app runs in a window, and Close goes through Exit", async () => {

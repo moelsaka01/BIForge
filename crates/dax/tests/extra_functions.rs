@@ -89,3 +89,14 @@ fn isinscope_tells_a_group_by_column_from_a_filter() {
     assert_eq!(one(&e, "EVALUATE ROW(\"s\", CALCULATE(IF(ISINSCOPE(Emp[Name]), \"in\", \"out\"), Emp[Name] = \"Ann\"))"), Value::str("out"));
     assert_eq!(one(&e, "EVALUATE ROW(\"s\", IF(ISINSCOPE(Emp[Name]), \"in\", \"out\"))"), Value::str("out"));
 }
+
+#[test]
+fn isempty_and_columnstatistics() {
+    let e = engine();
+    assert_eq!(one(&e, "EVALUATE ROW(\"v\", ISEMPTY(Emp))").to_text(), "FALSE");
+    assert_eq!(one(&e, "EVALUATE ROW(\"v\", ISEMPTY(FILTER(Emp, Emp[Id] > 100)))").to_text(), "TRUE");
+    // Emp: Id 1, 2, 5, 7 (4 distinct values, longest text 1 character)
+    let t = &e.query("EVALUATE FILTER(COLUMNSTATISTICS(), [Table Name] = \"Emp\" && [Column Name] = \"Id\")").unwrap()[0];
+    let row: Vec<String> = t.rows[0].iter().map(|v| v.to_text()).collect();
+    assert_eq!(row, vec!["Emp", "Id", "1", "7", "4", "1"]);
+}

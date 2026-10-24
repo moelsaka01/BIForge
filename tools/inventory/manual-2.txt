@@ -114,8 +114,8 @@ N | Select related tables
 N | Bulk edit of properties (multi-select)
 D | Hierarchies in cards
 D | Display folders in cards
-D | Calculation group cards
-D | Field parameter cards
+P | Calculation group cards
+P | Field parameter cards
 N | Context menus (Delete, Hide, Rename, Add to layout)
 N | Auto-create relationships
 N | Manage relationships dialog (grid, autodetect)
@@ -577,7 +577,7 @@ N | Esc exit visual
 N | Enter slicer control
 N | F1 help
 ### Text editors
-D | Monaco shortcuts in DAX, M and TMDL editors (Ctrl+Space, Ctrl+F, Ctrl+/ ...)
+P | Monaco shortcuts in DAX, M and TMDL editors (Ctrl+Space, Ctrl+F, Ctrl+/ ...)
 D | Ctrl+Enter / F5 run query in DAX query view
 N | F2 rename in Model and Table view
 D | Print Screen / system keys never intercepted (tested)

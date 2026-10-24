@@ -137,3 +137,22 @@ describe("Style preset", () => {
     await waitFor(() => expect((frame().querySelector("[data-container-look]") ?? frame()).getAttribute("style")).not.toMatch(/box-shadow/));
   });
 });
+
+describe("Size and position", () => {
+  it("the General tab writes a typed position and size back to the visual in one step", async () => {
+    const t = setup();
+    await t.run("report.visual.add", { type: "clusteredColumnChart", fields: [{ role: "Category", field: Cat }, { role: "Y", field: Qty }] });
+    render(<t.Host />);
+    await select(t.visual().name);
+    fireEvent.click(await screen.findByRole("tab", { name: "Format visual" }));
+    fireEvent.click(await screen.findByRole("tab", { name: "General" }));
+    const header = await screen.findByRole("button", { name: "Size and position" });
+    if (header.getAttribute("aria-expanded") === "false") fireEvent.click(header);
+    const width = (await screen.findByLabelText("Width")) as HTMLInputElement;
+    fireEvent.change(width, { target: { value: "333" } });
+    fireEvent.blur(width);
+    await waitFor(() => expect(t.visual().position.width).toBe(333));
+    await t.run("edit.undo");
+    await waitFor(() => expect(t.visual().position.width).not.toBe(333));
+  });
+});

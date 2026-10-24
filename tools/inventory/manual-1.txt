@@ -213,8 +213,8 @@ N | New / Edit / Hide fields / Templates / Add function
 ## 12. Report canvas and page features
 ### Canvas
 D | Pages and page tabs: add, rename, reorder, duplicate, delete, hide
-D | Page size (16:9, 4:3, Letter, Tooltip, Custom)
-D | Page background
+P | Page size (16:9, 4:3, Letter, Tooltip, Custom)
+P | Page background
 D | Visual frames: drag, resize (8 handles), nudge, delete, z-order, duplicate
 D | Zoom: fit, 50%, 75%, 100%, 150%
 D | Multi-selection with rubber band and Shift/Ctrl click
