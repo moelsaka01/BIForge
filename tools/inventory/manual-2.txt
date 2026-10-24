@@ -417,7 +417,7 @@ N | Model language
 N | Locale for import
 ### Updates / Usage data / Diagnostics
 N | Updates notification (local build only)
-N | Usage data (no telemetry in BIForge; the page states this)
+D | Usage data (no telemetry in BIForge; the page states this)
 N | Diagnostic: enable tracing
 N | Diagnostic: trace folder location and open
 N | Diagnostic: crash dump collection

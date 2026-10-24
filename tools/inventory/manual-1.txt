@@ -7,7 +7,7 @@ D | Options and settings entry
 D | About entry
 P | Data-source cards: Blank report, Excel workbook, Get data from other sources
 D | Card: SQL Server
-N | Card: Learn with sample data (own sample project)
+D | Card: Learn with sample data (own sample project)
 D | Collapsible Recommended section with tip carousel (original tips)
 D | Recent list: keyword filter, date filter, remove entry
 D | Missing recent project reports the error and can be removed

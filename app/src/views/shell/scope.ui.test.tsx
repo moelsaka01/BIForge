@@ -128,6 +128,18 @@ describe("File menu (backstage)", () => {
 });
 
 describe("Options dialog", () => {
+  it("the Usage Data page states that BIForge collects nothing and sends nothing over the network, and offers no switch", async () => {
+    const a = makeApp();
+    render(a.element);
+    await openProject(a);
+    await act(async () => void a.registry.execute("app.options"));
+    const dlg = await screen.findByRole("dialog", { name: "Options" });
+    fireEvent.click(within(dlg).getAllByRole("tab").find((t) => t.getAttribute("data-page") === "g.usage")!);
+    const panel = within(dlg).getByRole("tabpanel", { name: "Usage Data" });
+    expect(panel.textContent).toContain("collects no usage data and sends nothing over the network");
+    expect(within(panel).queryAllByRole("checkbox")).toHaveLength(0);
+  });
+
   it("lists every page of GLOBAL and CURRENT FILE; each page opens with its settings, and unimplemented ones say so", async () => {
     const a = makeApp();
     render(a.element);
