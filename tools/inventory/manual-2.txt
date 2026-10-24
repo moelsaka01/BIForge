@@ -97,7 +97,7 @@ N | Table header menu (New column, rename, copy table)
 P | Copy table / copy values to clipboard
 N | Data category and format display
 N | Calculated column editing in grid
-N | Locale-formatted dates
+D | Locale-formatted dates
 ## 15. Model view
 D | Table cards in a grid
 D | Drag to create relationships

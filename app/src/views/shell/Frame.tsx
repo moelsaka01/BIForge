@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { Tab, TabList } from "@fluentui/react-components";
 import { listRelationships } from "../../core/model/relationships";
-import { listTables } from "../../core/model/ops";
+import { getModelCulture, listTables } from "../../core/model/ops";
 import { resolveTheme, themeToJson } from "../../core/report/theme";
 import { activePageName, listPageNames, parsePage, parseVisual, visualKey } from "../../core/report/visualDoc";
 import { visibleTabs, ribbonFor, type RibbonCtx, type RibbonTab } from "../../core/shell/ribbon";
@@ -134,7 +134,7 @@ function ViewBody({ spec, onScale }: { spec: ShellSpec; onScale(s: number): void
         </div>
       );
     case "data":
-      return withData(session.engine ? <DataView engine={session.engine} table={dataTable} reloadKey={sess.dataEpoch + sess.dataTables.length} /> : <div className="empty-note">The data engine is not available.</div>);
+      return withData(session.engine ? <DataView engine={session.engine} table={dataTable} reloadKey={sess.dataEpoch + sess.dataTables.length} culture={doc.project ? (getModelCulture(doc.project) ?? undefined) : undefined} /> : <div className="empty-note">The data engine is not available.</div>);
     case "model":
       return withData(
         <ModelView

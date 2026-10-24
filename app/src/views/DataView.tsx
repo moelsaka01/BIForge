@@ -46,10 +46,12 @@ export interface DataViewProps {
   table: string | null;
   /** Changes whenever the table's data was refreshed, so the grid reloads. */
   reloadKey: number;
+  /** The model language: dates are written the way this culture writes them. Without it they show as the engine sends them. */
+  culture?: string;
 }
 
 /** Virtualized, read-only data grid. Rows are fetched from the engine page by page; only visible rows are rendered. */
-export function DataView({ engine, table, reloadKey }: DataViewProps) {
+export function DataView({ engine, table, reloadKey, culture }: DataViewProps) {
   const [info, setInfo] = useState<TableInfo | null | undefined>(undefined);
   const [sort, setSort] = useState<SortSpec | null>(null);
   const [scrollTop, setScrollTop] = useState(0);
@@ -213,7 +215,7 @@ export function DataView({ engine, table, reloadKey }: DataViewProps) {
                     role="gridcell"
                     style={{ ...cellBox(isNumeric(c.biType), widthOf(c.name)), lineHeight: `${ROW_HEIGHT}px` }}
                   >
-                    {row ? formatCell(row[j], c.biType) : "…"}
+                    {row ? formatCell(row[j], c.biType, culture) : "…"}
                   </div>
                 ))}
               </div>

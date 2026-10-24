@@ -36,6 +36,14 @@ describe("DataView", () => {
     expect(screen.getAllByText("Text").length).toBe(1);
   });
 
+  it("shows dates the way the model language writes them", async () => {
+    const e = new FakeEngine();
+    e.tables.set("T", { columns: [col("when", "dateTime")], rows: [["2024-05-06"], ["2024-12-31 23:59:59"]] });
+    render(<DataView engine={e} table="T" reloadKey={0} culture="de-DE" />);
+    await screen.findByText("6.5.2024");
+    expect(screen.getByText(/31\.12\.2024/)).toBeTruthy();
+  });
+
   it("scrolling loads and shows later rows", async () => {
     const e = bigEngine(100_000);
     render(<DataView engine={e} table="Big" reloadKey={0} />);

@@ -291,6 +291,19 @@ describe("workspace", () => {
     }
   });
 
+  it("the Table view writes dates in the model language of the file", async () => {
+    const a = makeApp();
+    a.engine.tables.set("Sales", { columns: [col("OrderDate", "dateTime")], rows: [["2024-05-06"]] });
+    render(a.element);
+    await openProject(a);
+    await act(async () => void a.registry.execute("model.setCulture", { culture: "de-DE" }));
+    await act(async () => void a.shell.selectTable("Sales"));
+    fireEvent.click(screen.getByRole("button", { name: "Table view" }));
+    expect(await screen.findByText("6.5.2024")).toBeTruthy();
+    await act(async () => void a.registry.execute("model.setCulture", { culture: "en-US" }));
+    expect(await screen.findByText("5/6/2024")).toBeTruthy();
+  });
+
   it("the page arrows go to the previous and the next page and are disabled at the ends", async () => {
     const a = makeApp();
     render(a.element);

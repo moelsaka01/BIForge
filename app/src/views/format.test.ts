@@ -37,3 +37,21 @@ describe("default number format (Power BI General)", () => {
     expect(formatCell("1.0", "string")).toBe("1.0");
   });
 });
+
+describe("dates in the model's language", () => {
+  it("are written the way the culture writes them, with the time when there is one", () => {
+    expect(formatCell("2024-05-06", "dateTime", "en-US")).toBe("5/6/2024");
+    expect(formatCell("2024-05-06", "dateTime", "de-DE")).toBe("6.5.2024");
+    expect(formatCell("2024-05-06", "dateTime", "ja-JP")).toBe("2024/5/6");
+    expect(formatCell("2024-05-06 13:45:30", "dateTime", "en-US")).toBe("5/6/2024 1:45:30 PM");
+    expect(formatCell("2024-05-06 13:45:30.123456", "dateTime", "de-DE")).toContain("13:45:30");
+  });
+
+  it("show as sent without a culture, and anything that is not a date stays as it is", () => {
+    expect(formatCell("2024-05-06", "dateTime")).toBe("2024-05-06");
+    expect(formatCell("not a date", "dateTime", "de-DE")).toBe("not a date");
+    expect(formatCell(null, "dateTime", "de-DE")).toBe("");
+    expect(formatCell("2024-05-06", "string", "de-DE")).toBe("2024-05-06");
+    expect(formatCell("2024-05-06", "dateTime", "xx-invalid-culture-name-zzz")).toBe("2024-05-06");
+  });
+});
