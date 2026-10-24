@@ -128,7 +128,7 @@ D | Result tables
 N | Multiple query tabs
 N | Query tab rename, save, open .dax files
 N | Run selection
-N | Quick queries from a table, column or measure (EVALUATE sample, summarize, TOPN...)
+D | Quick queries from a table, column or measure (EVALUATE sample, summarize, TOPN...)
 N | Update model with measure/column/table changes from a query (DEFINE blocks to model)
 D | Format query
 N | Find and replace

@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { quickQueries, type QuickTarget } from "../core/dax/quickQueries";
+import { ContextMenu } from "./report/ContextMenu";
 import { Button, Input, Tree, TreeItem, TreeItemLayout } from "@fluentui/react-components";
 import type { Project } from "../core/model/types";
 import { listTables } from "../core/model/ops";
@@ -26,6 +28,8 @@ export interface DataPaneProps {
   onRefreshAll(): void;
   onImport(): void;
   canImport: boolean;
+  /** Right-click > a quick query: the DAX text to put in the query view. */
+  onQuickQuery?(text: string): void;
 }
 
 const typeGlyph = (t: string | null) =>
@@ -34,6 +38,7 @@ const typeGlyph = (t: string | null) =>
 /** Field list: tables, their columns and measures, with search. Contains no logic beyond filtering and display. */
 export function DataPane(p: DataPaneProps) {
   const [q, setQ] = useState("");
+  const [menu, setMenu] = useState<{ x: number; y: number; target: QuickTarget } | null>(null);
   const needle = q.trim().toLowerCase();
   const loaded = new Set(p.dataTables.map((t) => t.toLowerCase()));
   const tables = listTables(p.project)
@@ -50,7 +55,26 @@ export function DataPane(p: DataPaneProps) {
     .filter((t) => t.show && !(p.fieldUse && getProperty(p.project, { kind: "table", table: t.name }, "isHidden") === true));
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6, padding: 8, height: "100%", overflow: "auto" }} aria-label="Data pane">
+    <div
+      style={{ display: "flex", flexDirection: "column", gap: 6, padding: 8, height: "100%", overflow: "auto" }}
+      aria-label="Data pane"
+      onContextMenu={(e) => {
+        const el = (e.target as HTMLElement).closest<HTMLElement>("[data-qq]");
+        if (!el || !p.onQuickQuery) return;
+        e.preventDefault();
+        const kind = el.dataset.qq as QuickTarget["kind"];
+        const target = (kind === "table" ? { kind, table: el.dataset.table! } : { kind, table: el.dataset.table!, name: el.dataset.name! }) as QuickTarget;
+        setMenu({ x: e.clientX, y: e.clientY, target });
+      }}
+    >
+      {menu && (
+        <ContextMenu
+          x={menu.x}
+          y={menu.y}
+          onClose={() => setMenu(null)}
+          items={quickQueries(menu.target).map((qq) => ({ label: qq.label, onClick: () => p.onQuickQuery?.(qq.text) }))}
+        />
+      )}
       <Input size="small" placeholder="Search" aria-label="Search fields" value={q} onChange={(_, d) => setQ(d.value)} />
       <div style={{ display: "flex", gap: 4 }}>
         <Button size="small" disabled={!p.canImport} onClick={p.onImport}>
@@ -70,7 +94,7 @@ export function DataPane(p: DataPaneProps) {
                 onClick={() => p.onSelect(t.name)}
                 style={{ fontWeight: p.selected === t.name ? 700 : 400 }}
               >
-                {t.name}
+                <span data-qq="table" data-table={t.name}>{t.name}</span>
                 {refreshable && !hasData ? " (no data loaded)" : ""}
                 {refreshable && (
                   <Button
@@ -135,7 +159,9 @@ export function DataPane(p: DataPaneProps) {
                   return (
                     <TreeItem key={`c-${c.name}`} itemType="leaf" value={`${t.name}.${c.name}`}>
                       <TreeItemLayout>
-                        <FieldLabel p={p} field={{ kind: "column", table: t.name, name: c.name }} glyph={typeGlyph(c.dataType)} />
+                        <span data-qq="column" data-table={t.name} data-name={c.name}>
+                          <FieldLabel p={p} field={{ kind: "column", table: t.name, name: c.name }} glyph={typeGlyph(c.dataType)} />
+                        </span>
                       </TreeItemLayout>
                     </TreeItem>
                   );
@@ -143,7 +169,9 @@ export function DataPane(p: DataPaneProps) {
                 {t.measures.map((m) => (
                   <TreeItem key={`m-${m.name}`} itemType="leaf" value={`${t.name}.[${m.name}]`}>
                     <TreeItemLayout>
-                      <FieldLabel p={p} field={{ kind: "measure", table: t.name, name: m.name }} glyph="fx" />
+                      <span data-qq="measure" data-table={t.name} data-name={m.name}>
+                        <FieldLabel p={p} field={{ kind: "measure", table: t.name, name: m.name }} glyph="fx" />
+                      </span>
                     </TreeItemLayout>
                   </TreeItem>
                 ))}

@@ -227,6 +227,19 @@ export function registerShellCommands(r: CommandRegistry<Session>): void {
     },
   });
   r.register({
+    id: "dax.quickQuery",
+    label: "Quick query",
+    category: "DAX",
+    isEnabled: hasProject,
+    run(s, args) {
+      const text = (args as { text?: string } | undefined)?.text;
+      if (!text) throw new Error("Missing query text.");
+      s.shell.setDaxQuery(text);
+      s.shell.setView("dax");
+      s.shell.setDaxTab("query");
+    },
+  });
+  r.register({
     id: "dax.query.format",
     label: "Format query",
     category: "DAX",

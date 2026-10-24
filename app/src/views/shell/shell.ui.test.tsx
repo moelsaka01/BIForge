@@ -163,6 +163,27 @@ describe("workspace", () => {
     await waitFor(() => expect(a.dax.calls.some((c) => c.includes("EVALUATE"))).toBe(true));
   });
 
+  it("right-clicking a table, column or measure in the Data pane offers quick queries that open in the query view", async () => {
+    const a = makeApp();
+    render(a.element);
+    await openProject(a);
+    const pane = await screen.findByLabelText("Data pane");
+    const sales = within(pane).getByText("Sales");
+    fireEvent.contextMenu(sales);
+    expect((await screen.findAllByRole("menuitem")).map((m) => m.textContent)).toEqual(["Show data", "Show first 100 rows", "Count rows"]);
+    fireEvent.click(screen.getByRole("menuitem", { name: "Show first 100 rows" }));
+    const editor = (await screen.findByLabelText("DAX query")) as HTMLTextAreaElement;
+    expect(editor.value).toBe(["EVALUATE", "TOPN(100, 'Sales')"].join("\n"));
+    // a column and a measure
+    fireEvent.click(screen.getByRole("button", { name: "Report view" }));
+    const paneAgain = await screen.findByLabelText("Data pane");
+    fireEvent.click(within(paneAgain).getAllByRole("treeitem")[0]); // expand the table
+    const col = (await within(paneAgain).findAllByText("Quantity"))[0];
+    fireEvent.contextMenu(col);
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Show distinct values" }));
+    expect(((await screen.findByLabelText("DAX query")) as HTMLTextAreaElement).value).toBe(["EVALUATE", "DISTINCT('Sales'[Quantity])", "ORDER BY 'Sales'[Quantity]"].join("\n"));
+  });
+
   it("Format query lays out the text of the query editor, undo-free and without running it", async () => {
     const a = makeApp();
     render(a.element);

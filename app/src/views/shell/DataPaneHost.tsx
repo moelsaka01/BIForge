@@ -49,6 +49,7 @@ export function DataPaneHost({ forReport }: { forReport: boolean }) {
       onRefresh={(t) => void env.run("data.refreshTable", { name: t })}
       onRefreshAll={() => void env.run("data.refreshAll")}
       onImport={() => void env.run("data.getData")}
+      onQuickQuery={(text) => void env.run("dax.quickQuery", { text })}
     />
   );
 }
