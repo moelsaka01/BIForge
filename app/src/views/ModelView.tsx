@@ -74,6 +74,9 @@ export function ModelView({ project, session, registry, engine, onError, propert
   const selected = sel0.kind === "rel" ? sel0.id : null;
   const setSelected = (id: string | null) => setSel(id ? { kind: "rel", id } : { kind: "none" });
   const [dropTarget, setDropTarget] = useState<string | null>(null);
+  // cards folded to their header (Alt+Shift+1 folds all, Alt+Shift+9 unfolds all)
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const toggleCollapsed = (name: string) => setCollapsed((c) => { const n = new Set(c); if (n.has(name)) n.delete(name); else n.add(name); return n; });
   const dragging = useRef<{ table: string; column: string } | null>(null);
 
   const run = async (id: string, args?: unknown) => {
@@ -103,19 +106,40 @@ export function ModelView({ project, session, registry, engine, onError, propert
     await run("model.addRelationship", spec);
   };
 
+  const boxOf = (name: string) => {
+    const b = boxes.get(name);
+    return b && collapsed.has(name) ? { ...b, h: HEAD_H + 2 } : b;
+  };
   const height = Math.max(300, ...[...boxes.values()].map((b) => b.y + b.h + 20));
   const width = Math.max(400, ...[...boxes.values()].map((b) => b.x + b.w + 20));
   const sel = rels.find((r) => r.id === selected) ?? null;
+  // the tables joined to the selected table by a relationship are drawn highlighted
+  const selectedTable = sel0.kind === "table" || sel0.kind === "column" || sel0.kind === "measure" ? sel0.table : null;
+  const related = new Set(selectedTable ? rels.flatMap((r) => (r.fromTable === selectedTable ? [r.toTable] : r.toTable === selectedTable ? [r.fromTable] : [])) : []);
 
   return (
     <div style={{ display: "flex", height: "100%", minHeight: 0 }}>
-      <div style={{ flex: 1, overflow: "auto", position: "relative" }} data-testid="model-canvas">
+      <div
+        style={{ flex: 1, overflow: "auto", position: "relative" }}
+        data-testid="model-canvas"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (!e.altKey || !e.shiftKey || e.ctrlKey || e.metaKey) return;
+          if (e.code === "Digit1") {
+            e.preventDefault();
+            setCollapsed(new Set(tables.map((t) => t.name)));
+          } else if (e.code === "Digit9") {
+            e.preventDefault();
+            setCollapsed(new Set());
+          }
+        }}
+      >
         {tables.length === 0 && <div style={{ padding: 16 }}>The model has no tables. Import data to start.</div>}
         <div style={{ position: "relative", width, height }}>
           <svg width={width} height={height} style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
             {rels.map((r) => {
-              const a = boxes.get(r.fromTable);
-              const b = boxes.get(r.toTable);
+              const a = boxOf(r.fromTable);
+              const b = boxOf(r.toTable);
               if (!a || !b) return null;
               const p = anchor(a, b);
               const q = anchor(b, a);
@@ -146,12 +170,16 @@ export function ModelView({ project, session, registry, engine, onError, propert
             })}
           </svg>
           {tables.map((t) => {
-            const box = boxes.get(t.name)!;
+            const base = boxes.get(t.name)!;
+            const folded = collapsed.has(t.name);
+            const box = folded ? { ...base, h: HEAD_H + 2 } : base;
             const selTable = (sel0.kind === "table" || sel0.kind === "column" || sel0.kind === "measure") && sel0.table === t.name;
             return (
               <div
                 key={t.name}
                 data-testid={`card-${t.name}`}
+                data-collapsed={folded}
+                data-related={related.has(t.name)}
                 style={{
                   position: "absolute",
                   left: box.x,
@@ -159,7 +187,7 @@ export function ModelView({ project, session, registry, engine, onError, propert
                   width: box.w,
                   height: box.h,
                   boxSizing: "border-box",
-                  border: selTable ? "2px solid #0f6cbd" : "1px solid #8a8886",
+                  border: selTable ? "2px solid #0f6cbd" : related.has(t.name) ? "2px dashed #0f6cbd" : "1px solid #8a8886",
                   borderRadius: 4,
                   background: "var(--colorNeutralBackground1, #fff)",
                   overflow: "hidden",
@@ -172,9 +200,21 @@ export function ModelView({ project, session, registry, engine, onError, propert
                   onClick={() => setSel({ kind: "table", table: t.name })}
                   style={{ height: HEAD_H, lineHeight: `${HEAD_H}px`, padding: "0 8px", fontWeight: 600, background: "var(--colorNeutralBackground3, #e1dfdd)", flex: "none", cursor: "pointer", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
                 >
+                  <button
+                    type="button"
+                    aria-label={`${folded ? "Expand" : "Collapse"} ${t.name}`}
+                    aria-expanded={!folded}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleCollapsed(t.name);
+                    }}
+                    style={{ all: "unset", cursor: "pointer", marginRight: 6, fontSize: 10 }}
+                  >
+                    {folded ? "▸" : "▾"}
+                  </button>
                   {t.name}
                 </div>
-                <div style={{ overflowY: t.columns.length + t.measures.length > MAX_ROWS ? "auto" : "hidden", flex: 1, minHeight: 0 }}>
+                {!folded && <div style={{ overflowY: t.columns.length + t.measures.length > MAX_ROWS ? "auto" : "hidden", flex: 1, minHeight: 0 }}>
                   {t.columns.length + t.measures.length === 0 && <div style={{ padding: "2px 8px", opacity: 0.6 }}>(no columns)</div>}
                   {t.columns.map((c) => {
                     const key = `${t.name}.${c.name}`;
@@ -236,7 +276,7 @@ export function ModelView({ project, session, registry, engine, onError, propert
                       <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{m.name}</span>
                     </div>
                   ))}
-                </div>
+                </div>}
               </div>
             );
           })}

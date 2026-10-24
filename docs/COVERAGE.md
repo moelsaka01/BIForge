@@ -159,7 +159,7 @@ Last updated: 2026-10-17, after the scope-change session was completed (see PROG
 | Report canvas and page features | 53 | 30 | 1 | 22 |
 | Visuals | 76 | 45 | 0 | 31 |
 | Table view | 18 | 5 | 1 | 12 |
-| Model view | 23 | 8 | 0 | 15 |
+| Model view | 23 | 10 | 0 | 13 |
 | DAX query view | 15 | 5 | 0 | 10 |
 | TMDL view | 8 | 4 | 0 | 4 |
 | Modeling features | 48 | 24 | 1 | 23 |
@@ -170,13 +170,13 @@ Last updated: 2026-10-17, after the scope-change session was completed (see PROG
 | Options dialog: Global | 61 | 12 | 2 | 47 |
 | Options dialog: Current File | 23 | 1 | 0 | 22 |
 | Dialogs | 48 | 20 | 0 | 28 |
-| Keyboard shortcuts | 37 | 21 | 0 | 16 |
+| Keyboard shortcuts | 37 | 22 | 0 | 15 |
 | Export, print and file formats | 15 | 2 | 0 | 13 |
 | Accessibility and platform | 12 | 1 | 1 | 10 |
 | Format pane cards per visual | 1264 | 413 | 245 | 606 |
 | DAX functions | 317 | 297 | 0 | 20 |
 | M standard library | 652 | 421 | 0 | 231 |
-| **Total** | **3008** | **1493** | **278** | **1237** |
+| **Total** | **3008** | **1496** | **278** | **1234** |
 <!-- inventory-status:end -->
 
 ## Online track (Publish & Share; plan in docs/ONLINE_PLAN.md)

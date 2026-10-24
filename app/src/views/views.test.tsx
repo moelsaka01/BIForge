@@ -185,6 +185,38 @@ describe("ModelView", () => {
     expect(screen.getByTestId("card-Dim")).toBeTruthy();
   });
 
+  it("a card folds to its header and unfolds; Alt+Shift+1 folds every card, Alt+Shift+9 unfolds every card", async () => {
+    const s = await modelSetup(false);
+    renderModel(s, false);
+    const card = (n: string) => screen.getByTestId(`card-${n}`);
+    expect(card("Fact").getAttribute("data-collapsed")).toBe("false");
+    fireEvent.click(screen.getByRole("button", { name: "Collapse Fact" }));
+    expect(card("Fact").getAttribute("data-collapsed")).toBe("true");
+    expect(within(card("Fact")).queryByText("cust")).toBeNull();
+    expect(card("Dim").getAttribute("data-collapsed")).toBe("false");
+    fireEvent.click(screen.getByRole("button", { name: "Expand Fact" }));
+    expect(within(card("Fact")).getByText("cust")).toBeTruthy();
+    const canvas = screen.getByTestId("model-canvas");
+    fireEvent.keyDown(canvas, { key: "!", code: "Digit1", altKey: true, shiftKey: true });
+    expect(card("Fact").getAttribute("data-collapsed")).toBe("true");
+    expect(card("Dim").getAttribute("data-collapsed")).toBe("true");
+    fireEvent.keyDown(canvas, { key: "(", code: "Digit9", altKey: true, shiftKey: true });
+    expect(card("Fact").getAttribute("data-collapsed")).toBe("false");
+    expect(card("Dim").getAttribute("data-collapsed")).toBe("false");
+  });
+
+  it("selecting a table highlights the tables it is related to", async () => {
+    const s = await modelSetup(false);
+    const { view } = renderModel(s, false);
+    drag("Fact.cust", "Dim.id");
+    await waitFor(() => expect(listRelationships(s.session.store.project!)).toHaveLength(1));
+    view.rerender(<ModelView project={s.session.store.project!} session={s.session} registry={s.registry} engine={null} onError={() => undefined} />);
+    expect(screen.getByTestId("card-Dim").getAttribute("data-related")).toBe("false");
+    fireEvent.click(screen.getByTestId("card-head-Fact"));
+    expect(screen.getByTestId("card-Dim").getAttribute("data-related")).toBe("true");
+    expect(screen.getByTestId("card-Fact").getAttribute("data-related")).toBe("false");
+  });
+
   it("dragging a column onto another table's column creates a many-to-one relationship (no data: defaults)", async () => {
     const s = await modelSetup(false);
     const { view } = renderModel(s, false);

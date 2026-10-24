@@ -107,9 +107,9 @@ D | Properties pane (collapsible) for table, column, measure, relationship, mult
 N | Move cards, zoom, fit to screen, 100%, minimap
 N | Layout tabs (All tables, additional layouts)
 N | Show/hide fields, hidden fields display
-N | Collapse/expand table cards
+D | Collapse/expand table cards
 N | Relationship lines with cardinality and filter direction markers
-N | Highlight related tables
+D | Highlight related tables
 N | Select related tables
 N | Bulk edit of properties (multi-select)
 N | Hierarchies in cards
@@ -571,7 +571,7 @@ N | Ctrl+Space multi-select data points
 N | Ctrl+H show data point details
 D | Ctrl+Shift+C clear data selection
 N | Ctrl+Alt+I annotations visibility
-N | Alt+Shift+1 collapse all tables, Alt+Shift+9 expand all tables
+D | Alt+Shift+1 collapse all tables, Alt+Shift+9 expand all tables
 N | Ctrl+Right Arrow enter visual
 N | Esc exit visual
 N | Enter slicer control
