@@ -536,7 +536,7 @@ export function autoCreateMobile(p: Project, page: string): number {
   return ordered.length;
 }
 
-const isStaticDecoration = (type: string): boolean => type === "pageNavigator";
+const isStaticDecoration = (type: string): boolean => type === "pageNavigator" || type === "bookmarkNavigator";
 
 // ---- groups ------------------------------------------------------------------------------------
 // A group is a visual file with visualGroup instead of visual; its members name it in parentGroupName. Member

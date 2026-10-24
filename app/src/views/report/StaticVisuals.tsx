@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import { FormatReader } from "../../core/report/formatReader";
+import { listBookmarks } from "../../core/report/bookmarks";
 import { navigatorPages, readAction, readShape, readTextbox, shapeSvg, type ShapeModel } from "../../core/report/staticVisuals";
 import { buttonModel, imageModel, navigatorModel } from "../../core/report/staticModels";
 import type { PageModel, VisualModel } from "../../core/report/visualDoc";
@@ -95,6 +96,24 @@ export function ButtonView({ page, visual, width, height, runOnClick }: Props) {
       )}
       {text}
     </button>
+  );
+}
+
+/** A row of buttons, one per bookmark of the report; a click applies the bookmark. */
+export function BookmarkNavigatorView({ visual, width, height }: Props) {
+  const c = useReport();
+  const f = new FormatReader(visual.json, c.theme, "bookmarkNavigator");
+  const nav = navigatorModel(f, c.theme, width, height);
+  const bookmarks = listBookmarks(c.project);
+  return (
+    <div role="navigation" aria-label="Bookmark navigator" style={nav.container}>
+      {bookmarks.length === 0 && <span style={{ padding: 6, opacity: 0.7, fontSize: 12 }}>No bookmarks yet. Add some in the Bookmarks pane.</span>}
+      {bookmarks.map((b) => (
+        <button key={b.id} type="button" onClick={() => c.dispatch("report.bookmark.apply", { id: b.id })} style={nav.entry(false)}>
+          {b.name}
+        </button>
+      ))}
+    </div>
   );
 }
 

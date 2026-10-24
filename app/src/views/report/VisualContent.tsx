@@ -19,7 +19,7 @@ import { useReport } from "./reportContext";
 import { readSlicer } from "../../core/report/slicerSettings";
 import { HierarchySlicerView } from "./HierarchySlicerView";
 import { SlicerView } from "./SlicerView";
-import { ButtonView, ImageView, PageNavigatorView, ShapeView, TextboxView } from "./StaticVisuals";
+import { BookmarkNavigatorView, ButtonView, ImageView, PageNavigatorView, ShapeView, TextboxView } from "./StaticVisuals";
 
 /** Loads the data of one visual and draws it according to its type. */
 export function VisualContent({ page, visual, width, height, runOnClick }: { page: PageModel; visual: VisualModel; width: number; height: number; runOnClick?: (e: React.MouseEvent) => boolean }) {
@@ -113,6 +113,8 @@ export function VisualContent({ page, visual, width, height, runOnClick }: { pag
         return <ImageView {...sp} />;
       case "button":
         return <ButtonView {...sp} />;
+      case "bookmarkNavigator":
+        return <BookmarkNavigatorView {...sp} />;
       default:
         return <PageNavigatorView {...sp} />;
     }

@@ -143,6 +143,21 @@ describe("objects without data on the canvas", () => {
     await waitFor(() => expect(t.session.report.getSnapshot().page).not.toBe("page1"));
   });
 
+  it("a bookmark navigator lists the bookmarks in order and a click applies one (here: goes to its page)", async () => {
+    const t = setup();
+    await t.run("report.page.add", { name: "Second" });
+    await t.run("report.bookmark.add", { name: "On second" });
+    await t.run("report.page.go", { page: "page1" });
+    await t.run("report.bookmark.add", { name: "On first" });
+    await t.run("report.visual.add", { type: "bookmarkNavigator" });
+    render(<t.Host />);
+    const nav = await screen.findByRole("navigation", { name: "Bookmark navigator" });
+    expect(within(nav).getAllByRole("button").map((b) => b.textContent)).toEqual(["On second", "On first"]);
+    expect(t.session.report.getSnapshot().page).toBe("page1");
+    fireEvent.click(within(nav).getByRole("button", { name: "On second" }));
+    await waitFor(() => expect(t.session.report.getSnapshot().page).not.toBe("page1"));
+  });
+
   it("the Format pane offers the Action card for a button with the report's pages", async () => {
     const t = setup();
     await t.run("report.page.add", { name: "Details" });
@@ -163,6 +178,6 @@ describe("objects without data on the canvas", () => {
     const t = setup();
     render(<t.Host />);
     const gallery = await screen.findByRole("group", { name: "Visual types" });
-    for (const n of ["Text box", "Shape", "Image", "Button", "Page navigator"]) expect(within(gallery).queryByRole("button", { name: n }), n).toBeNull();
+    for (const n of ["Text box", "Shape", "Image", "Button", "Page navigator", "Bookmark navigator"]) expect(within(gallery).queryByRole("button", { name: n }), n).toBeNull();
   });
 });

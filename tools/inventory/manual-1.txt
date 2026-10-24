@@ -78,7 +78,7 @@ D | Quick measure
 ## 5. Report view ribbon: Insert tab
 ### Pages
 D | New page
-N | New blank page
+D | New blank page
 ### Visuals
 D | New visual
 N | Visuals gallery group
@@ -97,7 +97,7 @@ P | Buttons gallery (back, information, help, Q&A, bookmark, page navigation, bl
 P | Shapes gallery (rectangle, rounded rectangle, oval, line, arrow, triangle, ...)
 D | Image
 D | Page navigator
-N | Bookmark navigator
+D | Bookmark navigator
 ## 6. Report view ribbon: Modeling tab
 ### Relationships
 D | Manage relationships
@@ -248,7 +248,7 @@ D | Add, apply, update, rename, reorder, delete bookmarks
 D | Data / Display / Current page options
 D | Bookmark groups
 N | Selection-pane based bookmark visibility
-N | Bookmark navigator visual
+D | Bookmark navigator visual
 N | Bookmark view mode (presenting)
 ### Themes
 D | Five built-in themes

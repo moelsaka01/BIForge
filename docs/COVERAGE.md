@@ -149,14 +149,14 @@ Last updated: 2026-10-17, after the scope-change session was completed (see PROG
 | Title bar and window | 13 | 10 | 0 | 3 |
 | File menu and backstage | 20 | 12 | 1 | 7 |
 | Report view ribbon: Home tab | 19 | 14 | 1 | 4 |
-| Report view ribbon: Insert tab | 19 | 7 | 2 | 10 |
+| Report view ribbon: Insert tab | 19 | 9 | 2 | 8 |
 | Report view ribbon: Modeling tab | 22 | 12 | 0 | 10 |
 | Report view ribbon: View tab | 19 | 14 | 0 | 5 |
 | Report view ribbon: Optimize tab | 4 | 2 | 0 | 2 |
 | Report view ribbon: Help tab | 5 | 2 | 0 | 3 |
 | Report view ribbon: External Tools tab | 2 | 0 | 0 | 2 |
 | Report view contextual tabs | 35 | 20 | 2 | 13 |
-| Report canvas and page features | 53 | 29 | 1 | 23 |
+| Report canvas and page features | 53 | 30 | 1 | 22 |
 | Visuals | 76 | 45 | 0 | 31 |
 | Table view | 18 | 5 | 1 | 12 |
 | Model view | 23 | 8 | 0 | 15 |
@@ -176,7 +176,7 @@ Last updated: 2026-10-17, after the scope-change session was completed (see PROG
 | Format pane cards per visual | 1264 | 413 | 245 | 606 |
 | DAX functions | 317 | 297 | 0 | 20 |
 | M standard library | 652 | 421 | 0 | 231 |
-| **Total** | **3008** | **1487** | **278** | **1243** |
+| **Total** | **3008** | **1490** | **278** | **1240** |
 <!-- inventory-status:end -->
 
 ## Online track (Publish & Share; plan in docs/ONLINE_PLAN.md)

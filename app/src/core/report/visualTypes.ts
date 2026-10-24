@@ -11,7 +11,7 @@ export interface RoleDef {
   max: number;
 }
 
-export type VisualFamily = "decomposition" | "keyDrivers" | "cartesian" | "pie" | "scatter" | "table" | "matrix" | "card" | "kpi" | "gauge" | "treemap" | "funnel" | "waterfall" | "slicer" | "map" | "textbox" | "shape" | "image" | "button" | "pageNavigator";
+export type VisualFamily = "decomposition" | "keyDrivers" | "cartesian" | "pie" | "scatter" | "table" | "matrix" | "card" | "kpi" | "gauge" | "treemap" | "funnel" | "waterfall" | "slicer" | "map" | "textbox" | "shape" | "image" | "button" | "pageNavigator" | "bookmarkNavigator";
 
 export interface VisualTypeDef {
   id: string;
@@ -222,6 +222,7 @@ VISUAL_TYPES.push(
   staticType("image", "Image", "image", "🖼", { width: 200, height: 150 }),
   staticType("actionButton", "Button", "button", "▭", { width: 160, height: 40 }),
   staticType("pageNavigator", "Page navigator", "pageNavigator", "⇆", { width: 420, height: 48 }),
+  staticType("bookmarkNavigator", "Bookmark navigator", "bookmarkNavigator", "🔖", { width: 420, height: 48 }),
 );
 
 export const isStatic = (typeId: string): boolean => visualType(typeId)?.static === true;
