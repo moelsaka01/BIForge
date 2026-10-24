@@ -6,6 +6,7 @@ import { setModelCulture } from "../model/ops";
 import { canvasOptionsOf } from "../report/canvasOptions";
 import type { TmdlDocument } from "../model/types";
 import type { Session } from "../session/session";
+import { formatDax } from "../dax/format";
 import { PANE_IDS, type PaneId, type ShellKind } from "../shell/settings";
 import { VIEW_IDS, type ViewId, type Zoom } from "../shell/shellStore";
 
@@ -224,6 +225,13 @@ export function registerShellCommands(r: CommandRegistry<Session>): void {
         p.model.tmdl[path] = document;
       });
     },
+  });
+  r.register({
+    id: "dax.query.format",
+    label: "Format query",
+    category: "DAX",
+    isEnabled: hasProject,
+    run: (s) => s.shell.setDaxQuery(formatDax(s.shell.getSnapshot().daxQuery)),
   });
   r.register({ id: "dax.query.run", label: "Run query", category: "DAX", isEnabled: hasProject, run: (s) => s.shell.requestRunQuery() });
   r.register({

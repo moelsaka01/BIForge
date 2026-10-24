@@ -525,7 +525,7 @@ function daxTabs(): RibbonTab[] {
             cmd("run", "Run", "run", "dax.query.run", { size: "large", keytip: "RN" }),
             cmd("queryTab", "Query", "code", "dax.tab", { size: "large", args: { tab: "query" }, checked: (c) => c.daxTab === "query" }),
             cmd("measuresTab", "Measures", "measure", "dax.tab", { size: "large", args: { tab: "measures" }, checked: (c) => c.daxTab === "measures" }),
-            todo("format", "Format query", "format", { size: "large" }),
+            cmd("format", "Format query", "format", "dax.query.format", { size: "large" }),
           ],
         },
         modelingCalculations(),

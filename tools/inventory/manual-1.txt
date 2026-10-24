@@ -207,7 +207,7 @@ N | Name, data type, format, summarization, data category, sort by column
 N | Hide / Unhide
 ### Measure tools
 N | Name, home table, format, data category
-N | Format DAX expression (local formatter)
+D | Format DAX expression (local formatter)
 ### Visual calculations tab
 N | New / Edit / Hide fields / Templates / Add function
 ## 12. Report canvas and page features

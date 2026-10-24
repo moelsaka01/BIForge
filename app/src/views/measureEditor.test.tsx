@@ -57,6 +57,18 @@ describe("MeasureEditor", () => {
     expect(screen.getByText("Saved")).toBeTruthy();
   });
 
+  it("Format lays the expression out and says why when it cannot", async () => {
+    await setup();
+    await type("calculate(sum(Sales[Amount]),Sales[Year]=2024)");
+    fireEvent.click(await screen.findByRole("button", { name: "Format" }));
+    const box = screen.getByLabelText("DAX expression") as HTMLTextAreaElement;
+    await waitFor(() => expect(box.value).toBe("calculate(sum(Sales[Amount]), Sales[Year] = 2024)"));
+    await type("SUM(Sales[Amount]");
+    fireEvent.click(screen.getByRole("button", { name: "Format" }));
+    expect((await screen.findAllByText(/not closed/)).length).toBeGreaterThan(0);
+    expect(box.value).toBe("SUM(Sales[Amount]");
+  });
+
   it("falls back to a plain text box, visibly, when the code editor cannot load", async () => {
     await setup();
     expect((await screen.findByRole("alert")).textContent).toContain("could not be loaded");

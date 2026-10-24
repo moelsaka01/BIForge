@@ -8,6 +8,7 @@ import type { DaxApi, EditorDiagnostic, FunctionInfo, QueryResult } from "../cor
 import type { EditorFactory } from "../core/dax/editorTypes";
 import { buildContext, modelDocuments } from "../core/dax/context";
 import { byColumnQuery, valueQuery } from "../core/dax/measureQuery";
+import { formatDax } from "../core/dax/format";
 import { DaxEditor } from "./DaxEditor";
 import { ResultGrid } from "./ResultGrid";
 
@@ -212,6 +213,20 @@ export function MeasureEditor({ project, dax, registry, factory, onError }: Meas
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           <Button size="small" appearance="primary" disabled={blocked || run.status === "running" || (target.kind === "new" && table === "")} onClick={() => void evaluate()}>
             Evaluate
+          </Button>
+          <Button
+            size="small"
+            disabled={expr.trim() === ""}
+            onClick={() => {
+              try {
+                setExpr(formatDax(expr));
+                setCheckFailure(null);
+              } catch (e) {
+                setCheckFailure(e instanceof Error ? e.message : String(e));
+              }
+            }}
+          >
+            Format
           </Button>
           <Select size="small" aria-label="Show by" value={by} onChange={(_, d) => setBy(d.value)}>
             <option value={NO_BREAKDOWN}>Total only</option>

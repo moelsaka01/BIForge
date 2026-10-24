@@ -163,6 +163,19 @@ describe("workspace", () => {
     await waitFor(() => expect(a.dax.calls.some((c) => c.includes("EVALUATE"))).toBe(true));
   });
 
+  it("Format query lays out the text of the query editor, undo-free and without running it", async () => {
+    const a = makeApp();
+    render(a.element);
+    await openProject(a);
+    fireEvent.click(screen.getByRole("button", { name: "DAX query view" }));
+    const editor = (await screen.findByLabelText("DAX query")) as HTMLTextAreaElement;
+    fireEvent.change(editor, { target: { value: 'evaluate summarizecolumns(Product[Category],"T",[Total]) order by [T] desc' } });
+    a.dax.calls.length = 0;
+    fireEvent.click(ribbon().getByRole("button", { name: "Format query" }));
+    await waitFor(() => expect(editor.value).toBe(["EVALUATE", '    summarizecolumns(Product[Category], "T", [Total])', "ORDER BY", "    [T] desc"].join("\n")));
+    expect(a.dax.calls).toHaveLength(0);
+  });
+
   it("F5 and Ctrl+Enter run the query in the DAX query view", async () => {
     const a = makeApp();
     a.dax.handler = (q) => (q.includes("EVALUATE") ? { results: [{ columns: ["Total"], rows: [[{ t: "int", v: "7" }]], totalRows: 1, truncated: false }], elapsedMs: 1 } : undefined);
