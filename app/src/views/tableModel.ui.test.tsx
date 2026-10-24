@@ -44,7 +44,7 @@ describe("Table view: headers and cells share exact columns", () => {
     expect(headers.map((h) => h.style.textAlign)).toEqual(["left", "right", "right", "left"]);
     // the header row and the body rows are exactly as wide as the columns together
     const total = headers.reduce((n, h) => n + outerWidth(h), 0);
-    const headerRow = headers[0].parentElement as HTMLElement;
+    const headerRow = headers[0].closest("[role=row]") as HTMLElement;
     const bodyRow = cells[0].parentElement as HTMLElement;
     expect(parseFloat(headerRow.style.width)).toBe(total);
     expect(parseFloat(bodyRow.style.width)).toBe(total);

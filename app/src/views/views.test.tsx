@@ -135,6 +135,47 @@ const drag = (from: string, to: string) => {
   fireEvent.dragEnd(src);
 };
 
+describe("DataView: column width and Copy table", () => {
+  it("dragging the right edge of a header resizes that column in the header and every row, and no less than a minimum", async () => {
+    const e = bigEngine(30);
+    render(<DataView engine={e} table="Big" reloadKey={0} />);
+    await screen.findByText(/30 rows/);
+    await waitFor(() => expect(screen.getByText("row 0")).toBeTruthy());
+    const width = (el: HTMLElement) => el.style.width;
+    const header = () => screen.getAllByRole("columnheader")[1];
+    const cell = () => document.querySelector("[data-row='0']")!.querySelectorAll<HTMLElement>("[role=gridcell]")[1];
+    expect(width(header())).toBe("170px");
+    const handle = screen.getByLabelText("Resize name");
+    fireEvent.pointerDown(handle, { clientX: 100 });
+    fireEvent.pointerMove(window, { clientX: 160 });
+    fireEvent.pointerUp(window);
+    expect(width(header())).toBe("230px");
+    expect(width(cell())).toBe("230px");
+    expect(width(screen.getAllByRole("columnheader")[0])).toBe("170px");
+    fireEvent.pointerDown(handle, { clientX: 300 });
+    fireEvent.pointerMove(window, { clientX: 0 });
+    fireEvent.pointerUp(window);
+    expect(width(header())).toBe("50px");
+  });
+
+  it("Copy table puts the header and all rows on the clipboard as tab-separated text, in the current sort order", async () => {
+    const e = new FakeEngine();
+    e.tables.set("T", { columns: [col("id", "int64"), col("note")], rows: [["1", "a\tb"], ["2", null], ["3", 'say "hi"']] });
+    let copied = "";
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: async (t: string) => void (copied = t) } });
+    render(<DataView engine={e} table="T" reloadKey={0} />);
+    await screen.findByText(/3 rows/);
+    fireEvent.click(screen.getByRole("button", { name: "Copy table" }));
+    await screen.findByText("Copied 3 rows");
+    expect(copied).toBe('id\tnote\r\n1\t"a\tb"\r\n2\t\r\n3\t"say ""hi"""');
+    fireEvent.click(screen.getAllByRole("columnheader")[0]);
+    fireEvent.click(screen.getAllByRole("columnheader")[0]);
+    await waitFor(() => expect(screen.getByTestId("data-status").textContent).toMatch(/descending/));
+    fireEvent.click(screen.getByRole("button", { name: "Copy table" }));
+    await waitFor(() => expect(copied.split("\r\n")[1]).toMatch(/^3\t/));
+  });
+});
+
 describe("ModelView", () => {
   it("shows a card per table with its columns", async () => {
     const s = await modelSetup(false);

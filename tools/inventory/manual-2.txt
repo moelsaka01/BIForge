@@ -85,7 +85,7 @@ D | Column headers with type
 D | Header alignment matching cell alignment (text left, numbers right)
 D | Single-column sort
 N | Multi-column sort
-N | Column width drag
+D | Column width drag
 N | Column context menu (rename, copy, hide, sort, format)
 N | Right-click row/column menu
 N | Formula bar (calculated column, measure)
@@ -94,7 +94,7 @@ N | Filter on columns (value list)
 N | Go to / Find in table
 N | Show hidden columns
 N | Table header menu (New column, rename, copy table)
-N | Copy table / copy values to clipboard
+P | Copy table / copy values to clipboard
 N | Data category and format display
 N | Calculated column editing in grid
 N | Locale-formatted dates

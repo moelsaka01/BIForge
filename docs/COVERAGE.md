@@ -158,7 +158,7 @@ Last updated: 2026-10-17, after the scope-change session was completed (see PROG
 | Report view contextual tabs | 35 | 19 | 2 | 14 |
 | Report canvas and page features | 53 | 29 | 1 | 23 |
 | Visuals | 76 | 45 | 0 | 31 |
-| Table view | 18 | 4 | 0 | 14 |
+| Table view | 18 | 5 | 1 | 12 |
 | Model view | 23 | 8 | 0 | 15 |
 | DAX query view | 15 | 2 | 0 | 13 |
 | TMDL view | 8 | 4 | 0 | 4 |
@@ -176,7 +176,7 @@ Last updated: 2026-10-17, after the scope-change session was completed (see PROG
 | Format pane cards per visual | 1264 | 413 | 245 | 606 |
 | DAX functions | 317 | 297 | 0 | 20 |
 | M standard library | 652 | 421 | 0 | 231 |
-| **Total** | **3008** | **1479** | **278** | **1251** |
+| **Total** | **3008** | **1480** | **279** | **1249** |
 <!-- inventory-status:end -->
 
 ## Online track (Publish & Share; plan in docs/ONLINE_PLAN.md)

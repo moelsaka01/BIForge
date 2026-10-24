@@ -8,8 +8,8 @@ export const ROW_HEIGHT = 28;
 const COL_WIDTH = 170;
 
 /** Header and body cells share this box (same width, border-box sizing, padding and border), so columns line up exactly. */
-const cellBox = (numeric: boolean): React.CSSProperties => ({
-  width: COL_WIDTH,
+const cellBox = (numeric: boolean, width = COL_WIDTH): React.CSSProperties => ({
+  width,
   flex: "none",
   boxSizing: "border-box",
   padding: "0 8px",
@@ -20,6 +20,14 @@ const cellBox = (numeric: boolean): React.CSSProperties => ({
   textAlign: numeric ? "right" : "left",
 });
 const FALLBACK_VIEWPORT = 480;
+const MIN_COL_WIDTH = 50;
+const COPY_ROW_LIMIT = 100_000;
+
+/** Tab-separated text of a table (the format Excel and Power BI paste); a cell with a tab, quote or line break is quoted. */
+export function toTsv(header: string[], rows: (string | null)[][]): string {
+  const cell = (v: string | null) => (v === null ? "" : /[\t\n\r"]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+  return [header, ...rows].map((r) => r.map((v) => cell(v)).join("\t")).join("\r\n");
+}
 
 const TYPE_LABEL: Record<BiType, string> = {
   int64: "Whole number",
@@ -46,11 +54,15 @@ export function DataView({ engine, table, reloadKey }: DataViewProps) {
   const [sort, setSort] = useState<SortSpec | null>(null);
   const [scrollTop, setScrollTop] = useState(0);
   const [, setTick] = useState(0);
+  const [widths, setWidths] = useState<Record<string, number>>({});
+  const [copied, setCopied] = useState<string | null>(null);
   const box = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setSort(null);
     setScrollTop(0);
+    setWidths({});
+    setCopied(null);
   }, [table]);
 
   useEffect(() => {
@@ -90,7 +102,40 @@ export function DataView({ engine, table, reloadKey }: DataViewProps) {
 
   const rows: number[] = [];
   for (let i = range.first; i < range.end; i++) rows.push(i);
-  const width = info.columns.length * COL_WIDTH;
+  const widthOf = (name: string) => widths[name] ?? COL_WIDTH;
+  const width = info.columns.reduce((sum, c) => sum + widthOf(c.name), 0);
+
+  /** Drag the right edge of a header to resize its column. */
+  const startResize = (name: string, e: React.PointerEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const x0 = e.clientX;
+    const w0 = widthOf(name);
+    const move = (ev: PointerEvent) => setWidths((w) => ({ ...w, [name]: Math.max(MIN_COL_WIDTH, w0 + ev.clientX - x0) }));
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  };
+
+  /** Copy table: the header and every row (up to a limit) in the current sort order, as tab-separated text. */
+  const copyTable = async () => {
+    try {
+      const rowsOut: (string | null)[][] = [];
+      const limit = Math.min(info.rowCount, COPY_ROW_LIMIT);
+      while (rowsOut.length < limit) {
+        const page = await engine.fetchPage(info.name, rowsOut.length, Math.min(1000, limit - rowsOut.length), sort);
+        if (page.rows.length === 0) break;
+        rowsOut.push(...page.rows);
+      }
+      await navigator.clipboard.writeText(toTsv(info.columns.map((c) => c.name), rowsOut));
+      setCopied(`Copied ${rowsOut.length.toLocaleString()} rows${info.rowCount > limit ? ` of ${info.rowCount.toLocaleString()}` : ""}`);
+    } catch (e) {
+      setCopied(`Copy failed: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
@@ -98,6 +143,10 @@ export function DataView({ engine, table, reloadKey }: DataViewProps) {
         {info.name} — {info.rowCount.toLocaleString()} rows, {info.columns.length} columns
         {sort ? ` — sorted by ${sort.column} ${sort.descending ? "descending" : "ascending"}` : ""}
         {cache?.error ? ` — error: ${cache.error}` : ""}
+        <button type="button" onClick={() => void copyTable()} style={{ marginLeft: 12, font: "inherit" }}>
+          Copy table
+        </button>
+        {copied ? <span role="status" style={{ marginLeft: 8 }}>{copied}</span> : null}
       </div>
       <div
         ref={box}
@@ -111,15 +160,15 @@ export function DataView({ engine, table, reloadKey }: DataViewProps) {
           {info.columns.map((c) => {
             const active = sort?.column === c.name;
             return (
+              <div key={c.name} style={{ position: "relative", flex: "none", display: "flex" }}>
               <button
-                key={c.name}
                 role="columnheader"
                 aria-sort={active ? (sort!.descending ? "descending" : "ascending") : "none"}
                 onClick={() => toggleSort(c.name)}
                 title={`${c.name} — ${TYPE_LABEL[c.biType]} (${c.duckdbType}). Click to sort.`}
                 style={{
                   font: "inherit",
-                  ...cellBox(isNumeric(c.biType)),
+                  ...cellBox(isNumeric(c.biType), widthOf(c.name)),
                   height: ROW_HEIGHT + 8,
                   borderTop: 0,
                   borderBottom: 0,
@@ -136,6 +185,14 @@ export function DataView({ engine, table, reloadKey }: DataViewProps) {
                 {active ? (sort!.descending ? " ▼" : " ▲") : ""}
                 <div style={{ fontWeight: 400, fontSize: 10, opacity: 0.7 }}>{TYPE_LABEL[c.biType]}</div>
               </button>
+              <div
+                role="separator"
+                aria-orientation="vertical"
+                aria-label={`Resize ${c.name}`}
+                onPointerDown={(e) => startResize(c.name, e)}
+                style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: 6, cursor: "col-resize" }}
+              />
+              </div>
             );
           })}
         </div>
@@ -154,7 +211,7 @@ export function DataView({ engine, table, reloadKey }: DataViewProps) {
                   <div
                     key={c.name}
                     role="gridcell"
-                    style={{ ...cellBox(isNumeric(c.biType)), lineHeight: `${ROW_HEIGHT}px` }}
+                    style={{ ...cellBox(isNumeric(c.biType), widthOf(c.name)), lineHeight: `${ROW_HEIGHT}px` }}
                   >
                     {row ? formatCell(row[j], c.biType) : "…"}
                   </div>
