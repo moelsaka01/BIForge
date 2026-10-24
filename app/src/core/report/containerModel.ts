@@ -63,6 +63,12 @@ const SHADOW_PRESETS: Record<string, { angle: number; distance: number }> = {
   Top: { angle: 90, distance: 3 },
   TopLeft: { angle: 135, distance: 3 },
 };
+/** BIForge's own style presets (the Style preset card): each one changes what an unset background, border and shadow look like. */
+export const STYLE_PRESETS: Record<string, { background: boolean; border: boolean; radius: number; shadow: boolean }> = {
+  Default: { background: true, border: false, radius: 0, shadow: false },
+  Minimal: { background: false, border: false, radius: 0, shadow: false },
+  Boxed: { background: true, border: true, radius: 4, shadow: true },
+};
 const DASH: Record<string, string> = { solid: "solid", dashed: "dashed", dotted: "dotted", custom: "dashed" };
 
 function block(f: FormatReader, theme: Theme, object: "title" | "subTitle", text: string, defaults: { size: number; color: string; family: string }, wrapDefault: boolean): TextBlock | null {
@@ -116,11 +122,12 @@ export function buildContainer(inp: ContainerInput): ContainerModel {
   const pad = (prop: string) => base + Math.max(0, f.num("padding", prop, 0));
   const body = { left: pad("left"), right: pad("right"), top: y + sp("spaceAbovePlotArea", 0) + pad("top"), bottom: pad("bottom") };
 
-  const bgOn = f.bool("background", "show", true);
+  const style = STYLE_PRESETS[f.str("stylePreset", "name", "Default")] ?? STYLE_PRESETS.Default;
+  const bgOn = f.bool("background", "show", style.background);
   const bgAlpha = opacityOf(f.num("background", "transparency", 0));
   const bgColor = f.color("background", "color") ?? theme.background;
-  const borderOn = f.bool("border", "show", false);
-  const shadowOn = f.bool("dropShadow", "show", false);
+  const borderOn = f.bool("border", "show", style.border);
+  const shadowOn = f.bool("dropShadow", "show", style.shadow);
   // a preset is a direction (and a default distance); Custom keeps the angle and distance of the card
   const preset = SHADOW_PRESETS[f.str("dropShadow", "preset", "Custom")];
   const angle = ((preset ? preset.angle : f.num("dropShadow", "angle", 45)) * Math.PI) / 180;
@@ -132,7 +139,7 @@ export function buildContainer(inp: ContainerInput): ContainerModel {
   const look: CSSProperties = {
     background: bgOn ? `color-mix(in srgb, ${bgColor} ${Math.round(bgAlpha * 100)}%, transparent)` : "transparent",
     border: borderOn ? `${f.num("border", "width", 1)}px solid ${f.color("border", "color") ?? theme.muted}` : "1px solid transparent",
-    borderRadius: f.num("border", "radius", 0),
+    borderRadius: f.num("border", "radius", style.radius),
     boxShadow: shadowOn ? `${inner ? "inset " : ""}${(Math.cos(angle) * dist).toFixed(1)}px ${(-Math.sin(angle) * dist).toFixed(1)}px ${blur}px ${spread}px color-mix(in srgb, ${f.color("dropShadow", "color") ?? "#000000"} ${Math.round(shadowAlpha * 100)}%, transparent)` : undefined,
   };
 

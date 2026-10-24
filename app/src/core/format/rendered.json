@@ -35,6 +35,7 @@
    "width"
   ],
   "spacing": [
+   "customizeSpacing",
    "spaceAboveDivider",
    "spaceAbovePlotArea",
    "spaceAboveSubtitle",
@@ -110,6 +111,9 @@
    "type",
    "underline",
    "valueFontColor"
+  ],
+  "stylePreset": [
+   "name"
   ],
   "visualHeader": [
    "background",

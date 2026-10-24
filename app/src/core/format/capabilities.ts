@@ -54,8 +54,8 @@ export const CONTAINER_GENERAL_PROPS: ReadonlySet<string> = new Set(["x", "y", "
 /** Whether a property is stored in visual.visualContainerObjects (true) or visual.objects (false). */
 export const isContainerProp = (object: string, prop: string): boolean => CONTAINER_OBJECTS.has(object) || (object === "general" && CONTAINER_GENERAL_PROPS.has(prop));
 
-/** Container objects the General tab shows, in order. (visualLink is an Action card of buttons, stylePreset is chosen with themes.) */
-export const GENERAL_ORDER = ["title", "subTitle", "visualHeader", "background", "border", "dropShadow", "padding", "spacing", "divider", "lockAspect", "visualLink", "visualTooltip", "visualHeaderTooltip", "general"] as const;
+/** Container objects the General tab shows, in order. (visualLink is an Action card of buttons; stylePreset offers BIForge's own presets.) */
+export const GENERAL_ORDER = ["title", "subTitle", "visualHeader", "background", "border", "dropShadow", "padding", "spacing", "divider", "lockAspect", "stylePreset", "visualLink", "visualTooltip", "visualHeaderTooltip", "general"] as const;
 
 /**
  * Properties the theme schema does not list because a theme cannot set them, but that the visuals store; their names

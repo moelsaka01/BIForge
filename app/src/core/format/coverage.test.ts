@@ -60,6 +60,7 @@ function testValues(prop: string, kind: Kind): Lit[] {
       return [lit.str("#123456")];
     case "s":
       // a dash pattern must be one to be read
+      if (prop === "name") return [lit.str("Boxed")]; // the Style preset card
       return [lit.str(/fontFamily/i.test(prop) ? "Courier New" : /dashArray/i.test(prop) ? "4 2" : /FormatString/i.test(prop) ? "0.000" : "Zz")];
     case "f":
       return [lit.num(Math.min(kind[2], Math.max(kind[1], 20)))];
@@ -120,6 +121,8 @@ const ENABLE: Record<string, Record<string, Lit>> = {
 
 /** Properties that only matter together with another one. */
 const WITH: Record<string, Record<string, Record<string, Lit>>> = {
+  // custom spacing only replaces the default gaps once the switch is on
+  spacing: { customizeSpacing: { spaceBelowTitle: lit.num(9) } },
   valueAxis: { labelDisplayUnits: { labelPrecision: lit.num(2) } },
   labels: { labelDisplayUnits: { labelPrecision: lit.num(2) } },
   mapControls: { zoomLevel: { autoZoom: lit.bool(false) } },
@@ -332,7 +335,7 @@ function computeAll(): Coverage {
   let common: Record<string, string[]> | null = null;
   for (const vt of VISUAL_TYPES) {
     if (!visualObjects(vt.id)) continue;
-    const m = measure(containerScenario, vt.id, containerNames.filter((o) => o !== "stylePreset"));
+    const m = measure(containerScenario, vt.id, containerNames);
     if (!common) common = m;
     else for (const o of Object.keys(common)) common[o] = (common[o] ?? []).filter((p) => m[o]?.includes(p));
     if (vt.id === "clusteredColumnChart") break; // the container model does not depend on the type

@@ -4,6 +4,7 @@
 import { CONTAINER_OBJECTS, GENERAL_ORDER, visualObjects, type CardProps, type Kind } from "./capabilities";
 import { cardLabel, optionLabel, propGroup, propLabel } from "./labels";
 import rendered from "./rendered.json";
+import { STYLE_PRESETS } from "../report/containerModel";
 
 export type PropType = "bool" | "text" | "number" | "color" | "enum";
 
@@ -99,7 +100,6 @@ const FONTS = ["Segoe UI", "Segoe UI Light", "Segoe UI Semibold", "Arial", "Cali
 const HIDDEN: Record<string, ReadonlySet<string>> = {
   dataPoint: new Set(["fill", "fillRule"]), // per-series colors have their own list
   general: new Set(["formatString", "imageUrl"]),
-  stylePreset: new Set(["name"]),
 };
 
 function defaultFor(object: string, prop: string, kind: Kind): boolean | number | string | undefined {
@@ -125,6 +125,7 @@ export function propDef(object: string, key: string, kind: Kind, ctx: CardContex
     case "f":
       return { ...base, type: "number", min: kind[1], max: kind[2], auto: "Theme" };
     case "s": {
+      if (object === "stylePreset" && key === "name") return { ...base, type: "enum", options: Object.keys(STYLE_PRESETS).map((n) => ({ value: n, label: n })), default: "Default" };
       if (object === "visualLink" && key === "navigationSection") return { ...base, type: "enum", options: ctx?.pages.length ? ctx.pages.map((p) => ({ value: p.name, label: p.displayName })) : NONE, auto: "Choose a page" };
       if (object === "visualLink" && key === "bookmark") return { ...base, type: "enum", options: ctx?.bookmarks.length ? ctx.bookmarks.map((b) => ({ value: b.id, label: b.name })) : NONE, auto: "Choose a bookmark" };
       if (object === "visualTooltip" && key === "section") return { ...base, type: "enum", options: ctx?.tooltipPages?.length ? ctx.tooltipPages.map((p) => ({ value: p.name, label: p.displayName })) : NONE, auto: "Choose a tooltip page" };

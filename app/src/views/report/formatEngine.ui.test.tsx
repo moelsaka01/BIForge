@@ -115,3 +115,25 @@ describe("the schema-driven Format pane", () => {
     });
   });
 });
+
+describe("Style preset", () => {
+  it("the General tab offers BIForge's presets; Boxed draws a border, rounded corners and a shadow, Minimal removes the background", async () => {
+    const t = setup();
+    await t.run("report.visual.add", { type: "clusteredColumnChart", fields: [{ role: "Category", field: Cat }, { role: "Y", field: Qty }] });
+    render(<t.Host />);
+    await select(t.visual().name);
+    fireEvent.click(await screen.findByRole("tab", { name: "Format visual" }));
+    fireEvent.click(await screen.findByRole("tab", { name: "General" }));
+    const el = await card("stylePreset");
+    const frame = () => document.querySelector(`[data-visual="${t.visual().name}"]`) as HTMLElement;
+    const choose = async (name: string) => {
+      fireEvent.change(within(el).getByLabelText("Name"), { target: { value: name } });
+      await waitFor(() => expect(getFormat(t.visual().json, "stylePreset", "name")).toEqual(lit.str(name)));
+    };
+    expect(Array.from((within(el).getByLabelText("Name") as HTMLSelectElement).options).map((o) => o.value)).toContain("Boxed");
+    await choose("Boxed");
+    await waitFor(() => expect(frame().querySelector("[data-container-look]")?.getAttribute("style") ?? frame().getAttribute("style")).toMatch(/box-shadow/));
+    await choose("Minimal");
+    await waitFor(() => expect((frame().querySelector("[data-container-look]") ?? frame()).getAttribute("style")).not.toMatch(/box-shadow/));
+  });
+});
