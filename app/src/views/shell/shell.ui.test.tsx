@@ -163,6 +163,24 @@ describe("workspace", () => {
     await waitFor(() => expect(a.dax.calls.some((c) => c.includes("EVALUATE"))).toBe(true));
   });
 
+  it("F5 and Ctrl+Enter run the query in the DAX query view", async () => {
+    const a = makeApp();
+    a.dax.handler = (q) => (q.includes("EVALUATE") ? { results: [{ columns: ["Total"], rows: [[{ t: "int", v: "7" }]], totalRows: 1, truncated: false }], elapsedMs: 1 } : undefined);
+    render(a.element);
+    await openProject(a);
+    fireEvent.click(screen.getByRole("button", { name: "DAX query view" }));
+    const editor = await screen.findByLabelText("DAX query");
+    fireEvent.change(editor, { target: { value: 'EVALUATE ROW("Total", 7)' } });
+    const runs = () => a.dax.calls.filter((c) => c.includes("EVALUATE")).length;
+    a.dax.calls.length = 0;
+    expect(fireEvent.keyDown(editor, { key: "F5" })).toBe(false);
+    await waitFor(() => expect(runs()).toBe(1));
+    fireEvent.keyDown(editor, { key: "Enter", ctrlKey: true });
+    await waitFor(() => expect(runs()).toBe(2));
+    fireEvent.keyDown(editor, { key: "Enter" });
+    expect(runs()).toBe(2);
+  });
+
   it("an error from a command is shown in the frame, not thrown", async () => {
     const a = makeApp();
     render(a.element);

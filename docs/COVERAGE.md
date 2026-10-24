@@ -147,9 +147,9 @@ Last updated: 2026-10-17, after the scope-change session was completed (see PROG
 | --- | ---: | ---: | ---: | ---: |
 | Start screen | 12 | 8 | 1 | 3 |
 | Title bar and window | 13 | 9 | 0 | 4 |
-| File menu and backstage | 20 | 10 | 1 | 9 |
+| File menu and backstage | 20 | 12 | 1 | 7 |
 | Report view ribbon: Home tab | 19 | 14 | 1 | 4 |
-| Report view ribbon: Insert tab | 19 | 5 | 2 | 12 |
+| Report view ribbon: Insert tab | 19 | 7 | 2 | 10 |
 | Report view ribbon: Modeling tab | 22 | 12 | 0 | 10 |
 | Report view ribbon: View tab | 19 | 13 | 1 | 5 |
 | Report view ribbon: Optimize tab | 4 | 2 | 0 | 2 |
@@ -159,7 +159,7 @@ Last updated: 2026-10-17, after the scope-change session was completed (see PROG
 | Report canvas and page features | 53 | 29 | 1 | 23 |
 | Visuals | 76 | 45 | 0 | 31 |
 | Table view | 18 | 4 | 0 | 14 |
-| Model view | 23 | 7 | 0 | 16 |
+| Model view | 23 | 8 | 0 | 15 |
 | DAX query view | 15 | 2 | 0 | 13 |
 | TMDL view | 8 | 4 | 0 | 4 |
 | Modeling features | 48 | 23 | 1 | 24 |
@@ -170,13 +170,13 @@ Last updated: 2026-10-17, after the scope-change session was completed (see PROG
 | Options dialog: Global | 61 | 10 | 2 | 49 |
 | Options dialog: Current File | 23 | 1 | 0 | 22 |
 | Dialogs | 48 | 20 | 0 | 28 |
-| Keyboard shortcuts | 37 | 19 | 0 | 18 |
+| Keyboard shortcuts | 37 | 21 | 0 | 16 |
 | Export, print and file formats | 15 | 2 | 0 | 13 |
 | Accessibility and platform | 12 | 1 | 1 | 10 |
 | Format pane cards per visual | 1264 | 343 | 280 | 641 |
 | DAX functions | 317 | 297 | 0 | 20 |
 | M standard library | 652 | 377 | 0 | 275 |
-| **Total** | **3008** | **1355** | **313** | **1340** |
+| **Total** | **3008** | **1362** | **313** | **1333** |
 <!-- inventory-status:end -->
 
 ## Online track (Publish & Share; plan in docs/ONLINE_PLAN.md)

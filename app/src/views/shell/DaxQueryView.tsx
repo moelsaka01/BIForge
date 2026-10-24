@@ -52,6 +52,19 @@ export function DaxQueryView({ project, dax, factory }: { project: Project; dax:
   };
   const latest = useRef(execute);
   latest.current = execute;
+  const latestText = useRef(text);
+  latestText.current = text;
+  // F5 and Ctrl+Enter run the query (capture phase, so the editor does not swallow them and the WebView never reloads on F5)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const run = e.key === "F5" || (e.key === "Enter" && (e.ctrlKey || e.metaKey));
+      if (!run || e.altKey) return;
+      e.preventDefault();
+      if (latestText.current.trim() !== "") void latest.current();
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, []);
   const firstTick = useRef(st.runQueryTick);
   useEffect(() => {
     if (st.runQueryTick !== firstTick.current) {

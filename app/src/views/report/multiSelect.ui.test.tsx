@@ -259,3 +259,23 @@ describe("selecting several visuals on the canvas", () => {
     expect(t.vs().map((v) => v.position.x)).toEqual([0, 300]);
   });
 });
+
+describe("keyboard: Tab through the visuals", () => {
+  it("Tab selects the next visual and wraps around; Shift+Tab goes back", async () => {
+    const t = setup();
+    const names = [await t.add(0, 0), await t.add(200, 0), await t.add(400, 0)];
+    render(<t.Host />);
+    await waitFor(() => expect(t.frame(names[0])).toBeTruthy());
+    const page = document.querySelector('[role="region"][data-page]') as HTMLElement;
+    const sel = () => t.session.report.getSnapshot().canvas;
+    const seen: string[] = [];
+    for (let i = 0; i < 4; i++) {
+      fireEvent.keyDown(page, { key: "Tab" });
+      seen.push(sel()[0]);
+    }
+    expect(new Set(seen.slice(0, 3))).toEqual(new Set(names));
+    expect(seen[3]).toBe(seen[0]);
+    fireEvent.keyDown(page, { key: "Tab", shiftKey: true });
+    expect(sel()).toEqual([seen[2]]);
+  });
+});

@@ -35,7 +35,7 @@ D | New
 D | Open
 D | Save
 D | Save as
-N | Save a copy
+D | Save a copy
 D | Close project
 P | Get data
 N | Import: Power BI template (.pbit)
@@ -46,7 +46,7 @@ N | Export: PDF
 D | Export: PBIP project copy
 N | Print
 D | Options and settings: Options
-N | Options and settings: Data source settings
+D | Options and settings: Data source settings
 N | Options and settings: Custom visual security
 D | About
 D | Exit
@@ -85,8 +85,8 @@ N | Visuals gallery group
 N | Visual from file
 N | Q&A visual (local)
 N | Smart narrative
-N | Key influencers
-N | Decomposition tree
+D | Key influencers
+D | Decomposition tree
 N | Find anomalies
 N | Forecast
 N | Sparklines

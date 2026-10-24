@@ -121,7 +121,7 @@ N | Auto-create relationships
 N | Manage relationships dialog (grid, autodetect)
 N | Create relationship dialog
 N | Edit relationship dialog with Cross-filter direction, Make this relationship active, Apply security filter in both directions, Assume referential integrity
-N | Many-to-many with both cross-filter
+D | Many-to-many with both cross-filter
 ## 16. DAX query view
 D | Query editor (Monaco) with Run
 D | Result tables
@@ -562,7 +562,7 @@ D | Arrow keys move selected visual
 N | Shift+Arrow resize visual
 D | Ctrl+G group / Ctrl+Shift+G ungroup
 D | Ctrl+D duplicate
-N | Tab cycles visuals
+D | Tab cycles visuals
 N | Ctrl+F6 / Shift+Ctrl+F6 move focus between sections
 N | Ctrl+Shift+F11 show visuals as tables
 N | Ctrl+Shift+F10 show/hide tooltip
@@ -578,7 +578,7 @@ N | Enter slicer control
 N | F1 help
 ### Text editors
 D | Monaco shortcuts in DAX, M and TMDL editors (Ctrl+Space, Ctrl+F, Ctrl+/ ...)
-N | Ctrl+Enter / F5 run query in DAX query view
+D | Ctrl+Enter / F5 run query in DAX query view
 N | F2 rename in Model and Table view
 D | Print Screen / system keys never intercepted (tested)
 ## 27. Export, print and file formats
