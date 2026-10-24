@@ -67,7 +67,7 @@ export function registerShellCommands(r: CommandRegistry<Session>): void {
     isEnabled: (s) => hasProject(s) && s.shell.getSnapshot().view === "report",
     run(s, args) {
       const z = (args as { zoom?: Zoom } | undefined)?.zoom;
-      if (z !== "fit" && !(typeof z === "number" && z >= 0.1 && z <= 4)) throw new Error("Zoom must be \"fit\" or a number between 10% and 400%.");
+      if (z !== "fit" && z !== "width" && !(typeof z === "number" && z >= 0.1 && z <= 4)) throw new Error("Zoom must be \"fit\", \"width\" or a number between 10% and 400%.");
       s.shell.setZoom(z);
     },
   });

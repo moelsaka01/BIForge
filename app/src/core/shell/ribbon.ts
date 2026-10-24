@@ -281,6 +281,7 @@ const pageViewGroup = (): RibbonGroup => ({
   label: "Page view",
   controls: [
     cmd("fit", "Fit to page", "fit", "view.zoom", { size: "large", args: { zoom: "fit" }, checked: (c) => c.zoom === "fit", keytip: "FP" }),
+    cmd("fitWidth", "Fit to width", "fit", "view.zoom", { size: "large", args: { zoom: "width" }, checked: (c) => c.zoom === "width", keytip: "FW" }),
     cmd("actual", "Actual size", "actual", "view.zoom", { size: "large", args: { zoom: 1 }, checked: (c) => c.zoom === 1 }),
   ],
 });

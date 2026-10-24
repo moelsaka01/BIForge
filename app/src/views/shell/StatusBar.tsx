@@ -33,6 +33,9 @@ export function StatusBar({ text, scale, zoom }: StatusBarProps) {
           <button type="button" aria-label="Fit to page" title="Fit to page" aria-pressed={zoom === "fit"} onClick={() => set("fit")}>
             ⛶
           </button>
+          <button type="button" aria-label="Fit to width" title="Fit to width" aria-pressed={zoom === "width"} onClick={() => set("width")}>
+            ↔
+          </button>
         </div>
       )}
     </footer>

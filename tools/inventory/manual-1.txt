@@ -27,7 +27,7 @@ N | Window size, position and state remembered between runs
 N | System menu (restore, move, size, close) on the title bar
 ### Status bar
 D | Page indicator and status text
-N | Zoom slider with Fit to page / Fit to width buttons
+D | Zoom slider with Fit to page / Fit to width buttons
 N | Page navigation arrows
 ## 3. File menu and backstage
 ### Items (no cloud items)
@@ -136,7 +136,7 @@ D | Browse for themes (import JSON)
 N | Customize current theme (dialog, every setting)
 D | Save current theme
 ### Page view
-P | Fit to page / Fit to width / Actual size
+D | Fit to page / Fit to width / Actual size
 D | Mobile layout
 D | Gridlines
 D | Snap to grid

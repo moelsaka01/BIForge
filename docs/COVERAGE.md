@@ -146,12 +146,12 @@ Last updated: 2026-10-17, after the scope-change session was completed (see PROG
 | Inventory area | Items | Done-tested | Partial | Not started |
 | --- | ---: | ---: | ---: | ---: |
 | Start screen | 12 | 8 | 1 | 3 |
-| Title bar and window | 13 | 9 | 0 | 4 |
+| Title bar and window | 13 | 10 | 0 | 3 |
 | File menu and backstage | 20 | 12 | 1 | 7 |
 | Report view ribbon: Home tab | 19 | 14 | 1 | 4 |
 | Report view ribbon: Insert tab | 19 | 7 | 2 | 10 |
 | Report view ribbon: Modeling tab | 22 | 12 | 0 | 10 |
-| Report view ribbon: View tab | 19 | 13 | 1 | 5 |
+| Report view ribbon: View tab | 19 | 14 | 0 | 5 |
 | Report view ribbon: Optimize tab | 4 | 2 | 0 | 2 |
 | Report view ribbon: Help tab | 5 | 2 | 0 | 3 |
 | Report view ribbon: External Tools tab | 2 | 0 | 0 | 2 |
@@ -176,7 +176,7 @@ Last updated: 2026-10-17, after the scope-change session was completed (see PROG
 | Format pane cards per visual | 1264 | 413 | 245 | 606 |
 | DAX functions | 317 | 297 | 0 | 20 |
 | M standard library | 652 | 421 | 0 | 231 |
-| **Total** | **3008** | **1485** | **279** | **1244** |
+| **Total** | **3008** | **1487** | **278** | **1243** |
 <!-- inventory-status:end -->
 
 ## Online track (Publish & Share; plan in docs/ONLINE_PLAN.md)

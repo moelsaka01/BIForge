@@ -259,6 +259,38 @@ describe("workspace", () => {
     expect(runs()).toBe(2);
   });
 
+  it("Fit to width scales the page to the width of the canvas (even when it is shorter than the page), from the status bar and the View tab", async () => {
+    const desc = (name: "clientWidth" | "clientHeight", value: number) => Object.defineProperty(HTMLElement.prototype, name, { configurable: true, get: () => value });
+    const w = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "clientWidth");
+    const h = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "clientHeight");
+    desc("clientWidth", 1100);
+    desc("clientHeight", 300);
+    try {
+      const a = makeApp();
+      render(a.element);
+      await openProject(a);
+      const pct = () => Number(screen.getByTestId("zoom-percent").textContent!.replace("%", ""));
+      await waitFor(() => expect(pct()).toBeGreaterThan(20));
+      const fitPct = pct();
+      fireEvent.click(screen.getByRole("button", { name: "Fit to width" }));
+      await waitFor(() => expect(screen.getByRole("button", { name: "Fit to width" }).getAttribute("aria-pressed")).toBe("true"));
+      expect(a.shell.getSnapshot().zoom).toBe("width");
+      expect(pct()).toBeGreaterThan(fitPct);
+      fireEvent.click(screen.getByRole("button", { name: "Fit to page" }));
+      await waitFor(() => expect(pct()).toBe(fitPct));
+      fireEvent.click(within(screen.getByTestId("ribbon")).getByRole("tab", { name: "View" }));
+      fireEvent.click(within(screen.getByTestId("ribbon")).getByRole("button", { name: "Fit to width" }));
+      await waitFor(() => expect(a.shell.getSnapshot().zoom).toBe("width"));
+      fireEvent.click(within(screen.getByTestId("ribbon")).getByRole("button", { name: "Actual size" }));
+      await waitFor(() => expect(pct()).toBe(100));
+    } finally {
+      if (w) Object.defineProperty(HTMLElement.prototype, "clientWidth", w);
+      else delete (HTMLElement.prototype as unknown as Record<string, unknown>).clientWidth;
+      if (h) Object.defineProperty(HTMLElement.prototype, "clientHeight", h);
+      else delete (HTMLElement.prototype as unknown as Record<string, unknown>).clientHeight;
+    }
+  });
+
   it("an error from a command is shown in the frame, not thrown", async () => {
     const a = makeApp();
     render(a.element);

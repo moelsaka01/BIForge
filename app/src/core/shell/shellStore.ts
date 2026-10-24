@@ -5,7 +5,7 @@ import type { ModelDialogId } from "../model/modelDialogs";
 
 export type ViewId = "report" | "data" | "model" | "dax" | "tmdl";
 export const VIEW_IDS: readonly ViewId[] = ["report", "data", "model", "dax", "tmdl"];
-export type Zoom = "fit" | number;
+export type Zoom = "fit" | "width" | number;
 
 /** A dialog a command asked for. The shell draws it; the dialog's buttons dispatch commands again. */
 export type DialogRequest =

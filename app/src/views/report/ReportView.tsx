@@ -41,7 +41,7 @@ export interface ReportViewProps {
   canvas?: CanvasOptions;
 }
 
-type Zoom = "fit" | number;
+type Zoom = "fit" | "width" | number;
 
 /** What the docked panes need to know about the canvas. */
 export interface ReportDockApi {
@@ -154,7 +154,8 @@ export function ReportView(p: ReportViewProps) {
   );
 
   const fit = page ? Math.min(size.w / page.width, size.h / page.height) : 1;
-  const scale = zoom === "fit" ? Math.max(0.2, Math.min(1.5, fit)) : zoom;
+  const fitWidth = page ? size.w / page.width : 1;
+  const scale = zoom === "fit" ? Math.max(0.2, Math.min(1.5, fit)) : zoom === "width" ? Math.max(0.2, Math.min(1.5, fitWidth)) : zoom;
   const onScale = p.onScale;
   // the phone layout is drawn at a fixed readable scale (it is narrow and scrolls)
   const mobileScale = Math.max(0.5, Math.min(1.2, (size.h - 24) / MOBILE_MIN_HEIGHT));
