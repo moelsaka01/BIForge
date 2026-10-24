@@ -342,7 +342,7 @@ function computeAll(): Coverage {
   }
   if (common) result["*"] = Object.fromEntries(Object.entries(common).filter(([, ps]) => ps.length > 0));
   for (const [id, sc] of Object.entries(SCENARIOS)) {
-    const objs = Object.keys(visualObjects(id) ?? {}).filter((o) => !CONTAINER_OBJECTS.has(o) && o !== "general" && o !== "actionButtonSection");
+    const objs = Object.keys(visualObjects(id) ?? {}).filter((o) => !CONTAINER_OBJECTS.has(o) && o !== "actionButtonSection");
     const own = measure(sc, id, objs);
     if (SM_TYPES.includes(id)) Object.assign(own, measure(smScenario(id), id, ["smallMultiplesLayout", "subheader"]));
     if (Object.keys(own).length) result[id] = own;

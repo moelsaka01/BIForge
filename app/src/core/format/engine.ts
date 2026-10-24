@@ -99,7 +99,7 @@ const FONTS = ["Segoe UI", "Segoe UI Light", "Segoe UI Semibold", "Arial", "Cali
 /** Properties another control of the pane edits (or that make no sense as a single control); never listed as plain controls. */
 const HIDDEN: Record<string, ReadonlySet<string>> = {
   dataPoint: new Set(["fill", "fillRule"]), // per-series colors have their own list
-  general: new Set(["formatString", "imageUrl"]),
+  general: new Set(["formatString", "imageUrl"]), // read from the file; no control
 };
 
 function defaultFor(object: string, prop: string, kind: Kind): boolean | number | string | undefined {

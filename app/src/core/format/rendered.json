@@ -147,6 +147,9 @@
   ]
  },
  "clusteredColumnChart": {
+  "general": [
+   "formatString"
+  ],
   "categoryAxis": [
    "axisStyle",
    "bold",
@@ -338,6 +341,9 @@
   ]
  },
  "clusteredBarChart": {
+  "general": [
+   "formatString"
+  ],
   "categoryAxis": [
    "axisStyle",
    "bold",
@@ -529,6 +535,9 @@
   ]
  },
  "columnChart": {
+  "general": [
+   "formatString"
+  ],
   "categoryAxis": [
    "axisStyle",
    "bold",
@@ -591,6 +600,9 @@
    "valueCustomFormatString",
    "valueFormatString",
    "wordWrap"
+  ],
+  "layout": [
+   "seriesOrderReversed"
   ],
   "legend": [
    "bold",
@@ -686,6 +698,9 @@
   ]
  },
  "barChart": {
+  "general": [
+   "formatString"
+  ],
   "categoryAxis": [
    "axisStyle",
    "bold",
@@ -748,6 +763,9 @@
    "valueCustomFormatString",
    "valueFormatString",
    "wordWrap"
+  ],
+  "layout": [
+   "seriesOrderReversed"
   ],
   "legend": [
    "bold",
@@ -843,6 +861,9 @@
   ]
  },
  "hundredPercentStackedColumnChart": {
+  "general": [
+   "formatString"
+  ],
   "categoryAxis": [
    "axisStyle",
    "bold",
@@ -900,6 +921,9 @@
    "showSeries",
    "transparency",
    "wordWrap"
+  ],
+  "layout": [
+   "seriesOrderReversed"
   ],
   "legend": [
    "bold",
@@ -971,6 +995,9 @@
   ]
  },
  "hundredPercentStackedBarChart": {
+  "general": [
+   "formatString"
+  ],
   "categoryAxis": [
    "axisStyle",
    "bold",
@@ -1028,6 +1055,9 @@
    "showSeries",
    "transparency",
    "wordWrap"
+  ],
+  "layout": [
+   "seriesOrderReversed"
   ],
   "legend": [
    "bold",
@@ -1099,6 +1129,9 @@
   ]
  },
  "lineChart": {
+  "general": [
+   "formatString"
+  ],
   "categoryAxis": [
    "axisStyle",
    "bold",
@@ -1306,6 +1339,9 @@
   ]
  },
  "areaChart": {
+  "general": [
+   "formatString"
+  ],
   "categoryAxis": [
    "axisStyle",
    "bold",
@@ -1512,6 +1548,9 @@
   ]
  },
  "stackedAreaChart": {
+  "general": [
+   "formatString"
+  ],
   "categoryAxis": [
    "axisStyle",
    "bold",
@@ -1562,6 +1601,9 @@
    "transparency",
    "valueCustomFormatString",
    "valueFormatString"
+  ],
+  "layout": [
+   "seriesOrderReversed"
   ],
   "legend": [
    "bold",
@@ -1686,6 +1728,9 @@
   ]
  },
  "hundredPercentStackedAreaChart": {
+  "general": [
+   "formatString"
+  ],
   "categoryAxis": [
    "axisStyle",
    "bold",
@@ -1731,6 +1776,9 @@
    "show",
    "showSeries",
    "transparency"
+  ],
+  "layout": [
+   "seriesOrderReversed"
   ],
   "legend": [
    "bold",
@@ -1831,6 +1879,9 @@
   ]
  },
  "ribbonChart": {
+  "general": [
+   "formatString"
+  ],
   "categoryAxis": [
    "axisStyle",
    "bold",
@@ -1916,6 +1967,9 @@
   ]
  },
  "lineClusteredColumnComboChart": {
+  "general": [
+   "formatString"
+  ],
   "categoryAxis": [
    "axisStyle",
    "bold",
@@ -2136,6 +2190,9 @@
   ]
  },
  "pieChart": {
+  "general": [
+   "formatString"
+  ],
   "dataPoint": [
    "borderColor",
    "borderColorMatchFill",
@@ -2178,6 +2235,9 @@
   ]
  },
  "donutChart": {
+  "general": [
+   "formatString"
+  ],
   "dataPoint": [
    "borderColor",
    "borderColorMatchFill",
@@ -2221,6 +2281,9 @@
   ]
  },
  "funnel": {
+  "general": [
+   "formatString"
+  ],
   "categoryAxis": [
    "color",
    "show"
@@ -2245,6 +2308,9 @@
   ]
  },
  "treemap": {
+  "general": [
+   "formatString"
+  ],
   "categoryLabels": [
    "bold",
    "color",
@@ -2462,6 +2528,9 @@
   ]
  },
  "waterfallChart": {
+  "general": [
+   "formatString"
+  ],
   "categoryAxis": [
    "axisStyle",
    "bold",
@@ -2888,6 +2957,10 @@
   ]
  },
  "slicer": {
+  "general": [
+   "orientation",
+   "selfFilterEnabled"
+  ],
   "data": [
    "mode"
   ],
@@ -3013,6 +3086,9 @@
   ]
  },
  "image": {
+  "general": [
+   "altText"
+  ],
   "image": [
    "altText",
    "backgroundColor",

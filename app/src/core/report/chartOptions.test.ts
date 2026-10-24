@@ -358,3 +358,37 @@ describe("the border of bars (Data colors card)", () => {
     expect(o.borderColor).toBe("rgba(15, 108, 189, 1)");
   });
 });
+
+describe("general > Format string", () => {
+  it("replaces the number format of the values in labels and tooltips", () => {
+    const rows = [[c("Bikes"), c(1234.5)], [c("Shoes"), c(10)]];
+    const make = (fmt?: string) => {
+      const v = visualOf("pieChart", { Category: [Cat], Y: [Qty] });
+      setFormat(v.json, "labels", "show", lit.bool(true));
+      setFormat(v.json, "labels", "labelStyle", lit.str("Data value, percent of total"));
+      setFormat(v.json, "labels", "labelDisplayUnits", lit.num(1)); // no K / M scaling, so the format shows
+      if (fmt) setFormat(v.json, "general", "formatString", lit.str(fmt));
+      return build(v, grouped(v, rows)).option as { series: { label: { formatter: (a: unknown) => string } }[]; tooltip: { formatter: (a: unknown) => string } };
+    };
+    const arg = { name: "Bikes", value: 1234.5, percent: 99, data: { raw: 1234.5 } };
+    expect(make().series[0].label.formatter(arg)).not.toContain("1,234.500");
+    expect(make("#,0.000").series[0].label.formatter(arg)).toContain("1,234.500");
+    expect(make("#,0.000").tooltip.formatter(arg)).toContain("1,234.500");
+  });
+});
+
+describe("layout > series order reversed", () => {
+  it("lists the stacked series from the last to the first, and tooltips still name the right data point", () => {
+    const rows = [[c("Accessories"), c("France"), c(30)], [c("Accessories"), c("Canada"), c(10)], [c("Bikes"), c("France"), c(50)], [c("Bikes"), c("Canada"), c(70)]];
+    const names = (reversed: boolean) => {
+      const v = visualOf("stackedAreaChart", { Category: [Cat], Series: [Country], Y: [Qty] });
+      if (reversed) setFormat(v.json, "layout", "seriesOrderReversed", lit.bool(true));
+      const b = build(v, grouped(v, rows));
+      return { names: (b.option.series as { name: string }[]).map((s) => s.name), point: b.pointAt(0, 0) };
+    };
+    const normal = names(false);
+    const rev = names(true);
+    expect(rev.names).toEqual([...normal.names].reverse());
+    expect(rev.point!.values[1]).toEqual(lit.str(rev.names[0]));
+  });
+});

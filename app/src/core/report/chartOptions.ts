@@ -178,6 +178,11 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
   };
   valueCols.forEach((_, vi) => p.series.forEach((_s, si) => addSeries(vi, si, false)));
   if (hl) valueCols.forEach((_, vi) => p.series.forEach((_s, si) => addSeries(vi, si, true)));
+  // layout > series order reversed: the stack (and the legend) lists the series from the last to the first
+  if (f.bool("layout", "seriesOrderReversed", false) && stacked) {
+    seriesOut.reverse();
+    meta.reverse();
+  }
 
   if (ribbon) {
     // one custom series per legend entry: a column slot per category and a ribbon to the next category
@@ -867,7 +872,12 @@ function gauge(inp: ChartInput): ChartBuild {
 }
 
 /** Builds the chart for the visual, or null when the visual is not an ECharts visual. */
-export function buildChart(inp: ChartInput): ChartBuild | null {
+export function buildChart(inp0: ChartInput): ChartBuild | null {
+  // general > Format string: a number format for the values of the visual that replaces the fields' own
+  const fs = new FormatReader(inp0.visual.json, inp0.theme, inp0.visual.visualType).str("general", "formatString", "");
+  const inp: ChartInput = fs
+    ? { ...inp0, loaded: { ...inp0.loaded, query: { ...inp0.loaded.query, columns: inp0.loaded.query.columns.map((c) => (c.kind === "value" ? { ...c, format: fs } : c)) } } }
+    : inp0;
   const b = buildChartRaw(inp);
   if (b) {
     const f = new FormatReader(inp.visual.json, inp.theme, inp.visual.visualType);
