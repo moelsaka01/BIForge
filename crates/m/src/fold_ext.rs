@@ -10,6 +10,7 @@ pub const TABLE_EXT_FNS: &[&str] = &[
     "Table.PositionOf", "Table.FromColumns", "Table.FromList", "Table.FromValue", "Table.PrefixColumns", "Table.Repeat",
     "Table.InsertRows", "Table.SplitAt", "Table.MatchesAllRows", "Table.MatchesAnyRows", "Table.TransformRows", "Table.RemoveMatchingRows",
     "Table.MaxN", "Table.MinN", "Table.PositionOfAny", "Table.ReplaceRows", "Table.ColumnsOfType",
+    "Table.AddRankColumn", "Record.ToTable", "Record.FromTable",
 ];
 
 fn cmp(x: &Value, y: &Value) -> std::cmp::Ordering {
@@ -58,6 +59,79 @@ impl<'a> Ev<'a> {
             return Ok(None);
         }
         let v = match name {
+            "Table.AddRankColumn" => {
+                let t = table_arg(a, 0, name)?;
+                self.no_nested(&t)?;
+                let Value::Text(new) = arg(a, 1, name)? else {
+                    return Err(MError::expr("The new column name must be text."));
+                };
+                if t.col(new).is_some() {
+                    return Err(MError::expr(format!("The column '{new}' of the table already exists.")));
+                }
+                // criteria: "col", {"col", Order.Descending} or a list of those
+                let mut keys: Vec<(String, bool)> = Vec::new();
+                let mut push = |item: &Value| -> R<()> {
+                    match item {
+                        Value::Text(c) => keys.push((c.clone(), false)),
+                        Value::List(p) if p.len() == 2 => match (&p[0], &p[1]) {
+                            (Value::Text(c), Value::Num(o)) => keys.push((c.clone(), *o == 1.0)),
+                            _ => return Err(MError::expr("A comparison criterion is a column name or {column name, Order.Ascending|Order.Descending}.")),
+                        },
+                        _ => return Err(MError::unsupported("Only column comparison criteria are supported.")),
+                    }
+                    Ok(())
+                };
+                match arg(a, 2, name)? {
+                    Value::Text(_) => push(arg(a, 2, name)?)?,
+                    Value::List(items) if items.len() == 2 && matches!((&items[0], &items[1]), (Value::Text(_), Value::Num(_))) => push(arg(a, 2, name)?)?,
+                    Value::List(items) => {
+                        for i in items {
+                            push(i)?;
+                        }
+                    }
+                    _ => return Err(MError::expr("The comparison criteria must be a column name or a list of them.")),
+                }
+                for (c, _) in &keys {
+                    if t.col(c).is_none() {
+                        return Err(missing_col(c));
+                    }
+                }
+                let kind = match a.get(3) {
+                    Some(Value::Record(f)) => match f.iter().find(|(k, _)| k == "RankKind") {
+                        Some((_, Value::Num(n))) => *n as i64,
+                        _ => 0,
+                    },
+                    _ => 0,
+                };
+                let order: Vec<String> = keys.iter().map(|(c, d)| format!("{} {}", qi(c), if *d { "DESC NULLS LAST" } else { "ASC NULLS FIRST" })).collect();
+                let order = order.join(", ");
+                let rank = match kind {
+                    1 => format!("dense_rank() OVER (ORDER BY {order})"),
+                    2 => format!("row_number() OVER (ORDER BY {order}, {})", qi(ORD)),
+                    _ => format!("rank() OVER (ORDER BY {order})"),
+                };
+                let body = format!("SELECT {}, {}, {rank} AS {} FROM {}", qi(ORD), Self::col_list_keep(&t), qi(new), qi(&t.name));
+                Value::Table(self.derive(&[&t], body)?)
+            }
+            "Record.ToTable" => {
+                let Value::Record(fields) = arg(a, 0, name)? else {
+                    return Err(MError::expr("Record.ToTable needs a record."));
+                };
+                let rows = fields.iter().map(|(k, v)| Value::List(vec![Value::Text(k.clone()), v.clone()])).collect();
+                self.table_literal("#table", &[Value::List(vec![Value::Text("Name".into()), Value::Text("Value".into())]), Value::List(rows)])?
+            }
+            "Record.FromTable" => {
+                let t = table_arg(a, 0, name)?;
+                let mut out = Vec::new();
+                for row in self.all_records(&t)? {
+                    let get = |c: &str| row.iter().find(|(k, _)| k == c).map(|(_, v)| v.clone()).ok_or_else(|| missing_col(c));
+                    let Value::Text(k) = get("Name")? else {
+                        return Err(MError::expr("The Name column must hold text."));
+                    };
+                    out.push((k, get("Value")?));
+                }
+                Value::Record(out)
+            }
             "Table.ColumnCount" => Value::Num(table_arg(a, 0, name)?.plain_cols().count() as f64),
             "Table.First" | "Table.Last" | "Table.Row" => {
                 let t = table_arg(a, 0, name)?;

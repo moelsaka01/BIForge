@@ -11,6 +11,7 @@ pub mod stdlib_date;
 pub mod stdlib_ext;
 pub mod stdlib_list;
 pub mod stdlib_misc;
+pub mod stdlib_more;
 pub mod stdlib_native;
 pub mod stdlib_rec;
 pub mod steps;

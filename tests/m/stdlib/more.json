@@ -1,0 +1,402 @@
+[
+ {
+  "fn": "DateTime.IsInNextHour",
+  "m": "DateTime.IsInNextHour(DateTime.LocalNow() + #duration(0,1,0,0))",
+  "expect": "true"
+ },
+ {
+  "fn": "DateTime.IsInNextHour",
+  "m": "DateTime.IsInNextHour(DateTime.LocalNow())",
+  "expect": "false"
+ },
+ {
+  "fn": "DateTime.IsInPreviousHour",
+  "m": "DateTime.IsInPreviousHour(DateTime.LocalNow() - #duration(0,1,0,0))",
+  "expect": "true"
+ },
+ {
+  "fn": "DateTime.IsInPreviousHour",
+  "m": "DateTime.IsInPreviousHour(DateTime.LocalNow() + #duration(0,1,0,0))",
+  "expect": "false"
+ },
+ {
+  "fn": "DateTime.IsInNextNHours",
+  "m": "DateTime.IsInNextNHours(DateTime.LocalNow() + #duration(0,3,0,0), 3)",
+  "expect": "true"
+ },
+ {
+  "fn": "DateTime.IsInNextNHours",
+  "m": "DateTime.IsInNextNHours(DateTime.LocalNow() + #duration(0,4,0,0), 3)",
+  "expect": "false"
+ },
+ {
+  "fn": "DateTime.IsInNextNHours",
+  "m": "DateTime.IsInNextNHours(DateTime.LocalNow(), 3)",
+  "expect": "false"
+ },
+ {
+  "fn": "DateTime.IsInPreviousNHours",
+  "m": "DateTime.IsInPreviousNHours(DateTime.LocalNow() - #duration(0,3,0,0), 3)",
+  "expect": "true"
+ },
+ {
+  "fn": "DateTime.IsInPreviousNHours",
+  "m": "DateTime.IsInPreviousNHours(DateTime.LocalNow() - #duration(0,4,0,0), 3)",
+  "expect": "false"
+ },
+ {
+  "fn": "DateTime.IsInPreviousNHours",
+  "m": "DateTime.IsInPreviousNHours(DateTime.LocalNow(), 3)",
+  "expect": "false"
+ },
+ {
+  "fn": "DateTime.IsInNextMinute",
+  "m": "DateTime.IsInNextMinute(DateTime.LocalNow() + #duration(0,0,1,0))",
+  "expect": "true"
+ },
+ {
+  "fn": "DateTime.IsInNextMinute",
+  "m": "DateTime.IsInNextMinute(DateTime.LocalNow())",
+  "expect": "false"
+ },
+ {
+  "fn": "DateTime.IsInPreviousMinute",
+  "m": "DateTime.IsInPreviousMinute(DateTime.LocalNow() - #duration(0,0,1,0))",
+  "expect": "true"
+ },
+ {
+  "fn": "DateTime.IsInPreviousMinute",
+  "m": "DateTime.IsInPreviousMinute(DateTime.LocalNow() + #duration(0,0,1,0))",
+  "expect": "false"
+ },
+ {
+  "fn": "DateTime.IsInNextNMinutes",
+  "m": "DateTime.IsInNextNMinutes(DateTime.LocalNow() + #duration(0,0,3,0), 3)",
+  "expect": "true"
+ },
+ {
+  "fn": "DateTime.IsInNextNMinutes",
+  "m": "DateTime.IsInNextNMinutes(DateTime.LocalNow() + #duration(0,0,4,0), 3)",
+  "expect": "false"
+ },
+ {
+  "fn": "DateTime.IsInNextNMinutes",
+  "m": "DateTime.IsInNextNMinutes(DateTime.LocalNow(), 3)",
+  "expect": "false"
+ },
+ {
+  "fn": "DateTime.IsInPreviousNMinutes",
+  "m": "DateTime.IsInPreviousNMinutes(DateTime.LocalNow() - #duration(0,0,3,0), 3)",
+  "expect": "true"
+ },
+ {
+  "fn": "DateTime.IsInPreviousNMinutes",
+  "m": "DateTime.IsInPreviousNMinutes(DateTime.LocalNow() - #duration(0,0,4,0), 3)",
+  "expect": "false"
+ },
+ {
+  "fn": "DateTime.IsInPreviousNMinutes",
+  "m": "DateTime.IsInPreviousNMinutes(DateTime.LocalNow(), 3)",
+  "expect": "false"
+ },
+ {
+  "fn": "DateTime.IsInNextSecond",
+  "m": "DateTime.IsInNextSecond(DateTime.LocalNow() + #duration(0,0,0,1))",
+  "expect": "true"
+ },
+ {
+  "fn": "DateTime.IsInNextSecond",
+  "m": "DateTime.IsInNextSecond(DateTime.LocalNow())",
+  "expect": "false"
+ },
+ {
+  "fn": "DateTime.IsInPreviousSecond",
+  "m": "DateTime.IsInPreviousSecond(DateTime.LocalNow() - #duration(0,0,0,1))",
+  "expect": "true"
+ },
+ {
+  "fn": "DateTime.IsInPreviousSecond",
+  "m": "DateTime.IsInPreviousSecond(DateTime.LocalNow() + #duration(0,0,0,1))",
+  "expect": "false"
+ },
+ {
+  "fn": "DateTime.IsInNextNSeconds",
+  "m": "DateTime.IsInNextNSeconds(DateTime.LocalNow() + #duration(0,0,0,3), 3)",
+  "expect": "true"
+ },
+ {
+  "fn": "DateTime.IsInNextNSeconds",
+  "m": "DateTime.IsInNextNSeconds(DateTime.LocalNow() + #duration(0,0,0,4), 3)",
+  "expect": "false"
+ },
+ {
+  "fn": "DateTime.IsInNextNSeconds",
+  "m": "DateTime.IsInNextNSeconds(DateTime.LocalNow(), 3)",
+  "expect": "false"
+ },
+ {
+  "fn": "DateTime.IsInPreviousNSeconds",
+  "m": "DateTime.IsInPreviousNSeconds(DateTime.LocalNow() - #duration(0,0,0,3), 3)",
+  "expect": "true"
+ },
+ {
+  "fn": "DateTime.IsInPreviousNSeconds",
+  "m": "DateTime.IsInPreviousNSeconds(DateTime.LocalNow() - #duration(0,0,0,4), 3)",
+  "expect": "false"
+ },
+ {
+  "fn": "DateTime.IsInPreviousNSeconds",
+  "m": "DateTime.IsInPreviousNSeconds(DateTime.LocalNow(), 3)",
+  "expect": "false"
+ },
+ {
+  "fn": "Date.StartOfDay",
+  "m": "Date.StartOfDay(#datetime(2024, 5, 6, 13, 45, 30))",
+  "expect": "2024-05-06 00:00:00"
+ },
+ {
+  "fn": "Date.EndOfDay",
+  "m": "Date.EndOfDay(#datetime(2024, 5, 6, 13, 45, 30))",
+  "expect": "2024-05-06 23:59:59.999999"
+ },
+ {
+  "fn": "DateTime.Time",
+  "m": "DateTime.Time(#datetime(2024, 5, 6, 13, 45, 30))",
+  "expect": "13:45:30"
+ },
+ {
+  "fn": "Date.ToRecord",
+  "m": "Date.ToRecord(#date(2024, 5, 6))[Year]",
+  "expect": "2024"
+ },
+ {
+  "fn": "Date.ToRecord",
+  "m": "Date.ToRecord(#date(2024, 5, 6))[Month]",
+  "expect": "5"
+ },
+ {
+  "fn": "Date.ToRecord",
+  "m": "Date.ToRecord(#date(2024, 5, 6))[Day]",
+  "expect": "6"
+ },
+ {
+  "fn": "Date.ToRecord",
+  "m": "Record.FieldNames(Date.ToRecord(#date(2024, 5, 6)))",
+  "expect": "{Year,Month,Day}",
+  "mode": "value"
+ },
+ {
+  "fn": "DateTime.ToRecord",
+  "m": "DateTime.ToRecord(#datetime(2024, 5, 6, 13, 45, 30))[Year]",
+  "expect": "2024"
+ },
+ {
+  "fn": "DateTime.ToRecord",
+  "m": "DateTime.ToRecord(#datetime(2024, 5, 6, 13, 45, 30))[Month]",
+  "expect": "5"
+ },
+ {
+  "fn": "DateTime.ToRecord",
+  "m": "DateTime.ToRecord(#datetime(2024, 5, 6, 13, 45, 30))[Day]",
+  "expect": "6"
+ },
+ {
+  "fn": "DateTime.ToRecord",
+  "m": "DateTime.ToRecord(#datetime(2024, 5, 6, 13, 45, 30))[Hour]",
+  "expect": "13"
+ },
+ {
+  "fn": "DateTime.ToRecord",
+  "m": "DateTime.ToRecord(#datetime(2024, 5, 6, 13, 45, 30))[Minute]",
+  "expect": "45"
+ },
+ {
+  "fn": "DateTime.ToRecord",
+  "m": "DateTime.ToRecord(#datetime(2024, 5, 6, 13, 45, 30))[Second]",
+  "expect": "30"
+ },
+ {
+  "fn": "DateTime.ToRecord",
+  "m": "Record.FieldNames(DateTime.ToRecord(#datetime(2024, 5, 6, 13, 45, 30)))",
+  "expect": "{Year,Month,Day,Hour,Minute,Second}",
+  "mode": "value"
+ },
+ {
+  "fn": "Time.ToRecord",
+  "m": "Time.ToRecord(#time(13, 45, 30))[Hour]",
+  "expect": "13"
+ },
+ {
+  "fn": "Time.ToRecord",
+  "m": "Time.ToRecord(#time(13, 45, 30))[Minute]",
+  "expect": "45"
+ },
+ {
+  "fn": "Time.ToRecord",
+  "m": "Time.ToRecord(#time(13, 45, 30))[Second]",
+  "expect": "30"
+ },
+ {
+  "fn": "Time.ToRecord",
+  "m": "Record.FieldNames(Time.ToRecord(#time(13, 45, 30)))",
+  "expect": "{Hour,Minute,Second}",
+  "mode": "value"
+ },
+ {
+  "fn": "Duration.ToRecord",
+  "m": "Duration.ToRecord(#duration(2, 3, 4, 5))[Days]",
+  "expect": "2"
+ },
+ {
+  "fn": "Duration.ToRecord",
+  "m": "Duration.ToRecord(#duration(2, 3, 4, 5))[Hours]",
+  "expect": "3"
+ },
+ {
+  "fn": "Duration.ToRecord",
+  "m": "Duration.ToRecord(#duration(2, 3, 4, 5))[Minutes]",
+  "expect": "4"
+ },
+ {
+  "fn": "Duration.ToRecord",
+  "m": "Duration.ToRecord(#duration(2, 3, 4, 5))[Seconds]",
+  "expect": "5"
+ },
+ {
+  "fn": "Duration.ToRecord",
+  "m": "Record.FieldNames(Duration.ToRecord(#duration(2, 3, 4, 5)))",
+  "expect": "{Days,Hours,Minutes,Seconds}",
+  "mode": "value"
+ },
+ {
+  "fn": "Number.RoundAwayFromZero",
+  "m": "Number.RoundAwayFromZero(1.1)",
+  "expect": "2"
+ },
+ {
+  "fn": "Number.RoundAwayFromZero",
+  "m": "Number.RoundAwayFromZero(-1.1)",
+  "expect": "-2"
+ },
+ {
+  "fn": "Number.RoundAwayFromZero",
+  "m": "Number.RoundAwayFromZero(2.341, 2)",
+  "expect": "2.35"
+ },
+ {
+  "fn": "Number.RoundAwayFromZero",
+  "m": "Number.RoundAwayFromZero(3)",
+  "expect": "3"
+ },
+ {
+  "fn": "Number.RoundTowardZero",
+  "m": "Number.RoundTowardZero(2.9)",
+  "expect": "2"
+ },
+ {
+  "fn": "Number.RoundTowardZero",
+  "m": "Number.RoundTowardZero(-2.9)",
+  "expect": "-2"
+ },
+ {
+  "fn": "Number.RoundTowardZero",
+  "m": "Number.RoundTowardZero(2.789, 2)",
+  "expect": "2.78"
+ },
+ {
+  "fn": "List.Covariance",
+  "m": "List.Covariance({1, 2, 3}, {1, 2, 3})",
+  "expect": "0.6666666666666666",
+  "mode": "value"
+ },
+ {
+  "fn": "List.Covariance",
+  "m": "List.Covariance({1, 2, 3}, {3, 2, 1})",
+  "expect": "-0.6666666666666666",
+  "mode": "value"
+ },
+ {
+  "fn": "List.Covariance",
+  "m": "List.Covariance({1, 2, 3, 4}, {5, 5, 5, 5})",
+  "expect": "0",
+  "mode": "value"
+ },
+ {
+  "fn": "Value.NullableEquals",
+  "m": "Value.NullableEquals(1, 1)",
+  "expect": "true",
+  "mode": "value"
+ },
+ {
+  "fn": "Value.NullableEquals",
+  "m": "Value.NullableEquals(1, 2)",
+  "expect": "false",
+  "mode": "value"
+ },
+ {
+  "fn": "Value.NullableEquals",
+  "m": "Value.NullableEquals(null, 1)",
+  "expect": "null",
+  "mode": "value"
+ },
+ {
+  "fn": "Value.NullableEquals",
+  "m": "Value.NullableEquals(\"a\", null)",
+  "expect": "null",
+  "mode": "value"
+ },
+ {
+  "fn": "Value.NullableEquals",
+  "m": "Value.NullableEquals(null, null)",
+  "expect": "null",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.AddRankColumn",
+  "m": "Table.Column(Table.AddRankColumn(#table({\"n\", \"score\"}, {{\"a\", 10}, {\"b\", 30}, {\"c\", 30}, {\"d\", 20}}), \"Rank\", {\"score\", Order.Descending}), \"Rank\")",
+  "expect": "{4,1,1,3}",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.AddRankColumn",
+  "m": "Table.Column(Table.AddRankColumn(#table({\"n\", \"score\"}, {{\"a\", 10}, {\"b\", 30}, {\"c\", 30}, {\"d\", 20}}), \"Rank\", \"score\"), \"Rank\")",
+  "expect": "{1,3,3,2}",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.AddRankColumn",
+  "m": "Table.Column(Table.AddRankColumn(#table({\"n\", \"score\"}, {{\"a\", 10}, {\"b\", 30}, {\"c\", 30}, {\"d\", 20}}), \"Rank\", {\"score\", Order.Descending}, [RankKind = RankKind.Dense]), \"Rank\")",
+  "expect": "{3,1,1,2}",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.AddRankColumn",
+  "m": "Table.Column(Table.AddRankColumn(#table({\"n\", \"score\"}, {{\"a\", 10}, {\"b\", 30}, {\"c\", 30}, {\"d\", 20}}), \"Rank\", {\"score\", Order.Descending}, [RankKind = RankKind.Ordinal]), \"Rank\")",
+  "expect": "{4,1,2,3}",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.AddRankColumn",
+  "m": "Table.ColumnNames(Table.AddRankColumn(#table({\"n\", \"score\"}, {{\"a\", 10}, {\"b\", 30}, {\"c\", 30}, {\"d\", 20}}), \"Rank\", \"score\"))",
+  "expect": "{n,score,Rank}",
+  "mode": "value"
+ },
+ {
+  "fn": "Record.ToTable",
+  "m": "Table.Column(Record.ToTable([a = 1, b = 2]), \"Name\")",
+  "expect": "{a,b}",
+  "mode": "value"
+ },
+ {
+  "fn": "Record.ToTable",
+  "m": "Table.Column(Record.ToTable([a = 1, b = 2]), \"Value\")",
+  "expect": "{1,2}",
+  "mode": "value"
+ },
+ {
+  "fn": "Record.FromTable",
+  "m": "Record.FromTable(#table({\"Name\", \"Value\"}, {{\"x\", 1}, {\"y\", 2}}))",
+  "expect": "[x: 1,y: 2]",
+  "mode": "value"
+ }
+]
