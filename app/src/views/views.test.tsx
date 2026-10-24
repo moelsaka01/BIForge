@@ -250,6 +250,24 @@ describe("ModelView", () => {
     expect(parseFloat(card.style.height)).toBe(heightBefore + 22);
   });
 
+  it("a relationship line shows the cardinality at both ends and the filter direction, and changes when the direction changes", async () => {
+    const s = await modelSetup(false);
+    const { view } = renderModel(s, false);
+    drag("Fact.cust", "Dim.id");
+    await waitFor(() => expect(listRelationships(s.session.store.project!)).toHaveLength(1));
+    const rel = listRelationships(s.session.store.project!)[0];
+    const rerender = () => view.rerender(<ModelView project={s.session.store.project!} session={s.session} registry={s.registry} engine={null} onError={() => undefined} />);
+    rerender();
+    const texts = () => [...screen.getByTestId(`rel-${rel.id}`).querySelectorAll("text")].map((t) => t.textContent);
+    // many on the dragged (Fact) side, one on Dim; the filter runs one way
+    expect(texts().filter((t) => t === "*")).toHaveLength(1);
+    expect(texts().filter((t) => t === "1")).toHaveLength(1);
+    expect(texts().some((t) => t === "◄" || t === "►")).toBe(true);
+    await s.registry.execute("model.updateRelationship", { id: rel.id, patch: { crossFilter: "both" } });
+    rerender();
+    expect(texts()).toContain("◄►");
+  });
+
   it("selecting a table highlights the tables it is related to", async () => {
     const s = await modelSetup(false);
     const { view } = renderModel(s, false);
