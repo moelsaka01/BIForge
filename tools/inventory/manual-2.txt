@@ -425,7 +425,7 @@ N | Diagnostic: crash dump collection
 N | Preview features list (each switch)
 ### Auto recovery
 D | Autosave and crash recovery
-N | Autosave interval setting
+D | Autosave interval setting
 N | Autorecovery folder and open folder
 ### Report settings
 N | Use the modern visual tooltip
@@ -444,7 +444,7 @@ N | Apply a theme to new reports
 D | Interface: Classic and Modern
 D | Ribbon mode: multi-line, single line
 D | Theme: Light, Dark
-N | Theme: Use system setting
+D | Theme: Use system setting
 N | Display language (UI strings)
 N | Font size and zoom of the interface
 N | Show recent files count
@@ -469,7 +469,7 @@ N | Type detection for this file
 N | Allow parallel loading
 N | Locale for import
 ### Regional settings
-N | Model language for this file
+D | Model language for this file
 N | Model locale
 ### Privacy
 N | Privacy levels for this file
@@ -507,7 +507,7 @@ N | Edit relationships
 D | Manage roles
 D | View as roles
 D | Quick measures
-N | New parameter (what-if)
+D | New parameter (what-if)
 N | Customize theme
 N | Data source settings
 N | Data groups
@@ -521,8 +521,8 @@ N | Save as dialog
 N | Export to PDF dialog
 N | Print dialog
 N | Linguistic schema
-N | Calculation group editor
-N | Field parameters dialog
+D | Calculation group editor
+D | Field parameters dialog
 D | Hierarchy editor
 N | Mobile layout tools
 D | Selection pane

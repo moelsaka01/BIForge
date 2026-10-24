@@ -167,16 +167,16 @@ Last updated: 2026-10-17, after the scope-change session was completed (see PROG
 | Power Query editor: window and ribbon | 94 | 41 | 4 | 49 |
 | M language | 12 | 3 | 0 | 9 |
 | Get data: connectors | 47 | 25 | 16 | 6 |
-| Options dialog: Global | 61 | 8 | 2 | 51 |
-| Options dialog: Current File | 23 | 0 | 0 | 23 |
-| Dialogs | 48 | 17 | 0 | 31 |
+| Options dialog: Global | 61 | 10 | 2 | 49 |
+| Options dialog: Current File | 23 | 1 | 0 | 22 |
+| Dialogs | 48 | 20 | 0 | 28 |
 | Keyboard shortcuts | 37 | 19 | 0 | 18 |
 | Export, print and file formats | 15 | 2 | 0 | 13 |
 | Accessibility and platform | 12 | 1 | 1 | 10 |
 | Format pane cards per visual | 1264 | 343 | 280 | 641 |
 | DAX functions | 317 | 297 | 0 | 20 |
 | M standard library | 652 | 377 | 0 | 275 |
-| **Total** | **3008** | **1349** | **313** | **1346** |
+| **Total** | **3008** | **1355** | **313** | **1340** |
 <!-- inventory-status:end -->
 
 ## Online track (Publish & Share; plan in docs/ONLINE_PLAN.md)

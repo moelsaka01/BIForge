@@ -51,6 +51,22 @@ describe("recovery snapshot lifecycle", () => {
     expect(io.recovery.has(ROOT)).toBe(true);
   });
 
+  it("Options > Auto recovery: the delay decides when the snapshot is written, and the switch turns it off", async () => {
+    const { io, reg, session } = await setup(1000);
+    session.shell.settings.setOption("autosave.seconds", 5);
+    await reg.execute("model.addTable", { name: "A" });
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(io.recovery.has(ROOT)).toBe(false);
+    await vi.advanceTimersByTimeAsync(2500);
+    expect(io.recovery.has(ROOT)).toBe(true);
+    session.shell.settings.setOption("autosave.enabled", false);
+    await session.discardRecovery();
+    expect(io.recovery.has(ROOT)).toBe(false);
+    await reg.execute("model.addTable", { name: "B" });
+    await vi.advanceTimersByTimeAsync(20_000);
+    expect(io.recovery.has(ROOT)).toBe(false);
+  });
+
   it("undoing every edit removes the snapshot, so the next open offers nothing", async () => {
     const { io, reg, session } = await setup();
     await reg.execute("model.addTable", { name: "A" });
