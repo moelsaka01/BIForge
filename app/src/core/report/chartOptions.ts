@@ -129,13 +129,13 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
       const dimmed = (selecting && !isSelected(ci, si)) || (hl !== null && !isHighlight);
       const c = cond?.[ci] ?? color;
       const item: O = { value: v, raw: cells[vi][si][ci] };
-      if (!asLine || cond) item.itemStyle = { color: c, opacity: (dimmed ? DIM : 1) * (asLine ? 1 : fillAlpha) };
+      // a border with transparency, or "outline only" (empty bar, border in the bar's color), is decided per bar
+      const edge = borderOn && !asLine ? sliceItemStyle(f, theme, c) : {};
+      if (!asLine || cond) item.itemStyle = { color: c, opacity: (dimmed ? DIM : 1) * (asLine ? 1 : fillAlpha), ...edge };
       if (asLine && dimmed) item.itemStyle = { ...(item.itemStyle ?? {}), opacity: DIM };
       return item;
     });
-    const barBorder = borderOn
-      ? { borderWidth: f.num("dataPoint", "borderSize", 1), borderColor: f.bool("dataPoint", "borderColorMatchFill", false) ? color : (f.color("dataPoint", "borderColor") ?? theme.foreground) }
-      : {};
+    const barBorder = borderOn ? sliceItemStyle(f, theme, color) : {};
     const s: O = {
       name: isHighlight ? `${name} (highlighted)` : name,
       type: asLine ? "line" : "bar",

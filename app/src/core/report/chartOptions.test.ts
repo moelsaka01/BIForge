@@ -334,3 +334,27 @@ describe("the content settings of the Tooltips card", () => {
     expect(pie([])).not.toContain("Ctrl+click");
   });
 });
+
+describe("the border of bars (Data colors card)", () => {
+  const rows = [[c("Accessories"), c(30)], [c("Bikes"), c(50)]];
+  const firstBar = (props: [string, ReturnType<typeof lit.str> | ReturnType<typeof lit.bool> | ReturnType<typeof lit.num>][]) => {
+    const v = visualOf("clusteredColumnChart", { Category: [Cat], Y: [Qty] });
+    for (const [p, val] of props) setFormat(v.json, "dataPoint", p, val);
+    const o = build(v, grouped(v, rows)).option as { series: { data: { itemStyle: Record<string, unknown> }[] }[] };
+    return o.series[0].data[0].itemStyle;
+  };
+  it("no border unless it is on; its color, size and transparency apply to every bar", () => {
+    expect(firstBar([]).borderWidth).toBeUndefined();
+    const solid = firstBar([["borderShow", lit.bool(true)], ["borderColor", lit.str("#ff0000")], ["borderSize", lit.num(3)]]);
+    expect(solid.borderColor).toBe("rgba(255, 0, 0, 1)");
+    expect(solid.borderWidth).toBe(3);
+    const faint = firstBar([["borderShow", lit.bool(true)], ["borderColor", lit.str("#ff0000")], ["borderTransparency", lit.num(50)]]);
+    expect(faint.borderColor).toBe("rgba(255, 0, 0, 0.5)");
+  });
+  it("outline only empties the bar and draws its border in the bar's own color", () => {
+    const o = firstBar([["borderShow", lit.bool(true)], ["borderOutlineOnly", lit.bool(true)]]);
+    expect(o.color).toBe("transparent");
+    expect(firstBar([])["color"]).toBe("#0f6cbd"); // the first theme color
+    expect(o.borderColor).toBe("rgba(15, 108, 189, 1)");
+  });
+});
