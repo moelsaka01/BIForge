@@ -48,6 +48,8 @@ export interface ContainerInput {
   titleByDefault: boolean;
   /** Tables and matrices never get an automatic title text. */
   noAutoText: boolean;
+  /** Whether the visual header shows when the visual does not say (Options > Report settings). */
+  headerDefault?: boolean;
 }
 
 const ALIGN: Record<string, CSSProperties["textAlign"]> = { left: "left", center: "center", right: "right", Left: "left", Center: "center", Right: "right" };
@@ -150,7 +152,7 @@ export function buildContainer(inp: ContainerInput): ContainerModel {
     divider,
     body,
     altText: f.str("general", "altText", ""),
-    headerShown: f.bool("visualHeader", "show", true),
+    headerShown: f.bool("visualHeader", "show", inp.headerDefault ?? true),
     headerStyle: {
       background: f.color("visualHeader", "background") ?? "#ffffffd9",
       color: f.color("visualHeader", "foreground") ?? "#222222",

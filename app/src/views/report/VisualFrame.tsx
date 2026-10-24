@@ -75,7 +75,7 @@ export function VisualFrame(p: FrameProps) {
   const type = visualType(visual.visualType);
   const fam = type?.family;
   const isCard = fam === "card" || fam === "kpi" || fam === "slicer";
-  const model = buildContainer({ f, theme: c.theme, autoTitle: autoTitle(visual), titleByDefault: !isCard, noAutoText: fam === "table" || fam === "matrix" });
+  const model = buildContainer({ f, theme: c.theme, autoTitle: autoTitle(visual), titleByDefault: !isCard, noAutoText: fam === "table" || fam === "matrix", headerDefault: c.canvas.visualHeader });
   const titleText = model.title?.text ?? "";
   // the Action card: Ctrl+click follows the link; the hover text says what it does (or why it cannot)
   const action = readAction(visual.json);

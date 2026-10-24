@@ -139,7 +139,7 @@ export const OPTION_PAGES: OptionPage[] = [
       b("report.slicerSearch", "Enable search in slicers", true),
       b("report.persistentFilters", "Persistent filters", false),
       b("report.hideFilterPane", "Hide the filter pane in new reports", false),
-      b("report.visualHeader", "Show the visual header on hover", true),
+      b("report.visualHeader", "Show the visual header on hover", true, true, "A visual's own Visual header setting wins."),
       b("canvas.smartGuides", "Smart guides: snap to other visuals and the page while moving and resizing (hold Alt to skip)", true, true),
       b("canvas.gridlines", "Show gridlines on the canvas", false, true),
       b("canvas.snapToGrid", "Snap visuals to the grid", false, true),

@@ -434,7 +434,7 @@ N | Enable slicer search
 N | Enable the filter pane search
 N | Persistent filters
 N | Report: default view setting
-N | Show visual header on hover
+D | Show visual header on hover
 N | Default cross filtering / cross highlighting
 N | Hide the filters pane for new reports
 N | Drill-through default
