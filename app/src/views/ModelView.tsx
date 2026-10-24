@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { Fragment, useRef, useState } from "react";
 import type { CommandRegistry } from "../core/commands/registry";
 import type { Session } from "../core/session/session";
 import type { Project } from "../core/model/types";
@@ -30,13 +30,13 @@ interface Box {
 }
 
 /** Automatic grid layout; card positions are not user-editable yet. */
-export function layoutCards(tables: { name: string; columns: unknown[]; measures?: unknown[]; hierarchies?: unknown[] }[]): Map<string, Box> {
+export function layoutCards(tables: { name: string; columns: unknown[]; measures?: unknown[]; hierarchies?: unknown[]; folders?: number }[]): Map<string, Box> {
   const out = new Map<string, Box>();
   const rowBottoms: number[] = [];
   tables.forEach((t, i) => {
     const r = Math.floor(i / COLS);
     const c = i % COLS;
-    const h = HEAD_H + Math.min(Math.max(t.columns.length + (t.measures?.length ?? 0) + (t.hierarchies?.length ?? 0), 1), MAX_ROWS) * ROW_H + CARD_PAD;
+    const h = HEAD_H + Math.min(Math.max(t.columns.length + (t.measures?.length ?? 0) + (t.hierarchies?.length ?? 0) + (t.folders ?? 0), 1), MAX_ROWS) * ROW_H + CARD_PAD;
     const y = r === 0 ? 20 : rowBottoms[r - 1] + GAP_Y;
     rowBottoms[r] = Math.max(rowBottoms[r] ?? 0, y + h);
     out.set(t.name, { x: 20 + c * (CARD_W + GAP_X), y, w: CARD_W, h });
@@ -71,7 +71,13 @@ export function ModelView({ project, session, registry, engine, onError, propert
   const tables = listTables(project);
   const rels = listRelationships(project);
   const hierarchiesOf = (name: string) => listHierarchies(project, name);
-  const boxes = layoutCards(tables.map((t) => ({ ...t, hierarchies: hierarchiesOf(t.name) })));
+  // a field's display folder: the cards list fields under a heading per folder
+  const folderOf = (table: string, field: { kind: "column"; column: string } | { kind: "measure"; name: string }): string => {
+    const v = getProperty(project, { table, ...field } as never, "displayFolder");
+    return typeof v === "string" ? v : "";
+  };
+  const foldersIn = (t: TableView) => new Set([...t.columns.map((c) => folderOf(t.name, { kind: "column", column: c.name })), ...t.measures.map((m) => folderOf(t.name, { kind: "measure", name: m.name }))].filter(Boolean));
+  const boxes = layoutCards(tables.map((t) => ({ ...t, hierarchies: hierarchiesOf(t.name), folders: foldersIn(t).size })));
   const [sel0, setSel] = useState<Sel>({ kind: "none" });
   const selected = sel0.kind === "rel" ? sel0.id : null;
   const setSelected = (id: string | null) => setSel(id ? { kind: "rel", id } : { kind: "none" });
@@ -174,6 +180,13 @@ export function ModelView({ project, session, registry, engine, onError, propert
           {tables.map((t) => {
             const base = boxes.get(t.name)!;
             const folded = collapsed.has(t.name);
+            const shownFolders = new Set<string>();
+            const folderRow = (table: string, folder: string) => (
+              <div key={`f:${folder}`} data-testid={`folder-${table}.${folder}`} style={{ height: ROW_H, boxSizing: "border-box", display: "flex", alignItems: "center", gap: 6, padding: "0 8px", fontWeight: 600, opacity: 0.8 }}>
+                <span aria-hidden style={{ width: 16, textAlign: "center" }}>▾</span>
+                <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{folder}</span>
+              </div>
+            );
             const box = folded ? { ...base, h: HEAD_H + 2 } : base;
             const selTable = (sel0.kind === "table" || sel0.kind === "column" || sel0.kind === "measure") && sel0.table === t.name;
             return (
@@ -216,14 +229,17 @@ export function ModelView({ project, session, registry, engine, onError, propert
                   </button>
                   {t.name}
                 </div>
-                {!folded && <div style={{ overflowY: t.columns.length + t.measures.length + hierarchiesOf(t.name).length > MAX_ROWS ? "auto" : "hidden", flex: 1, minHeight: 0 }}>
+                {!folded && <div style={{ overflowY: t.columns.length + t.measures.length + hierarchiesOf(t.name).length + foldersIn(t).size > MAX_ROWS ? "auto" : "hidden", flex: 1, minHeight: 0 }}>
                   {t.columns.length + t.measures.length === 0 && <div style={{ padding: "2px 8px", opacity: 0.6 }}>(no columns)</div>}
-                  {t.columns.map((c) => {
+                  {[...t.columns].sort((a, b) => folderOf(t.name, { kind: "column", column: a.name }).localeCompare(folderOf(t.name, { kind: "column", column: b.name }))).map((c) => {
                     const key = `${t.name}.${c.name}`;
+                    const folder = folderOf(t.name, { kind: "column", column: c.name });
+                    const head = folder && !shownFolders.has(folder) ? (shownFolders.add(folder), folderRow(t.name, folder)) : null;
                     const isSel = sel0.kind === "column" && sel0.table === t.name && sel0.column === c.name;
                     return (
+                      <Fragment key={c.name}>
+                      {head}
                       <div
-                        key={c.name}
                         data-testid={`col-${key}`}
                         data-hidden={getProperty(project, { kind: "column", table: t.name, column: c.name }, "isHidden") === true}
                         draggable
@@ -267,11 +283,16 @@ export function ModelView({ project, session, registry, engine, onError, propert
                         <FieldIcon kind={fieldIconKind(c.dataType, c.summarizeBy)} />
                         <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{c.name}</span>
                       </div>
+                      </Fragment>
                     );
                   })}
-                  {t.measures.map((m) => (
+                  {[...t.measures].sort((a, b) => folderOf(t.name, { kind: "measure", name: a.name }).localeCompare(folderOf(t.name, { kind: "measure", name: b.name }))).map((m) => {
+                    const folder = folderOf(t.name, { kind: "measure", name: m.name });
+                    const head = folder && !shownFolders.has(folder) ? (shownFolders.add(folder), folderRow(t.name, folder)) : null;
+                    return (
+                    <Fragment key={`m:${m.name}`}>
+                    {head}
                     <div
-                      key={`m:${m.name}`}
                       data-testid={`measure-${t.name}.${m.name}`}
                       data-hidden={getProperty(project, { kind: "measure", table: t.name, name: m.name }, "isHidden") === true}
                       onClick={() => setSel({ kind: "measure", table: t.name, name: m.name })}
@@ -280,7 +301,9 @@ export function ModelView({ project, session, registry, engine, onError, propert
                       <FieldIcon kind="measure" />
                       <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{m.name}</span>
                     </div>
-                  ))}
+                    </Fragment>
+                    );
+                  })}
                   {hierarchiesOf(t.name).map((h) => (
                     <div
                       key={`h:${h.name}`}

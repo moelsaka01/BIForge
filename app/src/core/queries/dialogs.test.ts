@@ -266,10 +266,15 @@ describe("ribbon", () => {
     expect(itemState(item("format.upper"), rc({ selected: ["Id"] })).reason).toBe("Select a text column.");
     expect(itemState(item("format.upper"), rc({ selected: ["Name"] })).enabled).toBe(true);
     expect(itemState(item("t.round.round"), rc({ selected: ["Name"] })).reason).toBe("Select a number column.");
+    const buildOf = (id: string) => {
+      const a = item(id).action;
+      if (a.type !== "transform") throw new Error(`${id} is not a transform`);
+      return a.build(rc({ selected: ["Amount"] }));
+    };
     expect(itemState(item("t.round.up"), rc({ selected: ["Amount"] })).enabled).toBe(true);
-    expect(item("t.round.up").action.type === "transform" && item("t.round.up").action.build(rc({ selected: ["Amount"] }))).toMatchObject({ function: "Number.RoundUp", columns: ["Amount"] });
-    expect(item("t.round.down").action.type === "transform" && item("t.round.down").action.build(rc({ selected: ["Amount"] }))).toMatchObject({ function: "Number.RoundDown" });
-    expect(item("t.info.sign").action.type === "transform" && item("t.info.sign").action.build(rc({ selected: ["Amount"] }))).toMatchObject({ function: "Number.Sign" });
+    expect(buildOf("t.round.up")).toMatchObject({ function: "Number.RoundUp", columns: ["Amount"] });
+    expect(buildOf("t.round.down")).toMatchObject({ function: "Number.RoundDown" });
+    expect(buildOf("t.info.sign")).toMatchObject({ function: "Number.Sign" });
     expect(itemState(item("t.round"), rc({ selected: ["Amount"] })).enabled).toBe(true);
     expect(itemState(item("promote"), rc({ hasTable: false })).reason).toContain("not a table");
     expect(itemState(item("promote"), rc({ hasQuery: false })).reason).toBe("Select a query first.");

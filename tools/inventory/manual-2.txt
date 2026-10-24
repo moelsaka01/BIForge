@@ -113,7 +113,7 @@ D | Highlight related tables
 N | Select related tables
 N | Bulk edit of properties (multi-select)
 D | Hierarchies in cards
-N | Display folders in cards
+D | Display folders in cards
 D | Calculation group cards
 D | Field parameter cards
 N | Context menus (Delete, Hide, Rename, Add to layout)

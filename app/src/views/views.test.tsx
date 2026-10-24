@@ -235,6 +235,21 @@ describe("ModelView", () => {
     expect(col().style.opacity).toBe("");
   });
 
+  it("fields with a display folder are listed under a heading for the folder, once, and the card grows for it", async () => {
+    const s = await modelSetup(false);
+    const heightBefore = parseFloat(renderModel(s, false).view.container.querySelector<HTMLElement>("[data-testid=card-Dim]")!.style.height);
+    cleanup();
+    for (const column of ["id", "name"]) await s.registry.execute("model.setProperty", { target: { kind: "column", table: "Dim", column }, key: "displayFolder", value: "Keys" });
+    renderModel(s, false);
+    const card = screen.getByTestId("card-Dim");
+    expect(within(card).getAllByText("Keys")).toHaveLength(1);
+    expect(screen.getByTestId("folder-Dim.Keys")).toBeTruthy();
+    // the heading comes right before the fields of the folder
+    const order = [...card.querySelectorAll("[data-testid]")].map((e) => e.getAttribute("data-testid")).filter((x) => /^(folder|col)-/.test(x!));
+    expect(order).toEqual(["folder-Dim.Keys", "col-Dim.id", "col-Dim.name"]);
+    expect(parseFloat(card.style.height)).toBe(heightBefore + 22);
+  });
+
   it("selecting a table highlights the tables it is related to", async () => {
     const s = await modelSetup(false);
     const { view } = renderModel(s, false);
