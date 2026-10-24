@@ -218,6 +218,13 @@ const SCENARIOS: Record<string, Scenario> = {
       return { c: m.container, on: m.entry(true), off: m.entry(false), h: m.showHidden };
     },
   },
+  bookmarkNavigator: {
+    make: () => visualOf("bookmarkNavigator", {}),
+    render: (v) => {
+      const m = navigatorModel(new FormatReader(v.json, DEFAULT_THEME, "bookmarkNavigator"), DEFAULT_THEME, 400, 40);
+      return { c: m.container, on: m.entry(true), off: m.entry(false) };
+    },
+  },
   image: { make: () => visualOf("image", {}), render: (v) => imageModel(new FormatReader(v.json, DEFAULT_THEME, "image"), 200, 100) },
 };
 

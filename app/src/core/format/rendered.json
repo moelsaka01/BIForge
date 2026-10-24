@@ -3085,6 +3085,30 @@
    "underline"
   ]
  },
+ "bookmarkNavigator": {
+  "fill": [
+   "fillColor",
+   "show",
+   "transparency"
+  ],
+  "layout": [
+   "cellPadding"
+  ],
+  "outline": [
+   "lineColor",
+   "show",
+   "weight"
+  ],
+  "text": [
+   "bold",
+   "fontColor",
+   "fontFamily",
+   "fontSize",
+   "horizontalAlignment",
+   "italic",
+   "underline"
+  ]
+ },
  "image": {
   "general": [
    "altText"
