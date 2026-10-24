@@ -3,7 +3,7 @@
 import type { Expr, Project, TmdlNode } from "../model/types";
 import type { TableInfo } from "../data/types";
 import { addTable, findTable } from "../model/ops";
-import { columnNode, node, text } from "../model/tables";
+import { columnNode, node, sourceKey, text } from "../model/tables";
 import { removeRelationshipsOnColumns } from "../model/relationships";
 
 const GENERATED = "BIForge.GeneratedM";
@@ -117,9 +117,9 @@ export function applyQueryLoad(
     found = findTable(p, info.name)!;
   }
   const t = found.node;
-  const oldColumns = new Map(t.children.filter((c) => c.kind === "column").map((c) => [c.name!.toLowerCase(), c]));
+  const oldColumns = new Map(t.children.filter((c) => c.kind === "column").map((c) => [sourceKey(c), c]));
   const fresh = new Set(info.columns.map((c) => c.name.toLowerCase()));
-  const gone = [...oldColumns.values()].filter((c) => !fresh.has(c.name!.toLowerCase())).map((c) => c.name!);
+  const gone = [...oldColumns.entries()].filter(([k]) => !fresh.has(k)).map(([, c]) => c.name!);
   const columns = info.columns.map((c) => columnNode(c.name, c.biType, newId, oldColumns.get(c.name.toLowerCase())));
   const oldPart = t.children.find(isMPartition);
   // unchanged M (a table only reloaded because a query it uses changed) keeps its partition, marker and import source as they are
@@ -181,4 +181,21 @@ export function removeExpression(p: Project, name: string): void {
 
 export function expressionExists(p: Project, name: string): boolean {
   return allNodes(p).some((n) => n.kind === "expression" && n.name === name);
+}
+
+/** Replaces the M text of query `name` (a table's M partition or a named expression); the text is not checked. */
+export function setQueryText(p: Project, name: string, mText: string): void {
+  for (const n of allNodes(p)) {
+    if (n.name !== name) continue;
+    if (n.kind === "expression") n.default = exprOf(mText);
+    else if (n.kind === "table") {
+      const part = n.children.find(isMPartition);
+      const src = part?.props.find((x) => x.key === "source");
+      if (!part || !src) continue;
+      if (typeof src.value === "object" && "Expr" in src.value && src.value.Expr.text === exprOf(mText).text) return;
+      src.value = { Expr: exprOf(mText) };
+      // text the user's rename touched is no longer the text BIForge generated
+      part.children = part.children.filter((a) => !(a.kind === "annotation" && a.name === GENERATED));
+    }
+  }
 }

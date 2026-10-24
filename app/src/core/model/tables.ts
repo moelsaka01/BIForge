@@ -18,6 +18,9 @@ export const node = (kind: string, name: string | null, props: TmdlNode["props"]
 
 export const text = (key: string, v: string) => ({ key, value: { Text: v } });
 
+/** A column is found again after a refresh by its source name, so a column renamed in the model keeps its name and settings. */
+export const sourceKey = (c: TmdlNode) => (textProp(c, "sourceColumn") ?? c.name!).toLowerCase();
+
 export function columnNode(name: string, t: BiType, newId: () => string, existing?: TmdlNode): TmdlNode {
   if (existing) {
     // Refresh keeps user-edited properties (format, description, lineageTag, ...) and only updates what the source defines.
@@ -68,9 +71,9 @@ export function applyImport(
     found = findTable(p, info.name)!;
   }
   const t = found.node;
-  const oldColumns = new Map(t.children.filter((c) => c.kind === "column").map((c) => [c.name!.toLowerCase(), c]));
+  const oldColumns = new Map(t.children.filter((c) => c.kind === "column").map((c) => [sourceKey(c), c]));
   const fresh = new Set(info.columns.map((c) => c.name.toLowerCase()));
-  const gone = [...oldColumns.values()].filter((c) => !fresh.has(c.name!.toLowerCase())).map((c) => c.name!);
+  const gone = [...oldColumns.entries()].filter(([k]) => !fresh.has(k)).map(([, c]) => c.name!);
   const isGenerated = (c: TmdlNode) => c.kind === "partition" && c.children.some((a) => a.kind === "annotation" && a.name === GENERATED_ANNOTATION);
   const isOwnPartition = (c: TmdlNode) => c.kind === "partition" && !isGenerated(c);
   // A partition BIForge wrote is rebuilt from the source; one the user edited (no marker) is kept as is.

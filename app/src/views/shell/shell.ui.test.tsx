@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import tauriConf from "../../../src-tauri/tauri.conf.json?raw";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import * as info from "../../core/info";
 import { resolveTheme } from "../../core/report/theme";
@@ -175,7 +174,7 @@ describe("workspace", () => {
     const pane = await screen.findByLabelText("Data pane");
     const sales = within(pane).getByText("Sales");
     fireEvent.contextMenu(sales);
-    expect((await screen.findAllByRole("menuitem")).map((m) => m.textContent)).toEqual(["Show data", "Show first 100 rows", "Count rows"]);
+    expect((await screen.findAllByRole("menuitem")).map((m) => m.textContent)).toEqual(["Rename", "Show data", "Show first 100 rows", "Count rows"]);
     fireEvent.click(screen.getByRole("menuitem", { name: "Show first 100 rows" }));
     const editor = (await screen.findByLabelText("DAX query")) as HTMLTextAreaElement;
     expect(editor.value).toBe(["EVALUATE", "TOPN(100, 'Sales')"].join("\n"));
@@ -187,6 +186,31 @@ describe("workspace", () => {
     fireEvent.contextMenu(col);
     fireEvent.click(await screen.findByRole("menuitem", { name: "Show distinct values" }));
     expect(((await screen.findByLabelText("DAX query")) as HTMLTextAreaElement).value).toBe(["EVALUATE", "DISTINCT('Sales'[Quantity])", "ORDER BY 'Sales'[Quantity]"].join("\n"));
+  });
+
+  it("right-click > Rename renames a table, a column and a measure with everything that uses them", async () => {
+    const a = makeApp();
+    render(a.element);
+    await openProject(a);
+    const pane = await screen.findByLabelText("Data pane");
+    fireEvent.contextMenu(within(pane).getByText("Sales"));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Rename" }));
+    const input = (await screen.findByLabelText("New name")) as HTMLInputElement;
+    expect(input.value).toBe("Sales");
+    fireEvent.change(input, { target: { value: "Orders" } });
+    fireEvent.click(screen.getByRole("button", { name: "Rename" }));
+    await waitFor(() => expect(listTables(a.session.store.project!).map((t) => t.name)).toContain("Orders"));
+    expect(listTables(a.session.store.project!).map((t) => t.name)).not.toContain("Sales");
+    // the measure of the fixture read Sales[Quantity] and now reads Orders[Quantity]
+    const m = listTables(a.session.store.project!).find((t) => t.name === "Orders")!.measures;
+    for (const x of m) expect(x.expression).not.toMatch(/Sales/);
+    // a column through the same menu
+    fireEvent.click(within(await screen.findByLabelText("Data pane")).getAllByRole("treeitem").find((t) => t.textContent?.startsWith("Orders"))!);
+    fireEvent.contextMenu((await within(await screen.findByLabelText("Data pane")).findAllByText("Quantity"))[0]);
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Rename" }));
+    fireEvent.change(await screen.findByLabelText("New name"), { target: { value: "Units" } });
+    fireEvent.click(screen.getByRole("button", { name: "Rename" }));
+    await waitFor(() => expect(listTables(a.session.store.project!).find((t) => t.name === "Orders")!.columns.map((c) => c.name)).toContain("Units"));
   });
 
   it("Update model with changes writes the DEFINE MEASUREs of the query into the model: new ones are added, existing ones edited, an unknown table is refused", async () => {
@@ -543,7 +567,7 @@ describe("title bar", () => {
     const a = makeApp();
     render(a.element);
     expect(screen.getByRole("banner").hasAttribute("data-tauri-drag-region")).toBe(true);
-    const conf = JSON.parse(readFileSync(resolve(__dirname, "../../../src-tauri/tauri.conf.json"), "utf8"));
+    const conf = JSON.parse(tauriConf);
     const w = conf.app.windows[0];
     expect(w.decorations).toBe(false);
     expect(w.minWidth).toBeGreaterThanOrEqual(800);

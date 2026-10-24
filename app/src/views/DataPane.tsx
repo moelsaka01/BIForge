@@ -30,6 +30,8 @@ export interface DataPaneProps {
   canImport: boolean;
   /** Right-click > a quick query: the DAX text to put in the query view. */
   onQuickQuery?(text: string): void;
+  /** Right-click > Rename: the object to rename. */
+  onRename?(target: QuickTarget): void;
 }
 
 const typeGlyph = (t: string | null) =>
@@ -72,7 +74,7 @@ export function DataPane(p: DataPaneProps) {
           x={menu.x}
           y={menu.y}
           onClose={() => setMenu(null)}
-          items={quickQueries(menu.target).map((qq) => ({ label: qq.label, onClick: () => p.onQuickQuery?.(qq.text) }))}
+          items={[...(p.onRename ? [{ label: "Rename", onClick: () => p.onRename?.(menu.target) }] : []), ...quickQueries(menu.target).map((qq) => ({ label: qq.label, onClick: () => p.onQuickQuery?.(qq.text) }))]}
         />
       )}
       <Input size="small" placeholder="Search" aria-label="Search fields" value={q} onChange={(_, d) => setQ(d.value)} />

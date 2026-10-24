@@ -94,8 +94,14 @@ impl DataService {
     pub fn drop_table(&self, table: &str) -> Result<(), String> {
         self.with(|e| e.drop_table(table))
     }
-    pub fn fetch_page(&self, table: &str, offset: u64, limit: u64, sort: Option<SortSpec>) -> Result<RowPage, String> {
-        self.with(|e| e.fetch_page(table, offset, limit.min(5000), sort.as_ref()))
+    pub fn rename_table(&self, old: &str, new: &str) -> Result<(), String> {
+        self.with(|e| e.rename_table(old, new))
+    }
+    pub fn rename_column(&self, table: &str, old: &str, new: &str) -> Result<(), String> {
+        self.with(|e| e.rename_column(table, old, new))
+    }
+    pub fn fetch_page(&self, table: &str, offset: u64, limit: u64, sorts: Vec<SortSpec>) -> Result<RowPage, String> {
+        self.with(|e| e.fetch_page_sorted(table, offset, limit.min(5000), &sorts))
     }
     pub fn suggest(&self, from: (String, String), to: (String, String)) -> Result<RelationshipHint, String> {
         self.with(|e| e.suggest_relationship((&from.0, &from.1), (&to.0, &to.1)))
@@ -138,14 +144,24 @@ pub fn engine_drop_table(state: tauri::State<DataService>, table: String) -> Res
     state.drop_table(&table)
 }
 #[tauri::command]
+pub fn engine_rename_table(state: tauri::State<DataService>, old: String, new: String) -> Result<(), String> {
+    state.rename_table(&old, &new)
+}
+#[tauri::command]
+pub fn engine_rename_column(state: tauri::State<DataService>, table: String, old: String, new: String) -> Result<(), String> {
+    state.rename_column(&table, &old, &new)
+}
+#[tauri::command]
 pub fn engine_fetch_page(
     state: tauri::State<DataService>,
     table: String,
     offset: u64,
     limit: u64,
     sort: Option<SortSpec>,
+    sorts: Option<Vec<SortSpec>>,
 ) -> Result<RowPage, String> {
-    state.fetch_page(&table, offset, limit, sort)
+    // `sorts` orders by several columns; `sort` (one column) is what older callers send
+    state.fetch_page(&table, offset, limit, sorts.unwrap_or_else(|| sort.into_iter().collect()))
 }
 #[tauri::command]
 pub fn engine_suggest_relationship(
@@ -226,10 +242,10 @@ mod tests {
         let spec = SourceSpec::Csv { path: csv.to_string_lossy().into_owned(), delimiter: None, header: None };
         let info = svc.import("T", &spec).unwrap();
         assert_eq!(info.row_count, 2);
-        let page = svc.fetch_page("T", 0, 10, Some(SortSpec { column: "k".into(), descending: false })).unwrap();
+        let page = svc.fetch_page("T", 0, 10, vec![SortSpec { column: "k".into(), descending: false }]).unwrap();
         assert_eq!(page.rows[0][0].as_deref(), Some("1"));
         assert!(svc.table_info("Nope").unwrap().is_none());
-        assert!(svc.fetch_page("Nope", 0, 1, None).unwrap_err().contains("Nope"));
+        assert!(svc.fetch_page("Nope", 0, 1, vec![]).unwrap_err().contains("Nope"));
         let hint = svc.suggest(("T".into(), "k".into()), ("T".into(), "k".into())).unwrap();
         assert!(hint.from_unique && hint.to_unique);
         assert!(svc.set_credential(&spec, "x").is_err());

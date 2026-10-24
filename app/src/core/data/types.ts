@@ -85,6 +85,10 @@ export interface EngineApi {
   importSource(table: string, spec: SourceSpec): Promise<TableInfo>;
   tableInfo(table: string): Promise<TableInfo | null>;
   dropTable(table: string): Promise<void>;
+  /** Renames the stored data of a table (the model table was renamed). */
+  renameTable(old: string, to: string): Promise<void>;
+  /** Renames a stored column (a model column was renamed, or a source column is mapped to the name it has in the model). */
+  renameColumn(table: string, old: string, to: string): Promise<void>;
   fetchPage(table: string, offset: number, limit: number, sort?: SortSpec | null): Promise<RowPage>;
   suggestRelationship(from: [string, string], to: [string, string]): Promise<RelationshipHint>;
   excelSheets(path: string): Promise<string[]>;

@@ -109,6 +109,15 @@ export function registerModelingCommands(r: CommandRegistry<Session>): void {
     if (!table) throw new Error("Select a table first.");
     s.shell.openDialog({ kind: "modelDialog", id: "newHierarchy", table });
   });
+  reg("model.rename", "Rename", async (s, a) => {
+    const { kind, table, to } = need<{ kind: "table" | "column" | "measure"; table: string; to: string }>(a, ["kind", "table", "to"]);
+    const name = (a as { name?: string }).name ?? "";
+    await s.renameObject(kind === "table" ? { kind, table } : { kind, table, name }, to);
+  });
+  reg("model.renameDialog", "Rename", (s, a) => {
+    const { kind, table } = need<{ kind: "table" | "column" | "measure"; table: string }>(a, ["kind", "table"]);
+    s.shell.openDialog({ kind: "modelDialog", id: "rename", table, column: (a as { name?: string }).name, renames: kind });
+  });
   reg("model.editCalculatedDialog", "Edit calculated column or table", (s, a) => {
     const { kind, table, column } = need<{ kind: "column" | "table"; table: string; column?: string }>(a, ["kind", "table"]);
     s.shell.openDialog({ kind: "modelDialog", id: kind === "column" ? "editColumn" : "editCalculatedTable", table, column });

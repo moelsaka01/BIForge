@@ -267,6 +267,7 @@ function ModelDialogHost({ request }: { request: Extract<DialogRequest, { kind: 
         table: request.table ?? null,
         column: request.column ? calculatedColumns(project, request.table ?? "").find((c) => c.name === request.column) ?? null : null,
         calculated: calculatedTables(project).find((c) => c.name === request.table) ?? null,
+        rename: request.renames && request.table ? { kind: request.renames, table: request.table, name: request.renames === "table" ? request.table : (request.column ?? "") } : null,
       });
     } catch (e) {
       return e instanceof Error ? e : new Error(String(e));

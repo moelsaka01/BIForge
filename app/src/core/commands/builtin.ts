@@ -112,7 +112,10 @@ export function createRegistry(session: Session): CommandRegistry<Session> {
     category: "Edit",
     shortcut: "Ctrl+Z",
     isEnabled: (s) => s.store.getSnapshot().canUndo,
-    run: (s) => void s.store.undo(),
+    run: async (s) => {
+      s.store.undo();
+      await s.syncRenamedData();
+    },
   });
   r.register({
     id: "edit.redo",
@@ -120,7 +123,10 @@ export function createRegistry(session: Session): CommandRegistry<Session> {
     category: "Edit",
     shortcut: "Ctrl+Y",
     isEnabled: (s) => s.store.getSnapshot().canRedo,
-    run: (s) => void s.store.redo(),
+    run: async (s) => {
+      s.store.redo();
+      await s.syncRenamedData();
+    },
   });
 
   r.register({

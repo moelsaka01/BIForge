@@ -360,3 +360,44 @@ fn csv_empty_text_fields_load_as_empty_string_like_power_query() {
     let (rows, nonnull, _) = e.column_stats("T", "name").unwrap();
     assert_eq!((rows, nonnull), (3, 3));
 }
+
+#[test]
+fn renaming_a_stored_table_and_column_keeps_the_rows() {
+    let d = tempfile::tempdir().unwrap();
+    let f = p(d.path(), "o.csv");
+    std::fs::write(&f, "id,amount\n1,2.5\n2,4\n").unwrap();
+    let e = Engine::in_memory().unwrap();
+    e.import("Orders", &csv_spec(f.clone()), &creds()).unwrap();
+    e.import("Taken", &csv_spec(f), &creds()).unwrap();
+    e.rename_column("Orders", "amount", "Value").unwrap();
+    e.rename_table("Orders", "Invoices").unwrap();
+    assert!(!e.has_table("Orders").unwrap());
+    let info = e.table_info("Invoices").unwrap();
+    assert_eq!(info.columns.iter().map(|c| c.name.as_str()).collect::<Vec<_>>(), ["id", "Value"]);
+    let page = e.fetch_page("Invoices", 0, 10, None).unwrap();
+    assert_eq!(page.rows[1][1].as_deref(), Some("4.0"));
+    // a name that is taken is refused; a table or column that was never stored is not an error (a calculated column)
+    assert!(e.rename_table("Invoices", "taken").is_err());
+    e.rename_table("Never", "Whatever").unwrap();
+    e.rename_column("Invoices", "calculated", "other").unwrap();
+    // the DAX engine reads the stored data under the model's names
+    e.rename_column("Invoices", "id", "Id").unwrap();
+    assert_eq!(e.table_info("Invoices").unwrap().columns[0].name, "Id");
+}
+
+#[test]
+fn a_page_can_be_sorted_by_several_columns() {
+    let d = tempfile::tempdir().unwrap();
+    let f = p(d.path(), "m.csv");
+    std::fs::write(&f, "g,n\nb,1\na,2\nb,3\na,1\nb,2\n").unwrap();
+    let e = Engine::in_memory().unwrap();
+    e.import("M", &csv_spec(f), &creds()).unwrap();
+    let keys = |page: RowPage| page.rows.iter().map(|r| format!("{}{}", r[0].as_deref().unwrap(), r[1].as_deref().unwrap())).collect::<Vec<_>>();
+    let asc_desc = e.fetch_page_sorted("M", 0, 10, &[SortSpec { column: "g".into(), descending: false }, SortSpec { column: "n".into(), descending: true }]).unwrap();
+    assert_eq!(keys(asc_desc), ["a2", "a1", "b3", "b2", "b1"]);
+    // one key behaves as before; no key is the physical order; an unknown column is refused
+    let one = e.fetch_page_sorted("M", 0, 10, &[SortSpec { column: "n".into(), descending: false }]).unwrap();
+    assert_eq!(keys(one), ["b1", "a1", "a2", "b2", "b3"]);
+    assert_eq!(keys(e.fetch_page_sorted("M", 0, 10, &[]).unwrap()), ["b1", "a2", "b3", "a1", "b2"]);
+    assert!(e.fetch_page_sorted("M", 0, 10, &[SortSpec { column: "g".into(), descending: false }, SortSpec { column: "zzz".into(), descending: false }]).is_err());
+}

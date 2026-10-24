@@ -109,6 +109,8 @@ fn main() {
             data::engine_import,
             data::engine_table_info,
             data::engine_drop_table,
+            data::engine_rename_table,
+            data::engine_rename_column,
             data::engine_fetch_page,
             data::engine_suggest_relationship,
             data::engine_excel_sheets,

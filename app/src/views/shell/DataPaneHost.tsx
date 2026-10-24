@@ -50,6 +50,7 @@ export function DataPaneHost({ forReport }: { forReport: boolean }) {
       onRefreshAll={() => void env.run("data.refreshAll")}
       onImport={() => void env.run("data.getData")}
       onQuickQuery={(text) => void env.run("dax.quickQuery", { text })}
+      onRename={(t) => void env.run("model.renameDialog", t.kind === "table" ? { kind: "table", table: t.table } : { kind: t.kind, table: t.table, name: t.name })}
     />
   );
 }

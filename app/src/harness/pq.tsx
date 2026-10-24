@@ -28,6 +28,8 @@ const httpEngine: EngineApi = {
   importSource: (table, spec) => post("/engine/import", { table, spec }),
   tableInfo: (table) => post("/engine/tableInfo", { table }),
   dropTable: (table) => post("/engine/drop", { table }),
+  renameTable: unsupported,
+  renameColumn: unsupported,
   fetchPage: unsupported,
   suggestRelationship: unsupported,
   excelSheets: () => Promise.resolve(["Sheet1"]),

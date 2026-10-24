@@ -204,7 +204,7 @@ mod tests {
         let info = dax.calc_table(&docs, "Regions", "SUMMARIZE(Sales, Sales[Region], \"Total\", SUM(Sales[Qty]))").unwrap();
         assert_eq!(info.row_count, 2);
         assert_eq!(info.columns.iter().map(|c| c.name.as_str()).collect::<Vec<_>>(), ["Region", "Total"]);
-        let page = svc.fetch_page("Regions", 0, 10, None).unwrap();
+        let page = svc.fetch_page("Regions", 0, 10, vec![]).unwrap();
         let mut rows: Vec<Vec<Option<String>>> = page.rows;
         rows.sort();
         assert_eq!(rows, vec![vec![Some("East".to_string()), Some("7".to_string())], vec![Some("West".to_string()), Some("3".to_string())]]);
@@ -221,7 +221,7 @@ mod tests {
         let with_col = with_col.replace("\tmeasure Total", "\tcolumn Double = Sales[Qty] * 2\n\t\tdataType: int64\n\tmeasure Total");
         let docs3 = vec![biforge_model::tmdl::parse(&with_col).unwrap()];
         assert_eq!(dax.calc_columns(&docs3, "Sales").unwrap(), ["Double"]);
-        let page = svc.fetch_page("Sales", 0, 10, None).unwrap();
+        let page = svc.fetch_page("Sales", 0, 10, vec![]).unwrap();
         let idx = page.columns.iter().position(|c| c.name == "Double").unwrap();
         assert_eq!(page.rows.iter().map(|r| r[idx].clone().unwrap()).collect::<Vec<_>>(), ["4", "6", "10"]);
         // the model still reads the stored column as calculated (not as imported data)
@@ -278,7 +278,7 @@ mod tests {
         let info = dax.calc_table(&docs, "LocalDateTable_Orders_Day", "ADDCOLUMNS(CALENDAR(DATE(YEAR(MIN('Orders'[Day])), 1, 1), DATE(YEAR(MAX('Orders'[Day])), 12, 31)), \"Year\", YEAR([Date]), \"MonthNo\", MONTH([Date]), \"Month\", FORMAT([Date], \"MMMM\"), \"QuarterNo\", QUARTER([Date]), \"Quarter\", \"Qtr \" & QUARTER([Date]), \"Day\", DAY([Date]))").unwrap();
         assert_eq!(info.row_count, 731, "2023 and 2024");
         assert_eq!(info.columns.iter().map(|c| c.name.as_str()).collect::<Vec<_>>(), ["Date", "Year", "MonthNo", "Month", "QuarterNo", "Quarter", "Day"]);
-        let page = svc.fetch_page("LocalDateTable_Orders_Day", 74, 1, None).unwrap();
+        let page = svc.fetch_page("LocalDateTable_Orders_Day", 74, 1, vec![]).unwrap();
         assert_eq!(page.rows[0].iter().map(|c| c.clone().unwrap_or_default()).collect::<Vec<_>>()[1..], ["2023", "3", "March", "1", "Qtr 1", "16"]);
     }
 

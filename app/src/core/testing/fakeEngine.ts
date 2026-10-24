@@ -44,6 +44,19 @@ export class FakeEngine implements EngineApi {
     this.calls.push(`drop:${table}`);
     this.tables.delete(table);
   }
+  async renameTable(old: string, to: string): Promise<void> {
+    this.calls.push(`renameTable:${old}->${to}`);
+    const t = this.tables.get(old);
+    if (!t) return;
+    this.tables.delete(old);
+    this.tables.set(to, t);
+  }
+  async renameColumn(table: string, old: string, to: string): Promise<void> {
+    this.calls.push(`renameColumn:${table}:${old}->${to}`);
+    const t = this.tables.get(table);
+    const c = t?.columns.find((x) => x.name === old);
+    if (c) c.name = to;
+  }
   async fetchPage(table: string, offset: number, limit: number, sort?: SortSpec | null): Promise<RowPage> {
     this.calls.push(`page:${table}:${offset}:${limit}:${sort ? sort.column + (sort.descending ? "-" : "+") : ""}`);
     const t = this.tables.get(table);

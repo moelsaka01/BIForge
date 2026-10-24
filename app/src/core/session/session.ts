@@ -8,9 +8,10 @@ import { listDataSources, withLocation, type SourceLocation } from "../data/data
 import { QueryDraft } from "../queries/draft";
 import type { MApi } from "../queries/types";
 import { addRelationship } from "../model/relationships";
-import { autoDateExpression, finishAutoDate, planAutoDate, calcGroupData, setCalculationGroup, addCalculatedColumn, calculatedColumns, calculatedTables, setCalculatedColumn, setCalculatedTable, setColumnDataType } from "../model/modeling";
-import { applyGroups, applyQueryLoad, expressionExists, listGroups, listQueries, queryTexts, removeExpression, upsertExpression, userMTables } from "../queries/queries";
+import { autoDateExpression, finishAutoDate, planAutoDate, calcGroupData, setCalculationGroup, addCalculatedColumn, calculatedColumns, calculatedTables, listFieldParameters, setCalculatedColumn, setCalculatedTable, setColumnDataType } from "../model/modeling";
+import { applyGroups, applyQueryLoad, expressionExists, listGroups, listQueries, queryTexts, removeExpression, setQueryText, upsertExpression, userMTables } from "../queries/queries";
 import { findTable } from "../model/ops";
+import { renameObject, sourceNames, type RenameReport, type RenameTarget } from "../model/rename";
 import { ShellStore } from "../shell/shellStore";
 import type { OpenedPackage, PublishApi } from "../publish/types";
 import { PublishUi } from "../publish/publishUi";
@@ -140,7 +141,11 @@ export class Session {
     return () => this.listeners.delete(fn);
   };
 
+  /** Renames of tables and columns done in this project (the data store follows them, also on undo and redo). */
+  private renameLog: { kind: "table" | "column"; table: string; from: string; to: string }[] = [];
+
   private set(patch: Partial<SessionSnapshot>): void {
+    if ("root" in patch && patch.root !== this.snap.root) this.renameLog = [];
     this.snap = { ...this.snap, ...patch };
     this.listeners.forEach((l) => l());
   }
@@ -517,6 +522,7 @@ export class Session {
   async importTable(name: string, spec: SourceSpec): Promise<void> {
     const engine = this.requireEngine();
     const info = await engine.importSource(name, spec);
+    await this.mapSourceColumns(name, info.columns.map((c) => c.name));
     let removed: string[] = [];
     let created = false;
     this.store.transact(`Import "${name}"`, (p) => {
@@ -582,6 +588,7 @@ export class Session {
     const p = this.store.project!;
     const texts = queryTexts(p);
     const info = await this.m.load(texts, name, name);
+    await this.mapSourceColumns(name, info.columns.map((c) => c.name));
     this.store.transact(`Refresh "${name}"`, (pp) => void applyQueryLoad(pp, info, texts[name]));
     void engine;
     this.markLoaded(info.name);
@@ -626,7 +633,9 @@ export class Session {
     const failures: { query: string; error: string }[] = [];
     for (const q of toLoad) {
       try {
-        loaded.push({ name: q.name, info: await m.load(texts, q.name, q.name) });
+        const info = await m.load(texts, q.name, q.name);
+        await this.mapSourceColumns(q.name, info.columns.map((c) => c.name));
+        loaded.push({ name: q.name, info });
       } catch (e) {
         failures.push({ query: q.name, error: errText(e) });
       }
@@ -663,6 +672,93 @@ export class Session {
         : `Applied query changes: ${loaded.length} table(s) loaded.`,
     );
     return { loaded: loaded.map((l) => l.name), failures };
+  }
+
+  // ---- renaming ----
+
+  /**
+   * A column renamed in the model keeps its source name (`sourceColumn`); the data store holds the model name, so after a load the
+   * columns the source calls by their old name are renamed to the name the model uses.
+   */
+  private async mapSourceColumns(table: string, loadedColumns: string[]): Promise<void> {
+    const p = this.store.project;
+    if (!p || !this.engine) return;
+    for (const [model, source] of sourceNames(p, table)) {
+      if (loadedColumns.includes(source) && !loadedColumns.includes(model)) await this.engine.renameColumn(table, source, model);
+    }
+  }
+
+  /** Renames a table, column or measure and everything that refers to it (DAX, M, relationships, the report), as one undo step. */
+  async renameObject(target: RenameTarget, to: string): Promise<RenameReport> {
+    const p = this.store.project;
+    if (!p) throw new Error("Open or create a project first.");
+    if (to.trim() === (target.kind === "table" ? target.table : target.name)) return { expressions: 0, reportReferences: 0, queries: [] };
+    // M queries that use a renamed table are rewritten first (the Rust M engine knows where a name is a reference)
+    const rewritten: Record<string, string> = {};
+    if (target.kind === "table" && this.m) {
+      const texts = queryTexts(p);
+      const deps = await this.m.dependencies(texts);
+      for (const [k, v] of Object.entries(deps)) if (k !== target.table && v.includes(target.table)) rewritten[k] = await this.m.editStep(texts[k], { op: "renameRef", old: target.table, new: to.trim() });
+    }
+    // the same edit on a copy first: a refused name changes nothing, not even the data store
+    renameObject(structuredClone(p), target, to, Object.keys(rewritten));
+    const loaded = (t: string) => this.snap.dataTables.some((x) => x.toLowerCase() === t.toLowerCase());
+    const engine = this.engine;
+    if (engine && target.kind === "table" && loaded(target.table)) await engine.renameTable(target.table, to.trim());
+    if (engine && target.kind === "column" && loaded(target.table)) await engine.renameColumn(target.table, target.name, to.trim());
+    if (target.kind !== "measure") this.renameLog.push(target.kind === "table" ? { kind: "table", table: target.table, from: target.table, to: to.trim() } : { kind: "column", table: target.table, from: target.name, to: to.trim() });
+    let report!: RenameReport;
+    this.store.transact(`Rename ${target.kind} "${target.kind === "table" ? target.table : target.name}"`, (pr) => {
+      report = renameObject(pr, target, to, Object.keys(rewritten));
+      for (const [q, text] of Object.entries(rewritten)) setQueryText(pr, q, text);
+    });
+    if (target.kind === "table" && loaded(target.table)) this.set({ dataTables: this.snap.dataTables.map((t) => (t.toLowerCase() === target.table.toLowerCase() ? to.trim() : t)), dataEpoch: this.snap.dataEpoch + 1 });
+    else if (target.kind === "column") this.set({ dataEpoch: this.snap.dataEpoch + 1 });
+    // a field parameter lists its fields as text (NAMEOF), so its rows follow the new name
+    if (engine && listFieldParameters(this.store.project!).length > 0) await this.recalculate();
+    this.setMessage(`Renamed to "${to.trim()}": ${report.expressions} DAX expression(s) and ${report.reportReferences} report reference(s) updated${Object.keys(rewritten).length ? `, ${Object.keys(rewritten).length} quer${Object.keys(rewritten).length === 1 ? "y" : "ies"} rewritten` : ""}.`);
+    return report;
+  }
+
+  /**
+   * After an undo or redo of a rename the model has the other name, so the data store is renamed to match: the tables first
+   * (newest rename first), then the columns of the tables that exist in both.
+   */
+  async syncRenamedData(): Promise<void> {
+    const p = this.store.project;
+    const engine = this.engine;
+    if (!p || !engine || this.renameLog.length === 0) return;
+    const inModel = (t: string) => !!findTable(p, t);
+    const inStore = (t: string) => this.snap.dataTables.some((x) => x.toLowerCase() === t.toLowerCase());
+    let changed = false;
+    const swapTable = async (a: string, b: string) => {
+      await engine.renameTable(a, b);
+      this.set({ dataTables: this.snap.dataTables.map((t) => (t.toLowerCase() === a.toLowerCase() ? b : t)) });
+      changed = true;
+    };
+    for (let pass = 0; pass < this.renameLog.length; pass++) {
+      let moved = false;
+      for (const e of [...this.renameLog].reverse().filter((x) => x.kind === "table")) {
+        if (inModel(e.from) && !inModel(e.to) && inStore(e.to) && !inStore(e.from)) { await swapTable(e.to, e.from); moved = true; }
+        else if (inModel(e.to) && !inModel(e.from) && inStore(e.from) && !inStore(e.to)) { await swapTable(e.from, e.to); moved = true; }
+      }
+      if (!moved) break;
+    }
+    // names a table had at some point: a column rename was logged under the name of that time
+    const names = new Set(this.renameLog.flatMap((e) => (e.kind === "table" ? [e.from, e.to] : [e.table])));
+    for (const t of names) {
+      if (!inModel(t) || !inStore(t)) continue;
+      const have = new Set((await engine.tableInfo(t))?.columns.map((c) => c.name.toLowerCase()) ?? []);
+      const model = new Set(listTables(p).find((x) => x.name.toLowerCase() === t.toLowerCase())?.columns.map((c) => c.name.toLowerCase()) ?? []);
+      for (const e of [...this.renameLog].reverse().filter((x) => x.kind === "column")) {
+        if (e.table.toLowerCase() !== t.toLowerCase() && !this.renameLog.some((r) => r.kind === "table" && [r.from, r.to].some((n) => n.toLowerCase() === e.table.toLowerCase()) && [r.from, r.to].some((n) => n.toLowerCase() === t.toLowerCase()))) continue;
+        const f = e.from.toLowerCase();
+        const to = e.to.toLowerCase();
+        if (model.has(f) && !model.has(to) && have.has(to) && !have.has(f)) { await engine.renameColumn(t, e.to, e.from); have.delete(to); have.add(f); changed = true; }
+        else if (model.has(to) && !model.has(f) && have.has(f) && !have.has(to)) { await engine.renameColumn(t, e.from, e.to); have.delete(f); have.add(to); changed = true; }
+      }
+    }
+    if (changed) this.set({ dataEpoch: this.snap.dataEpoch + 1 });
   }
 
   // ---- calculated columns and tables ----

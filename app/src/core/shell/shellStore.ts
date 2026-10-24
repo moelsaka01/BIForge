@@ -14,7 +14,7 @@ export type DialogRequest =
   | { kind: "newTable" }
   | { kind: "roles" }
   | { kind: "viewAs" }
-  | { kind: "modelDialog"; id: ModelDialogId; table?: string | null; column?: string }
+  | { kind: "modelDialog"; id: ModelDialogId; table?: string | null; column?: string; /** rename: what is renamed (column is then the column or measure name) */ renames?: "table" | "column" | "measure" }
   | { kind: "unsaved"; /** the command to run again (with discard: true) once the user has decided */ resume: { id: string; args?: Record<string, unknown> } }
   | { kind: "options"; page?: string }
   | { kind: "saveAs"; copy?: boolean }

@@ -133,6 +133,32 @@ impl Engine {
         Ok(())
     }
 
+    /// Renames a stored table (the data of a table renamed in the model). Fails when the new name is taken.
+    pub fn rename_table(&self, old: &str, new: &str) -> Result<()> {
+        if !self.has_table(old)? {
+            return Ok(());
+        }
+        if !old.eq_ignore_ascii_case(new) && self.has_table(new)? {
+            return Err(EngineError::InvalidName(format!("the data store already has a table named \"{new}\"")));
+        }
+        self.conn.execute_batch(&format!("ALTER TABLE {} RENAME TO {}", q(old), q(new)))?;
+        self.data_changed();
+        Ok(())
+    }
+
+    /// Renames a column of a stored table (the data of a column renamed in the model, or a source column mapped to its model name).
+    pub fn rename_column(&self, table: &str, old: &str, new: &str) -> Result<()> {
+        if !self.has_table(table)? {
+            return Ok(());
+        }
+        if !self.table_info(table)?.columns.iter().any(|c| c.name.eq_ignore_ascii_case(old)) {
+            return Ok(()); // a calculated column that was never stored
+        }
+        self.conn.execute_batch(&format!("ALTER TABLE {} RENAME COLUMN {} TO {}", q(table), q(old), q(new)))?;
+        self.data_changed();
+        Ok(())
+    }
+
     /// Stores the result of a SELECT as table `name`; like `import`, a failing query leaves existing data intact.
     pub fn import_select(&self, name: &str, select_sql: &str) -> Result<TableInfo> {
         check_name(name)?;
@@ -264,22 +290,24 @@ impl Engine {
 
     /// One page of rows, optionally sorted. Stable: ties are broken by physical row order.
     pub fn fetch_page(&self, name: &str, offset: u64, limit: u64, sort: Option<&SortSpec>) -> Result<RowPage> {
+        self.fetch_page_sorted(name, offset, limit, sort.map(std::slice::from_ref).unwrap_or(&[]))
+    }
+
+    /// One page of rows ordered by several columns (the first is the main key); ties are broken by physical row order.
+    pub fn fetch_page_sorted(&self, name: &str, offset: u64, limit: u64, sorts: &[SortSpec]) -> Result<RowPage> {
         let info = self.table_info(name)?;
         let select: Vec<String> = info.columns.iter().map(|c| format!("CAST({} AS VARCHAR)", q(&c.name))).collect();
-        let sql = match sort {
-            Some(s) => {
-                self.require_column(&info, &s.column)?;
-                format!(
-                    "SELECT {} FROM {} ORDER BY {} {} NULLS LAST, rowid LIMIT {limit} OFFSET {offset}",
-                    select.join(", "),
-                    q(name),
-                    q(&s.column),
-                    if s.descending { "DESC" } else { "ASC" }
-                )
+        let sql = match sorts {
+            [_, ..] => {
+                for s in sorts {
+                    self.require_column(&info, &s.column)?;
+                }
+                let order: Vec<String> = sorts.iter().map(|s| format!("{} {} NULLS LAST", q(&s.column), if s.descending { "DESC" } else { "ASC" })).collect();
+                format!("SELECT {} FROM {} ORDER BY {}, rowid LIMIT {limit} OFFSET {offset}", select.join(", "), q(name), order.join(", "))
             }
             // a table is rebuilt by CREATE TABLE AS, so its row ids are 0..n-1: a range scan reads only the page
             // (ORDER BY rowid LIMIT/OFFSET would read the whole table, seconds on 10 million rows)
-            None => format!("SELECT {} FROM {} WHERE rowid >= {offset} AND rowid < {} ORDER BY rowid", select.join(", "), q(name), offset.saturating_add(limit)),
+            [] => format!("SELECT {} FROM {} WHERE rowid >= {offset} AND rowid < {} ORDER BY rowid", select.join(", "), q(name), offset.saturating_add(limit)),
         };
         let n = info.columns.len();
         let mut st = self.conn.prepare(&sql)?;

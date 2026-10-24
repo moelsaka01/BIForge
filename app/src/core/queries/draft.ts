@@ -183,7 +183,7 @@ export class QueryDraft {
   rename(old: string, to: string, rewritten: Record<string, string>): void {
     const q = this.get(old);
     if (!q) throw new Error(`The query "${old}" does not exist.`);
-    if (q.loaded && !q.isNew) throw new Error("A query that is loaded into the model cannot be renamed yet: renaming a table is not implemented.");
+    if (q.loaded && !q.isNew) throw new Error("A query that is loaded into the model cannot be renamed yet in this editor: rename the table in the Data pane (right-click > Rename).");
     const n = this.checkName(to, old);
     const queries = this.snap.queries.map((x) => {
       const text = rewritten[x.name] ?? x.text;

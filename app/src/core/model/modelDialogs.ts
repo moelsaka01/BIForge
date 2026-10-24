@@ -4,7 +4,7 @@ import type { DialogDef } from "../queries/dialogs";
 import type { TableView } from "./ops";
 import { QUICK_MEASURES, quickExpression, quickName, splitColumn, type QuickKind } from "./quickMeasures";
 
-export type ModelDialogId = "newColumn" | "editColumn" | "newCalculatedTable" | "editCalculatedTable" | "newHierarchy" | "quickMeasure" | "whatIf" | "calculationGroup" | "fieldParameter" | "markDateTable" | "newRelationship";
+export type ModelDialogId = "newColumn" | "editColumn" | "newCalculatedTable" | "editCalculatedTable" | "newHierarchy" | "quickMeasure" | "whatIf" | "calculationGroup" | "fieldParameter" | "markDateTable" | "newRelationship" | "rename";
 
 export interface ModelDialogCtx {
   tables: TableView[];
@@ -12,6 +12,8 @@ export interface ModelDialogCtx {
   table: string | null;
   /** editColumn: the calculated column to edit and its formula. */
   column?: { name: string; expression: string } | null;
+  /** rename: the object to rename. */
+  rename?: { kind: "table" | "column" | "measure"; table: string; name: string } | null;
   /** editCalculatedTable: the table and its expression. */
   calculated?: { name: string; expression: string } | null;
 }
@@ -28,6 +30,20 @@ const ref = (t: string, c: string) => (/^[A-Za-z_]w*$/.test(t) ? `${t}[${c}]` : 
 
 export function modelDialogFor(id: ModelDialogId, c: ModelDialogCtx): DialogDef {
   switch (id) {
+    case "rename": {
+      if (!c.rename) throw new Error("Select a table, column or measure to rename.");
+      const r = c.rename;
+      return {
+        title: `Rename ${r.kind}`,
+        submitLabel: "Rename",
+        fields: [{ kind: "text", key: "to", label: "New name", default: r.name }],
+        build: (v) => {
+          const to = String(v.to ?? "").trim();
+          if (!to) throw new Error("Enter a name.");
+          return { command: "model.rename", args: { kind: r.kind, table: r.table, name: r.name, to } };
+        },
+      };
+    }
     case "newColumn":
     case "editColumn": {
       const editing = id === "editColumn";
