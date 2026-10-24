@@ -195,7 +195,7 @@ N | Aggregations (manage aggregations)
 N | Incremental refresh policy (local)
 N | Composite model storage modes (Import, DirectQuery, Dual)
 N | DirectQuery sources
-N | Model properties (culture, description)
+D | Model properties (culture, description)
 P | Calculated tables: column and table functions
 N | User-defined functions
 N | Query-reduction settings

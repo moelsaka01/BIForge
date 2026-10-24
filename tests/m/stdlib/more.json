@@ -500,5 +500,65 @@
   "m": "Table.Column(Table.TransformColumnTypes(#table({\"a\"}, {{\"10:11:12\"}}), {{\"a\", Time.Type}}), \"a\")",
   "expect": "{10:11:12}",
   "mode": "value"
+ },
+ {
+  "fn": "Type.RecordFields",
+  "m": "Record.FieldNames(Type.RecordFields(type [a = number, b = text]))",
+  "expect": "{a,b}",
+  "mode": "value"
+ },
+ {
+  "fn": "Type.RecordFields",
+  "m": "Type.Is(Type.RecordFields(type [a = number, b = text])[b][Type], type text)",
+  "expect": "true",
+  "mode": "value"
+ },
+ {
+  "fn": "Type.RecordFields",
+  "m": "Type.RecordFields(type [a = number])[a][Optional]",
+  "expect": "false",
+  "mode": "value"
+ },
+ {
+  "fn": "Type.TableRow",
+  "m": "Record.FieldNames(Type.RecordFields(Type.TableRow(type table [a = number, b = text])))",
+  "expect": "{a,b}",
+  "mode": "value"
+ },
+ {
+  "fn": "Type.ForRecord",
+  "m": "Type.IsOpenRecord(Type.ForRecord([a = [Type = type number, Optional = false]], true))",
+  "expect": "true",
+  "mode": "value"
+ },
+ {
+  "fn": "Type.ForRecord",
+  "m": "Record.FieldNames(Type.RecordFields(Type.ForRecord([a = [Type = type number, Optional = false], b = [Type = type text, Optional = false]], false)))",
+  "expect": "{a,b}",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.ToList",
+  "m": "Table.ToList(#table({\"a\",\"b\"},{{\"x\",\"1\"},{\"y\",\"2\"},{\"x\",\"3\"}}), Combiner.CombineTextByDelimiter(\"-\"))",
+  "expect": "{x-1,y-2,x-3}",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.ReplaceMatchingRows",
+  "m": "Table.Column(Table.ReplaceMatchingRows(#table({\"a\",\"b\"},{{\"x\",\"1\"},{\"y\",\"2\"},{\"x\",\"3\"}}), {{[a=\"y\",b=\"2\"], [a=\"z\",b=\"9\"]}}), \"a\")",
+  "expect": "{x,z,x}",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.ReplaceMatchingRows",
+  "m": "Table.Column(Table.ReplaceMatchingRows(#table({\"a\",\"b\"},{{\"x\",\"1\"},{\"y\",\"2\"},{\"x\",\"3\"}}), {{[a=\"y\",b=\"2\"], [a=\"z\",b=\"9\"]}}), \"b\")",
+  "expect": "{1,9,3}",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.ReplaceMatchingRows",
+  "m": "Table.RowCount(Table.ReplaceMatchingRows(#table({\"a\",\"b\"},{{\"x\",\"1\"},{\"y\",\"2\"},{\"x\",\"3\"}}), {{[a=\"q\",b=\"0\"], [a=\"z\",b=\"9\"]}}))",
+  "expect": "3",
+  "mode": "value"
  }
 ]

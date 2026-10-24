@@ -10,7 +10,7 @@ pub const TABLE_EXT_FNS: &[&str] = &[
     "Table.PositionOf", "Table.FromColumns", "Table.FromList", "Table.FromValue", "Table.PrefixColumns", "Table.Repeat",
     "Table.InsertRows", "Table.SplitAt", "Table.MatchesAllRows", "Table.MatchesAnyRows", "Table.TransformRows", "Table.RemoveMatchingRows",
     "Table.MaxN", "Table.MinN", "Table.PositionOfAny", "Table.ReplaceRows", "Table.ColumnsOfType",
-    "Table.AddRankColumn", "Record.ToTable", "Record.FromTable",
+    "Table.AddRankColumn", "Record.ToTable", "Record.FromTable", "Table.ToList", "Table.ReplaceMatchingRows",
 ];
 
 fn cmp(x: &Value, y: &Value) -> std::cmp::Ordering {
@@ -112,6 +112,41 @@ impl<'a> Ev<'a> {
                 };
                 let body = format!("SELECT {}, {}, {rank} AS {} FROM {}", qi(ORD), Self::col_list_keep(&t), qi(new), qi(&t.name));
                 Value::Table(self.derive(&[&t], body)?)
+            }
+            "Table.ToList" => {
+                let t = table_arg(a, 0, name)?;
+                let combiner = arg(a, 1, name)?;
+                let mut out = Vec::new();
+                for row in self.all_records(&t)? {
+                    let cells = Value::List(row.into_iter().map(|(_, v)| v).collect());
+                    out.push(self.apply(combiner, vec![cells])?);
+                }
+                Value::List(out)
+            }
+            "Table.ReplaceMatchingRows" => {
+                let t = table_arg(a, 0, name)?;
+                let Value::List(pairs) = arg(a, 1, name)? else {
+                    return Err(MError::expr("Table.ReplaceMatchingRows needs a list of {old, new} records."));
+                };
+                let names: Vec<String> = t.plain_cols().map(|c| c.name.clone()).collect();
+                let mut rows = Vec::new();
+                for row in self.all_records(&t)? {
+                    let mut cur = row;
+                    for p in pairs {
+                        let Value::List(pair) = p else {
+                            return Err(MError::expr("Each replacement is a list {old row, new row}."));
+                        };
+                        if pair.len() == 2 && Self::row_matches(&cur, &pair[0])? {
+                            let Value::Record(new) = &pair[1] else {
+                                return Err(MError::expr("The new row must be a record."));
+                            };
+                            cur = names.iter().map(|n| (n.clone(), new.iter().find(|(k, _)| k == n).map(|(_, v)| v.clone()).unwrap_or(Value::Null))).collect();
+                            break;
+                        }
+                    }
+                    rows.push(Value::List(cur.into_iter().map(|(_, v)| v).collect()));
+                }
+                self.table_literal("#table", &[Value::List(names.into_iter().map(Value::Text).collect()), Value::List(rows)])?
             }
             "Record.ToTable" => {
                 let Value::Record(fields) = arg(a, 0, name)? else {

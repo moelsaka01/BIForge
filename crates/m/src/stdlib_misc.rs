@@ -11,7 +11,7 @@ pub const MISC_FNS: &[&str] = &[
     "Text.Format", "Text.NewGuid", "Uri.EscapeDataString", "Uri.BuildQueryString", "Uri.Combine", "Uri.Parts", "Uri.FromParts",
     "Function.Invoke", "Function.IsDataSource", "Expression.Constant", "Expression.Identifier", "Expression.Evaluate",
     "Diagnostics.Trace", "Diagnostics.ValueToText", "Type.Is", "Type.IsNullable", "Type.NonNullable", "Type.ListItem",
-    "Type.TableColumn", "Type.OpenRecord", "Type.ClosedRecord", "Type.IsOpenRecord",
+    "Type.TableColumn", "Type.OpenRecord", "Type.ClosedRecord", "Type.IsOpenRecord", "Type.RecordFields", "Type.TableRow", "Type.ForRecord",
 ];
 
 pub fn call(ev: &Ev, name: &str, a: &[Value]) -> Option<R<Value>> {
@@ -336,6 +336,35 @@ fn dispatch(ev: &Ev, name: &str, a: &[Value]) -> R<Value> {
             TypeExpr::Record { fields, .. } => Ok(Value::Type(TypeExpr::Record { fields: fields.clone(), open: name == "Type.OpenRecord" })),
             _ => Err(MError::expr(format!("{name} needs a record type."))),
         },
+        "Type.RecordFields" => match type_arg(a, 0, name)? {
+            TypeExpr::Record { fields, .. } => Ok(Value::Record(
+                fields
+                    .iter()
+                    .map(|(n, t)| (n.clone(), Value::Record(vec![("Type".into(), Value::Type(t.clone().unwrap_or_else(|| TypeExpr::Named("any".into())))), ("Optional".into(), Value::Bool(false))])))
+                    .collect(),
+            )),
+            _ => Err(MError::expr("Type.RecordFields needs a record type.")),
+        },
+        "Type.TableRow" => match type_arg(a, 0, name)? {
+            TypeExpr::Table { fields } => Ok(Value::Type(TypeExpr::Record { fields: fields.clone(), open: false })),
+            _ => Err(MError::expr("Type.TableRow needs a table type.")),
+        },
+        "Type.ForRecord" => {
+            let Some(Value::Record(fs)) = a.first() else {
+                return Err(MError::expr("Type.ForRecord needs a record of [Type, Optional] fields."));
+            };
+            let mut fields = Vec::new();
+            for (k, v) in fs {
+                let Value::Record(spec) = v else {
+                    return Err(MError::expr("Each field of Type.ForRecord is a record [Type = ..., Optional = ...]."));
+                };
+                match spec.iter().find(|(n, _)| n == "Type") {
+                    Some((_, Value::Type(t))) => fields.push((k.clone(), Some(t.clone()))),
+                    _ => return Err(MError::expr("Each field of Type.ForRecord needs a Type.")),
+                }
+            }
+            Ok(Value::Type(TypeExpr::Record { fields, open: matches!(a.get(1), Some(Value::Bool(true))) }))
+        }
         "Type.IsOpenRecord" => match type_arg(a, 0, name)? {
             TypeExpr::Record { open, .. } => Ok(Value::Bool(*open)),
             _ => Err(MError::expr("Type.IsOpenRecord needs a record type.")),
