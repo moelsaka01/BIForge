@@ -5,7 +5,7 @@
 const WIDTH = 72;
 const INDENT = "    ";
 
-type Tok = { k: "ws" | "comment" | "str" | "table" | "col" | "num" | "id" | "op" | "open" | "close" | "comma" | "lbrace" | "rbrace"; s: string; glued: boolean };
+export type Tok = { at: number; end: number; k: "ws" | "comment" | "str" | "table" | "col" | "num" | "id" | "op" | "open" | "close" | "comma" | "lbrace" | "rbrace"; s: string; glued: boolean };
 
 const RULES: [Tok["k"], RegExp][] = [
   ["comment", /^(\/\/[^\n]*|--[^\n]*|\/\*[\s\S]*?\*\/)/],
@@ -37,7 +37,7 @@ export function tokenize(text: string): Tok[] {
     const hit = RULES.map(([k, re]) => [k, re.exec(rest)] as const).find(([, m]) => m);
     if (!hit) throw new Error(`Unexpected character "${rest[0]}" at position ${i}.`);
     const [k, m] = hit;
-    out.push({ k, s: m![0], glued: !space });
+    out.push({ k, s: m![0], glued: !space, at: i, end: i + m![0].length });
     i += m![0].length;
     space = false;
   }

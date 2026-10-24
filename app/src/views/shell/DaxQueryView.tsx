@@ -80,6 +80,9 @@ export function DaxQueryView({ project, dax, factory }: { project: Project; dax:
         <Button size="small" appearance="primary" disabled={text.trim() === "" || run.status === "running"} onClick={() => void execute()}>
           Run
         </Button>
+        <Button size="small" disabled={!/DEFINE/i.test(text)} onClick={() => void env.run("dax.query.updateModel")}>
+          Update model with changes
+        </Button>
         <Text size={200}>Write an EVALUATE query. Errors are reported when it runs.</Text>
       </div>
       <div aria-label="Query result" aria-live="polite">

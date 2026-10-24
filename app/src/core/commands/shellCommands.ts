@@ -2,10 +2,11 @@
 // the start screen only dispatch these ids; nothing here knows about components.
 import type { CommandRegistry } from "./registry";
 import { optionDef, optionValue } from "../options/schema";
-import { setModelCulture } from "../model/ops";
+import { addMeasure, listTables, setMeasureExpression, setModelCulture } from "../model/ops";
 import { canvasOptionsOf } from "../report/canvasOptions";
 import type { TmdlDocument } from "../model/types";
 import type { Session } from "../session/session";
+import { parseDefinitions } from "../dax/defineBlocks";
 import { formatDax } from "../dax/format";
 import { PANE_IDS, type PaneId, type ShellKind } from "../shell/settings";
 import { VIEW_IDS, type ViewId, type Zoom } from "../shell/shellStore";
@@ -224,6 +225,30 @@ export function registerShellCommands(r: CommandRegistry<Session>): void {
         if (!(path in p.model.tmdl)) throw new Error(`The model has no file ${path}.`);
         p.model.tmdl[path] = document;
       });
+    },
+  });
+  r.register({
+    id: "dax.query.updateModel",
+    label: "Update model with changes",
+    category: "DAX",
+    isEnabled: hasProject,
+    async run(s) {
+      const defs = parseDefinitions(s.shell.getSnapshot().daxQuery);
+      if (defs.length === 0) throw new Error("The query has no DEFINE MEASURE, COLUMN or TABLE to write into the model.");
+      const tables = () => listTables(s.store.project!);
+      for (const d of defs) {
+        if (d.kind === "table") {
+          await s.setCalculatedTable(d.name, d.expression);
+          continue;
+        }
+        const t = tables().find((x) => x.name.toLowerCase() === d.table.toLowerCase());
+        if (!t) throw new Error(`The table "${d.table}" is not in the model.`);
+        if (d.kind === "measure") {
+          if (t.measures.some((m) => m.name.toLowerCase() === d.name.toLowerCase())) s.store.transact(`Edit measure "${d.name}"`, (p) => setMeasureExpression(p, d.name, d.expression));
+          else s.store.transact(`New measure "${d.name}"`, (p) => addMeasure(p, t.name, d.name, d.expression));
+        } else if (t.columns.some((c) => c.name.toLowerCase() === d.name.toLowerCase())) await s.editCalculatedColumn(t.name, d.name, d.expression);
+        else await s.addCalculatedColumn(t.name, d.name, d.expression);
+      }
     },
   });
   r.register({

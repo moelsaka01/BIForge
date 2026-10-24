@@ -5,6 +5,9 @@ import * as info from "../../core/info";
 import { resolveTheme } from "../../core/report/theme";
 import { installDomStubs } from "../../core/testing/domStubs";
 import { column, agg } from "../../core/report/fields";
+import { calculatedTables } from "../../core/model/modeling";
+import { col } from "../../core/testing/fakeEngine";
+import { listTables } from "../../core/model/ops";
 import { MemoryStorage, PBIP, ROOT, makeApp } from "./testApp";
 import { SETTINGS_KEY } from "../../core/shell/settings";
 
@@ -182,6 +185,47 @@ describe("workspace", () => {
     fireEvent.contextMenu(col);
     fireEvent.click(await screen.findByRole("menuitem", { name: "Show distinct values" }));
     expect(((await screen.findByLabelText("DAX query")) as HTMLTextAreaElement).value).toBe(["EVALUATE", "DISTINCT('Sales'[Quantity])", "ORDER BY 'Sales'[Quantity]"].join("\n"));
+  });
+
+  it("Update model with changes writes the DEFINE MEASUREs of the query into the model: new ones are added, existing ones edited, an unknown table is refused", async () => {
+    const a = makeApp();
+    render(a.element);
+    await openProject(a);
+    fireEvent.click(screen.getByRole("button", { name: "DAX query view" }));
+    const editor = (await screen.findByLabelText("DAX query")) as HTMLTextAreaElement;
+    const button = () => screen.getByRole("button", { name: "Update model with changes" }) as HTMLButtonElement;
+    fireEvent.change(editor, { target: { value: "EVALUATE Sales" } });
+    expect(button().disabled).toBe(true);
+    const measures = () => listTables(a.session.store.project!).find((t) => t.name === "Sales")!.measures;
+    const query = (body: string) => ["DEFINE", body, "EVALUATE", "    ROW ( \"x\", 1 )"].join("\n");
+    fireEvent.change(editor, { target: { value: query("    MEASURE Sales[Units] = SUM ( Sales[Quantity] )") } });
+    fireEvent.click(button());
+    await waitFor(() => expect(measures().map((m) => m.name)).toContain("Units"));
+    expect(measures().find((m) => m.name === "Units")!.expression).toBe("SUM ( Sales[Quantity] )");
+    // the same measure again: its expression is replaced, not duplicated
+    fireEvent.change(editor, { target: { value: query("    MEASURE Sales[Units] = SUM ( Sales[Quantity] ) * 2") } });
+    fireEvent.click(button());
+    await waitFor(() => expect(measures().find((m) => m.name === "Units")!.expression).toBe("SUM ( Sales[Quantity] ) * 2"));
+    expect(measures().filter((m) => m.name === "Units")).toHaveLength(1);
+    // a table the model does not have changes nothing
+    const before = measures().length;
+    fireEvent.change(editor, { target: { value: query("    MEASURE Nowhere[M] = 1") } });
+    fireEvent.click(button());
+    expect((await screen.findAllByText(/"Nowhere" is not in the model/)).length).toBeGreaterThan(0);
+    expect(measures()).toHaveLength(before);
+  });
+
+  it("Update model with changes also writes DEFINE TABLE as a calculated table and DEFINE COLUMN as a calculated column", async () => {
+    const a = makeApp();
+    a.engine.calcTables.set("Top3", { name: "Top3", columns: [col("Quantity", "int64")], rowCount: 3 });
+    render(a.element);
+    await openProject(a);
+    fireEvent.click(screen.getByRole("button", { name: "DAX query view" }));
+    const editor = (await screen.findByLabelText("DAX query")) as HTMLTextAreaElement;
+    fireEvent.change(editor, { target: { value: ["DEFINE", "    TABLE Top3 = TOPN ( 3, Sales )", "    COLUMN Sales[Double] = Sales[Quantity] * 2", "EVALUATE", "    ROW ( \"x\", 1 )"].join("\n") } });
+    await act(async () => void a.registry.execute("dax.query.updateModel"));
+    expect(calculatedTables(a.session.store.project!).map((t) => t.name)).toContain("Top3");
+    expect(JSON.stringify(a.session.store.project!.model.tmdl)).toContain("Sales[Quantity] * 2");
   });
 
   it("Format query lays out the text of the query editor, undo-free and without running it", async () => {
