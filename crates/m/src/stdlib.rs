@@ -526,8 +526,14 @@ pub const NOT_SUPPORTED: &[&str] = &[
 ];
 
 /// Sorted names of the library functions that work (used for editor completions; a test keeps the app's copy in sync).
+/// Type values the library names (`Int64.Type`): they work in type ascriptions and Table.TransformColumnTypes.
+pub const TYPE_CONSTS: &[&str] = &[
+    "Int8.Type", "Int16.Type", "Int32.Type", "Int64.Type", "Single.Type", "Double.Type", "Decimal.Type", "Currency.Type", "Percentage.Type",
+    "Logical.Type", "Date.Type", "DateTime.Type", "Time.Type",
+];
+
 pub fn supported_functions() -> Vec<&'static str> {
-    let mut v: Vec<&'static str> = SCALAR_FNS.iter().chain(TABLE_FNS.iter()).chain(crate::stdlib_ext::all_names().iter()).copied().filter(|n| !NOT_SUPPORTED.contains(n)).collect();
+    let mut v: Vec<&'static str> = SCALAR_FNS.iter().chain(TABLE_FNS.iter()).chain(crate::stdlib_ext::all_names().iter()).chain(TYPE_CONSTS.iter()).copied().filter(|n| !NOT_SUPPORTED.contains(n)).collect();
     v.sort_unstable();
     v.dedup();
     v

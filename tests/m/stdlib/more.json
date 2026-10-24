@@ -398,5 +398,107 @@
   "m": "Record.FromTable(#table({\"Name\", \"Value\"}, {{\"x\", 1}, {\"y\", 2}}))",
   "expect": "[x: 1,y: 2]",
   "mode": "value"
+ },
+ {
+  "fn": "Int8.Type",
+  "m": "Table.Column(Table.TransformColumnTypes(#table({\"a\"}, {{\"5\"}}), {{\"a\", Int8.Type}}), \"a\")",
+  "expect": "{5}",
+  "mode": "value"
+ },
+ {
+  "fn": "Int8.Type",
+  "m": "Table.Column(Table.TransformColumnTypes(#table({\"a\"}, {{\"5.5\"}}), {{\"a\", Int8.Type}}), \"a\")",
+  "expect": "{6}",
+  "mode": "value"
+ },
+ {
+  "fn": "Int16.Type",
+  "m": "Table.Column(Table.TransformColumnTypes(#table({\"a\"}, {{\"5\"}}), {{\"a\", Int16.Type}}), \"a\")",
+  "expect": "{5}",
+  "mode": "value"
+ },
+ {
+  "fn": "Int16.Type",
+  "m": "Table.Column(Table.TransformColumnTypes(#table({\"a\"}, {{\"5.5\"}}), {{\"a\", Int16.Type}}), \"a\")",
+  "expect": "{6}",
+  "mode": "value"
+ },
+ {
+  "fn": "Int32.Type",
+  "m": "Table.Column(Table.TransformColumnTypes(#table({\"a\"}, {{\"5\"}}), {{\"a\", Int32.Type}}), \"a\")",
+  "expect": "{5}",
+  "mode": "value"
+ },
+ {
+  "fn": "Int32.Type",
+  "m": "Table.Column(Table.TransformColumnTypes(#table({\"a\"}, {{\"5.5\"}}), {{\"a\", Int32.Type}}), \"a\")",
+  "expect": "{6}",
+  "mode": "value"
+ },
+ {
+  "fn": "Int64.Type",
+  "m": "Table.Column(Table.TransformColumnTypes(#table({\"a\"}, {{\"5\"}}), {{\"a\", Int64.Type}}), \"a\")",
+  "expect": "{5}",
+  "mode": "value"
+ },
+ {
+  "fn": "Int64.Type",
+  "m": "Table.Column(Table.TransformColumnTypes(#table({\"a\"}, {{\"5.5\"}}), {{\"a\", Int64.Type}}), \"a\")",
+  "expect": "{6}",
+  "mode": "value"
+ },
+ {
+  "fn": "Single.Type",
+  "m": "Table.Column(Table.TransformColumnTypes(#table({\"a\"}, {{\"2.5\"}}), {{\"a\", Single.Type}}), \"a\")",
+  "expect": "{2.5}",
+  "mode": "value"
+ },
+ {
+  "fn": "Double.Type",
+  "m": "Table.Column(Table.TransformColumnTypes(#table({\"a\"}, {{\"2.5\"}}), {{\"a\", Double.Type}}), \"a\")",
+  "expect": "{2.5}",
+  "mode": "value"
+ },
+ {
+  "fn": "Decimal.Type",
+  "m": "Table.Column(Table.TransformColumnTypes(#table({\"a\"}, {{\"2.5\"}}), {{\"a\", Decimal.Type}}), \"a\")",
+  "expect": "{2.5}",
+  "mode": "value"
+ },
+ {
+  "fn": "Percentage.Type",
+  "m": "Table.Column(Table.TransformColumnTypes(#table({\"a\"}, {{\"2.5\"}}), {{\"a\", Percentage.Type}}), \"a\")",
+  "expect": "{2.5}",
+  "mode": "value"
+ },
+ {
+  "fn": "Currency.Type",
+  "m": "Table.Column(Table.TransformColumnTypes(#table({\"a\"}, {{\"2.123456\"}}), {{\"a\", Currency.Type}}), \"a\")",
+  "expect": "{2.1235}",
+  "mode": "value"
+ },
+ {
+  "fn": "Logical.Type",
+  "m": "Table.Column(Table.TransformColumnTypes(#table({\"a\"}, {{\"true\"}}), {{\"a\", Logical.Type}}), \"a\")",
+  "expect": "{true}",
+  "mode": "value"
+ },
+ {
+  "fn": "Date.Type",
+  "m": "Table.Column(Table.TransformColumnTypes(#table({\"a\"}, {{\"2024-05-06\"}}), {{\"a\", Date.Type}}), \"a\")",
+  "expect": "{2024-05-06}",
+  "mode": "value"
+ },
+ {
+  "fn": "DateTime.Type",
+  "m": "Table.Column(Table.TransformColumnTypes(#table({\"a\"}, {{\"2024-05-06 10:11:12\"}}), {{\"a\", DateTime.Type}}), \"a\")",
+  "expect": "{2024-05-06 10:11:12}",
+  "mode": "value"
+ },
+ {
+  "fn": "Time.Type",
+  "m": "Table.Column(Table.TransformColumnTypes(#table({\"a\"}, {{\"10:11:12\"}}), {{\"a\", Time.Type}}), \"a\")",
+  "expect": "{10:11:12}",
+  "mode": "value"
  }
 ]
