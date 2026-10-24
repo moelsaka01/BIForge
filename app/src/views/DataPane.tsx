@@ -94,8 +94,10 @@ export function DataPane(p: DataPaneProps) {
                 onClick={() => p.onSelect(t.name)}
                 style={{ fontWeight: p.selected === t.name ? 700 : 400 }}
               >
-                <span data-qq="table" data-table={t.name}>{t.name}</span>
-                {refreshable && !hasData ? " (no data loaded)" : ""}
+                <span data-qq="table" data-table={t.name}>
+                  {t.name}
+                  {refreshable && !hasData ? " (no data loaded)" : ""}
+                </span>
                 {refreshable && (
                   <Button
                     size="small"
