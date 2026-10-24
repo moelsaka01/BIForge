@@ -119,7 +119,7 @@ D | Field parameter cards
 N | Context menus (Delete, Hide, Rename, Add to layout)
 N | Auto-create relationships
 N | Manage relationships dialog (grid, autodetect)
-D | Create relationship dialog
+N | Create relationship dialog
 N | Edit relationship dialog with Cross-filter direction, Make this relationship active, Apply security filter in both directions, Assume referential integrity
 D | Many-to-many with both cross-filter
 ## 16. DAX query view
