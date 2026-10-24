@@ -5,6 +5,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import { installDomStubs } from "../core/testing/domStubs";
 import { col } from "../core/testing/fakeEngine";
 import { calculatedTables, listFieldParameters } from "../core/model/modeling";
+import { listRelationships } from "../core/model/relationships";
 import { listTables } from "../core/model/ops";
 import { PBIP, makeApp } from "./shell/testApp";
 
@@ -86,5 +87,38 @@ describe("Field parameter", () => {
     await waitFor(() => expect(listFieldParameters(a.session.store.project!).map((f) => f.table)).toContain("Metric"));
     const fp = listFieldParameters(a.session.store.project!).find((f) => f.table === "Metric")!;
     expect(fp.entries.map((e) => `${e.table}[${e.name}]`)).toEqual(["Sales[Quantity]", "Sales[UnitPrice]"]);
+  });
+});
+
+describe("New relationship", () => {
+  it("creates the relationship with the chosen columns, cardinality, direction and state", async () => {
+    const a = await open();
+    const before = listRelationships(a.session.store.project!).length;
+    await act(async () => void a.registry.execute("model.newRelationshipDialog"));
+    const dlg = await dialog();
+    expect(within(dlg).getByText("Create relationship")).toBeTruthy();
+    fireEvent.change(within(dlg).getByLabelText("From table"), { target: { value: "Customer" } });
+    fireEvent.change(within(dlg).getByLabelText("From column"), { target: { value: "CustomerKey" } });
+    fireEvent.change(within(dlg).getByLabelText("To table"), { target: { value: "Product" } });
+    fireEvent.change(within(dlg).getByLabelText("To column"), { target: { value: "ProductKey" } });
+    fireEvent.change(within(dlg).getByLabelText("Cardinality"), { target: { value: "oneToOne" } });
+    fireEvent.change(within(dlg).getByLabelText("Cross-filter direction"), { target: { value: "both" } });
+    fireEvent.click(within(dlg).getByLabelText("Make this relationship active"));
+    fireEvent.click(within(dlg).getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(listRelationships(a.session.store.project!)).toHaveLength(before + 1));
+    const made = listRelationships(a.session.store.project!).find((r) => r.fromTable === "Customer" && r.toTable === "Product")!;
+    expect(made).toMatchObject({ fromColumn: "CustomerKey", toColumn: "ProductKey", fromCardinality: "one", toCardinality: "one", crossFilter: "both", isActive: false });
+  });
+
+  it("refuses the same table on both sides and changes nothing", async () => {
+    const a = await open();
+    const before = listRelationships(a.session.store.project!).length;
+    await act(async () => void a.registry.execute("model.newRelationshipDialog"));
+    const dlg = await dialog();
+    fireEvent.change(within(dlg).getByLabelText("From table"), { target: { value: "Customer" } });
+    fireEvent.change(within(dlg).getByLabelText("To table"), { target: { value: "Customer" } });
+    fireEvent.click(within(dlg).getByRole("button", { name: "Save" }));
+    expect(await within(dlg).findByText(/two different tables/)).toBeTruthy();
+    expect(listRelationships(a.session.store.project!)).toHaveLength(before);
   });
 });

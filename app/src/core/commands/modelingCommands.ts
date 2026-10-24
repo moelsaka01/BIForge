@@ -85,6 +85,7 @@ export function registerModelingCommands(r: CommandRegistry<Session>): void {
     const { table, column } = need<{ table: string; column: string }>(a, ["table", "column"]);
     s.store.transact(`Mark "${table}" as date table`, (p) => mod.markDateTable(p, table, column));
   });
+  reg("model.newRelationshipDialog", "New relationship", (s) => s.shell.openDialog({ kind: "modelDialog", id: "newRelationship", table: s.shell.getSnapshot().selectedTable }));
   reg("model.markDateTableDialog", "Mark as date table", (s) => s.shell.openDialog({ kind: "modelDialog", id: "markDateTable", table: s.shell.getSnapshot().selectedTable }));
   reg("model.manageRolesDialog", "Manage roles", (s) => s.shell.openDialog({ kind: "roles" }));
   reg("model.viewAsDialog", "View as", (s) => s.shell.openDialog({ kind: "viewAs" }));

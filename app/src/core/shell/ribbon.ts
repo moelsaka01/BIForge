@@ -232,7 +232,10 @@ const modelingCalculations = (): RibbonGroup => ({
 const relationshipsGroup = (): RibbonGroup => ({
   id: "relationships",
   label: "Relationships",
-  controls: [cmd("manageRelationships", "Manage relationships", "relationships", "model.manageRelationships", { size: "large", keytip: "MR" })],
+  controls: [
+    cmd("manageRelationships", "Manage relationships", "relationships", "model.manageRelationships", { size: "large", keytip: "MR" }),
+    cmd("newRelationship", "New relationship", "relationships", "model.newRelationshipDialog", { size: "large", keytip: "NR" }),
+  ],
 });
 
 const securityGroup = (): RibbonGroup => ({

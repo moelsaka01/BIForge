@@ -4,7 +4,7 @@ import type { DialogDef } from "../queries/dialogs";
 import type { TableView } from "./ops";
 import { QUICK_MEASURES, quickExpression, quickName, splitColumn, type QuickKind } from "./quickMeasures";
 
-export type ModelDialogId = "newColumn" | "editColumn" | "newCalculatedTable" | "editCalculatedTable" | "newHierarchy" | "quickMeasure" | "whatIf" | "calculationGroup" | "fieldParameter" | "markDateTable";
+export type ModelDialogId = "newColumn" | "editColumn" | "newCalculatedTable" | "editCalculatedTable" | "newHierarchy" | "quickMeasure" | "whatIf" | "calculationGroup" | "fieldParameter" | "markDateTable" | "newRelationship";
 
 export interface ModelDialogCtx {
   tables: TableView[];
@@ -71,6 +71,42 @@ export function modelDialogFor(id: ModelDialogId, c: ModelDialogCtx): DialogDef 
           if (editing && name !== c.calculated!.name) throw new Error("Rename the table in the Model view; this form changes its expression.");
           if (!expression) throw new Error("Enter the DAX expression of the table.");
           return { command: "model.setCalculatedTable", args: { name, expression: stripName(name, expression) } };
+        },
+      };
+    }
+    case "newRelationship": {
+      if (c.tables.length < 2) throw new Error("A relationship needs two tables.");
+      const first = c.tables.find((t) => t.name === c.table) ?? c.tables[0];
+      const other = c.tables.find((t) => t.name !== first.name)!;
+      const cols = (name: unknown) => (c.tables.find((t) => t.name === name)?.columns ?? []).map((x) => ({ value: x.name, label: x.name }));
+      return {
+        title: "Create relationship",
+        submitLabel: "Save",
+        fields: [
+          { kind: "select", key: "fromTable", label: "From table", options: tableOptions(c), default: first.name },
+          { kind: "select", key: "fromColumn", label: "From column", options: (v) => cols(v.fromTable) },
+          { kind: "select", key: "toTable", label: "To table", options: tableOptions(c), default: other.name },
+          { kind: "select", key: "toColumn", label: "To column", options: (v) => cols(v.toTable) },
+          {
+            kind: "select",
+            key: "cardinality",
+            label: "Cardinality",
+            options: [{ value: "manyToOne", label: "Many to one (*:1)" }, { value: "oneToOne", label: "One to one (1:1)" }, { value: "oneToMany", label: "One to many (1:*)" }, { value: "manyToMany", label: "Many to many (*:*)" }],
+            default: "manyToOne",
+          },
+          { kind: "select", key: "crossFilter", label: "Cross-filter direction", options: [{ value: "single", label: "Single" }, { value: "both", label: "Both" }], default: "single" },
+          { kind: "check", key: "active", label: "Make this relationship active", default: true },
+        ],
+        build: (v) => {
+          const [fromTable, toTable] = [String(v.fromTable ?? ""), String(v.toTable ?? "")];
+          const [fromColumn, toColumn] = [String(v.fromColumn ?? ""), String(v.toColumn ?? "")];
+          if (!fromColumn || !toColumn) throw new Error("Choose a column on both sides.");
+          if (fromTable === toTable) throw new Error("Choose two different tables.");
+          const [a, b] = String(v.cardinality ?? "manyToOne") === "manyToOne" ? ["many", "one"] : v.cardinality === "oneToOne" ? ["one", "one"] : v.cardinality === "oneToMany" ? ["one", "many"] : ["many", "many"];
+          return {
+            command: "model.addRelationship",
+            args: { fromTable, fromColumn, toTable, toColumn, fromCardinality: a, toCardinality: b, crossFilter: v.crossFilter === "both" ? "both" : "single", isActive: v.active !== false },
+          };
         },
       };
     }
