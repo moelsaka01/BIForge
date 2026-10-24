@@ -2,7 +2,8 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { DataView } from "./DataView";
-import { ModelView } from "./ModelView";
+import { ModelView, layoutCards } from "./ModelView";
+import { listTables } from "../core/model/ops";
 import { DataPane } from "./DataPane";
 import { buildSpec, defaultTableName, emptyForm } from "./importForm";
 import { FakeEngine, col } from "../core/testing/fakeEngine";
@@ -203,6 +204,35 @@ describe("ModelView", () => {
     fireEvent.keyDown(canvas, { key: "(", code: "Digit9", altKey: true, shiftKey: true });
     expect(card("Fact").getAttribute("data-collapsed")).toBe("false");
     expect(card("Dim").getAttribute("data-collapsed")).toBe("false");
+  });
+
+  it("a hierarchy appears in its table's card, and the card is tall enough for it", async () => {
+    const s = await modelSetup(false);
+    const before = layoutCards(listTables(s.session.store.project!).map((t) => ({ ...t, hierarchies: [] }))).get("Dim")!.h;
+    await s.registry.execute("model.addHierarchy", { table: "Dim", name: "Naming", columns: ["id", "name"] });
+    renderModel(s, false);
+    const row = screen.getByTestId("hierarchy-Dim.Naming");
+    expect(within(screen.getByTestId("card-Dim")).getByText("Naming")).toBeTruthy();
+    expect(row.getAttribute("title")).toBe("Hierarchy: id > name");
+    const after = parseFloat((screen.getByTestId("card-Dim") as HTMLElement).style.height);
+    expect(after).toBe(before + 22);
+  });
+
+  it("hidden columns and measures stay in the card, drawn faded and marked hidden; unhiding restores them", async () => {
+    const s = await modelSetup(false);
+    const { view } = renderModel(s, false);
+    const col = () => screen.getByTestId("col-Dim.name");
+    expect(col().getAttribute("data-hidden")).toBe("false");
+    const rerender = () => view.rerender(<ModelView project={s.session.store.project!} session={s.session} registry={s.registry} engine={null} onError={() => undefined} />);
+    await s.registry.execute("model.setProperty", { target: { kind: "column", table: "Dim", column: "name" }, key: "isHidden", value: true });
+    rerender();
+    expect(col().getAttribute("data-hidden")).toBe("true");
+    expect(col().style.opacity).toBe("0.5");
+    expect(screen.getByTestId("col-Dim.id").getAttribute("data-hidden")).toBe("false");
+    await s.registry.execute("model.setProperty", { target: { kind: "column", table: "Dim", column: "name" }, key: "isHidden", value: false });
+    rerender();
+    expect(col().getAttribute("data-hidden")).toBe("false");
+    expect(col().style.opacity).toBe("");
   });
 
   it("selecting a table highlights the tables it is related to", async () => {

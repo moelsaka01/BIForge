@@ -106,13 +106,13 @@ D | Cards not clipped, Power BI-style field icons (Σ, calendar)
 D | Properties pane (collapsible) for table, column, measure, relationship, multi-selection
 N | Move cards, zoom, fit to screen, 100%, minimap
 N | Layout tabs (All tables, additional layouts)
-N | Show/hide fields, hidden fields display
+D | Show/hide fields, hidden fields display
 D | Collapse/expand table cards
 N | Relationship lines with cardinality and filter direction markers
 D | Highlight related tables
 N | Select related tables
 N | Bulk edit of properties (multi-select)
-N | Hierarchies in cards
+D | Hierarchies in cards
 N | Display folders in cards
 D | Calculation group cards
 D | Field parameter cards

@@ -8,6 +8,7 @@ import { getTableSource } from "../core/model/tables";
 import { PaneFrame } from "./shell/PaneFrame";
 import { ModelProperties } from "./ModelProperties";
 import { FieldIcon, fieldIconKind } from "./fieldIcon";
+import { getProperty, listHierarchies } from "../core/model/modeling";
 import { listRelationships, type EndCardinality, type NewRelationship, type Relationship } from "../core/model/relationships";
 
 const CARD_W = 220;
@@ -29,13 +30,13 @@ interface Box {
 }
 
 /** Automatic grid layout; card positions are not user-editable yet. */
-export function layoutCards(tables: { name: string; columns: unknown[]; measures?: unknown[] }[]): Map<string, Box> {
+export function layoutCards(tables: { name: string; columns: unknown[]; measures?: unknown[]; hierarchies?: unknown[] }[]): Map<string, Box> {
   const out = new Map<string, Box>();
   const rowBottoms: number[] = [];
   tables.forEach((t, i) => {
     const r = Math.floor(i / COLS);
     const c = i % COLS;
-    const h = HEAD_H + Math.min(Math.max(t.columns.length + (t.measures?.length ?? 0), 1), MAX_ROWS) * ROW_H + CARD_PAD;
+    const h = HEAD_H + Math.min(Math.max(t.columns.length + (t.measures?.length ?? 0) + (t.hierarchies?.length ?? 0), 1), MAX_ROWS) * ROW_H + CARD_PAD;
     const y = r === 0 ? 20 : rowBottoms[r - 1] + GAP_Y;
     rowBottoms[r] = Math.max(rowBottoms[r] ?? 0, y + h);
     out.set(t.name, { x: 20 + c * (CARD_W + GAP_X), y, w: CARD_W, h });
@@ -69,7 +70,8 @@ type Sel = { kind: "none" } | { kind: "rel"; id: string } | { kind: "table"; tab
 export function ModelView({ project, session, registry, engine, onError, properties }: ModelViewProps) {
   const tables = listTables(project);
   const rels = listRelationships(project);
-  const boxes = layoutCards(tables);
+  const hierarchiesOf = (name: string) => listHierarchies(project, name);
+  const boxes = layoutCards(tables.map((t) => ({ ...t, hierarchies: hierarchiesOf(t.name) })));
   const [sel0, setSel] = useState<Sel>({ kind: "none" });
   const selected = sel0.kind === "rel" ? sel0.id : null;
   const setSelected = (id: string | null) => setSel(id ? { kind: "rel", id } : { kind: "none" });
@@ -214,7 +216,7 @@ export function ModelView({ project, session, registry, engine, onError, propert
                   </button>
                   {t.name}
                 </div>
-                {!folded && <div style={{ overflowY: t.columns.length + t.measures.length > MAX_ROWS ? "auto" : "hidden", flex: 1, minHeight: 0 }}>
+                {!folded && <div style={{ overflowY: t.columns.length + t.measures.length + hierarchiesOf(t.name).length > MAX_ROWS ? "auto" : "hidden", flex: 1, minHeight: 0 }}>
                   {t.columns.length + t.measures.length === 0 && <div style={{ padding: "2px 8px", opacity: 0.6 }}>(no columns)</div>}
                   {t.columns.map((c) => {
                     const key = `${t.name}.${c.name}`;
@@ -223,6 +225,7 @@ export function ModelView({ project, session, registry, engine, onError, propert
                       <div
                         key={c.name}
                         data-testid={`col-${key}`}
+                        data-hidden={getProperty(project, { kind: "column", table: t.name, column: c.name }, "isHidden") === true}
                         draggable
                         title="Drag onto a column of another table to create a relationship"
                         onClick={() => setSel({ kind: "column", table: t.name, column: c.name })}
@@ -258,6 +261,7 @@ export function ModelView({ project, session, registry, engine, onError, propert
                           padding: "0 8px",
                           cursor: "grab",
                           background: dropTarget === key ? "#cfe4fa" : isSel ? "var(--colorSubtleBackgroundSelected, #e6f2fb)" : undefined,
+                          opacity: getProperty(project, { kind: "column", table: t.name, column: c.name }, "isHidden") === true ? 0.5 : undefined,
                         }}
                       >
                         <FieldIcon kind={fieldIconKind(c.dataType, c.summarizeBy)} />
@@ -269,11 +273,23 @@ export function ModelView({ project, session, registry, engine, onError, propert
                     <div
                       key={`m:${m.name}`}
                       data-testid={`measure-${t.name}.${m.name}`}
+                      data-hidden={getProperty(project, { kind: "measure", table: t.name, name: m.name }, "isHidden") === true}
                       onClick={() => setSel({ kind: "measure", table: t.name, name: m.name })}
-                      style={{ height: ROW_H, boxSizing: "border-box", display: "flex", alignItems: "center", gap: 6, padding: "0 8px", cursor: "pointer", background: sel0.kind === "measure" && sel0.table === t.name && sel0.name === m.name ? "var(--colorSubtleBackgroundSelected, #e6f2fb)" : undefined }}
+                      style={{ height: ROW_H, boxSizing: "border-box", display: "flex", alignItems: "center", gap: 6, padding: "0 8px", cursor: "pointer", background: sel0.kind === "measure" && sel0.table === t.name && sel0.name === m.name ? "var(--colorSubtleBackgroundSelected, #e6f2fb)" : undefined, opacity: getProperty(project, { kind: "measure", table: t.name, name: m.name }, "isHidden") === true ? 0.5 : undefined }}
                     >
                       <FieldIcon kind="measure" />
                       <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{m.name}</span>
+                    </div>
+                  ))}
+                  {hierarchiesOf(t.name).map((h) => (
+                    <div
+                      key={`h:${h.name}`}
+                      data-testid={`hierarchy-${t.name}.${h.name}`}
+                      title={`Hierarchy: ${h.levels.map((l) => l.column).join(" > ")}`}
+                      style={{ height: ROW_H, boxSizing: "border-box", display: "flex", alignItems: "center", gap: 6, padding: "0 8px" }}
+                    >
+                      <span aria-hidden style={{ width: 16, textAlign: "center", opacity: 0.8 }}>≣</span>
+                      <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{h.name}</span>
                     </div>
                   ))}
                 </div>}
