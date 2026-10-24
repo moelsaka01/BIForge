@@ -434,3 +434,12 @@ BIForge uses the authorization-code flow with PKCE and a loopback redirect. The 
 - Not verifiable here: window functions with measures over relationships (Desktop model lacks them; the original fixture model with Date and Promotion tables is not the one open).
 - CI failed on the two session-7 pushes because the View-as UI test raced the closing roles dialog; the test now waits for the dialog to close (cadaea3). Release v0.1.1 is **not** tagged: needs a green CI run first.
 - **Parity sprint not started** (usage budget). Plan, by items gained per effort: (b) M standard library, 504 Not started in batches by family (Text, List, Number, Table, Date) with generated tests; format cards, 699 Not started (generic renderer + rendered.json); Options dialog, 78 (Global 55, Current File 23); keyboard shortcuts 31; dialogs 36; then Power Query ribbon 51, Table view 15, Model view 16. Skip: connectors needing drivers.
+
+## 2026-10-24: parity sprint (in progress)
+- Inventory now **1479 Done-tested / 278 Partial / 1251 Not started** (start of sprint 978 / 345 / 1685; goal 1504).
+- Gains by category: M standard library (stdlib_ext/list/date/rec/misc/native/more, tests/m/stdlib/*.json), Format cards (container Style preset + measured Customize spacing, bar borders, general Format string, reversed series order), PQ options and ribbon (Rounding/Information menus), shortcuts (F5/Ctrl+Enter, Tab, Ctrl+D...), model dialogs (what-if, calculation group, field parameter UI tests), audit flips of items already covered by tests.
+- Container-property counting follows the PBIR schema (tools/inventory/build.mjs); the M harness guard requires a case for every supported function.
+- Honest limits: Duration.Type and DateTimeZone.Type are not claimed (conversion unsupported / machine-zone dependent); `Style preset` offers BIForge's own presets (Power BI would not know their names); `general.formatString` is read from the file only (no control).
+### Next steps
+1. ~25 items to 1504: Data view features (copy table, find in table, show hidden columns), Options with real effect (report.visualHeader, slicer search), Format cards left with 1-3 missing props (scalarKey.min, columnWidth.value, showAllDataPoints, underline in ECharts), more M (List.FindText, Value.FromText semantics need checking).
+2. Rename table/column/measure with reference updates (not built).

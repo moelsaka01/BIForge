@@ -289,8 +289,8 @@ P | Parse: JSON, XML
 P | Statistics: sum, min, max, median, average, count values, count distinct, standard deviation
 N | Standard: add, multiply, subtract, divide, integer-divide, modulo, percentage, percent of
 N | Scientific: absolute, power, square root, exponent, logarithm, factorial, trig
-N | Rounding: round up, down, round
-N | Information: is even, is odd, sign
+D | Rounding: round up, down, round
+D | Information: is even, is odd, sign
 N | Date: age, date only, year, quarter, month, week, day, day of week, day of year, start/end of period, name of day/month
 N | Time: hour, minute, second, local time, time only, earliest, latest
 N | Duration: days, hours, minutes, seconds, total, subtract, multiply, divide, statistics

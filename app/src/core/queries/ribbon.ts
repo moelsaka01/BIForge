@@ -343,14 +343,35 @@ export const RIBBON: RibbonTab[] = [
         id: "numberColumn",
         label: "Number Column",
         items: [
-          { id: "t.round", label: "Round", need: "numberColumn", action: dlg("round") },
+          {
+            id: "t.round",
+            label: "Rounding",
+            need: "numberColumn",
+            action: { type: "none" },
+            menu: [
+              { id: "t.round.round", label: "Round...", need: "numberColumn", action: dlg("round") },
+              colFn("t.round.up", "Round Up", "Number.RoundUp", "Rounded Up", "int64"),
+              colFn("t.round.down", "Round Down", "Number.RoundDown", "Rounded Down", "int64"),
+            ],
+          },
           { id: "t.stats", label: "Statistics", need: "numberColumn", action: { type: "none" }, menu: columnStatistics },
           {
             id: "t.standard",
             label: "Standard",
             need: "numberColumn",
             action: { type: "none" },
-            menu: [colFn("t.std.abs", "Absolute Value", "Number.Abs", "Calculated Absolute Value", "number"), colFn("t.std.even", "Is Even", "Number.IsEven", "Calculated Is Even", "logical"), colFn("t.std.odd", "Is Odd", "Number.IsOdd", "Calculated Is Odd", "logical")],
+            menu: [colFn("t.std.abs", "Absolute Value", "Number.Abs", "Calculated Absolute Value", "number")],
+          },
+          {
+            id: "t.info",
+            label: "Information",
+            need: "numberColumn",
+            action: { type: "none" },
+            menu: [
+              colFn("t.std.even", "Is Even", "Number.IsEven", "Calculated Is Even", "logical"),
+              colFn("t.std.odd", "Is Odd", "Number.IsOdd", "Calculated Is Odd", "logical"),
+              colFn("t.info.sign", "Sign", "Number.Sign", "Calculated Sign", "int64"),
+            ],
           },
           {
             id: "t.scientific",

@@ -265,7 +265,11 @@ describe("ribbon", () => {
     expect(itemState(item("splitColumn"), rc({ selected: ["Id", "Name"] }))).toEqual({ enabled: false, reason: "Select a single column." });
     expect(itemState(item("format.upper"), rc({ selected: ["Id"] })).reason).toBe("Select a text column.");
     expect(itemState(item("format.upper"), rc({ selected: ["Name"] })).enabled).toBe(true);
-    expect(itemState(item("t.round"), rc({ selected: ["Name"] })).reason).toBe("Select a number column.");
+    expect(itemState(item("t.round.round"), rc({ selected: ["Name"] })).reason).toBe("Select a number column.");
+    expect(itemState(item("t.round.up"), rc({ selected: ["Amount"] })).enabled).toBe(true);
+    expect(item("t.round.up").action.type === "transform" && item("t.round.up").action.build(rc({ selected: ["Amount"] }))).toMatchObject({ function: "Number.RoundUp", columns: ["Amount"] });
+    expect(item("t.round.down").action.type === "transform" && item("t.round.down").action.build(rc({ selected: ["Amount"] }))).toMatchObject({ function: "Number.RoundDown" });
+    expect(item("t.info.sign").action.type === "transform" && item("t.info.sign").action.build(rc({ selected: ["Amount"] }))).toMatchObject({ function: "Number.Sign" });
     expect(itemState(item("t.round"), rc({ selected: ["Amount"] })).enabled).toBe(true);
     expect(itemState(item("promote"), rc({ hasTable: false })).reason).toContain("not a table");
     expect(itemState(item("promote"), rc({ hasQuery: false })).reason).toBe("Select a query first.");

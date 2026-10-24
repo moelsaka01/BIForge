@@ -250,6 +250,11 @@ fn extract_date_and_number_functions_on_a_column() {
     assert_eq!(one("Id", "Number.IsEven", "", "\"logical\""), ["false", "true", "false", "false"]);
     assert_eq!(one("Qty", "Number.Exp", "", "\"number\"")[0].starts_with("22026.46"), true);
 
+    // Rounding > Round Up / Round Down and Information > Sign (Qty is 10, null, 7.5, 7.5 as numbers)
+    assert_eq!(one("Qty", "Number.RoundUp", "", "\"int64\""), ["10", "~", "8", "8"]);
+    assert_eq!(one("Qty", "Number.RoundDown", "", "\"int64\""), ["10", "~", "7", "7"]);
+    assert_eq!(one("Qty", "Number.Sign", "", "\"int64\""), ["1", "~", "1", "1"]);
+
     // text before / after / between the first delimiter
     let t = "let Source = #table({\"P\"}, {{\"ab-cd-ef\"},{\"none\"},{\"[x] tail\"}}) in Source";
     let run = |f: &str, args: &str| {

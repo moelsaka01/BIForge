@@ -164,7 +164,7 @@ Last updated: 2026-10-17, after the scope-change session was completed (see PROG
 | TMDL view | 8 | 4 | 0 | 4 |
 | Modeling features | 48 | 24 | 1 | 23 |
 | DAX language | 15 | 8 | 0 | 7 |
-| Power Query editor: window and ribbon | 94 | 41 | 4 | 49 |
+| Power Query editor: window and ribbon | 94 | 43 | 4 | 47 |
 | M language | 12 | 3 | 0 | 9 |
 | Get data: connectors | 47 | 25 | 16 | 6 |
 | Options dialog: Global | 61 | 10 | 2 | 49 |
@@ -176,7 +176,7 @@ Last updated: 2026-10-17, after the scope-change session was completed (see PROG
 | Format pane cards per visual | 1264 | 413 | 245 | 606 |
 | DAX functions | 317 | 297 | 0 | 20 |
 | M standard library | 652 | 421 | 0 | 231 |
-| **Total** | **3008** | **1477** | **278** | **1253** |
+| **Total** | **3008** | **1479** | **278** | **1251** |
 <!-- inventory-status:end -->
 
 ## Online track (Publish & Share; plan in docs/ONLINE_PLAN.md)
