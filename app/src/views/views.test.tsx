@@ -235,6 +235,72 @@ describe("DataView: column width and Copy table", () => {
     fireEvent.click(screen.getByRole("button", { name: "Copy table" }));
     await waitFor(() => expect(copied.split("\r\n")[1]).toMatch(/^3\t/));
   });
+
+  it("Shift+click on a header adds a further sort key (its direction turns, then it drops out); a plain click starts over", async () => {
+    const e = new FakeEngine();
+    e.tables.set("S", { columns: [col("g"), col("n", "int64")], rows: [["b", "1"], ["a", "2"], ["b", "3"], ["a", "1"], ["b", "2"]] });
+    render(<DataView engine={e} table="S" reloadKey={0} />);
+    await screen.findByText(/5 rows/);
+    const header = (name: string) => screen.getAllByRole("columnheader").find((h) => h.textContent?.startsWith(name))!;
+    const order = () => [...document.querySelectorAll("[data-row]")].map((r) => [...r.querySelectorAll("[role=gridcell]")].map((c) => c.textContent).join(""));
+    const status = () => screen.getByTestId("data-status").textContent ?? "";
+    fireEvent.click(header("g"));
+    fireEvent.click(header("n"), { shiftKey: true });
+    await waitFor(() => expect(status()).toMatch(/sorted by g ascending, then n ascending/));
+    await waitFor(() => expect(order()).toEqual(["a1", "a2", "b1", "b2", "b3"]));
+    expect(header("g").textContent).toContain("▲1");
+    expect(header("n").textContent).toContain("▲2");
+    fireEvent.click(header("n"), { shiftKey: true });
+    await waitFor(() => expect(order()).toEqual(["a2", "a1", "b3", "b2", "b1"]));
+    expect(status()).toMatch(/then n descending/);
+    expect(e.calls.at(-1)).toMatch(/:g\+,n-$/);
+    fireEvent.click(header("n"), { shiftKey: true });
+    await waitFor(() => expect(status()).toMatch(/sorted by g ascending(?!, then)/));
+    fireEvent.click(header("n"));
+    await waitFor(() => expect(status()).toMatch(/sorted by n ascending(?!, then)/));
+    await waitFor(() => expect(order()).toEqual(["b1", "a1", "a2", "b2", "b3"]));
+  });
+
+  it("selecting cells (click, Shift+click, drag) and Copy values (Ctrl+C or right-click) put the shown values on the clipboard, in the sort order", async () => {
+    const e = new FakeEngine();
+    e.tables.set("C", { columns: [col("id", "int64"), col("note"), col("when", "dateTime")], rows: [["1", "a\tb", "2024-03-05"], ["2", null, "2024-03-06"], ["3", 'say "hi"', null]] });
+    let copied = "";
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: async (t: string) => void (copied = t) } });
+    render(<DataView engine={e} table="C" reloadKey={0} culture="en-US" />);
+    await screen.findByText(/3 rows/);
+    const cell = (row: number, c: number) => document.querySelector(`[data-row="${row}"]`)!.querySelectorAll("[role=gridcell]")[c] as HTMLElement;
+    await waitFor(() => expect(cell(2, 0).textContent).toBe("3"));
+    const grid = screen.getByRole("grid");
+    // a rectangle from a click to a Shift+click
+    fireEvent.mouseDown(cell(0, 1));
+    fireEvent.mouseDown(cell(1, 2), { shiftKey: true });
+    fireEvent.mouseUp(grid);
+    expect(document.querySelectorAll("[aria-selected=true]")).toHaveLength(4);
+    fireEvent.keyDown(grid, { key: "c", ctrlKey: true });
+    await screen.findByText("Copied 4 values");
+    expect(copied).toBe('"a\tb"\t3/5/2024\r\n\t3/6/2024');
+    // a drag selects too
+    fireEvent.mouseDown(cell(0, 0));
+    fireEvent.mouseEnter(cell(2, 0));
+    fireEvent.mouseUp(grid);
+    fireEvent.contextMenu(cell(2, 0));
+    expect(screen.getByRole("menuitem").textContent).toBe("Copy values");
+    fireEvent.click(screen.getByRole("menuitem", { name: "Copy values" }));
+    await waitFor(() => expect(copied).toBe("1\r\n2\r\n3"));
+    // a right-click on a cell outside the selection selects that one cell first
+    fireEvent.contextMenu(cell(1, 1));
+    expect(screen.getByRole("menuitem").textContent).toBe("Copy value");
+    fireEvent.click(screen.getByRole("menuitem"));
+    await waitFor(() => expect(copied).toBe(""));
+    // select all, in the sorted order
+    fireEvent.click(screen.getAllByRole("columnheader")[0]);
+    fireEvent.click(screen.getAllByRole("columnheader")[0]);
+    await waitFor(() => expect(screen.getByTestId("data-status").textContent).toMatch(/descending/));
+    fireEvent.keyDown(grid, { key: "a", ctrlKey: true });
+    fireEvent.keyDown(grid, { key: "c", ctrlKey: true });
+    await screen.findByText("Copied 9 values");
+    expect(copied.split("\r\n")[0]).toMatch(/^3\t/);
+  });
 });
 
 describe("ModelView", () => {

@@ -57,20 +57,30 @@ export class FakeEngine implements EngineApi {
     const c = t?.columns.find((x) => x.name === old);
     if (c) c.name = to;
   }
-  async fetchPage(table: string, offset: number, limit: number, sort?: SortSpec | null): Promise<RowPage> {
-    this.calls.push(`page:${table}:${offset}:${limit}:${sort ? sort.column + (sort.descending ? "-" : "+") : ""}`);
+  async fetchPage(table: string, offset: number, limit: number, sortArg?: SortSpec | SortSpec[] | null): Promise<RowPage> {
+    const sorts = sortArg ? (Array.isArray(sortArg) ? sortArg : [sortArg]) : [];
+    this.calls.push(`page:${table}:${offset}:${limit}:${sorts.map((s) => s.column + (s.descending ? "-" : "+")).join(",")}`);
     const t = this.tables.get(table);
     if (!t) throw new Error(`Table "${table}" does not exist in the data store.`);
     let rows = [...t.rows];
-    if (sort) {
-      const i = t.columns.findIndex((c) => c.name === sort.column);
-      const numeric = t.columns[i].biType === "int64" || t.columns[i].biType === "double";
+    if (sorts.length) {
+      const keys = sorts.map((sort) => {
+        const i = t.columns.findIndex((c) => c.name === sort.column);
+        if (i < 0) throw new Error(`Column "${sort.column}" does not exist in table "${table}".`);
+        return { i, sort, numeric: t.columns[i].biType === "int64" || t.columns[i].biType === "double" };
+      });
       rows.sort((a, b) => {
-        const x = a[i];
-        const y = b[i];
-        if (x === null || y === null) return x === y ? 0 : x === null ? 1 : -1; // NULLs last
-        const c = numeric ? Number(x) - Number(y) : x.localeCompare(y);
-        return sort.descending ? -c : c;
+        for (const { i, sort, numeric } of keys) {
+          const x = a[i];
+          const y = b[i];
+          if (x === null || y === null) {
+            if (x === y) continue;
+            return x === null ? 1 : -1; // NULLs last
+          }
+          const c = numeric ? Number(x) - Number(y) : x.localeCompare(y);
+          if (c !== 0) return sort.descending ? -c : c;
+        }
+        return 0;
       });
     }
     rows = rows.slice(offset, offset + limit);

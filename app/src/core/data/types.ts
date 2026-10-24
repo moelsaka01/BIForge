@@ -89,7 +89,8 @@ export interface EngineApi {
   renameTable(old: string, to: string): Promise<void>;
   /** Renames a stored column (a model column was renamed, or a source column is mapped to the name it has in the model). */
   renameColumn(table: string, old: string, to: string): Promise<void>;
-  fetchPage(table: string, offset: number, limit: number, sort?: SortSpec | null): Promise<RowPage>;
+  /** `sort` is one column, or several (the first is the main key). */
+  fetchPage(table: string, offset: number, limit: number, sort?: SortSpec | SortSpec[] | null): Promise<RowPage>;
   suggestRelationship(from: [string, string], to: [string, string]): Promise<RelationshipHint>;
   excelSheets(path: string): Promise<string[]>;
   sqliteTables(path: string): Promise<string[]>;

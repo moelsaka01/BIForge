@@ -3,6 +3,7 @@ import type { BiType, EngineApi, SortSpec, TableInfo } from "../core/data/types"
 import { visibleRange } from "./gridMath";
 import { PageCache } from "./pageCache";
 import { formatCell } from "./format";
+import { ContextMenu } from "./report/ContextMenu";
 
 export const ROW_HEIGHT = 28;
 const COL_WIDTH = 170;
@@ -24,9 +25,9 @@ const MIN_COL_WIDTH = 50;
 const COPY_ROW_LIMIT = 100_000;
 
 /** Tab-separated text of a table (the format Excel and Power BI paste); a cell with a tab, quote or line break is quoted. */
-export function toTsv(header: string[], rows: (string | null)[][]): string {
+export function toTsv(header: string[] | null, rows: (string | null)[][]): string {
   const cell = (v: string | null) => (v === null ? "" : /[\t\n\r"]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
-  return [header, ...rows].map((r) => r.map((v) => cell(v)).join("\t")).join("\r\n");
+  return (header ? [header, ...rows] : rows).map((r) => r.map((v) => cell(v)).join("\t")).join("\r\n");
 }
 
 const TYPE_LABEL: Record<BiType, string> = {
@@ -40,6 +41,9 @@ const TYPE_LABEL: Record<BiType, string> = {
 };
 
 const isNumeric = (t: BiType) => t === "int64" || t === "double" || t === "decimal";
+
+/** A cell of the grid: the row, and the position of the column among the columns shown. */
+type Cell = { row: number; col: number };
 
 export interface DataViewProps {
   engine: EngineApi;
@@ -55,7 +59,10 @@ export interface DataViewProps {
 /** Virtualized, read-only data grid. Rows are fetched from the engine page by page; only visible rows are rendered. */
 export function DataView({ engine, table, reloadKey, culture, hiddenColumns }: DataViewProps) {
   const [info, setInfo] = useState<TableInfo | null | undefined>(undefined);
-  const [sort, setSort] = useState<SortSpec | null>(null);
+  const [sorts, setSorts] = useState<SortSpec[]>([]);
+  const [sel, setSel] = useState<{ a: Cell; f: Cell } | null>(null);
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  const dragging = useRef(false);
   const [scrollTop, setScrollTop] = useState(0);
   const [, setTick] = useState(0);
   const [widths, setWidths] = useState<Record<string, number>>({});
@@ -67,7 +74,9 @@ export function DataView({ engine, table, reloadKey, culture, hiddenColumns }: D
   const box = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setSort(null);
+    setSorts([]);
+    setSel(null);
+    setMenu(null);
     setScrollTop(0);
     setWidths({});
     setCopied(null);
@@ -88,7 +97,7 @@ export function DataView({ engine, table, reloadKey, culture, hiddenColumns }: D
     };
   }, [engine, table, reloadKey]);
 
-  const cache = useMemo(() => (table && info ? new PageCache(engine, table, sort) : null), [engine, table, info, sort]);
+  const cache = useMemo(() => (table && info ? new PageCache(engine, table, sorts) : null), [engine, table, info, sorts]);
   useEffect(() => {
     const off = cache?.subscribe(() => setTick((t) => t + 1));
     return () => void off?.();
@@ -107,8 +116,40 @@ export function DataView({ engine, table, reloadKey, culture, hiddenColumns }: D
     return <Notice>No data is loaded for "{table}". Use Refresh to load it from its source.</Notice>;
   }
 
-  const toggleSort = (column: string) =>
-    setSort((s) => (s?.column !== column ? { column, descending: false } : !s.descending ? { column, descending: true } : null));
+  /** A click sorts by that column (ascending, descending, none); Shift+click adds the column as a further sort key (or turns its direction, then drops it). */
+  const toggleSort = (column: string, extend = false) =>
+    setSorts((cur) => {
+      const i = cur.findIndex((x) => x.column === column);
+      if (!extend) return cur.length === 1 && i === 0 ? (cur[0].descending ? [] : [{ column, descending: true }]) : [{ column, descending: false }];
+      if (i < 0) return [...cur, { column, descending: false }];
+      return cur[i].descending ? cur.filter((_, k) => k !== i) : cur.map((x, k) => (k === i ? { ...x, descending: true } : x));
+    });
+  const sortText = sorts.map((x, k) => (k === 0 ? "" : "then ") + x.column + " " + (x.descending ? "descending" : "ascending")).join(", ");
+
+  // ---- selecting cells and copying their values ----
+  const inSel = (row: number, col: number) => !!sel && row >= Math.min(sel.a.row, sel.f.row) && row <= Math.max(sel.a.row, sel.f.row) && col >= Math.min(sel.a.col, sel.f.col) && col <= Math.max(sel.a.col, sel.f.col);
+  const selCount = sel ? (Math.abs(sel.a.row - sel.f.row) + 1) * (Math.abs(sel.a.col - sel.f.col) + 1) : 0;
+  /** Copy value(s): the selected cells as the grid shows them, tab-separated (rows and columns in the current sort order and column order). */
+  const copyCells = async () => {
+    if (!sel) return;
+    const [r0, r1] = [Math.min(sel.a.row, sel.f.row), Math.min(Math.max(sel.a.row, sel.f.row), Math.min(info.rowCount, COPY_ROW_LIMIT) - 1)];
+    const cols = shown.slice(Math.min(sel.a.col, sel.f.col), Math.max(sel.a.col, sel.f.col) + 1);
+    try {
+      const out: (string | null)[][] = [];
+      for (let r = r0; r <= r1; ) {
+        const page = await engine.fetchPage(info.name, r, Math.min(1000, r1 - r + 1), sorts);
+        if (page.rows.length === 0) break;
+        for (const row of page.rows) out.push(cols.map(({ c, j }) => formatCell(row[j], c.biType, culture)));
+        r += page.rows.length;
+      }
+      await navigator.clipboard.writeText(toTsv(null, out));
+      const n = out.length * cols.length;
+      setCopied(`Copied ${n.toLocaleString()} value${n === 1 ? "" : "s"}`);
+    } catch (e) {
+      setCopied(`Copy failed: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  };
+
 
   const rows: number[] = [];
   for (let i = range.first; i < range.end; i++) rows.push(i);
@@ -157,7 +198,7 @@ export function DataView({ engine, table, reloadKey, culture, hiddenColumns }: D
         const to = pass === 0 ? total : Math.min(start, total);
         let row = Math.floor(from / info.columns.length);
         while (row * info.columns.length < to) {
-          const page = await engine.fetchPage(info.name, row, 1000, sort);
+          const page = await engine.fetchPage(info.name, row, 1000, sorts);
           if (page.rows.length === 0) break;
           for (let r = 0; r < page.rows.length; r++) {
             for (let j = 0; j < info.columns.length; j++) {
@@ -189,7 +230,7 @@ export function DataView({ engine, table, reloadKey, culture, hiddenColumns }: D
       const rowsOut: (string | null)[][] = [];
       const limit = Math.min(info.rowCount, COPY_ROW_LIMIT);
       while (rowsOut.length < limit) {
-        const page = await engine.fetchPage(info.name, rowsOut.length, Math.min(1000, limit - rowsOut.length), sort);
+        const page = await engine.fetchPage(info.name, rowsOut.length, Math.min(1000, limit - rowsOut.length), sorts);
         if (page.rows.length === 0) break;
         rowsOut.push(...page.rows);
       }
@@ -204,7 +245,7 @@ export function DataView({ engine, table, reloadKey, culture, hiddenColumns }: D
     <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
       <div style={{ fontSize: 12, padding: "4px 8px" }} data-testid="data-status">
         {info.name} — {info.rowCount.toLocaleString()} rows, {info.columns.length} columns
-        {sort ? ` — sorted by ${sort.column} ${sort.descending ? "descending" : "ascending"}` : ""}
+        {sorts.length ? ` — sorted by ${sortText}` : ""}
         {cache?.error ? ` — error: ${cache.error}` : ""}
         <input
           type="search"
@@ -235,20 +276,34 @@ export function DataView({ engine, table, reloadKey, culture, hiddenColumns }: D
         data-testid="grid-scroll"
         role="grid"
         aria-rowcount={total + 1}
-        style={{ flex: 1, overflow: "auto", position: "relative", minHeight: 0 }}
+        tabIndex={0}
+        aria-multiselectable="true"
+        style={{ flex: 1, overflow: "auto", position: "relative", minHeight: 0, outline: "none" }}
         onScroll={(e) => setScrollTop(e.currentTarget.scrollTop)}
+        onMouseUp={() => void (dragging.current = false)}
+        onKeyDown={(e) => {
+          if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "c" && sel) {
+            e.preventDefault();
+            void copyCells();
+          } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "a" && shown.length > 0 && total > 0) {
+            e.preventDefault();
+            setSel({ a: { row: 0, col: 0 }, f: { row: total - 1, col: shown.length - 1 } });
+          }
+        }}
       >
+        {menu && sel && <ContextMenu x={menu.x} y={menu.y} onClose={() => setMenu(null)} items={[{ label: selCount === 1 ? "Copy value" : "Copy values", onClick: () => void copyCells() }]} />}
         <div role="row" style={{ position: "sticky", top: 0, zIndex: 1, display: "flex", width, background: "var(--colorNeutralBackground3, #f3f3f3)" }}>
           {shown.map(({ c }) => {
-            const active = sort?.column === c.name;
+            const k = sorts.findIndex((x) => x.column === c.name);
+            const active = k >= 0;
             return (
               <div key={c.name} style={{ position: "relative", flex: "none", display: "flex" }}>
               <button
                 role="columnheader"
                 data-hidden={isHidden(c.name)}
-                aria-sort={active ? (sort!.descending ? "descending" : "ascending") : "none"}
-                onClick={() => toggleSort(c.name)}
-                title={`${c.name} — ${TYPE_LABEL[c.biType]} (${c.duckdbType})${isHidden(c.name) ? ", hidden" : ""}. Click to sort.`}
+                aria-sort={k === 0 ? (sorts[0].descending ? "descending" : "ascending") : "none"}
+                onClick={(e) => toggleSort(c.name, e.shiftKey)}
+                title={`${c.name} — ${TYPE_LABEL[c.biType]} (${c.duckdbType})${isHidden(c.name) ? ", hidden" : ""}. Click to sort; Shift+click adds the column to the sort.`}
                 style={{
                   font: "inherit",
                   ...cellBox(isNumeric(c.biType), widthOf(c.name)),
@@ -266,7 +321,7 @@ export function DataView({ engine, table, reloadKey, culture, hiddenColumns }: D
                 }}
               >
                 {c.name}
-                {active ? (sort!.descending ? " ▼" : " ▲") : ""}
+                {active ? (sorts[k].descending ? " ▼" : " ▲") + (sorts.length > 1 ? String(k + 1) : "") : ""}
                 <div style={{ fontWeight: 400, fontSize: 10, opacity: 0.7 }}>{TYPE_LABEL[c.biType]}</div>
               </button>
               <div
@@ -291,12 +346,24 @@ export function DataView({ engine, table, reloadKey, culture, hiddenColumns }: D
                 data-row={i}
                 style={{ position: "absolute", top: i * ROW_HEIGHT, height: ROW_HEIGHT, display: "flex", width, borderBottom: "1px solid #eee" }}
               >
-                {shown.map(({ c, j }) => (
+                {shown.map(({ c, j }, cj) => (
                   <div
                     key={c.name}
                     role="gridcell"
-                    style={{ ...cellBox(isNumeric(c.biType), widthOf(c.name)), lineHeight: `${ROW_HEIGHT}px`, opacity: isHidden(c.name) ? 0.5 : undefined, background: found && found.row === i && found.column === c.name ? "#fff4ce" : undefined }}
+                    aria-selected={inSel(i, cj)}
+                    style={{ ...cellBox(isNumeric(c.biType), widthOf(c.name)), lineHeight: `${ROW_HEIGHT}px`, opacity: isHidden(c.name) ? 0.5 : undefined, userSelect: "none", background: found && found.row === i && found.column === c.name ? "#fff4ce" : inSel(i, cj) ? "#cfe3f7" : undefined }}
                     data-match={found?.row === i && found.column === c.name ? "true" : undefined}
+                    onMouseDown={(e) => {
+                      if (e.button !== 0) return;
+                      dragging.current = true;
+                      setSel((cur) => (e.shiftKey && cur ? { a: cur.a, f: { row: i, col: cj } } : { a: { row: i, col: cj }, f: { row: i, col: cj } }));
+                    }}
+                    onMouseEnter={() => dragging.current && setSel((cur) => (cur ? { a: cur.a, f: { row: i, col: cj } } : cur))}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      if (!inSel(i, cj)) setSel({ a: { row: i, col: cj }, f: { row: i, col: cj } });
+                      setMenu({ x: e.clientX, y: e.clientY });
+                    }}
                   >
                     {row ? formatCell(row[j], c.biType, culture) : "…"}
                   </div>

@@ -14,7 +14,7 @@ export class PageCache {
   constructor(
     private engine: EngineApi,
     private table: string,
-    private sort: SortSpec | null,
+    private sort: SortSpec | SortSpec[] | null,
     readonly pageSize = PAGE_SIZE,
   ) {}
 
@@ -59,7 +59,7 @@ export class PageCache {
     }
   }
 
-  reset(sort: SortSpec | null): void {
+  reset(sort: SortSpec | SortSpec[] | null): void {
     this.generation++;
     this.pages.clear();
     this.pending.clear();
