@@ -61,6 +61,8 @@ export function PageTabs({ pages, active }: { pages: PageModel[]; active: string
   const [renaming, setRenaming] = useState<string | null>(null);
   const [dt, setDt] = useState<string | null>(null);
   const dtPage = pages.find((p) => p.name === dt);
+  const activeIndex = pages.findIndex((p) => p.name === active);
+  const arrowStyle: React.CSSProperties = { border: "none", background: "transparent", cursor: "pointer", padding: "0 6px", fontSize: 11 };
 
   const menu = (e: React.MouseEvent, p: PageModel, index: number) => {
     e.preventDefault();
@@ -86,6 +88,12 @@ export function PageTabs({ pages, active }: { pages: PageModel[]; active: string
 
   return (
     <div role="tablist" aria-label="Report pages" className="page-tabs">
+      <button type="button" aria-label="Previous page" disabled={activeIndex <= 0} onClick={() => c.dispatch("report.page.go", { page: pages[activeIndex - 1].name })} style={arrowStyle}>
+        ◀
+      </button>
+      <button type="button" aria-label="Next page" disabled={activeIndex < 0 || activeIndex >= pages.length - 1} onClick={() => c.dispatch("report.page.go", { page: pages[activeIndex + 1].name })} style={arrowStyle}>
+        ▶
+      </button>
       {pages.map((p, i) => (
         <div
           key={p.name}

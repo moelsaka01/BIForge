@@ -28,7 +28,7 @@ N | System menu (restore, move, size, close) on the title bar
 ### Status bar
 D | Page indicator and status text
 D | Zoom slider with Fit to page / Fit to width buttons
-N | Page navigation arrows
+D | Page navigation arrows
 ## 3. File menu and backstage
 ### Items (no cloud items)
 D | New

@@ -146,7 +146,7 @@ Last updated: 2026-10-17, after the scope-change session was completed (see PROG
 | Inventory area | Items | Done-tested | Partial | Not started |
 | --- | ---: | ---: | ---: | ---: |
 | Start screen | 12 | 8 | 1 | 3 |
-| Title bar and window | 13 | 10 | 0 | 3 |
+| Title bar and window | 13 | 11 | 0 | 2 |
 | File menu and backstage | 20 | 12 | 1 | 7 |
 | Report view ribbon: Home tab | 19 | 14 | 1 | 4 |
 | Report view ribbon: Insert tab | 19 | 9 | 2 | 8 |
@@ -176,7 +176,7 @@ Last updated: 2026-10-17, after the scope-change session was completed (see PROG
 | Format pane cards per visual | 1264 | 413 | 245 | 606 |
 | DAX functions | 317 | 297 | 0 | 20 |
 | M standard library | 652 | 421 | 0 | 231 |
-| **Total** | **3008** | **1490** | **278** | **1240** |
+| **Total** | **3008** | **1491** | **278** | **1239** |
 <!-- inventory-status:end -->
 
 ## Online track (Publish & Share; plan in docs/ONLINE_PLAN.md)

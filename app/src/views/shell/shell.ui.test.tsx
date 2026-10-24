@@ -291,6 +291,30 @@ describe("workspace", () => {
     }
   });
 
+  it("the page arrows go to the previous and the next page and are disabled at the ends", async () => {
+    const a = makeApp();
+    render(a.element);
+    await openProject(a);
+    await act(async () => void a.registry.execute("report.page.add", { name: "Second" }));
+    await act(async () => void a.registry.execute("report.page.add", { name: "Third" }));
+    const names = () => a.session.report.getSnapshot().page;
+    const first = a.session.store.project ? names() : null;
+    const prev = () => screen.getByRole("button", { name: "Previous page" }) as HTMLButtonElement;
+    const next = () => screen.getByRole("button", { name: "Next page" }) as HTMLButtonElement;
+    // the page that was added last is the current one
+    expect(next().disabled).toBe(true);
+    expect(prev().disabled).toBe(false);
+    fireEvent.click(prev());
+    await waitFor(() => expect(names()).not.toBe(first));
+    const middle = names();
+    expect(next().disabled).toBe(false);
+    fireEvent.click(prev());
+    await waitFor(() => expect(names()).not.toBe(middle));
+    expect(prev().disabled).toBe(true);
+    fireEvent.click(next());
+    await waitFor(() => expect(names()).toBe(middle));
+  });
+
   it("an error from a command is shown in the frame, not thrown", async () => {
     const a = makeApp();
     render(a.element);
