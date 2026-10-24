@@ -36,6 +36,58 @@ describe("DataView", () => {
     expect(screen.getAllByText("Text").length).toBe(1);
   });
 
+  it("Find in table goes to the next matching cell, wrapping around, and says when there is none", async () => {
+    const e = bigEngine(3000);
+    render(<DataView engine={e} table="Big" reloadKey={0} />);
+    await screen.findByText(/3,000 rows/);
+    const box = screen.getByLabelText("Find in table");
+    fireEvent.change(box, { target: { value: "row 25" } });
+    fireEvent.keyDown(box, { key: "Enter" });
+    await screen.findByText("Found in row 26");
+    await waitFor(() => expect(document.querySelector("[data-match=true]")?.textContent).toBe("row 25"));
+    fireEvent.keyDown(box, { key: "Enter" });
+    await screen.findByText("Found in row 251"); // "row 250" is the next cell that contains the text
+    await waitFor(() => expect(document.querySelector("[data-match=true]")?.textContent).toBe("row 250"));
+    // far down: scrolled to the row
+    fireEvent.change(box, { target: { value: "row 2999" } });
+    fireEvent.keyDown(box, { key: "Enter" });
+    await screen.findByText("Found in row 3,000");
+    expect(screen.getByTestId("grid-scroll").scrollTop).toBeGreaterThan(28 * 2900);
+    // after the last match it wraps to the first
+    fireEvent.keyDown(box, { key: "Enter" });
+    await screen.findByText("Found in row 3,000");
+    fireEvent.change(box, { target: { value: "zzz" } });
+    fireEvent.keyDown(box, { key: "Enter" });
+    await screen.findByText("Not found");
+    expect(document.querySelector("[data-match=true]")).toBeNull();
+    // #n goes to a row by number
+    fireEvent.change(box, { target: { value: "#1200" } });
+    fireEvent.keyDown(box, { key: "Enter" });
+    await screen.findByText("Went to row 1,200");
+    expect(screen.getByTestId("grid-scroll").scrollTop).toBe(28 * 1199 - 56);
+    fireEvent.change(box, { target: { value: "#9999" } });
+    fireEvent.keyDown(box, { key: "Enter" });
+    await screen.findByText(/There is no row 9999/);
+  });
+
+  it("hidden columns are drawn faded and marked; Show hidden columns leaves them out and brings them back, cells staying with their columns", async () => {
+    const e = new FakeEngine();
+    e.tables.set("T", { columns: [col("a"), col("secret"), col("c")], rows: [["1", "s1", "3"]] });
+    render(<DataView engine={e} table="T" reloadKey={0} hiddenColumns={new Set(["secret"])} />);
+    await screen.findByText("s1");
+    const header = (name: string) => screen.getAllByRole("columnheader").find((h) => h.textContent!.startsWith(name))!;
+    expect(header("secret").getAttribute("data-hidden")).toBe("true");
+    expect(header("secret").style.opacity).toBe("0.5");
+    expect(header("a").getAttribute("data-hidden")).toBe("false");
+    fireEvent.click(screen.getByLabelText("Show hidden columns"));
+    expect(screen.queryByText("s1")).toBeNull();
+    expect(screen.getAllByRole("columnheader").map((h) => h.textContent!.replace(/Text$/, ""))).toEqual(["a", "c"]);
+    // the values under "c" are still c's, not the hidden column's
+    expect(screen.getByText("3")).toBeTruthy();
+    fireEvent.click(screen.getByLabelText("Show hidden columns"));
+    expect(screen.getByText("s1")).toBeTruthy();
+  });
+
   it("shows dates the way the model language writes them", async () => {
     const e = new FakeEngine();
     e.tables.set("T", { columns: [col("when", "dateTime")], rows: [["2024-05-06"], ["2024-12-31 23:59:59"]] });

@@ -304,6 +304,20 @@ describe("workspace", () => {
     expect(await screen.findByText("5/6/2024")).toBeTruthy();
   });
 
+  it("the Table view draws a column the model hides faded, and offers to leave it out", async () => {
+    const a = makeApp();
+    a.engine.tables.set("Sales", { columns: [col("Quantity", "int64"), col("UnitPrice", "double")], rows: [["2", "3.5"]] });
+    render(a.element);
+    await openProject(a);
+    await act(async () => void a.registry.execute("model.setProperty", { target: { kind: "column", table: "Sales", column: "UnitPrice" }, key: "isHidden", value: true }));
+    await act(async () => void a.shell.selectTable("Sales"));
+    fireEvent.click(screen.getByRole("button", { name: "Table view" }));
+    const box = await screen.findByLabelText("Show hidden columns");
+    expect(screen.getAllByRole("columnheader").find((h) => h.textContent!.startsWith("UnitPrice"))!.getAttribute("data-hidden")).toBe("true");
+    fireEvent.click(box);
+    expect(screen.queryAllByRole("columnheader").some((h) => h.textContent!.startsWith("UnitPrice"))).toBe(false);
+  });
+
   it("the page arrows go to the previous and the next page and are disabled at the ends", async () => {
     const a = makeApp();
     render(a.element);

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { Tab, TabList } from "@fluentui/react-components";
 import { listRelationships } from "../../core/model/relationships";
 import { getModelCulture, listTables } from "../../core/model/ops";
+import { getProperty } from "../../core/model/modeling";
 import { resolveTheme, themeToJson } from "../../core/report/theme";
 import { activePageName, listPageNames, parsePage, parseVisual, visualKey } from "../../core/report/visualDoc";
 import { visibleTabs, ribbonFor, type RibbonCtx, type RibbonTab } from "../../core/shell/ribbon";
@@ -134,7 +135,7 @@ function ViewBody({ spec, onScale }: { spec: ShellSpec; onScale(s: number): void
         </div>
       );
     case "data":
-      return withData(session.engine ? <DataView engine={session.engine} table={dataTable} reloadKey={sess.dataEpoch + sess.dataTables.length} culture={doc.project ? (getModelCulture(doc.project) ?? undefined) : undefined} /> : <div className="empty-note">The data engine is not available.</div>);
+      return withData(session.engine ? <DataView engine={session.engine} table={dataTable} reloadKey={sess.dataEpoch + sess.dataTables.length} hiddenColumns={doc.project ? hiddenColumnsOf(doc.project, dataTable) : undefined} culture={doc.project ? (getModelCulture(doc.project) ?? undefined) : undefined} /> : <div className="empty-note">The data engine is not available.</div>);
     case "model":
       return withData(
         <ModelView
@@ -333,4 +334,10 @@ export function Frame({ spec }: { spec: ShellSpec }) {
       <Dialogs />
     </div>
   );
+}
+
+/** The columns of a table that the model hides. */
+function hiddenColumnsOf(project: import("../../core/model/types").Project, table: string | null): Set<string> {
+  const t = table ? listTables(project).find((x) => x.name === table) : undefined;
+  return new Set((t?.columns ?? []).filter((c) => getProperty(project, { kind: "column", table: t!.name, column: c.name }, "isHidden") === true).map((c) => c.name));
 }

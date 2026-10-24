@@ -48,16 +48,22 @@ export interface DataViewProps {
   reloadKey: number;
   /** The model language: dates are written the way this culture writes them. Without it they show as the engine sends them. */
   culture?: string;
+  /** Names of the columns the model hides: drawn faded, and the "Show hidden columns" switch can leave them out. */
+  hiddenColumns?: ReadonlySet<string>;
 }
 
 /** Virtualized, read-only data grid. Rows are fetched from the engine page by page; only visible rows are rendered. */
-export function DataView({ engine, table, reloadKey, culture }: DataViewProps) {
+export function DataView({ engine, table, reloadKey, culture, hiddenColumns }: DataViewProps) {
   const [info, setInfo] = useState<TableInfo | null | undefined>(undefined);
   const [sort, setSort] = useState<SortSpec | null>(null);
   const [scrollTop, setScrollTop] = useState(0);
   const [, setTick] = useState(0);
   const [widths, setWidths] = useState<Record<string, number>>({});
   const [copied, setCopied] = useState<string | null>(null);
+  const [showHidden, setShowHidden] = useState(true);
+  const [find, setFind] = useState("");
+  const [found, setFound] = useState<{ row: number; column: string } | null>(null);
+  const [findNote, setFindNote] = useState<string | null>(null);
   const box = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -65,6 +71,8 @@ export function DataView({ engine, table, reloadKey, culture }: DataViewProps) {
     setScrollTop(0);
     setWidths({});
     setCopied(null);
+    setFound(null);
+    setFindNote(null);
   }, [table]);
 
   useEffect(() => {
@@ -105,7 +113,10 @@ export function DataView({ engine, table, reloadKey, culture }: DataViewProps) {
   const rows: number[] = [];
   for (let i = range.first; i < range.end; i++) rows.push(i);
   const widthOf = (name: string) => widths[name] ?? COL_WIDTH;
-  const width = info.columns.reduce((sum, c) => sum + widthOf(c.name), 0);
+  const isHidden = (name: string) => hiddenColumns?.has(name) === true;
+  // the cells of a row are read by position in the full column list; leaving hidden columns out only skips drawing them
+  const shown = info.columns.map((c, j) => ({ c, j })).filter(({ c }) => showHidden || !isHidden(c.name));
+  const width = shown.reduce((sum, { c }) => sum + widthOf(c.name), 0);
 
   /** Drag the right edge of a header to resize its column. */
   const startResize = (name: string, e: React.PointerEvent) => {
@@ -120,6 +131,56 @@ export function DataView({ engine, table, reloadKey, culture }: DataViewProps) {
     };
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
+  };
+
+  /** Find in table: the next cell (after the one found last, row by row) whose text contains the text, wrapping around. */
+  const findNext = async () => {
+    const needle = find.trim().toLowerCase();
+    if (!needle) return setFindNote(null);
+    // "#1200" goes to row 1,200
+    const go = /^#(\d+)$/.exec(needle);
+    if (go) {
+      const row = Number(go[1]) - 1;
+      if (row < 0 || row >= info.rowCount) return setFindNote(`There is no row ${go[1]}; the table has ${info.rowCount.toLocaleString()} rows`);
+      setFound({ row, column: info.columns[0].name });
+      setFindNote(`Went to row ${(row + 1).toLocaleString()}`);
+      const top = Math.max(0, row * ROW_HEIGHT - ROW_HEIGHT * 2);
+      if (box.current) box.current.scrollTop = top;
+      setScrollTop(top);
+      return;
+    }
+    const start = found ? found.row * info.columns.length + info.columns.findIndex((c) => c.name === found.column) + 1 : 0;
+    const total = info.rowCount * info.columns.length;
+    try {
+      for (let pass = 0; pass < 2; pass++) {
+        const from = pass === 0 ? start : 0;
+        const to = pass === 0 ? total : Math.min(start, total);
+        let row = Math.floor(from / info.columns.length);
+        while (row * info.columns.length < to) {
+          const page = await engine.fetchPage(info.name, row, 1000, sort);
+          if (page.rows.length === 0) break;
+          for (let r = 0; r < page.rows.length; r++) {
+            for (let j = 0; j < info.columns.length; j++) {
+              const at = (row + r) * info.columns.length + j;
+              if (at < from || at >= to) continue;
+              const text = formatCell(page.rows[r][j], info.columns[j].biType, culture);
+              if (text.toLowerCase().includes(needle)) {
+                setFound({ row: row + r, column: info.columns[j].name });
+                setFindNote(`Found in row ${(row + r + 1).toLocaleString()}`);
+                if (box.current) box.current.scrollTop = Math.max(0, (row + r) * ROW_HEIGHT - ROW_HEIGHT * 2);
+                setScrollTop(Math.max(0, (row + r) * ROW_HEIGHT - ROW_HEIGHT * 2));
+                return;
+              }
+            }
+          }
+          row += page.rows.length;
+        }
+      }
+      setFound(null);
+      setFindNote("Not found");
+    } catch (e) {
+      setFindNote(`Find failed: ${e instanceof Error ? e.message : String(e)}`);
+    }
   };
 
   /** Copy table: the header and every row (up to a limit) in the current sort order, as tab-separated text. */
@@ -145,6 +206,25 @@ export function DataView({ engine, table, reloadKey, culture }: DataViewProps) {
         {info.name} — {info.rowCount.toLocaleString()} rows, {info.columns.length} columns
         {sort ? ` — sorted by ${sort.column} ${sort.descending ? "descending" : "ascending"}` : ""}
         {cache?.error ? ` — error: ${cache.error}` : ""}
+        <input
+          type="search"
+          aria-label="Find in table"
+          placeholder="Find in table (or #row)"
+          value={find}
+          onChange={(e) => {
+            setFind(e.target.value);
+            setFound(null);
+            setFindNote(null);
+          }}
+          onKeyDown={(e) => e.key === "Enter" && void findNext()}
+          style={{ marginLeft: 12, font: "inherit" }}
+        />
+        {findNote ? <span role="status" style={{ marginLeft: 8 }}>{findNote}</span> : null}
+        {(hiddenColumns?.size ?? 0) > 0 && (
+          <label style={{ marginLeft: 12 }}>
+            <input type="checkbox" checked={showHidden} onChange={(e) => setShowHidden(e.target.checked)} /> Show hidden columns
+          </label>
+        )}
         <button type="button" onClick={() => void copyTable()} style={{ marginLeft: 12, font: "inherit" }}>
           Copy table
         </button>
@@ -159,15 +239,16 @@ export function DataView({ engine, table, reloadKey, culture }: DataViewProps) {
         onScroll={(e) => setScrollTop(e.currentTarget.scrollTop)}
       >
         <div role="row" style={{ position: "sticky", top: 0, zIndex: 1, display: "flex", width, background: "var(--colorNeutralBackground3, #f3f3f3)" }}>
-          {info.columns.map((c) => {
+          {shown.map(({ c }) => {
             const active = sort?.column === c.name;
             return (
               <div key={c.name} style={{ position: "relative", flex: "none", display: "flex" }}>
               <button
                 role="columnheader"
+                data-hidden={isHidden(c.name)}
                 aria-sort={active ? (sort!.descending ? "descending" : "ascending") : "none"}
                 onClick={() => toggleSort(c.name)}
-                title={`${c.name} — ${TYPE_LABEL[c.biType]} (${c.duckdbType}). Click to sort.`}
+                title={`${c.name} — ${TYPE_LABEL[c.biType]} (${c.duckdbType})${isHidden(c.name) ? ", hidden" : ""}. Click to sort.`}
                 style={{
                   font: "inherit",
                   ...cellBox(isNumeric(c.biType), widthOf(c.name)),
@@ -177,6 +258,7 @@ export function DataView({ engine, table, reloadKey, culture }: DataViewProps) {
                   borderLeft: 0,
                   background: "transparent",
                   cursor: "pointer",
+                  opacity: isHidden(c.name) ? 0.5 : undefined,
                   paddingTop: 2,
                   paddingBottom: 2,
                   fontWeight: 600,
@@ -209,11 +291,12 @@ export function DataView({ engine, table, reloadKey, culture }: DataViewProps) {
                 data-row={i}
                 style={{ position: "absolute", top: i * ROW_HEIGHT, height: ROW_HEIGHT, display: "flex", width, borderBottom: "1px solid #eee" }}
               >
-                {info.columns.map((c, j) => (
+                {shown.map(({ c, j }) => (
                   <div
                     key={c.name}
                     role="gridcell"
-                    style={{ ...cellBox(isNumeric(c.biType), widthOf(c.name)), lineHeight: `${ROW_HEIGHT}px` }}
+                    style={{ ...cellBox(isNumeric(c.biType), widthOf(c.name)), lineHeight: `${ROW_HEIGHT}px`, opacity: isHidden(c.name) ? 0.5 : undefined, background: found && found.row === i && found.column === c.name ? "#fff4ce" : undefined }}
+                    data-match={found?.row === i && found.column === c.name ? "true" : undefined}
                   >
                     {row ? formatCell(row[j], c.biType, culture) : "…"}
                   </div>

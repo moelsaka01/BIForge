@@ -91,8 +91,8 @@ N | Right-click row/column menu
 N | Formula bar (calculated column, measure)
 N | Column tools tab
 N | Filter on columns (value list)
-N | Go to / Find in table
-N | Show hidden columns
+D | Go to / Find in table
+D | Show hidden columns
 N | Table header menu (New column, rename, copy table)
 P | Copy table / copy values to clipboard
 N | Data category and format display
