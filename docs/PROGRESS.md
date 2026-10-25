@@ -480,3 +480,19 @@ Filters funnel (lists report / page / visual / slicer filters and the selection 
 - **WACK:** Overall PASS, one flagged test (Blocked executables); the report was deleted by the clean, so the call sites were listed from source and the kit now writes its report to `docs/msix-wack-report.xml`. Proposals per call site in `docs/MSIX_SPIKE.md`. Done: opening a link no longer starts `rundll32.exe`.
 - Options with a real effect now: slicer search (global and file), default for cross-filtering (global) and "disable cross-highlighting and cross-filtering by default" (file).
 - Numbers at the end of this part: **inventory 1636 / 273 / 1099** (slicer search, default cross-filter, disable cross-filter by default: +4). Frontend 1055 passed (1 skipped); `cargo test --workspace` 493 passed. target/ at the end: 6.3 GB (checked with `node tools/target-size.mjs`). Not run in the real window.
+
+## 2026-10-25 (parity sprint, third part): 1636 / 273 / 1099 -> 1886 / 286 / 836
+Done-tested +250. Frontend 1112 tests (the full run before the last commit: 1 failure, a stale rendered.json, regenerated); one live Rust test with the real Python.
+- **Flips with existing tests** (23 items) and Ctrl+Shift+F11 (show visuals as tables).
+- **Format page** (Format tab with no visual selected): page size presets, page view, vertical alignment, canvas background and wallpaper with color, transparency and picture (`core/report/pageFormat.ts`, `PageFormatPane.tsx`); the page cards are measured by `measurePage()` in coverage.test.ts. **Tab order** in the Selection pane and Tab on the canvas.
+- **Filters pane**: relative date type, include/exclude, lock and hide (readers: hidden filters not listed, locked ones read-only), collapse, search, Clear all. Options with effect: Allow users to change filter types, filter pane search, show hidden pages to readers. Help links with F1.
+- **Plot area picture** for every chart (behind the plot, fit, transparency). General "Format string" for cards, tables, KPIs.
+- **New visual types** (each brings its container cards): Slicer (new), List slicer, Text slicer, Card (new), Smart narrative (template text, no AI: Partial), Shape map (built-in world/US maps only: Partial), Q&A (a few question shapes: Partial), Python visual (Done, live test) and R script visual (Partial: no R on this PC). Role names of these types are NOT verified against Desktop's capability dump (list `UNVERIFIED` in visualRoles.test.ts).
+- **Script visuals** run the user's own Python/R only when Run is pressed (`report.script.run`, Tauri `run_script_visual`, `script_src::run_visual_script`). Interpreter probe timeout raised to 45 s.
+- **Lock aspect** now keeps the ratio while resizing (visuals and groups).
+### Environment note
+Late in the session every process start on this PC took 20 to 30 s (python --version, node -e 0). The first Rust live test skipped because of the 10 s probe; with 45 s it ran and passed. Vitest with `--pool=threads` avoids worker process starts.
+### Not done / next steps
+1. `npx tauri build --debug --no-bundle` then `npm run e2e` on the fresh build (started at the end of this part; result below if it finished).
+2. Remaining N by size: Paginated report visual (21 cards), x-axis reference lines, actionButtonSection (35 cards per chart), underline in chart text (ECharts cannot), responsive, zoom slider tooltip, report-level cards (Report/Filter card/Visual group measurement), page cards pageSize/pageInformation.
+3. Options with real effect still missing: type detection, null handling, native query approval, tracing; keyboard: Shift+Arrow resize (conflicts with the existing move by 10), F2 rename, Ctrl+F6.
