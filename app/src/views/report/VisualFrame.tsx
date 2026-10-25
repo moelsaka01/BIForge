@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from "react";
+import { useRef, useState, type CSSProperties } from "react";
 import { generalCards, visualCards } from "../../core/report/formatSchema";
 import { fieldLabel } from "../../core/report/fields";
 import { FormatReader } from "../../core/report/formatReader";
@@ -11,6 +11,8 @@ import { listBookmarks } from "../../core/report/bookmarks";
 import { effectivelyHidden } from "../../core/report/groups";
 import { personalizeOn } from "../../core/report/reportOps";
 import { PersonalizePanel } from "./PersonalizePanel";
+import { activeDrillRole, drillKey, drillRolesOf, fieldsOfRole, isMatrixRole, type HeaderContext, type VisualStatus } from "../../core/report/headerButtons";
+import { restateFilters } from "../../core/report/filterRestatement";
 import { buildContainer } from "../../core/report/containerModel";
 import { drillPlan } from "../../core/report/queryBuilder";
 import { useReport, type MenuItem } from "./reportContext";
@@ -71,11 +73,20 @@ export function VisualFrame(p: FrameProps) {
   const [hover, setHover] = useState(false);
   const [headerTip, setHeaderTip] = useState(false);
   const [personalizing, setPersonalizing] = useState(false);
+  // what the visual reports about itself once drawn (see VisualContent), and the header popover that is open
+  const [info, setInfo] = useState<{ status: VisualStatus; tabular: boolean }>({ status: {}, tabular: false });
+  const [pop, setPop] = useState<null | "filters" | "error" | "warning" | "information">(null);
+  const [copyNote, setCopyNote] = useState<string | null>(null);
+  const frameRef = useRef<HTMLDivElement>(null);
   const f = new FormatReader(visual.json, c.theme, visual.visualType);
   const type = visualType(visual.visualType);
   const fam = type?.family;
+  const restated = type?.static ? [] : restateFilters(c.project, page, visual, { drillthrough: c.snap.drillthrough?.filters ?? [], selection: c.snap.selection });
+  const drillRoles = drillRolesOf(visual);
+  const role = activeDrillRole(visual, c.snap.drillRole[visual.name]);
+  const header: HeaderContext = { drillRoles, filters: restated.length, focusable: !type?.static, tabular: info.tabular, status: info.status };
   const isCard = fam === "card" || fam === "kpi" || fam === "slicer";
-  const model = buildContainer({ f, theme: c.theme, autoTitle: autoTitle(visual), titleByDefault: !isCard, noAutoText: fam === "table" || fam === "matrix", headerDefault: c.canvas.visualHeader });
+  const model = buildContainer({ f, theme: c.theme, autoTitle: autoTitle(visual), titleByDefault: !isCard, noAutoText: fam === "table" || fam === "matrix", headerDefault: c.canvas.visualHeader, header });
   const titleText = model.title?.text ?? "";
   // the Action card: Ctrl+click follows the link; the hover text says what it does (or why it cannot)
   const action = readAction(visual.json);
@@ -95,10 +106,11 @@ export function VisualFrame(p: FrameProps) {
     textDecoration: ht.underline ? "underline" : undefined,
   };
   const showTitle = model.title !== null;
-  const cats = (visual.roles.Category ?? []).map((x) => x.field);
-  const drill = c.snap.drill[visual.name];
+  const cats = role ? fieldsOfRole(visual, role) : [];
+  const drill = c.snap.drill[drillKey(visual.name, role ?? "Category")];
   const drillable = cats.length > 1;
-  const level = drill?.level ?? 0;
+  // a matrix that was not drilled shows every level
+  const level = drill?.level ?? (role && isMatrixRole(role) ? Math.max(0, cats.length - 1) : 0);
   const editingSource = c.snap.editInteractions;
   const sourceVisual = editingSource ? page.visuals.find((v) => v.name === editingSource) : undefined;
   const showBar = p.selected || hover;
@@ -160,6 +172,86 @@ export function VisualFrame(p: FrameProps) {
     </button>
   );
 
+  const copyImage = async () => {
+    try {
+      const { toBlob } = await import("html-to-image");
+      const blob = frameRef.current ? await toBlob(frameRef.current, { pixelRatio: 2, filter: (n) => !(n instanceof HTMLElement && (n.dataset.testid === "visual-bar" || n.dataset.testid === "header-popover")) }) : null;
+      if (!blob) throw new Error("nothing to draw");
+      await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+      setCopyNote("Copied the visual as an image");
+    } catch (e) {
+      setCopyNote(`Could not copy the image: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    setTimeout(() => setCopyNote(null), 3000);
+  };
+
+  /** The buttons the Visual header card has on and this visual's situation makes useful, left to right. */
+  const barButtons = () => {
+    const hb = model.headerButtons;
+    const out: React.ReactNode[] = [];
+    const popBtn = (kind: "error" | "warning" | "information", glyph: string, label: string) =>
+      out.push(iconBtn(label, glyph, () => setPop((x) => (x === kind ? null : kind)), { pressed: pop === kind }));
+    if (hb.error) popBtn("error", "⛔", "Error");
+    if (hb.warning) popBtn("warning", "⚠", "Warning");
+    if (hb.information) popBtn("information", "ℹ", "Information");
+    const editable = p.editing && !c.readOnly;
+    if (drillRoles.length > 0 && hb.drillUp && (editable || c.readOnly)) {
+      if (hb.roleSelector) {
+        out.push(
+          <select
+            key="role"
+            aria-label="Drill hierarchy"
+            value={role ?? ""}
+            onChange={(e) => c.dispatch("report.view.drillRole", { visual: visual.name, role: e.target.value })}
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+            style={{ height: 18, fontSize: 11, maxWidth: 110 }}
+          >
+            {drillRoles.map((r) => (
+              <option key={r} value={r}>
+                {r === "Category" ? "Axis" : r}: {fieldLabel(fieldsOfRole(visual, r)[0])}
+              </option>
+            ))}
+          </select>,
+        );
+      }
+      const dispatchDrill = (id: string, extra: object = {}) => c.dispatch(id, { visual: visual.name, role, ...extra });
+      out.push(
+        iconBtn("Drill up", "↑", () => dispatchDrill("report.view.drillUp", { levels: cats.length }), { disabled: level === 0 }),
+        ...(role === "Category" ? [iconBtn("Drill down mode", "↓", () => c.dispatch("report.view.drillMode", { visual: visual.name }), { pressed: c.snap.drillMode === visual.name })] : []),
+        iconBtn("Go to the next level", "⇊", () => dispatchDrill("report.view.nextLevel", { levels: cats.length }), { disabled: level >= cats.length - 1 }),
+        iconBtn("Expand all down one level", "⇉", () => dispatchDrill("report.view.expandAll", { levels: cats.length }), { disabled: level >= cats.length - 1 }),
+      );
+      if (role === "Category" && drillPlan(cats, drill).fields.length > 0) out.push(<span key="lvl" style={{ fontSize: 10, color: "#555", padding: "0 4px" }}>{fieldLabel(drillPlan(cats, drill).fields.at(-1)!)}</span>);
+    }
+    if (hb.filters) out.push(iconBtn(`Filters on this visual (${restated.length})`, "⏷", () => setPop((x) => (x === "filters" ? null : "filters")), { pressed: pop === "filters" }));
+    if (hb.focus) out.push(iconBtn(c.snap.focus === visual.name ? "Back to report" : "Focus mode", c.snap.focus === visual.name ? "⤡" : "⤢", () => c.dispatch(c.snap.focus === visual.name ? "report.view.exitFocus" : "report.view.focus", { visual: visual.name }), { pressed: c.snap.focus === visual.name }));
+    if (hb.seeData) out.push(iconBtn("Show data as a table", "▦", () => c.dispatch("report.view.asTable", { visual: visual.name }), { pressed: c.snap.asTable.includes(visual.name) }));
+    if (hb.copyImage) out.push(iconBtn("Copy visual as image", "⧉", () => void copyImage()));
+    if (c.readOnly && hb.personalize && !!type && !type.static && personalizeOn(c.project, page.name)) {
+      out.push(iconBtn("Personalize this visual", "✎", () => setPersonalizing((x) => !x), { pressed: personalizing }));
+    }
+    if (editable && hb.options) {
+      out.push(
+        <button
+          key="more"
+          aria-label="More options"
+          title="More options"
+          onClick={(e) => {
+            e.stopPropagation();
+            const r = e.currentTarget.getBoundingClientRect();
+            menu({ preventDefault: () => undefined, clientX: r.left, clientY: r.bottom } as React.MouseEvent);
+          }}
+          onPointerDown={(e) => e.stopPropagation()}
+          style={{ width: 22, height: 20, padding: 0, border: "none", borderRadius: 3, background: "transparent", color: "#222", cursor: "pointer", fontSize: 13 }}
+        >
+          …
+        </button>,
+      );
+    }
+    return out;
+  };
+
   const interactionControls = () => {
     if (!sourceVisual || sourceVisual.name === visual.name) return null;
     const explicit = page.interactions.find((i) => i.source === sourceVisual.name && i.target === visual.name)?.type ?? "Default";
@@ -178,6 +270,7 @@ export function VisualFrame(p: FrameProps) {
 
   return (
     <div
+      ref={frameRef}
       role="group"
       aria-label={`Visual: ${model.altText || titleText || type?.label || visual.visualType}`}
       data-visual={visual.name}
@@ -208,7 +301,7 @@ export function VisualFrame(p: FrameProps) {
           {model.subTitle.text}
         </div>
       )}
-      {headerTipPage !== undefined && (
+      {headerTipPage !== undefined && model.headerButtons.tooltip && (
         <>
           <span
             role="img"
@@ -238,54 +331,42 @@ export function VisualFrame(p: FrameProps) {
       <div style={{ position: "absolute", left: model.body.left, right: model.body.right, top: model.body.top, bottom: model.body.bottom, overflow: "hidden" }}>
         {pos.width > 20 && (
           <div style={{ width: "100%", height: "100%", transform: rotationOf(visual) ? `rotate(${rotationOf(visual)}deg)` : undefined }}>
-            <VisualContent page={page} visual={visual} width={Math.max(20, pos.width - model.body.left - model.body.right)} height={Math.max(20, pos.height - model.body.top - model.body.bottom)} runOnClick={(e) => !p.editing || c.readOnly || e.ctrlKey || e.metaKey} />
+            <VisualContent page={page} visual={visual} onInfo={setInfo} width={Math.max(20, pos.width - model.body.left - model.body.right)} height={Math.max(20, pos.height - model.body.top - model.body.bottom)} runOnClick={(e) => !p.editing || c.readOnly || e.ctrlKey || e.metaKey} />
           </div>
         )}
       </div>
-      {c.readOnly && showBar && model.headerShown && model.headerButtons.personalize && !!type && !type.static && personalizeOn(c.project, page.name) && (
-        <button
-          aria-label="Personalize this visual"
-          title="Personalize this visual"
-          aria-pressed={personalizing}
-          onClick={(e) => {
-            e.stopPropagation();
-            setPersonalizing((x) => !x);
-          }}
-          onPointerDown={(e) => e.stopPropagation()}
-          style={{ position: "absolute", right: 4, top: 2, height: 20, padding: "0 6px", border: "none", borderRadius: 3, cursor: "pointer", zIndex: 8, fontSize: 13, ...model.headerStyle }}
-        >
-          ✎
-        </button>
-      )}
       {c.readOnly && personalizing && <PersonalizePanel page={page} visual={visual} onClose={() => setPersonalizing(false)} />}
-      {p.editing && !c.readOnly && showBar && !editingSource && model.headerShown && (
+      {showBar && !editingSource && model.headerShown && (p.editing || c.readOnly) && barButtons().length > 0 && (
         <div
           data-testid="visual-bar"
-          onPointerDown={(e) => p.onPointerDownFrame?.(e, "move")}
-          style={{ position: "absolute", left: 0, right: 0, top: 0, height: 20, display: "flex", justifyContent: "flex-end", gap: 1, alignItems: "center", cursor: "move", paddingRight: 2, zIndex: 4, ...model.headerStyle }}
+          onPointerDown={(e) => p.editing && !c.readOnly && p.onPointerDownFrame?.(e, "move")}
+          style={{ position: "absolute", left: 0, right: 0, top: 0, height: 20, display: "flex", justifyContent: "flex-end", gap: 1, alignItems: "center", cursor: p.editing && !c.readOnly ? "move" : "default", paddingRight: 2, zIndex: 4, ...model.headerStyle }}
         >
-          {drillable && model.headerButtons.drillUp && (
+          {barButtons()}
+        </div>
+      )}
+      {pop && (
+        <div role="dialog" aria-label={pop === "filters" ? "Filters on this visual" : pop === "error" ? "Error" : pop === "warning" ? "Warning" : "Information"} data-testid="header-popover" onPointerDown={(e) => e.stopPropagation()} style={{ position: "absolute", right: 6, top: 24, maxWidth: 320, maxHeight: "70%", overflow: "auto", padding: "8px 12px", borderRadius: 4, border: "1px solid #aaa", background: "#fffffff5", color: "#222", boxShadow: "0 2px 10px #0003", zIndex: 12, fontSize: 12 }}>
+          {pop === "filters" ? (
             <>
-              {iconBtn("Drill up", "↑", () => c.dispatch("report.view.drillUp", { visual: visual.name }), { disabled: level === 0 })}
-              {iconBtn("Drill down mode", "↓", () => c.dispatch("report.view.drillMode", { visual: visual.name }), { pressed: c.snap.drillMode === visual.name })}
-              {iconBtn("Go to the next level", "⇊", () => c.dispatch("report.view.nextLevel", { visual: visual.name, levels: cats.length }), { disabled: level >= cats.length - 1 })}
-              {iconBtn("Expand all down one level", "⇉", () => c.dispatch("report.view.expandAll", { visual: visual.name, levels: cats.length }), { disabled: level >= cats.length - 1 })}
-              {drillPlan(cats, drill).fields.length > 0 && <span style={{ fontSize: 10, color: "#555", padding: "0 4px" }}>{fieldLabel(drillPlan(cats, drill).fields.at(-1)!)}</span>}
+              <strong>Filters on this visual</strong>
+              <ul style={{ margin: "4px 0 0", paddingLeft: 16 }}>
+                {restated.map((r, i) => (
+                  <li key={i}>
+                    <span style={{ opacity: 0.65 }}>{r.scope}: </span>
+                    {r.text}
+                  </li>
+                ))}
+              </ul>
             </>
+          ) : (
+            info.status[pop]
           )}
-          <button
-            aria-label="More options"
-            title="More options"
-            onClick={(e) => {
-              e.stopPropagation();
-              const r = e.currentTarget.getBoundingClientRect();
-              menu({ preventDefault: () => undefined, clientX: r.left, clientY: r.bottom } as React.MouseEvent);
-            }}
-            onPointerDown={(e) => e.stopPropagation()}
-            style={{ width: 22, height: 20, padding: 0, border: "none", borderRadius: 3, background: "transparent", color: "#222", cursor: "pointer", fontSize: 13 }}
-          >
-            …
-          </button>
+        </div>
+      )}
+      {copyNote && (
+        <div role="status" style={{ position: "absolute", right: 6, bottom: 4, fontSize: 11, padding: "1px 6px", background: "#fffffff0", color: "#222", border: "1px solid #aaa", borderRadius: 3, zIndex: 12 }}>
+          {copyNote}
         </div>
       )}
       {interactionControls()}

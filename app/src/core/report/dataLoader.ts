@@ -145,7 +145,9 @@ export class ReportData {
       const src = page.visuals.find((v) => v.name === sel!.visual);
       mode = src ? resolveInteraction(page, src, visual) : "none";
     } else sel = null;
-    const base: QueryOptions = { filters, drill: view.drill[visual.name] ?? NO_DRILL, seriesDrill: view.drill[drillKey(visual.name, "Series")] ?? NO_DRILL };
+    // a matrix without a drill position shows all its levels, a chart starts at its first one
+    const matrix = visualType(visual.visualType)?.family === "matrix";
+    const base: QueryOptions = { filters, drill: matrix ? view.drill[visual.name] : (view.drill[visual.name] ?? NO_DRILL), columnsDrill: view.drill[drillKey(visual.name, "Columns")] };
     if (mode === "filter") base.tuples = selectionTuples(sel, mode);
 
     if (type.family === "matrix") {

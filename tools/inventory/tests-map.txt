@@ -375,3 +375,9 @@
 18|Rename table / column / measure => app/src/core/model/rename.test.ts :: renaming a table ;; app/src/core/model/rename.test.ts :: the data with the table and the column ;; app/src/views/shell/shell.ui.test.tsx :: right-click > Rename renames
 19|DEFINE COLUMN => crates/dax/tests/define.rs :: define_column_adds_a_calculated_column_for_the_query
 19|DEFINE FUNCTION and user-defined functions => crates/dax/tests/define.rs :: define_function_inlines_the_body_with_the_arguments
+11|Show data as table => app/src/views/report/headerButtons.ui.test.tsx :: Show data as a table replaces the picture
+11|Focus mode => app/src/views/report/headerButtons.ui.test.tsx :: focus mode lets one visual fill the page
+11|Copy visual as image => app/src/views/report/headerButtons.ui.test.tsx :: puts a PNG of the visual on the clipboard
+12|Per-visual header icons (focus mode, more options, filters) => app/src/views/report/headerButtons.ui.test.tsx :: lists the report, page, visual and slicer filters ;; app/src/views/report/headerButtons.ui.test.tsx :: focus mode lets one visual fill the page
+12|Copy visual as image => app/src/views/report/headerButtons.ui.test.tsx :: puts a PNG of the visual on the clipboard
+27|Copy visual as image => app/src/views/report/headerButtons.ui.test.tsx :: puts a PNG of the visual on the clipboard

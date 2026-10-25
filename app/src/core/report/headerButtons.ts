@@ -6,8 +6,8 @@ import type { FieldRef } from "./fields";
 import type { VisualModel } from "./visualDoc";
 import { visualType } from "./visualTypes";
 
-/** Roles a drill action can follow: the category axis and the legend (series). */
-export type DrillRole = "Category" | "Series";
+/** The hierarchies a drill action can follow: the category axis of a chart, the rows and the columns of a matrix. */
+export type DrillRole = "Category" | "Rows" | "Columns";
 
 /** What went wrong or is worth knowing about a drawn visual; a text per kind, absent when there is nothing to say. */
 export interface VisualStatus {
@@ -53,18 +53,19 @@ export interface HeaderButtons {
   error: boolean;
 }
 
-/** The drill roles of a visual: the role names that hold several fields (only cartesian charts have a legend to drill). */
+/** The drill roles of a visual: the hierarchies it holds (a role with several fields). A matrix has two, rows and columns. */
 export function drillRolesOf(v: VisualModel): DrillRole[] {
   const family = visualType(v.visualType)?.family;
   const several = (role: string) => (v.roles[role] ?? []).length > 1;
-  const out: DrillRole[] = [];
-  if (several("Category")) out.push("Category");
-  if (family === "cartesian" && several("Series")) out.push("Series");
-  return out;
+  if (family === "matrix") return ((["Rows", "Columns"] as const).filter(several) as DrillRole[]);
+  return several("Category") ? ["Category"] : [];
 }
 
-/** Where the drill position of a role is kept: the category role under the visual's name, the legend under `name#Series`. */
-export const drillKey = (visual: string, role: DrillRole): string => (role === "Series" ? `${visual}#Series` : visual);
+/** A matrix shows every level until it is drilled; its drill state is then "all levels down to `level`". */
+export const isMatrixRole = (role: DrillRole): boolean => role !== "Category";
+
+/** Where the drill position of a role is kept: the category role (or the rows of a matrix) under the visual's name, the columns under `name#Columns`. */
+export const drillKey = (visual: string, role: DrillRole): string => (role === "Columns" ? `${visual}#Columns` : visual);
 
 /** The hierarchy the drill buttons follow: the chosen one when the visual still has it, else the first the visual has. */
 export function activeDrillRole(v: VisualModel, chosen: DrillRole | undefined): DrillRole | null {

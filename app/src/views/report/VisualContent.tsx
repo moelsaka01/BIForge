@@ -19,10 +19,12 @@ import { useReport } from "./reportContext";
 import { readSlicer } from "../../core/report/slicerSettings";
 import { HierarchySlicerView } from "./HierarchySlicerView";
 import { SlicerView } from "./SlicerView";
+import { DataTableView } from "./DataTableView";
+import { drillKey, fieldsOfRole, type VisualStatus } from "../../core/report/headerButtons";
 import { BookmarkNavigatorView, ButtonView, ImageView, PageNavigatorView, ShapeView, TextboxView } from "./StaticVisuals";
 
 /** Loads the data of one visual and draws it according to its type. */
-export function VisualContent({ page, visual, width, height, runOnClick }: { page: PageModel; visual: VisualModel; width: number; height: number; runOnClick?: (e: React.MouseEvent) => boolean }) {
+export function VisualContent({ page, visual, width, height, runOnClick, onInfo }: { page: PageModel; visual: VisualModel; width: number; height: number; runOnClick?: (e: React.MouseEvent) => boolean; onInfo?: (i: { status: VisualStatus; tabular: boolean }) => void }) {
   const c = useReport();
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const isMap = visualType(visual.visualType)?.family === "map";
@@ -61,8 +63,22 @@ export function VisualContent({ page, visual, width, height, runOnClick }: { pag
     return buildChart({ visual, loaded, theme: c.theme, selected });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loaded, visual, c.theme, selectedKey, geoReady]);
-  const cats = (visual.roles.Category ?? []).map((p) => p.field);
-  const drill = c.snap.drill[visual.name];
+  // what the header says about this visual: a failed query, a partial load, a note of the chart
+  const info = useMemo(() => {
+    const status: VisualStatus = {};
+    if (loaded?.kind === "error") status.error = loaded.message;
+    if ((loaded?.kind === "grouped" || loaded?.kind === "matrix") && loaded.truncated) status.warning = "Not all of the data is shown: this visual loads only the first rows.";
+    if (chartBuild?.notice) status.information = chartBuild.notice;
+    return { status, tabular: loaded?.kind === "grouped" && visualType(visual.visualType)?.family !== "table" };
+  }, [loaded, chartBuild, visual.visualType]);
+  const infoKey = JSON.stringify(info);
+  useEffect(() => {
+    onInfo?.(info);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [infoKey]);
+  const asTable = c.snap.asTable.includes(visual.name);
+  const cats = fieldsOfRole(visual, "Category");
+  const drill = c.snap.drill[drillKey(visual.name, "Category")];
 
   const onPoint = (point: SelectedPoint, additive: boolean) => {
     if (c.snap.drillMode === visual.name && cats.length > 1) {
@@ -127,6 +143,8 @@ export function VisualContent({ page, visual, width, height, runOnClick }: { pag
   if (!loaded) return <Notice muted>Loading…</Notice>;
   if (loaded.kind === "error") return <Notice error>Cannot load this visual: {loaded.message}</Notice>;
   if (loaded.kind === "empty") return <Notice>Add fields to this visual from the Data pane.</Notice>;
+
+  if (asTable && loaded.kind === "grouped") return <DataTableView loaded={loaded} width={width} height={height} />;
 
   if (loaded.kind === "hierarchy") {
     const fields = visual.roles.Values.map((v) => v.field);

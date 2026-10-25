@@ -586,7 +586,7 @@ N | Export report to PDF
 N | Export page to PNG
 N | Export visual data to CSV
 N | Export visual data to XLSX
-N | Copy visual as image
+D | Copy visual as image
 N | Print report
 D | PBIP project (TMDL model + PBIR report) open/save
 N | PBIP verified in Power BI Desktop for report pages and every source

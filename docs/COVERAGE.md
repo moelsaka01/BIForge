@@ -155,8 +155,8 @@ Last updated: 2026-10-17, after the scope-change session was completed (see PROG
 | Report view ribbon: Optimize tab | 4 | 2 | 0 | 2 |
 | Report view ribbon: Help tab | 5 | 2 | 0 | 3 |
 | Report view ribbon: External Tools tab | 2 | 0 | 0 | 2 |
-| Report view contextual tabs | 35 | 20 | 2 | 13 |
-| Report canvas and page features | 53 | 28 | 3 | 22 |
+| Report view contextual tabs | 35 | 23 | 2 | 10 |
+| Report canvas and page features | 53 | 30 | 3 | 20 |
 | Visuals | 76 | 45 | 0 | 31 |
 | Table view | 18 | 10 | 0 | 8 |
 | Model view | 23 | 13 | 3 | 7 |
@@ -171,12 +171,12 @@ Last updated: 2026-10-17, after the scope-change session was completed (see PROG
 | Options dialog: Current File | 23 | 1 | 0 | 22 |
 | Dialogs | 48 | 20 | 0 | 28 |
 | Keyboard shortcuts | 37 | 21 | 1 | 15 |
-| Export, print and file formats | 15 | 2 | 0 | 13 |
+| Export, print and file formats | 15 | 3 | 0 | 12 |
 | Accessibility and platform | 12 | 1 | 1 | 10 |
-| Format pane cards per visual | 1264 | 499 | 269 | 496 |
+| Format pane cards per visual | 1264 | 534 | 234 | 496 |
 | DAX functions | 317 | 297 | 0 | 20 |
 | M standard library | 652 | 421 | 0 | 231 |
-| **Total** | **3008** | **1591** | **308** | **1109** |
+| **Total** | **3008** | **1632** | **273** | **1103** |
 <!-- inventory-status:end -->
 
 ## Online track (Publish & Share; plan in docs/ONLINE_PLAN.md)

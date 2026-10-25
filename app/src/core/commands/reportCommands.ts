@@ -504,7 +504,7 @@ export function registerReportCommands(r: CommandRegistry<Session>): void {
   });
 
   // ---- view state (not part of the document) ----
-  const roleOf = (a: Record<string, unknown>): DrillRole => (a.role === "Series" ? "Series" : "Category");
+  const roleOf = (a: Record<string, unknown>): DrillRole => (a.role === "Rows" || a.role === "Columns" ? a.role : "Category");
   const view = (id: string, label: string, run: (s: Session, a: Record<string, unknown>) => void) => reg(id, label, (s, a) => run(s, (a ?? {}) as Record<string, unknown>), { enabled: hasProject });
   view("report.view.select", "Select data point", (s, a) => {
     const x = need<{ page: string; visual: string; point: SelectedPoint }>(a, ["page", "visual", "point"]);
@@ -519,7 +519,7 @@ export function registerReportCommands(r: CommandRegistry<Session>): void {
     const x = need<{ visual: string; levels: number; value: Lit }>(a, ["visual", "levels", "value"]);
     s.report.drillDown(x.visual, x.levels, x.value, roleOf(a));
   });
-  view("report.view.drillUp", "Drill up", (s, a) => s.report.drillUp(need<{ visual: string }>(a, ["visual"]).visual, roleOf(a)));
+  view("report.view.drillUp", "Drill up", (s, a) => s.report.drillUp(need<{ visual: string }>(a, ["visual"]).visual, roleOf(a), typeof a.levels === "number" ? a.levels : 1));
   view("report.view.nextLevel", "Go to the next level", (s, a) => {
     const x = need<{ visual: string; levels: number }>(a, ["visual", "levels"]);
     s.report.nextLevel(x.visual, x.levels, roleOf(a));
@@ -531,7 +531,7 @@ export function registerReportCommands(r: CommandRegistry<Session>): void {
   view("report.view.resetDrill", "Reset drill", (s, a) => s.report.resetDrill(need<{ visual: string }>(a, ["visual"]).visual));
   view("report.view.drillRole", "Drill role", (s, a) => {
     const x = need<{ visual: string; role: DrillRole }>(a, ["visual", "role"]);
-    if (x.role !== "Category" && x.role !== "Series") throw new Error("A drill role is Category or Series.");
+    if (x.role !== "Category" && x.role !== "Rows" && x.role !== "Columns") throw new Error("A drill role is Category, Rows or Columns.");
     s.report.setDrillRole(x.visual, x.role);
   });
   view("report.view.focus", "Focus mode", (s, a) => {

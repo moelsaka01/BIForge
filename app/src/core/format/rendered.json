@@ -120,12 +120,22 @@
    "border",
    "foreground",
    "show",
+   "showCopyVisualImageButton",
    "showDrillDownExpandButton",
    "showDrillDownLevelButton",
+   "showDrillRoleSelector",
    "showDrillToggleButton",
    "showDrillUpButton",
+   "showFilterRestatementButton",
+   "showFocusModeButton",
    "showOptionsMenu",
-   "showPersonalizeVisualButton"
+   "showPersonalizeVisualButton",
+   "showSeeDataLayoutToggleButton",
+   "showTooltipButton",
+   "showVisualErrorButton",
+   "showVisualInformationButton",
+   "showVisualWarningButton",
+   "transparency"
   ],
   "visualHeaderTooltip": [
    "background",

@@ -4,12 +4,12 @@ import type { FilterDef } from "./filters";
 import { samePoint, toggleSelection, type SelectedPoint, type Selection } from "./interactions";
 import type { DrillState } from "./queryBuilder";
 import { NO_DRILL } from "./queryBuilder";
-import { drillKey, type DrillRole } from "./headerButtons";
+import { drillKey, isMatrixRole, type DrillRole } from "./headerButtons";
 
 export interface ViewSnapshot {
   page: string | null;
   selection: Selection | null;
-  /** Drill positions by visual; the legend hierarchy of a visual is kept under `visual#Series` (see drillKey). */
+  /** Drill positions by visual; the columns of a matrix are kept under `visual#Columns` (see drillKey). */
   drill: Record<string, DrillState>;
   /** The hierarchy a visual's drill buttons follow, for a visual that has a category and a legend hierarchy. */
   drillRole: Record<string, DrillRole>;
@@ -133,8 +133,11 @@ export class ReportRuntime {
 
   // ---- drilling ----
 
-  drillOf(visual: string, role: DrillRole = "Category"): DrillState {
-    return this.snap.drill[drillKey(visual, role)] ?? NO_DRILL;
+  /** The drill position; a matrix that was not drilled yet shows all its `levels`, which is where its buttons start from. */
+  drillOf(visual: string, role: DrillRole = "Category", levels = 1): DrillState {
+    const d = this.snap.drill[drillKey(visual, role)];
+    if (d) return d;
+    return isMatrixRole(role) ? { level: Math.max(0, levels - 1), path: [], expand: true } : NO_DRILL;
   }
 
   private setDrill(visual: string, d: DrillState, role: DrillRole = "Category"): void {
@@ -154,29 +157,29 @@ export class ReportRuntime {
     this.setDrill(visual, { level: d.level + 1, path, expand: false }, role);
   }
 
-  drillUp(visual: string, role: DrillRole = "Category"): void {
-    const d = this.drillOf(visual, role);
+  drillUp(visual: string, role: DrillRole = "Category", levels = 1): void {
+    const d = this.drillOf(visual, role, levels);
     if (d.level === 0) return;
-    this.setDrill(visual, { level: d.level - 1, path: d.path.slice(0, d.level - 1), expand: false }, role);
+    this.setDrill(visual, { level: d.level - 1, path: d.path.slice(0, d.level - 1), expand: isMatrixRole(role) }, role);
   }
 
   /** Show the next level for all values ("go to the next level in the hierarchy"). */
   nextLevel(visual: string, levels: number, role: DrillRole = "Category"): void {
-    const d = this.drillOf(visual, role);
+    const d = this.drillOf(visual, role, levels);
     if (d.level >= levels - 1) return;
-    this.setDrill(visual, { level: d.level + 1, path: [...d.path, null].slice(0, d.level + 1), expand: false }, role);
+    this.setDrill(visual, { level: d.level + 1, path: [...d.path, null].slice(0, d.level + 1), expand: isMatrixRole(role) }, role);
   }
 
   /** Show all levels down to the next one ("expand all down one level"). */
   expandAll(visual: string, levels: number, role: DrillRole = "Category"): void {
-    const d = this.drillOf(visual, role);
+    const d = this.drillOf(visual, role, levels);
     if (d.level >= levels - 1) return;
     this.setDrill(visual, { level: d.level + 1, path: d.path, expand: true }, role);
   }
 
   resetDrill(visual: string): void {
     this.setDrill(visual, NO_DRILL, "Category");
-    this.setDrill(visual, NO_DRILL, "Series");
+    this.setDrill(visual, NO_DRILL, "Columns");
   }
 
   /** The drill role selector: the hierarchy the drill buttons of this visual follow. */

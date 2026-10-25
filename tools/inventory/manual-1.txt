@@ -185,11 +185,11 @@ D | Go to the next level
 D | Show next level
 N | Include / Exclude
 N | Sort axis
-N | Show data as table
+D | Show data as table
 N | Export data
 N | Spotlight
-N | Focus mode
-N | Copy visual as image
+D | Focus mode
+D | Copy visual as image
 ### Shape / Text box / Image tabs
 P | Shape fill, outline, effects, rotation
 P | Text box font, size, bold, italic, underline, color, alignment, bullets, link
@@ -228,7 +228,7 @@ D | Gridlines, snap to grid, lock objects
 D | Mobile layout canvas (phone portrait)
 D | Alt text for visuals
 N | Tab order
-N | Per-visual header icons (focus mode, more options, filters)
+D | Per-visual header icons (focus mode, more options, filters)
 ### Interactions
 D | Cross-filter and cross-highlight
 D | Edit interactions: filter / highlight / none
@@ -240,7 +240,7 @@ D | Hierarchy slicer
 N | Show data point as a table / See records
 N | Spotlight
 N | Export data (summarized / underlying)
-N | Copy visual as image
+D | Copy visual as image
 N | Personalize visuals
 N | Annotations
 ### Bookmarks

@@ -17,6 +17,7 @@
     "@tauri-apps/plugin-process": "^2.4.0",
     "@tauri-apps/plugin-updater": "^2.14.0",
     "echarts": "^6.1.0",
+    "html-to-image": "^1.11.13",
     "monaco-editor": "^0.57.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

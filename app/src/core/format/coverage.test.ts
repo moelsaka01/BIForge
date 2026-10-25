@@ -254,7 +254,16 @@ const containerScenario: Scenario = {
     setFormat(v.json, "divider", "show", lit.bool(true));
     return v;
   },
-  render: (v) => buildContainer({ f: new FormatReader(v.json, PRESET_THEME, v.visualType), theme: PRESET_THEME, autoTitle: "Auto", titleByDefault: true, noAutoText: false }),
+  render: (v) =>
+    buildContainer({
+      f: new FormatReader(v.json, PRESET_THEME, v.visualType),
+      theme: PRESET_THEME,
+      autoTitle: "Auto",
+      titleByDefault: true,
+      noAutoText: false,
+      // a visual in a situation where every header button applies: two drill hierarchies, filters, something to say
+      header: { drillRoles: ["Rows", "Columns"], filters: 2, focusable: true, tabular: true, status: { information: "i", warning: "w", error: "e" } },
+    }),
 };
 
 // ---- probing a result ---------------------------------------------------------------------------------------------

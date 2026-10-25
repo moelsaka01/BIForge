@@ -350,8 +350,19 @@ export function PageCanvas(p: PageCanvasProps) {
         }}
         style={{ position: "absolute", left: 0, top: 0, width: page.width, height: page.height, transform: `scale(${scale})`, transformOrigin: "0 0", background: pageBackground(page, c.theme.pageBackground), boxShadow: "0 1px 6px rgba(0,0,0,.25)", outline: "none", overflow: "hidden", ...gridStyle(c.canvas.gridlines, c.canvas.gridSize, c.theme.dark) }}
       >
+        {c.snap.focus && page.visuals.some((v) => v.name === c.snap.focus) && (
+          <button
+            type="button"
+            data-testid="exit-focus"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={() => c.dispatch("report.view.exitFocus")}
+            style={{ position: "absolute", left: 12, top: 12, zIndex: 30000, padding: "2px 10px", border: "1px solid #888", borderRadius: 4, background: "#ffffffee", color: "#222", cursor: "pointer" }}
+          >
+            ← Back to report
+          </button>
+        )}
         {page.groups
-          .filter((g) => p.editing || !effectivelyHidden(page, g.name))
+          .filter((g) => !c.snap.focus && (p.editing || !effectivelyHidden(page, g.name)))
           .map((g) => (
             <GroupFrame
               key={g.name}
@@ -365,17 +376,17 @@ export function PageCanvas(p: PageCanvasProps) {
             />
           ))}
         {page.visuals
-          .filter((v) => p.editing || !effectivelyHidden(page, v.name))
+          .filter((v) => (!c.snap.focus || v.name === c.snap.focus || !page.visuals.some((x) => x.name === c.snap.focus)) && (p.editing || !effectivelyHidden(page, v.name)))
           .map((v) => (
             <VisualFrame
               key={v.name}
               page={page}
               visual={v}
-              position={previewPosition(page, v.name, drag?.cur ?? {}) ?? v.position}
+              position={c.snap.focus === v.name ? { ...v.position, x: 12, y: 44, width: page.width - 24, height: page.height - 56 } : (previewPosition(page, v.name, drag?.cur ?? {}) ?? v.position)}
               selected={selection.includes(v.name)}
               primary={primary === v.name}
               multi={selection.length > 1}
-              editing={p.editing}
+              editing={p.editing && !c.snap.focus}
               onPointerDownFrame={(e, mode) => start(e, v.name, mode)}
               onSelect={(additive) => select(v.name, additive)}
             />
