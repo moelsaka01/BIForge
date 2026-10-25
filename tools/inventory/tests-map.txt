@@ -369,3 +369,9 @@
 26|Ctrl+Y redo => app/src/views/shell/shortcuts.ui.test.tsx :: Ctrl\+Y redoes
 26|Ctrl+X cut => app/src/views/report/multiSelect.ui.test.tsx :: Ctrl\+X cuts it
 26|Ctrl+D duplicate => app/src/views/report/multiSelect.ui.test.tsx :: Ctrl\+D duplicates
+14|Multi-column sort => app/src/views/views.test.tsx :: Shift\+click on a header adds a further sort key ;; crates/engine/tests/import.rs :: a_page_can_be_sorted_by_several_columns
+14|Copy table / copy values to clipboard => app/src/views/views.test.tsx :: Copy table puts the header and all rows ;; app/src/views/views.test.tsx :: selecting cells \(click, Shift\+click, drag\) and Copy values
+16|Query tab: DEFINE COLUMN and FUNCTION => crates/engine/tests/dax_sql.rs :: define_column_and_function_run_over_the_store_with_and_without_sql
+18|Rename table / column / measure => app/src/core/model/rename.test.ts :: renaming a table ;; app/src/core/model/rename.test.ts :: the data with the table and the column ;; app/src/views/shell/shell.ui.test.tsx :: right-click > Rename renames
+19|DEFINE COLUMN => crates/dax/tests/define.rs :: define_column_adds_a_calculated_column_for_the_query
+19|DEFINE FUNCTION and user-defined functions => crates/dax/tests/define.rs :: define_function_inlines_the_body_with_the_arguments

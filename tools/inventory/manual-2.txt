@@ -84,7 +84,7 @@ D | Virtualized grid
 D | Column headers with type
 D | Header alignment matching cell alignment (text left, numbers right)
 D | Single-column sort
-N | Multi-column sort
+D | Multi-column sort
 D | Column width drag
 N | Column context menu (rename, copy, hide, sort, format)
 N | Right-click row/column menu
@@ -94,7 +94,7 @@ N | Filter on columns (value list)
 D | Go to / Find in table
 D | Show hidden columns
 N | Table header menu (New column, rename, copy table)
-P | Copy table / copy values to clipboard
+D | Copy table / copy values to clipboard
 N | Data category and format display
 N | Calculated column editing in grid
 D | Locale-formatted dates
@@ -120,7 +120,7 @@ N | Context menus (Delete, Hide, Rename, Add to layout)
 N | Auto-create relationships
 N | Manage relationships dialog (grid, autodetect)
 D | Create relationship dialog
-N | Edit relationship dialog with Cross-filter direction, Make this relationship active, Apply security filter in both directions, Assume referential integrity
+P | Edit relationship dialog with Cross-filter direction, Make this relationship active, Apply security filter in both directions, Assume referential integrity
 D | Many-to-many with both cross-filter
 ## 16. DAX query view
 D | Query editor (Monaco) with Run
@@ -136,7 +136,7 @@ N | Comment/uncomment toggles
 N | Query error squiggles
 N | Cancel running query
 N | Result export (copy/CSV)
-N | Query tab: DEFINE COLUMN and FUNCTION
+D | Query tab: DEFINE COLUMN and FUNCTION
 N | Model-wide Info functions (INFO.VIEW.*)
 ## 17. TMDL view
 D | Text of every model file
@@ -151,7 +151,7 @@ N | Compare local versus model
 ### Tables, columns, measures
 D | Add / delete table
 D | Add / edit / delete measure (DAX text)
-N | Rename table / column / measure
+D | Rename table / column / measure
 D | Calculated columns (create, edit, delete)
 D | Calculated tables (create, edit, delete)
 N | Data type of columns
@@ -187,7 +187,7 @@ D | Create, edit cardinality, cross-filter direction, active/inactive, delete
 D | Ambiguity check
 D | Relationship cardinality detection from data
 N | Many-to-many with ambiguity warning
-N | Referential integrity assumption
+P | Referential integrity assumption
 ### Others
 N | Perspectives
 N | Translations (cultures)
@@ -210,8 +210,8 @@ D | Filter context, row context, context transition
 D | VAR / RETURN
 D | Measures with cycle detection and calculated columns
 D | DEFINE / EVALUATE / ORDER BY / START AT
-N | DEFINE COLUMN
-N | DEFINE FUNCTION and user-defined functions
+D | DEFINE COLUMN
+D | DEFINE FUNCTION and user-defined functions
 N | Visual calculations language
 N | Format string expressions (dynamic format strings)
 D | Monaco editor with IntelliSense, signature help, hover, squiggles
