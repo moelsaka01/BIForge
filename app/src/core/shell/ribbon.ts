@@ -267,7 +267,13 @@ const helpTab = (): RibbonTab => ({
     {
       id: "help",
       label: "Help",
-      controls: [cmd("about", "About", "about", "app.about", { size: "large", keytip: "AB" }), cmd("shortcuts", "Keyboard shortcuts", "keyboard", "app.shortcuts", { size: "large", keytip: "KS" })],
+      controls: [
+        cmd("docs", "Documentation", "help", "help.documentation", { size: "large", keytip: "DO" }),
+        cmd("issue", "Report an issue", "about", "help.reportIssue", { size: "large", keytip: "RI" }),
+        cmd("idea", "Submit an idea", "about", "help.submitIdea", { size: "large", keytip: "SI" }),
+        cmd("about", "About", "about", "app.about", { size: "large", keytip: "AB" }),
+        cmd("shortcuts", "Keyboard shortcuts", "keyboard", "app.shortcuts", { size: "large", keytip: "KS" }),
+      ],
     },
   ],
 });

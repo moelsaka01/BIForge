@@ -429,9 +429,9 @@ D | Autosave interval setting
 N | Autorecovery folder and open folder
 ### Report settings
 N | Use the modern visual tooltip
-N | Allow users to change filter types
+D | Allow users to change filter types
 D | Enable slicer search
-N | Enable the filter pane search
+D | Enable the filter pane search
 N | Persistent filters
 N | Report: default view setting
 D | Show visual header on hover
@@ -483,13 +483,13 @@ N | Report-level Add apply button to all slicers
 ### Report settings
 N | Use the modern visual tooltip for this file
 N | Default page size and view
-N | Allow changes to filter types
+D | Allow changes to filter types
 N | Persistent filters
 D | Slicer search
 N | Q&A
 N | Show visuals as tables default
 N | Export data setting
-N | Hidden pages shown to users
+D | Hidden pages shown to users
 N | Accessibility: alt text prompt
 ## 25. Dialogs
 D | Import dialog (all local sources)
@@ -575,7 +575,7 @@ D | Alt+Shift+1 collapse all tables, Alt+Shift+9 expand all tables
 N | Ctrl+Right Arrow enter visual
 N | Esc exit visual
 N | Enter slicer control
-N | F1 help
+D | F1 help
 ### Text editors
 P | Monaco shortcuts in DAX, M and TMDL editors (Ctrl+Space, Ctrl+F, Ctrl+/ ...)
 D | Ctrl+Enter / F5 run query in DAX query view

@@ -184,7 +184,7 @@ function FilterCard({ def, scope, visualFields }: { def: FilterDef; scope: Filte
         {def.hidden ? " (hidden)" : ""}
       </div>
       <fieldset disabled={locked} style={{ border: "none", padding: 0, margin: 0, minWidth: 0, display: open ? "flex" : "none", flexDirection: "column", gap: 4 }}>
-      <Select size="small" aria-label={`Filter type for ${fieldLabel(field)}`} value={mode} onChange={(_, d) => (setMode(d.value as Mode), setError(null))}>
+      <Select size="small" disabled={c.readOnly && !c.canvas.changeFilterTypes} aria-label={`Filter type for ${fieldLabel(field)}`} value={mode} onChange={(_, d) => (setMode(d.value as Mode), setError(null))}>
         {modes.filter((m) => m.show).map((m) => (
           <option key={m.v} value={m.v}>
             {m.label}
@@ -341,7 +341,7 @@ export function FiltersPane({ page, visual }: { page: PageModel; visual: VisualM
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: 8, height: "100%", overflow: "auto" }} aria-label="Filters pane">
       <div style={{ display: "flex", gap: 4 }}>
-        <Input size="small" style={{ flex: 1 }} placeholder="Search filters" aria-label="Search filters" value={needle} onChange={(_, d) => setNeedle(d.value)} />
+        {c.canvas.filterSearch && <Input size="small" style={{ flex: 1 }} placeholder="Search filters" aria-label="Search filters" value={needle} onChange={(_, d) => setNeedle(d.value)} />}
         {!c.readOnly && (
           <Button size="small" aria-label="Clear all filters" onClick={() => clearAll()}>
             Clear all

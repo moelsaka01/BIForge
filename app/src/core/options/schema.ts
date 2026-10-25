@@ -135,7 +135,8 @@ export const OPTION_PAGES: OptionPage[] = [
     id: "g.report", scope: "global", label: "Report settings",
     settings: [
       b("report.modernTooltip", "Use the modern visual tooltip", true),
-      b("report.changeFilterTypes", "Allow users to change filter types", true),
+      b("report.changeFilterTypes", "Allow users to change filter types", true, true, "When off, a reader of the report (viewing mode) cannot switch a filter between Basic, Advanced, Top N and Relative date."),
+      b("report.filterSearch", "Enable the search box of the Filters pane", true, true),
       b("report.slicerSearch", "Show the search box in slicers that do not decide for themselves", false, true, "A slicer's own Search setting wins."),
       b("report.persistentFilters", "Persistent filters", false),
       b("report.hideFilterPane", "Hide the filter pane in new reports", false),
@@ -177,11 +178,11 @@ export const OPTION_PAGES: OptionPage[] = [
     id: "f.report", scope: "file", label: "Report settings",
     settings: [
       b("file.report.modernTooltip", "Use the modern visual tooltip", true),
-      b("file.report.changeFilterTypes", "Allow users to change filter types", true),
+      b("file.report.changeFilterTypes", "Allow users to change filter types", true, true, "Off here wins over the global setting."),
       b("file.report.slicerSearch", "Show the search box in slicers that do not decide for themselves", false, true),
       b("file.report.persistentFilters", "Persistent filters", false),
       b("file.report.showTablesDefault", "Export data allowed", true),
-      b("file.report.hiddenPages", "Show hidden pages to users", false),
+      b("file.report.hiddenPages", "Show hidden pages to users", false, true, "In viewing mode the tabs of hidden pages are listed too."),
       b("file.report.personalize", "Let report readers personalize visuals (change the type and fields of a visual)", false, true, "Stored as the personalizeVisual setting of every page; the visual header then shows the Personalize button."),
     ],
   },

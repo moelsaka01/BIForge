@@ -56,8 +56,10 @@ function DrillthroughFields({ page, onClose }: { page: PageModel; onClose(): voi
   );
 }
 
-export function PageTabs({ pages, active }: { pages: PageModel[]; active: string }) {
+export function PageTabs({ pages: all, active }: { pages: PageModel[]; active: string }) {
   const c = useReport();
+  // viewing mode: hidden pages are not listed, unless Options > Current File > Report settings says so
+  const pages = c.readOnly && !c.canvas.showHiddenPages ? all.filter((p) => !p.hidden || p.name === active) : all;
   const [renaming, setRenaming] = useState<string | null>(null);
   const [dt, setDt] = useState<string | null>(null);
   const dtPage = pages.find((p) => p.name === dt);

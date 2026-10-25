@@ -102,7 +102,7 @@ function ctx(over: Partial<RibbonCtx> = {}): RibbonCtx {
     panes: { filters: true, visualizations: true, data: true, properties: true, bookmarks: false, selection: false, sync: false },
     themeName: "BIForge Default",
     paused: false,
-    canvas: { smartGuides: true, gridlines: false, snapToGrid: false, lockObjects: false, gridSize: 10, visualHeader: true, crossDefault: "highlight", slicerSearch: false },
+    canvas: { smartGuides: true, gridlines: false, snapToGrid: false, lockObjects: false, gridSize: 10, visualHeader: true, crossDefault: "highlight", slicerSearch: false, changeFilterTypes: true, filterSearch: true, showHiddenPages: false },
     mobileLayout: false,
     zoom: "fit",
     ...over,

@@ -282,16 +282,6 @@ export function PageCanvas(p: PageCanvasProps) {
       c.dispatch("report.view.clearSelection");
       return;
     }
-    // Tab / Shift+Tab select the next / previous visual of the page (front to back)
-    if (e.key === "Tab" && !mod && !e.altKey) {
-      const shown = topItems.filter((v) => !v.hidden);
-      if (shown.length === 0) return;
-      e.preventDefault();
-      const at = shown.findIndex((v) => v.name === selection[0]);
-      const next = at < 0 ? (e.shiftKey ? shown.length - 1 : 0) : (at + (e.shiftKey ? -1 : 1) + shown.length) % shown.length;
-      p.onSelection([shown[next].name]);
-      return;
-    }
     if (selection.length === 0) return;
     if (mod && e.key.toLowerCase() === "d") {
       e.preventDefault();

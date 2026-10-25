@@ -10,6 +10,7 @@ import { parseDefinitions } from "../dax/defineBlocks";
 import { formatDax } from "../dax/format";
 import { PANE_IDS, type PaneId, type ShellKind } from "../shell/settings";
 import { VIEW_IDS, type ViewId, type Zoom } from "../shell/shellStore";
+import { HELP_LINKS } from "../info";
 
 const hasProject = (s: Session) => s.store.project !== null;
 const VIEW_LABELS: Record<ViewId, string> = { report: "Report view", data: "Table view", model: "Model view", dax: "DAX query view", tmdl: "TMDL view" };
@@ -193,6 +194,23 @@ export function registerShellCommands(r: CommandRegistry<Session>): void {
   r.register({ id: "app.about", label: "About", category: "Help", run: (s) => s.shell.openDialog({ kind: "about" }) });
   r.register({ id: "view.fullScreen", label: "Full screen", category: "View", shortcut: "F11", run: (s) => s.shell.window.toggleFullscreen() });
   r.register({ id: "app.shortcuts", label: "Keyboard shortcuts", category: "Help", run: (s) => s.shell.openDialog({ kind: "shortcuts" }) });
+  // Help links open in the default browser; nothing is sent from the computer but the request for the page
+  for (const [id, label, key, shortcut] of [
+    ["help.documentation", "Documentation", "documentation", "F1"],
+    ["help.reportIssue", "Report an issue", "reportIssue", undefined],
+    ["help.submitIdea", "Submit an idea", "submitIdea", undefined],
+  ] as const) {
+    r.register({
+      id,
+      label,
+      category: "Help",
+      shortcut,
+      async run(s) {
+        if (!s.io.openUrl) throw new Error("Opening a web link is not available here.");
+        await s.io.openUrl(HELP_LINKS[key]);
+      },
+    });
+  }
 
   r.register({
     id: "data.getData",

@@ -159,11 +159,11 @@ D | Refresh visuals
 N | Optimization presets
 N | Performance analyzer (start recording, stop, refresh visuals, clear, export)
 ## 9. Report view ribbon: Help tab
-N | Documentation links (open the default browser)
+D | Documentation links (open the default browser)
 D | Keyboard shortcuts dialog
 D | About
 D | Sample reports (own)
-N | Report an issue / Submit an idea (GitHub issues)
+D | Report an issue / Submit an idea (GitHub issues)
 ## 10. Report view ribbon: External Tools tab
 N | External tools discovery (*.pbitool.json) and launch
 N | Local model server for external tools (port and database name arguments)

@@ -2,13 +2,13 @@
 // Options > Report settings / Query reduction with a real effect on the report: the search box of slicers and what a selection does by default.
 import { useSyncExternalStore } from "react";
 import { afterEach, describe, expect, it } from "vitest";
-import { act, cleanup, render, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { createRegistry } from "../../core/commands/builtin";
 import { canvasOptionsOf } from "../../core/report/canvasOptions";
 import { column, lit } from "../../core/report/fields";
 import { resolveInteraction } from "../../core/report/interactions";
 import { fixtureProject } from "../../core/report/testFixture";
-import { parsePage } from "../../core/report/visualDoc";
+import { listPageNames, parsePage } from "../../core/report/visualDoc";
 import { installDomStubs } from "../../core/testing/domStubs";
 import { FakeDax, cell, result } from "../../core/testing/fakeDax";
 import { FakeDialogs, FakeIO } from "../../core/testing/fakes";
@@ -18,7 +18,7 @@ import { ReportView, plainDocks } from "./ReportView";
 installDomStubs();
 afterEach(cleanup);
 
-function setup(options: Record<string, boolean | string>) {
+function setup(options: Record<string, boolean | string>, readOnly = false) {
   const session = new Session(new FakeIO(), new FakeDialogs());
   session.store.load(fixtureProject());
   const registry = createRegistry(session);
@@ -27,7 +27,7 @@ function setup(options: Record<string, boolean | string>) {
   dax.handler = () => ({ results: [result(["a"], [[cell("France", "text")], [cell("Canada", "text")]])], elapsedMs: 1 });
   function Host() {
     const doc = useSyncExternalStore(session.store.subscribe, session.store.getSnapshot);
-    return <ReportView project={doc.project!} runtime={session.report} dax={dax} dispatch={(id, a) => void registry.execute(id, a)} dataEpoch={0} docks={plainDocks} canvas={canvasOptionsOf(options)} />;
+    return <ReportView project={doc.project!} runtime={session.report} dax={dax} dispatch={(id, a) => void registry.execute(id, a)} dataEpoch={0} docks={plainDocks} canvas={canvasOptionsOf(options)} readOnly={readOnly} />;
   }
   const run = (id: string, a?: unknown) => act(async () => void (await registry.execute(id, a)));
   return { session, run, Host };
@@ -71,5 +71,33 @@ describe("what a selection does by default", () => {
     await t.run("report.interaction.set", { page: "page1", source: a.name, target: b.name, type: "DataFilter" });
     const set = parsePage(t.session.store.project!, "page1")!;
     expect(resolveInteraction(set, set.visuals[0], set.visuals[1], "none")).toBe("filter"); // Edit interactions wins
+  });
+});
+
+describe("viewing-mode report settings", () => {
+  it("hidden pages are not listed to readers unless Options > Current File > Show hidden pages is on", async () => {
+    for (const [opts, shown] of [[{}, false], [{ "file.report.hiddenPages": true }, true]] as const) {
+      const t = setup(opts, true);
+      await t.run("report.page.add", { name: "Secret" });
+      const pageName = listPageNames(t.session.store.project!).find((n) => parsePage(t.session.store.project!, n)!.displayName === "Secret")!;
+      await t.run("report.page.setHidden", { page: pageName, hidden: true });
+      await t.run("report.page.go", { page: "page1" });
+      render(<t.Host />);
+      await screen.findAllByRole("tab");
+      expect(!!screen.queryByRole("tab", { name: /Secret/ }), JSON.stringify(opts)).toBe(shown);
+      cleanup();
+    }
+  });
+
+  it("readers can switch a filter type only when Allow users to change filter types is on; the filter search follows its option", async () => {
+    for (const [opts, locked, search] of [[{}, false, true], [{ "report.changeFilterTypes": false }, true, true], [{ "file.report.changeFilterTypes": false }, true, true], [{ "report.filterSearch": false }, false, false]] as const) {
+      const t = setup(opts, true);
+      await t.run("report.filter.upsert", { scope: { level: "page", page: "page1" }, filter: { name: "f1", field: column("Product", "Category"), cond: { kind: "in", values: [] } } });
+      render(<t.Host />);
+      const type = await screen.findByLabelText("Filter type for Category");
+      expect((type as HTMLSelectElement).disabled, JSON.stringify(opts)).toBe(locked);
+      expect(!!screen.queryByLabelText("Search filters"), JSON.stringify(opts)).toBe(search);
+      cleanup();
+    }
   });
 });

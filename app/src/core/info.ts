@@ -1,6 +1,15 @@
 export const APP_NAME = "BIForge";
 export const APP_VERSION = "0.1.0";
 
+/** Where the documentation and the issue tracker are (the open-source repository on GitHub). */
+export const REPO_URL = "https://github.com/moelsaka01/BIForge";
+export const HELP_LINKS = {
+  documentation: `${REPO_URL}/tree/main/docs`,
+  reportIssue: `${REPO_URL}/issues/new?labels=bug`,
+  submitIdea: `${REPO_URL}/issues/new?labels=enhancement`,
+  releases: `${REPO_URL}/releases`,
+} as const;
+
 /** What the app can do today. Keep in step with docs/COVERAGE.md (Done-tested rows only). Shown in the About dialog. */
 export const WORKING_FEATURES = [
   "start screen, Classic and Modern interfaces, projects (new, open, save, undo/redo, crash recovery)",

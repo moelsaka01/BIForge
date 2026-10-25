@@ -416,3 +416,10 @@
 13|Card (new) => app/src/views/report/newCard.ui.test.tsx :: shows a tile for each field
 13|Slicer: text slicer / list slicer variants (new slicer) => app/src/views/report/newSlicers.ui.test.tsx :: Text slicer ;; app/src/views/report/newSlicers.ui.test.tsx :: List slicer is a drop-down
 13|Slicer: button slicer => app/src/views/report/newSlicers.ui.test.tsx :: shows the values as buttons
+23|Allow users to change filter types => app/src/views/report/reportOptions.ui.test.tsx :: readers can switch a filter type only when
+24|Allow changes to filter types => app/src/views/report/reportOptions.ui.test.tsx :: readers can switch a filter type only when
+23|Enable the filter pane search => app/src/views/report/reportOptions.ui.test.tsx :: the filter search follows its option
+24|Hidden pages shown to users => app/src/views/report/reportOptions.ui.test.tsx :: hidden pages are not listed to readers
+9|Documentation links (open the default browser) => app/src/core/commands/helpCommands.test.ts :: Documentation \(F1\)
+9|Report an issue / Submit an idea (GitHub issues) => app/src/core/commands/helpCommands.test.ts :: Report an issue
+26|F1 help => app/src/core/commands/helpCommands.test.ts :: Documentation \(F1\)
