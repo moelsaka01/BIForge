@@ -56,7 +56,7 @@ D | Shape
 D | Image
 D | Button
 D | Page navigator
-N | Bookmark navigator
+D | Bookmark navigator
 ### Analytics pane
 D | Constant line
 D | Min line
@@ -110,7 +110,7 @@ D | Show/hide fields, hidden fields display
 D | Collapse/expand table cards
 D | Relationship lines with cardinality and filter direction markers
 D | Highlight related tables
-N | Select related tables
+D | Select related tables
 N | Bulk edit of properties (multi-select)
 D | Hierarchies in cards
 D | Display folders in cards
@@ -302,9 +302,9 @@ N | Run Python script
 D | Custom column
 D | Conditional column
 D | Index column (from 0, from 1, custom)
-N | Column from examples
+D | Column from examples
 N | Invoke custom function
-N | Duplicate column
+D | Duplicate column
 N | Format / Extract / Parse (same as Transform on a new column)
 N | Statistics / Standard / Scientific / Trigonometry / Rounding / Information (new column)
 N | Date / Time / Duration (new column)
@@ -447,7 +447,7 @@ D | Theme: Light, Dark
 D | Theme: Use system setting
 N | Display language (UI strings)
 N | Font size and zoom of the interface
-N | Show recent files count
+D | Show recent files count
 N | Always show start screen
 ### External tools / Scripting
 P | R scripting: home directory, IDE
@@ -509,15 +509,15 @@ D | View as roles
 D | Quick measures
 D | New parameter (what-if)
 N | Customize theme
-N | Data source settings
+D | Data source settings
 N | Data groups
-N | Edit data (enter data)
+D | Edit data (enter data)
 N | Export data
 N | Performance analyzer
 N | Report settings dialog
 N | Feature switches (preview features)
 D | Keyboard shortcuts dialog
-N | Save as dialog
+D | Save as dialog
 N | Export to PDF dialog
 N | Print dialog
 N | Linguistic schema
@@ -534,12 +534,12 @@ N | Web URL dialog
 N | Report validator dialog
 N | Save diagnostics dialog
 N | New features dialog (what's new, local)
-N | Update model with query changes
-N | Auto-recovery dialog
+D | Update model with query changes
+D | Auto-recovery dialog
 N | Error dialog with details and copy
 N | Delete visual / custom visual warnings
-N | Theme validation errors
-N | Add column from examples
+D | Theme validation errors
+D | Add column from examples
 ## 26. Keyboard shortcuts
 ### Global and file
 D | Ctrl+N new
@@ -564,7 +564,7 @@ D | Ctrl+G group / Ctrl+Shift+G ungroup
 D | Ctrl+D duplicate
 D | Tab cycles visuals
 N | Ctrl+F6 / Shift+Ctrl+F6 move focus between sections
-N | Ctrl+Shift+F11 show visuals as tables
+D | Ctrl+Shift+F11 show visuals as tables
 N | Ctrl+Shift+F10 show/hide tooltip
 N | Alt+Shift+F10 focus visual menu
 N | Ctrl+Space multi-select data points

@@ -82,7 +82,8 @@ const num = areas.length;
       const st = exists ? cardStatus(alias[vis] ?? vis, c) : { s: "N", drawn: 0, total: props.length };
       return { s: st.s, t: exists && st.total ? `${c} (${st.drawn} of ${st.total} properties drawn)` : `${c} (${props.length} properties)` };
     });
-    if (cards["*"]) items.unshift({ s: "N", t: `Theme default style "*" (${cards["*"].length} properties)` });
+    // the theme's default style is read by the one FormatReader every authored visual type uses (coverage.test.ts proves it for each type)
+    if (cards["*"]) items.unshift({ s: exists ? "D" : "N", t: `Theme default style "*" (${cards["*"].length} properties)` });
     a.groups.push({ name: friendly[vis] ?? vis, items });
   }
   areas.push(a);

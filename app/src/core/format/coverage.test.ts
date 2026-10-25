@@ -398,6 +398,23 @@ describe("rendered coverage", () => {
     expect(star.general).toContain("altText");
   });
 
+  // The inventory counts "Theme default style" as done for every authored visual type (tools/inventory/build.mjs): this is the test.
+  it("the theme's default style of a visual type (visualStyles.<type>.*) and the one for every type (visualStyles.*.*) are used by every authored visual type", () => {
+    for (const vt of VISUAL_TYPES) {
+      for (const key of [vt.id, "*"]) {
+        const theme = { ...DEFAULT_THEME, visualStyles: { [key]: { "*": { title: [{ show: true, text: "From the theme" }], border: [{ show: true, radius: 7 }] } } } };
+        const v = visualOf(vt.id, {});
+        const m = buildContainer({ f: new FormatReader(v.json, theme, vt.id), theme, autoTitle: "Auto", titleByDefault: false, noAutoText: false });
+        expect(m.title?.text, `${vt.id} / ${key}`).toBe("From the theme");
+        expect(m.look.borderRadius, `${vt.id} / ${key}`).toBe(7);
+        // the visual's own setting wins
+        const own = visualOf(vt.id, {});
+        setFormat(own.json, "title", "text", lit.str("Own"));
+        expect(buildContainer({ f: new FormatReader(own.json, theme, vt.id), theme, autoTitle: "", titleByDefault: false, noAutoText: true }).title?.text).toBe("Own");
+      }
+    }
+  });
+
   it("charts draw their legend, axes and labels", () => {
     const col = computed.clusteredColumnChart as Record<string, string[]>;
     expect(col.legend).toEqual(expect.arrayContaining(["show", "position", "labelColor", "fontSize"]));

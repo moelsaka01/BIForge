@@ -540,6 +540,11 @@ export function registerReportCommands(r: CommandRegistry<Session>): void {
     s.report.setFocus(v);
   });
   view("report.view.exitFocus", "Back to report", (s) => s.report.setFocus(null));
+  reg("report.view.asTableSelected", "Show visuals as tables", (s) => {
+    const names = s.report.getSnapshot().canvas;
+    if (names.length === 0) throw new Error("Select a visual first.");
+    for (const n of names) s.report.toggleAsTable(n);
+  }, { shortcut: "Ctrl+Shift+F11" });
   view("report.view.asTable", "See data as a table", (s, a) => s.report.toggleAsTable(need<{ visual: string }>(a, ["visual"]).visual));
   view("report.view.drillMode", "Drill mode", (s, a) => {
     const v = (a.visual as string | null | undefined) ?? null;

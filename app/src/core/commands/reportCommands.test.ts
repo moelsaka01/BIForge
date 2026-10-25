@@ -115,6 +115,20 @@ describe("report commands", () => {
     expect(listBookmarks(t.project())).toEqual([]);
   });
 
+  it("Ctrl+Shift+F11 shows the selected visuals as tables and back", async () => {
+    const t = setup();
+    await t.run("report.visual.add", { type: "clusteredColumnChart", fields: [{ role: "Category", field: Cat }, { role: "Y", field: Qty }] });
+    const name = parsePage(t.project(), "page1")!.visuals[0].name;
+    expect(await t.fail("report.view.asTableSelected")).toMatch(/Select a visual/);
+    t.session.report.setCanvasSelection([name]);
+    const cmd = t.reg.byShortcut("Ctrl+Shift+F11");
+    expect(cmd?.id).toBe("report.view.asTableSelected");
+    await t.run(cmd!.id);
+    expect(t.session.report.getSnapshot().asTable).toEqual([name]);
+    await t.run(cmd!.id);
+    expect(t.session.report.getSnapshot().asTable).toEqual([]);
+  });
+
   it("themes: built-in, imported with warnings, reset", async () => {
     const t = setup();
     await t.run("report.theme.apply", { builtin: "BIForge Dark" });

@@ -150,33 +150,33 @@ Last updated: 2026-10-25 (see PROGRESS.md; the status table below is generated b
 | File menu and backstage | 20 | 12 | 1 | 7 |
 | Report view ribbon: Home tab | 19 | 14 | 1 | 4 |
 | Report view ribbon: Insert tab | 19 | 9 | 2 | 8 |
-| Report view ribbon: Modeling tab | 22 | 12 | 0 | 10 |
-| Report view ribbon: View tab | 19 | 14 | 0 | 5 |
+| Report view ribbon: Modeling tab | 22 | 14 | 0 | 8 |
+| Report view ribbon: View tab | 19 | 15 | 0 | 4 |
 | Report view ribbon: Optimize tab | 4 | 2 | 0 | 2 |
-| Report view ribbon: Help tab | 5 | 2 | 0 | 3 |
+| Report view ribbon: Help tab | 5 | 3 | 0 | 2 |
 | Report view ribbon: External Tools tab | 2 | 0 | 0 | 2 |
-| Report view contextual tabs | 35 | 23 | 2 | 10 |
-| Report canvas and page features | 53 | 30 | 3 | 20 |
-| Visuals | 76 | 45 | 0 | 31 |
+| Report view contextual tabs | 35 | 24 | 2 | 9 |
+| Report canvas and page features | 53 | 31 | 3 | 19 |
+| Visuals | 76 | 46 | 0 | 30 |
 | Table view | 18 | 10 | 0 | 8 |
-| Model view | 23 | 13 | 3 | 7 |
+| Model view | 23 | 14 | 3 | 6 |
 | DAX query view | 15 | 6 | 0 | 9 |
 | TMDL view | 8 | 4 | 0 | 4 |
 | Modeling features | 48 | 25 | 2 | 21 |
 | DAX language | 15 | 10 | 0 | 5 |
-| Power Query editor: window and ribbon | 94 | 43 | 4 | 47 |
+| Power Query editor: window and ribbon | 94 | 45 | 4 | 45 |
 | M language | 12 | 3 | 0 | 9 |
 | Get data: connectors | 47 | 25 | 16 | 6 |
-| Options dialog: Global | 61 | 14 | 2 | 45 |
+| Options dialog: Global | 61 | 15 | 2 | 44 |
 | Options dialog: Current File | 23 | 3 | 0 | 20 |
-| Dialogs | 48 | 20 | 0 | 28 |
-| Keyboard shortcuts | 37 | 21 | 1 | 15 |
+| Dialogs | 48 | 27 | 0 | 21 |
+| Keyboard shortcuts | 37 | 22 | 1 | 14 |
 | Export, print and file formats | 15 | 3 | 0 | 12 |
 | Accessibility and platform | 12 | 1 | 1 | 10 |
-| Format pane cards per visual | 1264 | 549 | 245 | 470 |
+| Format pane cards per visual | 1264 | 585 | 245 | 434 |
 | DAX functions | 317 | 297 | 0 | 20 |
 | M standard library | 652 | 421 | 0 | 231 |
-| **Total** | **3008** | **1651** | **284** | **1073** |
+| **Total** | **3008** | **1706** | **284** | **1018** |
 <!-- inventory-status:end -->
 
 ## Online track (Publish & Share; plan in docs/ONLINE_PLAN.md)
