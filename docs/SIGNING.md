@@ -26,7 +26,7 @@ steps and `docs/CODE_SIGNING_POLICY.md` stay). Release notes say: "Code signing:
 
 **Plan (decided 2026-10-23):**
 - **Reapply to SignPath in 2-3 months** (about January 2027). SignPath publishes no minimum waiting time (not found in their terms), so this is our own schedule. Before reapplying, build visible signals: more public releases, stars and users, a download page that documents what the program does, the code signing policy linked from the README; and ask SignPath which specific criterion failed.
-- **MSIX spike (Microsoft Store route) is planned after the parity sprint**: build an MSIX locally, run the Windows App Certification Kit, test Smart App Control on Windows 11. No account is needed for the spike; the account steps below wait for its result.
+- **MSIX spike done 2026-10-25** (see `docs/MSIX_SPIKE.md`): package built and signed with a test certificate; the Windows App Certification Kit still has to be run by the owner (elevation); Smart App Control was off on the dev PC.
 
 ## SignPath Foundation (free Authenticode signing for open-source projects) - declined, kept for reapplying
 
