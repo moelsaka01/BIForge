@@ -9,7 +9,7 @@ const CARTESIAN = ["clusteredBarChart", "barChart", "hundredPercentStackedBarCha
 const KEY: Record<string, string> = { lineStackedColumnComboChart: "lineClusteredColumnComboChart", pieChart: "pie", donutChart: "pie", ...Object.fromEntries(CARTESIAN.map((id) => [id, "cartesian"])) };
 // Types added after the capability dump: their role names are those of the PBIR files Desktop writes (a single Values well for the slicers).
 // They are not checked against the dump, so the list stays short; rerun tools/re/data-roles.mjs to verify them.
-const UNVERIFIED: Record<string, string[]> = { advancedSlicerVisual: ["Values"], listSlicer: ["Values"], textSlicer: ["Values"], cardVisual: ["Data"], aiNarratives: ["Category", "Values"], shapeMap: ["Category", "Size"] };
+const UNVERIFIED: Record<string, string[]> = { advancedSlicerVisual: ["Values"], listSlicer: ["Values"], textSlicer: ["Values"], cardVisual: ["Data"], aiNarratives: ["Category", "Values"], shapeMap: ["Category", "Size"], qnaVisual: [] };
 const roles = { ...(verified as unknown as Record<string, string[]>), ...UNVERIFIED };
 
 describe("visual role names against Desktop's capability definitions", () => {

@@ -37,7 +37,7 @@ P | Shape map
 N | Azure map (excluded as cloud tiles; local boundary version only)
 D | Decomposition tree
 D | Key influencers
-N | Q&A
+P | Q&A
 P | Smart narrative
 N | R script visual (needs local R)
 N | Python script visual (needs local Python)

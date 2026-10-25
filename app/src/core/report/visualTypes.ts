@@ -11,7 +11,7 @@ export interface RoleDef {
   max: number;
 }
 
-export type VisualFamily = "decomposition" | "keyDrivers" | "cartesian" | "pie" | "scatter" | "table" | "matrix" | "card" | "kpi" | "gauge" | "treemap" | "funnel" | "waterfall" | "slicer" | "narrative" | "map" | "textbox" | "shape" | "image" | "button" | "pageNavigator" | "bookmarkNavigator";
+export type VisualFamily = "decomposition" | "keyDrivers" | "cartesian" | "pie" | "scatter" | "table" | "matrix" | "card" | "kpi" | "gauge" | "treemap" | "funnel" | "waterfall" | "slicer" | "narrative" | "qna" | "map" | "textbox" | "shape" | "image" | "button" | "pageNavigator" | "bookmarkNavigator";
 
 export interface VisualTypeDef {
   id: string;
@@ -203,6 +203,7 @@ export const VISUAL_TYPES: VisualTypeDef[] = [
     size: { width: 360, height: 200 },
     glyph: "¶",
   },
+  { id: "qnaVisual", label: "Q&A", family: "qna", roles: [], size: { width: 420, height: 300 }, glyph: "?" },
   // the new slicers: same selection pipeline as the slicer (role Values, one filter on the visual); they differ in what they draw
   { id: "advancedSlicerVisual", label: "Slicer (new)", family: "slicer", roles: [{ name: "Values", label: "Field", accepts: "column", max: 1 }], size: { width: 240, height: 180 }, glyph: "▤" },
   { id: "listSlicer", label: "List slicer", family: "slicer", roles: [{ name: "Values", label: "Field", accepts: "column", max: 1 }], size: { width: 220, height: 40 }, glyph: "▾" },

@@ -3172,6 +3172,44 @@
    "textAlignment"
   ]
  },
+ "qnaVisual": {
+  "hiddenProperties": [
+   "savedUtterance"
+  ],
+  "inputBox": [
+   "acceptedColor",
+   "background",
+   "commitButtonBackgroundColor",
+   "errorColor",
+   "hoverColor",
+   "questionBold",
+   "questionFontColor",
+   "questionFontFamily",
+   "questionFontSize",
+   "questionItalic",
+   "questionUnderline",
+   "restatementFontColor",
+   "restatementFontFamily",
+   "restatementFontSize",
+   "warningColor"
+  ],
+  "suggestions": [
+   "cardBackground",
+   "cardBold",
+   "cardFontColor",
+   "cardFontFamily",
+   "cardFontSize",
+   "cardItalic",
+   "cardUnderline",
+   "headerBold",
+   "headerFontColor",
+   "headerFontFamily",
+   "headerFontSize",
+   "headerItalic",
+   "headerUnderline",
+   "show"
+  ]
+ },
  "multiRowCard": {
   "general": [
    "formatString"

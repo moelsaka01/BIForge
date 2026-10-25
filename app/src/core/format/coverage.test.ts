@@ -24,6 +24,7 @@ import { fixtureModel, visualOf } from "../report/testFixture";
 import { DEFAULT_THEME } from "../report/theme";
 import { setFormat, setRawProp, type VisualModel } from "../report/visualDoc";
 import { VISUAL_TYPES } from "../report/visualTypes";
+import { qnaLook, savedQuestion } from "../report/qnaLook";
 import { buildNarrative } from "../report/narrative";
 import { loadGazetteer } from "../report/geo";
 import caps from "./capabilities.json";
@@ -206,6 +207,7 @@ const SCENARIOS: Record<string, Scenario> = {
   card: { make: () => visualOf("card", { Values: [Qty] }), render: (v) => buildCard(v, grouped(v, [[n(1234567)]]), DEFAULT_THEME) },
   cardVisual: { make: () => visualOf("cardVisual", { Data: [Qty, Price] }), render: (v) => buildNewCard(v, grouped(v, [[n(1234567), d(3.5)]]), DEFAULT_THEME) },
   aiNarratives: { make: () => visualOf("aiNarratives", { Category: [Cat], Values: [Qty] }), render: (v) => buildNarrative(v, grouped(v, [[t("Bikes"), n(60)], [t("Clothing"), n(40)]]), DEFAULT_THEME) },
+  qnaVisual: { make: () => visualOf("qnaVisual", {}), render: (v) => [qnaLook(v, DEFAULT_THEME), savedQuestion(v)] },
   multiRowCard: { make: () => visualOf("multiRowCard", { Values: [Cat, Qty] }), render: (v) => buildMultiRowCard(v, grouped(v, [[t("Bikes"), n(5)], [t("Clothing"), n(7)]]), DEFAULT_THEME) },
   kpi: {
     make: () => visualOf("kpi", { Indicator: [Qty], TrendLine: [column("Date", "YearMonth")], Goal: [agg("Sales", "Quantity", 4)] }),
