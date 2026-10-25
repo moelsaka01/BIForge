@@ -1,6 +1,5 @@
 //! The M evaluator over DuckDB: every transform is checked against values computed by hand from small tables.
 //! Cell values are compared as text (what the preview grid shows).
-mod fixture;
 
 use biforge_engine::{Engine, MemoryCredentialStore, SourceSpec};
 use std::collections::BTreeMap;
@@ -455,9 +454,9 @@ fn loading_a_query_replaces_the_table_only_on_success() {
 #[test]
 fn m_over_imported_fixture_tables_by_query_name() {
     let _ = (SourceSpec::Json { path: String::new() }, MemoryCredentialStore::default());
-    let (store, _) = fixture::setup();
+    let (store, _) = crate::fixture::setup();
     // an M query can start from a table that is already in the store only through a source, so use the CSV directly
-    let sales = fixture::fixtures().join("Sales.csv").to_string_lossy().replace('\\', "/");
+    let sales = crate::fixture::fixtures().join("Sales.csv").to_string_lossy().replace('\\', "/");
     let m = format!(
         "let\n  Source = Csv.Document(File.Contents({sales:?}), [Delimiter=\",\"]),\n  H = Table.PromoteHeaders(Source),\n  T = Table.TransformColumnTypes(H, {{{{\"Quantity\", Int64.Type}}, {{\"Channel\", type text}}}}),\n  G = Table.Group(T, {{\"Channel\"}}, {{{{\"Qty\", each List.Sum([Quantity]), type nullable number}}, {{\"Rows\", each Table.RowCount(_), Int64.Type}}}})\nin\n  G"
     );

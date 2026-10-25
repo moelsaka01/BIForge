@@ -22,11 +22,11 @@
 
 ## Holdout set
 
-`tests/dax/holdout/` has the same case format. Those cases were written without running them on the engine and recorded afterwards; their pass rate is reported separately (`cargo test -p biforge-engine --test dax_conformance holdout_cases -- --nocapture`; `BIFORGE_HOLDOUT_REPORT_ONLY=1` prints failures without failing the test). Record with `node tools/dax-record/record.mjs --dir holdout`, add with `add-cases.mjs --dir holdout <area> <list.txt>`.
+`tests/dax/holdout/` has the same case format. Those cases were written without running them on the engine and recorded afterwards; their pass rate is reported separately (`cargo test -p biforge-engine --test it dax_conformance::holdout_cases -- --nocapture`; `BIFORGE_HOLDOUT_REPORT_ONLY=1` prints failures without failing the test). Record with `node tools/dax-record/record.mjs --dir holdout`, add with `add-cases.mjs --dir holdout <area> <list.txt>`.
 
 ## Running
 
-`cargo test -p biforge-engine --test dax_conformance -- --nocapture` prints `conformance: N/M pass, F fail, S skipped, P pending`. A case where BIForge reports "not implemented" is **skipped**, never counted as a pass; a pending case does not count at all. `BIFORGE_DAX_VERBOSE=1` lists every case and, for pending ones, the BIForge error if there is one; `BIFORGE_DAX_REPORT=<file>` writes the numbers (`pass recorded fail skipped pending`).
+`cargo test -p biforge-engine --test it dax_conformance:: -- --nocapture` prints `conformance: N/M pass, F fail, S skipped, P pending`. A case where BIForge reports "not implemented" is **skipped**, never counted as a pass; a pending case does not count at all. `BIFORGE_DAX_VERBOSE=1` lists every case and, for pending ones, the BIForge error if there is one; `BIFORGE_DAX_REPORT=<file>` writes the numbers (`pass recorded fail skipped pending`).
 
 ## Recording (needs Power BI Desktop and the fixture report)
 

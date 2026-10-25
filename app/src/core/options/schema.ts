@@ -136,7 +136,7 @@ export const OPTION_PAGES: OptionPage[] = [
     settings: [
       b("report.modernTooltip", "Use the modern visual tooltip", true),
       b("report.changeFilterTypes", "Allow users to change filter types", true),
-      b("report.slicerSearch", "Enable search in slicers", true),
+      b("report.slicerSearch", "Show the search box in slicers that do not decide for themselves", false, true, "A slicer's own Search setting wins."),
       b("report.persistentFilters", "Persistent filters", false),
       b("report.hideFilterPane", "Hide the filter pane in new reports", false),
       b("report.visualHeader", "Show the visual header on hover", true, true, "A visual's own Visual header setting wins."),
@@ -145,7 +145,7 @@ export const OPTION_PAGES: OptionPage[] = [
       b("canvas.snapToGrid", "Snap visuals to the grid", false, true),
       b("canvas.lockObjects", "Lock objects (visuals cannot be moved or resized)", false, true),
       n("canvas.gridSize", "Grid size (pixels)", 10, 2, 200, true),
-      e("report.crossFilter", "Default for cross-filtering", "filter", [["filter", "Cross-filtering"], ["highlight", "Cross-highlighting"]]),
+      e("report.crossFilter", "What a selection in a chart does to the other visuals", "highlight", [["highlight", "Cross-highlighting where the visual can, else cross-filtering"], ["filter", "Cross-filtering everywhere"]], true, "Edit interactions on a page wins."),
     ],
   },
   {
@@ -171,14 +171,14 @@ export const OPTION_PAGES: OptionPage[] = [
   },
   {
     id: "f.queryReduction", scope: "file", label: "Query reduction",
-    settings: [b("file.qr.disableCross", "Disable cross-highlighting and cross-filtering by default", false), b("file.qr.slicerApply", "Add an Apply button to each slicer", false), b("file.qr.filterApply", "Add a single Apply button to the filter pane", false)],
+    settings: [b("file.qr.disableCross", "Disable cross-highlighting and cross-filtering by default", false, true, "A selection then changes no other visual unless Edit interactions says so."), b("file.qr.slicerApply", "Add an Apply button to each slicer", false), b("file.qr.filterApply", "Add a single Apply button to the filter pane", false)],
   },
   {
     id: "f.report", scope: "file", label: "Report settings",
     settings: [
       b("file.report.modernTooltip", "Use the modern visual tooltip", true),
       b("file.report.changeFilterTypes", "Allow users to change filter types", true),
-      b("file.report.slicerSearch", "Enable search in slicers", true),
+      b("file.report.slicerSearch", "Show the search box in slicers that do not decide for themselves", false, true),
       b("file.report.persistentFilters", "Persistent filters", false),
       b("file.report.showTablesDefault", "Export data allowed", true),
       b("file.report.hiddenPages", "Show hidden pages to users", false),

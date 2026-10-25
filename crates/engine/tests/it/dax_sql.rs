@@ -4,8 +4,7 @@
 //! actually be used where the semantics allow it.
 
 use biforge_dax::Value;
-mod fixture;
-use fixture::setup;
+use crate::fixture::setup;
 
 fn same(a: &Value, b: &Value) -> bool {
     match (a, b) {

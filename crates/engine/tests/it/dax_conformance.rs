@@ -8,7 +8,6 @@
 //!
 //! Case file format: see tests/dax/README.md.
 
-mod fixture;
 
 use biforge_dax::diag::ErrorCode;
 use biforge_dax::value::{parse_datetime_literal, Value};
@@ -228,7 +227,7 @@ fn holdout_cases() {
 }
 
 fn run_suite(label: &str, dir: PathBuf, report_var: &str, use_sql: bool) {
-    let (store, dax) = fixture::setup();
+    let (store, dax) = crate::fixture::setup();
     let sql: Option<&dyn biforge_dax::sql::SqlExecutor> = if use_sql { Some(&store) } else { None };
     let mut files: Vec<PathBuf> = std::fs::read_dir(dir).map(|d| d.filter_map(|e| e.ok()).map(|e| e.path()).filter(|p| p.extension().is_some_and(|x| x == "json")).collect()).unwrap_or_default();
     files.sort();

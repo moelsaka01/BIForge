@@ -171,8 +171,8 @@ pub fn open_url(url: String) -> Result<(), String> {
     }
     #[cfg(windows)]
     {
-        // rundll32 receives the address as one argument, never through a shell
-        std::process::Command::new("rundll32.exe").args(["url.dll,FileProtocolHandler", &url]).spawn().map(|_| ()).map_err(|e| e.to_string())
+        // ShellExecuteW inside this process (the `open` crate): no other program is started to open the address
+        open::that_detached(&url).map_err(|e| e.to_string())
     }
     #[cfg(not(windows))]
     {

@@ -4,10 +4,12 @@ Measured on the development machine (11th Gen Intel Core i7-1165G7, 4 cores / 8 
 2026-10-23. Everything here is reproducible:
 
 ```bash
+node tools/perf-run.mjs 1000000 10000000   # generates the fixtures, runs the benchmark, DELETES the fixtures (they are GBs: never keep them)
+# by hand (delete target/perf-fixtures afterwards):
 node tools/dax-fixtures/generate-large.mjs 1000000      # writes target/perf-fixtures/1000000 (gitignored)
 node tools/dax-fixtures/generate-large.mjs 10000000
-cargo run --release -p biforge-engine --example perf_bench -- target/perf-fixtures/1000000
-PERF_EACH=1 cargo run --release -p biforge-engine --example perf_bench -- target/perf-fixtures/10000000   # per-query times
+cargo run --release -p biforge-engine --features tools --example perf_bench -- target/perf-fixtures/1000000
+PERF_EACH=1 cargo run --release -p biforge-engine --features tools --example perf_bench -- target/perf-fixtures/10000000   # per-query times
 ```
 
 The fixture is the DAX fixture of `tests/dax/fixtures` with a deterministic `Sales` table of 1 M or 10 M rows (same columns, the same

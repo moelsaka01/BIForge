@@ -430,12 +430,12 @@ N | Autorecovery folder and open folder
 ### Report settings
 N | Use the modern visual tooltip
 N | Allow users to change filter types
-N | Enable slicer search
+D | Enable slicer search
 N | Enable the filter pane search
 N | Persistent filters
 N | Report: default view setting
 D | Show visual header on hover
-N | Default cross filtering / cross highlighting
+D | Default cross filtering / cross highlighting
 N | Hide the filters pane for new reports
 N | Drill-through default
 N | Allow changes to measures in the report
@@ -476,7 +476,7 @@ N | Privacy levels for this file
 ### Auto recovery
 N | Recovery for this file
 ### Query reduction
-N | Disable cross highlighting/filtering by default
+D | Disable cross highlighting/filtering by default
 N | Slicer apply button
 N | Filter apply button
 N | Report-level Add apply button to all slicers
@@ -485,7 +485,7 @@ N | Use the modern visual tooltip for this file
 N | Default page size and view
 N | Allow changes to filter types
 N | Persistent filters
-N | Slicer search
+D | Slicer search
 N | Q&A
 N | Show visuals as tables default
 N | Export data setting

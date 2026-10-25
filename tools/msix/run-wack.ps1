@@ -3,7 +3,7 @@
 # the certificate goes into LocalMachine\TrustedPeople and is removed again at the end, also when the kit fails.
 # The kit installs the package, starts it, and removes it again; nothing is submitted anywhere.
 #   Start-Process powershell -Verb RunAs -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File','C:\dev\BIForge\tools\msix\run-wack.ps1'
-param([string]$Package = "target/msix/BIForge.msix", [string]$Report = "target/msix/wack-report.xml")
+param([string]$Package = "target/msix/BIForge.msix", [string]$Report = "docs/msix-wack-report.xml")
 $ErrorActionPreference = "Stop"
 $root = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
 $id = [Security.Principal.WindowsIdentity]::GetCurrent()

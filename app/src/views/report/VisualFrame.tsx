@@ -81,7 +81,7 @@ export function VisualFrame(p: FrameProps) {
   const f = new FormatReader(visual.json, c.theme, visual.visualType);
   const type = visualType(visual.visualType);
   const fam = type?.family;
-  const restated = type?.static ? [] : restateFilters(c.project, page, visual, { drillthrough: c.snap.drillthrough?.filters ?? [], selection: c.snap.selection });
+  const restated = type?.static ? [] : restateFilters(c.project, page, visual, { drillthrough: c.snap.drillthrough?.filters ?? [], selection: c.snap.selection, crossDefault: c.canvas.crossDefault });
   const drillRoles = drillRolesOf(visual);
   const role = activeDrillRole(visual, c.snap.drillRole[visual.name]);
   const header: HeaderContext = { drillRoles, filters: restated.length, focusable: !type?.static, tabular: info.tabular, status: info.status };
@@ -255,7 +255,7 @@ export function VisualFrame(p: FrameProps) {
   const interactionControls = () => {
     if (!sourceVisual || sourceVisual.name === visual.name) return null;
     const explicit = page.interactions.find((i) => i.source === sourceVisual.name && i.target === visual.name)?.type ?? "Default";
-    const effective = resolveInteraction(page, sourceVisual, visual);
+    const effective = resolveInteraction(page, sourceVisual, visual, c.canvas.crossDefault);
     const set = (type: "DataFilter" | "HighlightFilter" | "NoFilter") => c.dispatch("report.interaction.set", { page: page.name, source: sourceVisual.name, target: visual.name, type });
     const canHl = supportsHighlight(visual.visualType);
     return (

@@ -33,3 +33,20 @@ reqwest = { version = "0.13", default-features = false, features = ["blocking", 
 tempfile = "3"
 biforge-model = { path = "../model" }
 rust_xlsxwriter = "0.79"
+
+[features]
+# the development harnesses and the benchmark (examples) link DuckDB once more each: `cargo test` builds examples, so they only
+# build with `--features tools` (cargo run -p biforge-engine --features tools --example report_harness)
+tools = []
+
+[[example]]
+name = "perf_bench"
+required-features = ["tools"]
+
+[[example]]
+name = "pq_harness"
+required-features = ["tools"]
+
+[[example]]
+name = "report_harness"
+required-features = ["tools"]

@@ -44,3 +44,20 @@ Sources: <https://blogs.windows.com/windowsdeveloper/2025/09/10/free-developer-r
 2. Add the `store` Cargo feature (no updater) and a CI job that builds the MSIX unsigned for the Store (the Store signs it itself).
 3. Decide Windows 10 support (WebView2) and the version number scheme.
 4. Only then, and only if the registration is free, create the individual Partner Center account (owner action) and reserve the name.
+
+## Result of the Windows App Certification Kit (reported by the owner, 2026-10-25)
+
+**Overall PASS.** One test was flagged: **Blocked executables** ("references to process launch APIs and blocked executables"). The test certificate is confirmed removed from LocalMachine\TrustedPeople.
+
+The full report (`target\msix\wack-report.xml`) was deleted when `target/` was cleaned for disk space, so the exact strings the kit matched could not be read back. The list below comes from the source instead: every place where BIForge starts another program (`Command::new`; there is no `ShellExecute` or `CreateProcess` call outside the standard library). To get the kit's own list, rebuild with `tools/msix/build-msix.ps1` and run `tools/msix/run-wack.ps1` again, then the script now writes the report to `docs/msix-wack-report.xml`, outside `target/`, so a clean does not delete it.
+
+| # | Call site | Starts | Why | Proposal |
+| --- | --- | --- | --- | --- |
+| 1 | `crates/engine/src/sources/oledb_src.rs:193` | `powershell.exe -EncodedCommand ...` | OLE DB and Analysis Services connectors run a short script with `System.Data.OleDb` / the ADOMD client; PowerShell is on the kit's blocked list | **Remove from the Store build**: a Cargo feature `store` compiles the two connectors out (the NSIS/MSI builds keep them). A direct OLE DB implementation needs COM bindings (`windows` crate: `IDBInitialize`, `ICommand`, rowsets) for every provider and cannot host the .NET ADOMD library, so Analysis Services would still need another route; judged too large for the gain. **Alternative: keep and justify** (text below) if the Store review accepts it. |
+| 2 | `app/src-tauri/src/commands.rs:175` | `rundll32.exe url.dll,FileProtocolHandler <url>` | opens an http(s) address in the default browser | **Remove (done)**: replaced by the `open` crate, which calls `ShellExecuteW` in-process. |
+| 3 | `app/src-tauri/src/scheduled.rs:161` | `schtasks.exe` | scheduled refresh registers a Windows task that runs `biforge-app.exe` | **Remove from the Store build** (same `store` feature): a packaged app cannot register a task that starts its own package path reliably (the path changes on every update). Direct alternative for the installer builds: the Task Scheduler COM API (`ITaskService`), no executable. |
+| 4 | `crates/engine/src/sources/script_src.rs:38,167` | the user's `python.exe` / `Rscript.exe` | Python and R script sources | **Keep and justify**: the interpreter is the user's own, found on their PC, started only after a confirmation box, with a timeout; BIForge ships none. |
+
+### Justification for the certification notes (items kept)
+
+> BIForge is a desktop application (`runFullTrust`) that reads and writes local project folders. (a) The optional Python and R data sources run the interpreter that the user installed, only after the user confirmed the script in a dialog; BIForge ships no interpreter and the script text is the user's own. (b) [only if item 1 is kept] The optional OLE DB / Analysis Services data sources use Windows PowerShell with `System.Data.OleDb` to read from providers installed on the user's PC, with a fixed script, a connection string the user typed and no network access of its own. Neither is started without an explicit user action.

@@ -148,7 +148,7 @@ export function VisualContent({ page, visual, width, height, runOnClick, onInfo 
 
   if (loaded.kind === "hierarchy") {
     const fields = visual.roles.Values.map((v) => v.field);
-    const look = readSlicer(new FormatReader(visual.json, c.theme, "slicer"), false);
+    const look = readSlicer(new FormatReader(visual.json, c.theme, "slicer"), false, c.canvas.slicerSearch);
     const own = visual.filters.defs.find((d) => d.name === "slicer");
     return (
       <HierarchySlicerView
@@ -172,7 +172,7 @@ export function VisualContent({ page, visual, width, height, runOnClick, onInfo 
     const dt = c.model.columnType(field.table, field.name);
     const isDate = dt === "dateTime";
     const numeric = dt === "int64" || dt === "double" || dt === "decimal";
-    const look = readSlicer(f, isDate || numeric);
+    const look = readSlicer(f, isDate || numeric, c.canvas.slicerSearch);
     const own = visual.filters.defs.find((d) => d.name === "slicer");
     return (
       <SlicerView

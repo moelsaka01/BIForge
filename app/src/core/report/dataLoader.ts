@@ -30,6 +30,8 @@ export interface ViewState {
   drillthrough: RuntimeFilters["drillthrough"];
   /** Bumped when imported data changes, so cached results are dropped. */
   epoch: number;
+  /** What a selection does where the page has no Edit interactions setting (Options > Report settings, Query reduction). */
+  crossDefault?: "highlight" | "filter" | "none";
 }
 
 export const EMPTY_VIEW: ViewState = { selection: null, drill: {}, drillthrough: [], epoch: 0 };
@@ -143,7 +145,7 @@ export class ReportData {
     let mode: "filter" | "highlight" | "none" = "none";
     if (sel && sel.page === page.name) {
       const src = page.visuals.find((v) => v.name === sel!.visual);
-      mode = src ? resolveInteraction(page, src, visual) : "none";
+      mode = src ? resolveInteraction(page, src, visual, view.crossDefault) : "none";
     } else sel = null;
     // a matrix without a drill position shows all its levels, a chart starts at its first one
     const matrix = visualType(visual.visualType)?.family === "matrix";

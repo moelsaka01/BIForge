@@ -1,6 +1,5 @@
 //! The quick measure templates (app/src/core/model/quickMeasures.ts, expanded into tests/model/quick-measure-cases.json by the
 //! vitest suite) run on the DAX engine over the fixture data, in the interpreter and with SQL, and give the numbers they should.
-mod fixture;
 
 use biforge_dax::Value;
 use serde_json::Value as Json;
@@ -17,7 +16,7 @@ fn num(v: &Value) -> f64 {
 
 #[test]
 fn quick_measures_run_and_give_the_right_numbers() {
-    let (store, dax) = fixture::setup();
+    let (store, dax) = crate::fixture::setup();
     let total = num(&dax.eval_scalar("SUM(Sales[Quantity])").unwrap());
     let y23 = num(&dax.eval_scalar("CALCULATE(SUM(Sales[Quantity]), 'Date'[Year] = 2023)").unwrap());
     let y24 = num(&dax.eval_scalar("CALCULATE(SUM(Sales[Quantity]), 'Date'[Year] = 2024)").unwrap());

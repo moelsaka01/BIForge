@@ -1,8 +1,8 @@
 # M cases to check in Power BI Desktop
 
-`partition_*.m` are the M texts the app writes for the DAX fixture CSVs (checked against BIForge's engine by `crates/engine/tests/m_partitions.rs` and against the generator by `app/src/core/model/partitionM.contract.test.ts`).
+`partition_*.m` are the M texts the app writes for the DAX fixture CSVs (checked against BIForge's engine by `crates/engine/tests/it/m_partitions.rs` and against the generator by `app/src/core/model/partitionM.contract.test.ts`).
 
-The cases below are for **checking BIForge's M engine against Desktop** (there is no automatic recorder for M yet). Paste each into a blank query (Advanced Editor), compare the result with the "BIForge gives" column, and record differences in `research/m-semantics.md`. Each one tests a reading that is assumed there. `crates/engine/tests/m_queries.rs` (`desktop_check_cases_give_what_the_readme_says`) runs these exact queries, so the right-hand column is what BIForge really returns.
+The cases below are for **checking BIForge's M engine against Desktop** (there is no automatic recorder for M yet). Paste each into a blank query (Advanced Editor), compare the result with the "BIForge gives" column, and record differences in `research/m-semantics.md`. Each one tests a reading that is assumed there. `crates/engine/tests/it/m_queries.rs` (`desktop_check_cases_give_what_the_readme_says`) runs these exact queries, so the right-hand column is what BIForge really returns.
 
 | # | Query | BIForge gives |
 |---|---|---|

@@ -1,6 +1,5 @@
 //! The M text that the app writes into TMDL partitions (tests/m/*.m, produced by app/src/core/model/partitionM.ts and
 //! checked by a vitest contract test) is run by BIForge's M engine and must give exactly what the engine's own CSV import gives.
-mod fixture;
 
 use biforge_engine::{BiType, Engine, MemoryCredentialStore, SourceSpec};
 use std::collections::BTreeMap;
@@ -16,7 +15,7 @@ fn plain(s: &str) -> String {
 fn generated_partition_m_reproduces_the_csv_import() {
     let e = Engine::in_memory().unwrap();
     let creds = MemoryCredentialStore::default();
-    let dir = fixture::fixtures();
+    let dir = crate::fixture::fixtures();
     let mdir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/m");
     for table in ["Sales", "Customer", "Date"] {
         let path = dir.join(format!("{table}.csv")).to_string_lossy().into_owned();

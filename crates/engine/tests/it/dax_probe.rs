@@ -2,12 +2,11 @@
 //! prints the results the way tools/dax-record/probe.mjs prints Power BI's, so the two can be compared by eye.
 //!   BIFORGE_DAX_PROBE='EVALUATE ROW("a", 1)' cargo test -p biforge-engine --test dax_probe -- --nocapture
 
-mod fixture;
 
 #[test]
 fn probe() {
     let Ok(qs) = std::env::var("BIFORGE_DAX_PROBE") else { return };
-    let (_store, dax) = fixture::setup();
+    let (_store, dax) = crate::fixture::setup();
     for q in qs.split(";;") {
         println!("## {q}");
         match dax.query(q) {

@@ -3,7 +3,6 @@
 //! the vitest suite computed from the CSV files. This checks that generated queries are valid DAX and that the
 //! engine returns what a direct computation over the data gives.
 
-mod fixture;
 
 use biforge_dax::value::Value;
 use biforge_dax::ResultTable;
@@ -72,7 +71,7 @@ fn generated_report_queries_match_the_fixture_data_through_sql() {
 }
 
 fn check_all(use_sql: bool) {
-    let (store, dax) = fixture::setup();
+    let (store, dax) = crate::fixture::setup();
     let sql: Option<&dyn biforge_dax::sql::SqlExecutor> = if use_sql { Some(&store) } else { None };
     let g = golden();
     let cases = g["cases"].as_array().unwrap();

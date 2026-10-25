@@ -140,7 +140,7 @@ export function ReportView(p: ReportViewProps) {
   }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => p.onSelectVisual?.(page?.name ?? null, selected), [page?.name, selected]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const liveView: ViewState = useMemo(() => ({ selection: snap.selection, drill: snap.drill, drillthrough: snap.drillthrough?.filters ?? [], epoch: snap.epoch + p.dataEpoch }), [snap.selection, snap.drill, snap.drillthrough, snap.epoch, p.dataEpoch]);
+  const liveView: ViewState = useMemo(() => ({ selection: snap.selection, drill: snap.drill, drillthrough: snap.drillthrough?.filters ?? [], epoch: snap.epoch + p.dataEpoch, crossDefault: (p.canvas ?? DEFAULT_CANVAS).crossDefault }), [snap.selection, snap.drill, snap.drillthrough, snap.epoch, p.dataEpoch, p.canvas]);
   // Pause visuals: the visuals keep the view they had when paused (so they send no new queries) until Refresh visuals
   const frozen = useRef({ view: liveView, tick: snap.refreshTick });
   if (!snap.paused || frozen.current.tick !== snap.refreshTick) frozen.current = { view: liveView, tick: snap.refreshTick };

@@ -52,7 +52,7 @@ const defText = (d: FilterDef) => `${fieldLabel(d.field)} ${condText(d.cond)}`;
 const neutral = (d: FilterDef) => d.cond.kind === "in" && d.cond.values.length === 0;
 
 /** Every filter that affects the visual: report, page and visual filters, drillthrough, slicers of the page and the selection in another visual. */
-export function restateFilters(project: Project, page: PageModel, visual: VisualModel, rt: { drillthrough: FilterDef[]; selection: Selection | null }): RestatedFilter[] {
+export function restateFilters(project: Project, page: PageModel, visual: VisualModel, rt: { drillthrough: FilterDef[]; selection: Selection | null; crossDefault?: "highlight" | "filter" | "none" }): RestatedFilter[] {
   const out: RestatedFilter[] = [];
   const add = (scope: FilterScope, defs: FilterDef[]) => {
     for (const d of defs) if (!neutral(d)) out.push({ scope, text: defText(d) });
@@ -70,7 +70,7 @@ export function restateFilters(project: Project, page: PageModel, visual: Visual
   const sel = rt.selection;
   if (sel && sel.page === page.name && sel.visual !== visual.name && sel.points.length > 0) {
     const source = page.visuals.find((v) => v.name === sel.visual);
-    if (source && resolveInteraction(page, source, visual) !== "none") {
+    if (source && resolveInteraction(page, source, visual, rt.crossDefault) !== "none") {
       const fields = sel.points[0].fields;
       const values = sel.points.map((p) => p.values.map(litText).join(" / "));
       out.push({ scope: "Selection", text: `${fields.map(fieldLabel).join(" / ")} is ${values.join(" or ")}` });

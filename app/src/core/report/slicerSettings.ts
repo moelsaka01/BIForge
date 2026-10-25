@@ -39,12 +39,12 @@ export interface SlicerSettings {
   items: { font: Font; background?: string; padding: number };
 }
 
-export function readSlicer(f: FormatReader, isDateOrNumeric: boolean): SlicerSettings {
+export function readSlicer(f: FormatReader, isDateOrNumeric: boolean, searchDefault = false): SlicerSettings {
   return {
     mode: slicerMode(f.str("data", "mode", isDateOrNumeric ? "Between" : "Basic"), f.num("general", "orientation", 0) === 1),
     singleSelect: f.bool("selection", "singleSelect", false) || f.str("data", "mode", "") === "Single",
     selectAll: f.bool("selection", "selectAllCheckboxEnabled", false),
-    search: f.bool("general", "selfFilterEnabled", false),
+    search: f.bool("general", "selfFilterEnabled", searchDefault),
     header: { show: f.has("header", "show") && f.bool("header", "show", false), text: f.str("header", "text", ""), font: readFont(f, "header", { color: "fontColor", size: "textSize" }), background: f.color("header", "background") },
     items: { font: readFont(f, "items", { color: "fontColor", size: "textSize" }), background: f.color("items", "background"), padding: f.num("items", "padding", 0) },
   };

@@ -12,6 +12,10 @@ debug = "line-tables-only"
 
 [profile.dev.package."*"]
 debug = false
+# dependencies (DuckDB above all) are built with some optimization: an unoptimized C++ DuckDB makes every executable that links it several hundred MB
+opt-level = 1
 
 [profile.test]
 debug = "line-tables-only"
+# a test run rebuilds its binaries anyway: the incremental cache of the workspace crates is only disk
+incremental = false

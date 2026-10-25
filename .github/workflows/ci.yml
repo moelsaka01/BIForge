@@ -114,4 +114,4 @@ jobs:
           BIFORGE_TEST_MSSQL: "127.0.0.1:1433:shop:sa:Ci-Test-Passw0rd!:dbo.people"
           BIFORGE_TEST_MSSQL_TRUST: "1"
           BIFORGE_REQUIRE_MSSQL: "1"
-        run: cargo test -p biforge-engine --test import sqlserver
+        run: cargo test -p biforge-engine --test it import::sqlserver

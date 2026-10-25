@@ -12,12 +12,16 @@ export interface CanvasOptions {
   gridSize: number;
   /** Options > Report settings > Show the visual header on hover (a visual's own Visual header setting wins). */
   visualHeader: boolean;
+  /** What a selection does to a visual the page has no Edit interactions setting for: highlight where possible, filter, or nothing. */
+  crossDefault: "highlight" | "filter" | "none";
+  /** Slicers that do not say otherwise show their search box. */
+  slicerSearch: boolean;
 }
 
 export const CANVAS_OPTION_IDS = ["canvas.smartGuides", "canvas.gridlines", "canvas.snapToGrid", "canvas.lockObjects"] as const;
 export type CanvasOptionId = (typeof CANVAS_OPTION_IDS)[number];
 
-export const DEFAULT_CANVAS: CanvasOptions = { smartGuides: true, gridlines: false, snapToGrid: false, lockObjects: false, gridSize: 10, visualHeader: true };
+export const DEFAULT_CANVAS: CanvasOptions = { smartGuides: true, gridlines: false, snapToGrid: false, lockObjects: false, gridSize: 10, visualHeader: true, crossDefault: "highlight", slicerSearch: false };
 
 export function canvasOptionsOf(options: Record<string, OptionValue>): CanvasOptions {
   const bool = (id: string, d: boolean) => (typeof options[id] === "boolean" ? (options[id] as boolean) : d);
@@ -28,6 +32,8 @@ export function canvasOptionsOf(options: Record<string, OptionValue>): CanvasOpt
     snapToGrid: bool("canvas.snapToGrid", DEFAULT_CANVAS.snapToGrid),
     lockObjects: bool("canvas.lockObjects", DEFAULT_CANVAS.lockObjects),
     visualHeader: bool("report.visualHeader", DEFAULT_CANVAS.visualHeader),
+    crossDefault: bool("file.qr.disableCross", false) ? "none" : options["report.crossFilter"] === "filter" ? "filter" : "highlight",
+    slicerSearch: bool("report.slicerSearch", false) || bool("file.report.slicerSearch", false),
     gridSize: typeof size === "number" && size >= 2 && size <= 200 ? Math.round(size) : DEFAULT_CANVAS.gridSize,
   };
 }

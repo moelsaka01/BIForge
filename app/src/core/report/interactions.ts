@@ -55,13 +55,15 @@ export function isSlicer(v: VisualModel): boolean {
  * What a selection in `source` does to `target`: the page's explicit setting, else the default (charts highlight
  * charts that can, everything else is filtered).
  */
-export function resolveInteraction(page: PageModel, source: VisualModel, target: VisualModel): InteractionMode {
+export function resolveInteraction(page: PageModel, source: VisualModel, target: VisualModel, dflt: "highlight" | "filter" | "none" = "highlight"): InteractionMode {
   if (source.name === target.name) return "none";
   const explicit = page.interactions.find((i) => i.source === source.name && i.target === target.name)?.type ?? "Default";
   if (explicit === "NoFilter") return "none";
   if (explicit === "DataFilter") return "filter";
   const canHighlight = supportsHighlight(target.visualType);
   if (explicit === "HighlightFilter") return canHighlight ? "highlight" : "filter";
+  if (dflt === "none") return "none";
+  if (dflt === "filter") return "filter";
   const srcFamily = visualType(source.visualType)?.family;
   const chartLike = srcFamily === "cartesian" || srcFamily === "pie" || srcFamily === "scatter" || srcFamily === "treemap" || srcFamily === "funnel" || srcFamily === "waterfall";
   return chartLike && canHighlight ? "highlight" : "filter";
