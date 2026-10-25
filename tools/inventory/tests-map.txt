@@ -413,3 +413,6 @@
 12|Lock and hide filter => app/src/views/report/filtersPane.ui.test.tsx :: lock and hide are stored ;; app/src/views/report/filtersPane.ui.test.tsx :: readers of the report
 12|Include / exclude mode => app/src/views/report/filtersPane.ui.test.tsx :: Include / Exclude turns
 12|Collapse and expand filter cards, search in filters => app/src/views/report/filtersPane.ui.test.tsx :: a card collapses
+13|Card (new) => app/src/views/report/newCard.ui.test.tsx :: shows a tile for each field
+13|Slicer: text slicer / list slicer variants (new slicer) => app/src/views/report/newSlicers.ui.test.tsx :: Text slicer ;; app/src/views/report/newSlicers.ui.test.tsx :: List slicer is a drop-down
+13|Slicer: button slicer => app/src/views/report/newSlicers.ui.test.tsx :: shows the values as buttons

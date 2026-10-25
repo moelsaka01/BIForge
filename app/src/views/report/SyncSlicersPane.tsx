@@ -2,13 +2,14 @@ import { useEffect, useState } from "react";
 import { Button, Checkbox, Input } from "@fluentui/react-components";
 import { fieldLabel } from "../../core/report/fields";
 import { syncGroupOf } from "../../core/report/reportOps";
+import { visualType } from "../../core/report/visualTypes";
 import { useReport } from "./reportContext";
 
 /** Sync slicers pane: which pages a slicer is on and where it is shown. */
 export function SyncSlicersPane() {
   const c = useReport();
   const page = c.pages.find((p) => p.name === c.snap.page) ?? c.pages[0];
-  const slicer = page?.visuals.find((v) => v.name === c.snap.canvas.at(-1) && v.visualType === "slicer") ?? null;
+  const slicer = page?.visuals.find((v) => v.name === c.snap.canvas.at(-1) && visualType(v.visualType)?.family === "slicer") ?? null;
   const current = slicer ? syncGroupOf(slicer.json) : null;
   const field = slicer?.roles.Values?.[0]?.field;
   const [group, setGroup] = useState("");
@@ -19,7 +20,7 @@ export function SyncSlicersPane() {
     setRows(
       Object.fromEntries(
         c.pages.map((p) => {
-          const mate = p.name === page.name ? slicer : p.visuals.find((v) => v.visualType === "slicer" && current !== null && syncGroupOf(v.json) === current);
+          const mate = p.name === page.name ? slicer : p.visuals.find((v) => visualType(v.visualType)?.family === "slicer" && current !== null && syncGroupOf(v.json) === current);
           return [p.name, { sync: !!mate, visible: mate ? !mate.hidden : true }];
         }),
       ),

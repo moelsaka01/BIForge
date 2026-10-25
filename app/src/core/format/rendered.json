@@ -2942,6 +2942,9 @@
   ]
  },
  "tableEx": {
+  "general": [
+   "formatString"
+  ],
   "columnFormatting": [
    "alignment",
    "backColor",
@@ -3117,7 +3120,48 @@
    "underline"
   ]
  },
+ "cardVisual": {
+  "accentBar": [
+   "color",
+   "position",
+   "show",
+   "transparency",
+   "width"
+  ],
+  "label": [
+   "bold",
+   "fontColor",
+   "fontFamily",
+   "fontSize",
+   "horizontalAlignment",
+   "italic",
+   "position",
+   "show",
+   "text",
+   "transparency",
+   "underline"
+  ],
+  "layout": [
+   "orientation"
+  ],
+  "value": [
+   "bold",
+   "fontColor",
+   "fontFamily",
+   "fontSize",
+   "horizontalAlignment",
+   "italic",
+   "labelDisplayUnits",
+   "labelPrecision",
+   "show",
+   "transparency",
+   "underline"
+  ]
+ },
  "multiRowCard": {
+  "general": [
+   "formatString"
+  ],
   "card": [
    "barColor",
    "barShow",
@@ -3275,6 +3319,24 @@
    "padding",
    "textSize",
    "underline"
+  ],
+  "selection": [
+   "selectAllCheckboxEnabled",
+   "singleSelect"
+  ]
+ },
+ "advancedSlicerVisual": {
+  "general": [
+   "selfFilterEnabled"
+  ],
+  "selection": [
+   "selectAllCheckboxEnabled",
+   "singleSelect"
+  ]
+ },
+ "listSlicer": {
+  "general": [
+   "selfFilterEnabled"
   ],
   "selection": [
    "selectAllCheckboxEnabled",

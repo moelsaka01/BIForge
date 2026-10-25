@@ -19,7 +19,7 @@ import { influencersStyle, treeStyle } from "../report/analysisStyle";
 import { readSlicer } from "../report/slicerSettings";
 import { buttonModel, imageModel, navigatorModel } from "../report/staticModels";
 import { readShape, shapeSvg } from "../report/staticVisuals";
-import { buildCard, buildKpi, buildMatrix, buildMultiRowCard, buildTable } from "../report/tableModels";
+import { buildCard, buildKpi, buildMatrix, buildMultiRowCard, buildNewCard, buildTable } from "../report/tableModels";
 import { fixtureModel, visualOf } from "../report/testFixture";
 import { DEFAULT_THEME } from "../report/theme";
 import { setFormat, setRawProp, type VisualModel } from "../report/visualDoc";
@@ -115,6 +115,7 @@ const ENABLE: Record<string, Record<string, Lit>> = {
   trendline: { show: lit.bool(true) },
   trend: { show: lit.bool(true) },
   card: { barShow: lit.bool(true) },
+  accentBar: { show: lit.bool(true) },
   subTotals: { rowSubtotals: lit.bool(true), columnSubtotals: lit.bool(true) },
   heatMap: { show: lit.bool(true) },
   zoom: { show: lit.bool(true) },
@@ -201,6 +202,7 @@ const SCENARIOS: Record<string, Scenario> = {
     render: (v) => buildMatrix(v, matrixParts.map((p) => p.map(dec)), buildMatrixQuery(v, model, { filters: [] })!, DEFAULT_THEME, new Set()),
   },
   card: { make: () => visualOf("card", { Values: [Qty] }), render: (v) => buildCard(v, grouped(v, [[n(1234567)]]), DEFAULT_THEME) },
+  cardVisual: { make: () => visualOf("cardVisual", { Data: [Qty, Price] }), render: (v) => buildNewCard(v, grouped(v, [[n(1234567), d(3.5)]]), DEFAULT_THEME) },
   multiRowCard: { make: () => visualOf("multiRowCard", { Values: [Cat, Qty] }), render: (v) => buildMultiRowCard(v, grouped(v, [[t("Bikes"), n(5)], [t("Clothing"), n(7)]]), DEFAULT_THEME) },
   kpi: {
     make: () => visualOf("kpi", { Indicator: [Qty], TrendLine: [column("Date", "YearMonth")], Goal: [agg("Sales", "Quantity", 4)] }),
@@ -209,6 +211,9 @@ const SCENARIOS: Record<string, Scenario> = {
   decompositionTreeVisual: { make: () => visualOf("decompositionTreeVisual", { Analyze: [Qty], ExplainBy: [Cat] }), render: (v) => treeStyle(new FormatReader(v.json, DEFAULT_THEME, "decompositionTreeVisual"), DEFAULT_THEME) },
   keyDriversVisual: { make: () => visualOf("keyDriversVisual", { Target: [Ch], ExplainBy: [Cat] }), render: (v) => influencersStyle(new FormatReader(v.json, DEFAULT_THEME, "keyDriversVisual")) },
   slicer: { make: () => visualOf("slicer", { Values: [Country] }), render: (v) => readSlicer(new FormatReader(v.json, DEFAULT_THEME, "slicer"), false) },
+  advancedSlicerVisual: { make: () => visualOf("advancedSlicerVisual", { Values: [Country] }), render: (v) => readSlicer(new FormatReader(v.json, DEFAULT_THEME, v.visualType), false, false, v.visualType) },
+  listSlicer: { make: () => visualOf("listSlicer", { Values: [Country] }), render: (v) => readSlicer(new FormatReader(v.json, DEFAULT_THEME, v.visualType), false, false, v.visualType) },
+  textSlicer: { make: () => visualOf("textSlicer", { Values: [Country] }), render: (v) => readSlicer(new FormatReader(v.json, DEFAULT_THEME, v.visualType), false, false, v.visualType) },
   shape: {
     make: () => visualOf("shape", {}),
     render: (v) => {

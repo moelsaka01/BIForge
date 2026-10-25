@@ -8,6 +8,7 @@ import { readFilters, type RelUnit, type CmpOp, type Cond, type FilterDef, type 
 import { isDateField, isNumericColumn } from "../../core/report/modelInfo";
 import type { FilterScope } from "../../core/report/reportOps";
 import type { PageModel, VisualModel } from "../../core/report/visualDoc";
+import { visualType } from "../../core/report/visualTypes";
 import { useReport } from "./reportContext";
 import { fieldFromDrag } from "./VisualizationsPane";
 
@@ -331,7 +332,7 @@ export function FiltersPane({ page, visual }: { page: PageModel; visual: VisualM
   const vfields = visual ? Object.values(visual.roles).flat().map((x) => x.field) : [];
   const clearAll = () => {
     const scopes: { scope: FilterScope; defs: FilterDef[] }[] = [
-      ...(visual && visual.visualType !== "slicer" ? [{ scope: { level: "visual", page: page.name, visual: visual.name } as FilterScope, defs: visual.filters.defs.filter((d) => d.name !== "slicer") }] : []),
+      ...(visual && visualType(visual.visualType)?.family !== "slicer" ? [{ scope: { level: "visual", page: page.name, visual: visual.name } as FilterScope, defs: visual.filters.defs.filter((d) => d.name !== "slicer") }] : []),
       { scope: { level: "page", page: page.name }, defs: page.filters.defs.filter((d) => !d.name.startsWith("dt_")) },
       { scope: { level: "report" }, defs: reportDefs },
     ];
@@ -347,7 +348,7 @@ export function FiltersPane({ page, visual }: { page: PageModel; visual: VisualM
           </Button>
         )}
       </div>
-      {visual && visual.visualType !== "slicer" && <Section title="Filters on this visual" scope={{ level: "visual", page: page.name, visual: visual.name }} defs={visual.filters.defs.filter((d) => d.name !== "slicer")} hint="Drag fields here or pick one below" visualFields={vfields} page={page} needle={needle} />}
+      {visual && visualType(visual.visualType)?.family !== "slicer" && <Section title="Filters on this visual" scope={{ level: "visual", page: page.name, visual: visual.name }} defs={visual.filters.defs.filter((d) => d.name !== "slicer")} hint="Drag fields here or pick one below" visualFields={vfields} page={page} needle={needle} />}
       <Section title="Filters on this page" scope={{ level: "page", page: page.name }} defs={page.filters.defs.filter((d) => !d.name.startsWith("dt_"))} hint="Filters here apply to every visual on this page" visualFields={vfields} page={page} needle={needle} />
       <Section title="Filters on all pages" scope={{ level: "report" }} defs={reportDefs} hint="Filters here apply to every page" visualFields={vfields} page={page} needle={needle} />
       {page.type === "Drillthrough" && <div style={{ fontSize: 11, opacity: 0.7 }}>Drillthrough fields of this page are set in the page's context menu.</div>}

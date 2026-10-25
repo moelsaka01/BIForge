@@ -49,7 +49,7 @@ export function isSelectable(typeId: string): boolean {
 }
 
 export function isSlicer(v: VisualModel): boolean {
-  return v.visualType === "slicer";
+  return visualType(v.visualType)?.family === "slicer";
 }
 
 /**

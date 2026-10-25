@@ -3,7 +3,7 @@ import { useMemo, useRef, useState, type CSSProperties } from "react";
 import { valueToLit } from "../../core/report/chartData";
 import type { FieldRef } from "../../core/report/fields";
 import type { SelectedPoint } from "../../core/report/interactions";
-import type { CardModel, CellStyle, KpiModel, MatrixModel, MultiRowCardModel, TableModel } from "../../core/report/tableModels";
+import type { CardModel, CellStyle, KpiModel, MatrixModel, MultiRowCardModel, NewCardModel, TableModel } from "../../core/report/tableModels";
 import type { Theme } from "../../core/report/theme";
 import { fieldKey } from "../../core/report/fields";
 import { echarts } from "./echartsSetup";
@@ -232,6 +232,26 @@ export function CardView({ model, theme, width, height }: { model: CardModel; th
         {model.text}
       </div>
       {model.showLabel && <div style={{ ...model.labelStyle, marginTop: 4 }}>{model.label}</div>}
+    </div>
+  );
+}
+
+export function NewCardView({ model, theme, width, height }: { model: NewCardModel; theme: Theme; width: number; height: number }) {
+  return (
+    <div data-testid="new-card" style={{ width, height, boxSizing: "border-box", padding: 8, display: "flex", flexDirection: model.orientation, flexWrap: "wrap", gap: 12, alignContent: "flex-start", overflow: "auto" }}>
+      {model.tiles.map((t, i) => {
+        const a = model.accent;
+        const bar = a ? { [`border${a.position}`]: `${a.width}px solid ${a.color}` } : {};
+        const label = model.showLabel && <div style={model.labelStyle} data-testid="new-card-label">{t.label}</div>;
+        return (
+          <div key={i} data-testid="new-card-tile" style={{ flex: "1 1 120px", minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "center", padding: "4px 8px", ...bar }}>
+            {model.labelAbove && label}
+            {model.showValue && <div style={{ ...model.valueStyle, lineHeight: 1.15 }} data-testid="new-card-value">{t.value}</div>}
+            {!model.labelAbove && label}
+          </div>
+        );
+      })}
+      {model.tiles.length === 0 && <span style={{ color: theme.muted }}>No data</span>}
     </div>
   );
 }

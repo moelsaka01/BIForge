@@ -39,9 +39,15 @@ export interface SlicerSettings {
   items: { font: Font; background?: string; padding: number };
 }
 
-export function readSlicer(f: FormatReader, isDateOrNumeric: boolean, searchDefault = false): SlicerSettings {
+/** The style a slicer type starts with: the new slicer draws buttons, the list slicer a drop-down list, the others a vertical list. */
+export function defaultSlicerStyle(visualType: string, isDateOrNumeric: boolean): string {
+  if (isDateOrNumeric) return "Between";
+  return visualType === "advancedSlicerVisual" ? "HorizontalList" : visualType === "listSlicer" ? "Dropdown" : "Basic";
+}
+
+export function readSlicer(f: FormatReader, isDateOrNumeric: boolean, searchDefault = false, visualType = "slicer"): SlicerSettings {
   return {
-    mode: slicerMode(f.str("data", "mode", isDateOrNumeric ? "Between" : "Basic"), f.num("general", "orientation", 0) === 1),
+    mode: slicerMode(f.str("data", "mode", defaultSlicerStyle(visualType, isDateOrNumeric)), f.num("general", "orientation", 0) === 1),
     singleSelect: f.bool("selection", "singleSelect", false) || f.str("data", "mode", "") === "Single",
     selectAll: f.bool("selection", "selectAllCheckboxEnabled", false),
     search: f.bool("general", "selfFilterEnabled", searchDefault),

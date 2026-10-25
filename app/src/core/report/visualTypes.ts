@@ -107,6 +107,7 @@ export const VISUAL_TYPES: VisualTypeDef[] = [
     glyph: "▤",
   },
   { id: "card", label: "Card", family: "card", roles: [{ name: "Values", label: "Fields", accepts: "value", max: 1 }], size: { width: 200, height: 120 }, glyph: "123" },
+  { id: "cardVisual", label: "Card (new)", family: "card", roles: [{ name: "Data", label: "Data", accepts: "any", max: 8 }], size: { width: 320, height: 140 }, glyph: "▭" },
   {
     id: "multiRowCard",
     label: "Multi-row card",
@@ -191,6 +192,10 @@ export const VISUAL_TYPES: VisualTypeDef[] = [
     glyph: "⚑",
   },
   { id: "slicer", label: "Slicer", family: "slicer", roles: [{ name: "Values", label: "Field (several make a hierarchy slicer)", accepts: "column", max: 5 }], size: { width: 200, height: 240 }, glyph: "▽" },
+  // the new slicers: same selection pipeline as the slicer (role Values, one filter on the visual); they differ in what they draw
+  { id: "advancedSlicerVisual", label: "Slicer (new)", family: "slicer", roles: [{ name: "Values", label: "Field", accepts: "column", max: 1 }], size: { width: 240, height: 180 }, glyph: "▤" },
+  { id: "listSlicer", label: "List slicer", family: "slicer", roles: [{ name: "Values", label: "Field", accepts: "column", max: 1 }], size: { width: 220, height: 40 }, glyph: "▾" },
+  { id: "textSlicer", label: "Text slicer", family: "slicer", roles: [{ name: "Values", label: "Field", accepts: "column", max: 1 }], size: { width: 220, height: 56 }, glyph: "Ⓣ" },
   {
     id: "map",
     label: "Map",

@@ -22,15 +22,15 @@ D | Donut chart
 D | Treemap
 D | Gauge
 D | Card
-N | Card (new)
+D | Card (new)
 D | Multi-row card
 D | KPI
 D | Table
 D | Matrix
 D | Slicer (list, dropdown, tiles, numeric/date range, relative date)
 N | Slicer: hierarchy
-N | Slicer: text slicer / list slicer variants (new slicer)
-N | Slicer: button slicer
+D | Slicer: text slicer / list slicer variants (new slicer)
+D | Slicer: button slicer
 N | Basic map (bubble)
 N | Filled map
 N | Shape map

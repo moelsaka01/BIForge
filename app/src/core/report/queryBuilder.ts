@@ -99,7 +99,8 @@ function slotsFor(v: VisualModel, family: VisualFamily, drill?: DrillState): { g
       return { groups: dedupe([...roleSlots("Category"), ...roleSlots("Breakdown")]), values: roleSlots("Y"), extra: [] };
     case "table":
     case "card": {
-      const all = roleSlots("Values");
+      // the new card keeps its fields in the Data well
+      const all = roleSlots(v.visualType === "cardVisual" ? "Data" : "Values");
       return { groups: dedupe(all.filter((s) => s.field.kind === "column")), values: all.filter((s) => s.field.kind !== "column"), extra: [] };
     }
     case "kpi":

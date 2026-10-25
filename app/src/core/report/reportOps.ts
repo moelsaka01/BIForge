@@ -444,7 +444,7 @@ const slicersOf = (p: Project, page: string): J[] =>
   Object.keys(files(p))
     .filter((k) => k.startsWith(visualPrefix(page)) && k.endsWith("/visual.json"))
     .map((k) => files(p)[k])
-    .filter((j) => j.visual?.visualType === "slicer");
+    .filter((j) => visualType(j.visual?.visualType)?.family === "slicer");
 
 /** Every other slicer of the report that is in the same sync group, with its page. */
 export function syncedSlicers(p: Project, page: string, visual: string): { page: string; visual: string }[] {
@@ -459,7 +459,7 @@ export function syncedSlicers(p: Project, page: string, visual: string): { page:
  */
 export function setSlicerSync(p: Project, page: string, visual: string, group: string | null, pages: { page: string; sync: boolean; visible: boolean }[], newId: () => string = newName): void {
   const src = visualJson(p, page, visual);
-  if (src.visual?.visualType !== "slicer") throw new ReportError("Only a slicer can be synced.");
+  if (visualType(src.visual?.visualType)?.family !== "slicer") throw new ReportError("Only a slicer can be synced.");
   const old = syncGroupOf(src);
   if (!group) {
     for (const pg of listPageNames(p)) for (const j of slicersOf(p, pg)) if (old && syncGroupOf(j) === old && j !== src) (j.isHidden ? deleteVisual(p, pg, j.name) : delete j.visual.syncGroup);

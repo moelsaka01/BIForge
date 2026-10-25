@@ -5,7 +5,7 @@ import { fieldKey, type FieldRef } from "../../core/report/fields";
 import { FormatReader } from "../../core/report/formatReader";
 import { drillthroughTargets, type SelectedPoint } from "../../core/report/interactions";
 import { drillPlan } from "../../core/report/queryBuilder";
-import { buildCard, buildKpi, buildMatrix, buildMultiRowCard, buildTable } from "../../core/report/tableModels";
+import { buildCard, buildKpi, buildMatrix, buildMultiRowCard, buildNewCard, buildTable } from "../../core/report/tableModels";
 import type { PageModel, VisualModel } from "../../core/report/visualDoc";
 import { listPageNames } from "../../core/report/visualDoc";
 import { isStatic, visualType } from "../../core/report/visualTypes";
@@ -14,11 +14,11 @@ import { ChartView } from "./ChartView";
 import { registerWorld } from "./echartsSetup";
 import { DecompositionTreeView } from "./DecompositionTreeView";
 import { KeyInfluencersView } from "./KeyInfluencersView";
-import { CardView, KpiView, MatrixView, MultiRowCardView, TableView } from "./DomVisuals";
+import { CardView, KpiView, MatrixView, MultiRowCardView, NewCardView, TableView } from "./DomVisuals";
 import { useReport } from "./reportContext";
 import { readSlicer } from "../../core/report/slicerSettings";
 import { HierarchySlicerView } from "./HierarchySlicerView";
-import { SlicerView } from "./SlicerView";
+import { SlicerView, TextSlicerView } from "./SlicerView";
 import { DataTableView } from "./DataTableView";
 import { drillKey, fieldsOfRole, type VisualStatus } from "../../core/report/headerButtons";
 import { BookmarkNavigatorView, ButtonView, ImageView, PageNavigatorView, ShapeView, TextboxView } from "./StaticVisuals";
@@ -148,7 +148,7 @@ export function VisualContent({ page, visual, width, height, runOnClick, onInfo 
 
   if (loaded.kind === "hierarchy") {
     const fields = visual.roles.Values.map((v) => v.field);
-    const look = readSlicer(new FormatReader(visual.json, c.theme, "slicer"), false, c.canvas.slicerSearch);
+    const look = readSlicer(new FormatReader(visual.json, c.theme, visual.visualType), false, c.canvas.slicerSearch, visual.visualType);
     const own = visual.filters.defs.find((d) => d.name === "slicer");
     return (
       <HierarchySlicerView
@@ -168,12 +168,25 @@ export function VisualContent({ page, visual, width, height, runOnClick, onInfo 
 
   if (loaded.kind === "slicer") {
     const field = visual.roles.Values[0].field;
-    const f = new FormatReader(visual.json, c.theme, "slicer");
+    const f = new FormatReader(visual.json, c.theme, visual.visualType);
     const dt = c.model.columnType(field.table, field.name);
     const isDate = dt === "dateTime";
     const numeric = dt === "int64" || dt === "double" || dt === "decimal";
-    const look = readSlicer(f, isDate || numeric, c.canvas.slicerSearch);
+    const look = readSlicer(f, isDate || numeric, c.canvas.slicerSearch, visual.visualType);
     const own = visual.filters.defs.find((d) => d.name === "slicer");
+    if (visual.visualType === "textSlicer") {
+      return (
+        <TextSlicerView
+          cond={own?.cond ?? null}
+          look={look}
+          fieldName={field.name}
+          theme={c.theme}
+          width={width}
+          height={height}
+          onChange={(cond) => c.dispatch("report.slicer.select", { page: page.name, visual: visual.name, field, cond })}
+        />
+      );
+    }
     return (
       <SlicerView
         loaded={loaded}
@@ -216,6 +229,7 @@ export function VisualContent({ page, visual, width, height, runOnClick, onInfo 
       return <TableView model={model} theme={c.theme} width={width} height={height} selected={selected} onSort={onSort} onRow={onPoint} onContext={onContext} />;
     }
     case "card":
+      if (visual.visualType === "cardVisual") return <NewCardView model={buildNewCard(visual, loaded, c.theme)} theme={c.theme} width={width} height={height} />;
       return visual.visualType === "multiRowCard" ? (
         <MultiRowCardView model={buildMultiRowCard(visual, loaded, c.theme)} theme={c.theme} width={width} height={height} />
       ) : (

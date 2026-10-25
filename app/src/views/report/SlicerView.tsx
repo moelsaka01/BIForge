@@ -230,3 +230,56 @@ function RelativeSlicer(p: SlicerViewProps & { box: React.CSSProperties; header:
 }
 
 
+
+// ---- text slicer -----------------------------------------------------------------------------------------
+
+export interface TextSlicerViewProps {
+  cond: Cond | null;
+  look?: SlicerSettings;
+  fieldName?: string;
+  theme: Theme;
+  width: number;
+  height: number;
+  onChange(cond: Cond | null): void;
+}
+
+type TextOpChoice = "contains" | "startsWith" | "notContains" | "notStartsWith";
+const TEXT_CHOICES: { v: TextOpChoice; label: string }[] = [
+  { v: "contains", label: "contains" },
+  { v: "startsWith", label: "starts with" },
+  { v: "notContains", label: "does not contain" },
+  { v: "notStartsWith", label: "does not start with" },
+];
+
+/** Text slicer: a box to type in; the visuals show the rows whose value matches the text (contains, starts with, ...). Enter or Apply sets it. */
+export function TextSlicerView(p: TextSlicerViewProps) {
+  const { theme } = p;
+  const cur = p.cond?.kind === "text" ? p.cond : null;
+  const [op, setOp] = useState<TextOpChoice>(cur?.op ?? "contains");
+  const [text, setText] = useState(cur?.value ?? "");
+  const apply = (o = op, t = text) => p.onChange(t.trim() === "" ? null : { kind: "text", op: o, value: t.trim() });
+  const fontOf = p.look ? cssFont(p.look.items.font, { family: theme.textClasses.label.fontFace, size: theme.textClasses.label.fontSize + 2, color: theme.foreground }) : { color: theme.foreground, fontSize: theme.textClasses.label.fontSize + 2 };
+  return (
+    <div data-testid="text-slicer" style={{ width: p.width, height: p.height, boxSizing: "border-box", padding: 6, ...fontOf, background: p.look?.items.background, display: "flex", flexDirection: "column", gap: 4, overflow: "hidden" }}>
+      {p.look?.header.show && <div style={{ fontWeight: 600 }}>{p.look.header.text || p.fieldName || ""}</div>}
+      <div style={{ display: "flex", gap: 4 }}>
+        <select aria-label="Match" value={op} onChange={(e) => (setOp(e.target.value as TextOpChoice), apply(e.target.value as TextOpChoice))} style={{ maxWidth: "45%" }}>
+          {TEXT_CHOICES.map((c) => (
+            <option key={c.v} value={c.v}>
+              {c.label}
+            </option>
+          ))}
+        </select>
+        <Input size="small" style={{ flex: 1, minWidth: 0 }} aria-label={`Text to match in ${p.fieldName ?? "the field"}`} placeholder="Type text" value={text} onChange={(_, d) => setText(d.value)} onKeyDown={(e) => e.key === "Enter" && apply()} />
+        <Button size="small" appearance="primary" onClick={() => apply()}>
+          Apply
+        </Button>
+        {p.cond && (
+          <Button size="small" appearance="subtle" aria-label="Clear the text" onClick={() => (setText(""), p.onChange(null))}>
+            ✕
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}

@@ -91,8 +91,16 @@ export interface TableModel {
   truncated: boolean;
 }
 
+/** general > Format string: a number format for the values of the visual that replaces the fields own. */
+export function withFormatString(loaded: Extract<Loaded, { kind: "grouped" }>, f: FormatReader): Extract<Loaded, { kind: "grouped" }> {
+  const fs = f.str("general", "formatString", "");
+  if (!fs) return loaded;
+  return { ...loaded, query: { ...loaded.query, columns: loaded.query.columns.map((c) => (c.kind === "value" ? { ...c, format: fs } : c)) } };
+}
+
 export function buildTable(visual: VisualModel, loaded: Extract<Loaded, { kind: "grouped" }>, theme: Theme, totals: Value[] | null): TableModel {
   const f = new FormatReader(visual.json, theme, visual.visualType);
+  loaded = withFormatString(loaded, f);
   const q = loaded.query;
   // display order = the order of the fields in the well
   const fields = visual.roles.Values ?? [];
@@ -315,6 +323,7 @@ export interface CardModel {
 
 export function buildCard(visual: VisualModel, loaded: Extract<Loaded, { kind: "grouped" }>, theme: Theme): CardModel {
   const f = new FormatReader(visual.json, theme, visual.visualType);
+  loaded = withFormatString(loaded, f);
   const col = loaded.query.columns.find((c) => c.role === "Values" && c.kind === "value");
   const v = col ? loaded.rows[0]?.[col.index] : undefined;
   const text = v ? (v.kind === "blank" ? BLANK_LABEL : isNumeric(v) && v.num !== null ? formatCompact2(v.num, f, col!.format) : v.text) : "";
@@ -339,6 +348,55 @@ function formatCompact2(x: number, f: FormatReader, fmt: string | null): string 
   return valueText(x, fmt, f, "labels");
 }
 
+export interface NewCardModel {
+  /** One tile per field: the value, the caption, and where the caption sits. */
+  tiles: { value: string; label: string }[];
+  showValue: boolean;
+  showLabel: boolean;
+  labelAbove: boolean;
+  align: "left" | "center" | "right";
+  valueStyle: CSSProperties;
+  labelStyle: CSSProperties;
+  /** The bar at one edge of each tile (accent bar). */
+  accent: { color: string; width: number; position: "Left" | "Right" | "Top" | "Bottom"; opacity: number } | null;
+  /** Tiles side by side (Horizontal) or stacked. */
+  orientation: "row" | "column";
+}
+
+/** The new card: a tile for each field of the Data well, from the first row of the result. */
+export function buildNewCard(visual: VisualModel, loaded: Extract<Loaded, { kind: "grouped" }>, theme: Theme): NewCardModel {
+  const f = new FormatReader(visual.json, theme, visual.visualType);
+  const fmt = f.str("value", "customFormatString", "");
+  const fields = visual.roles.Data ?? [];
+  const row = loaded.rows[0];
+  const tiles = fields.map((pf, i) => {
+    const col = loaded.query.columns.find((c) => c.role === "Data" && c.order === i && c.kind !== "helper");
+    const v = col && row ? row[col.index] : undefined;
+    const value = !v ? "" : v.kind === "blank" ? f.str("value", "showBlankAs", "") : isNumeric(v) && v.num !== null ? valueText(v.num, fmt || col!.format, f, "value") : v.text;
+    return { value, label: f.str("label", "text", "") || pf.displayName || col?.label || "" };
+  });
+  const co = theme.textClasses.callout;
+  const lb = theme.textClasses.label;
+  const alignOf = (o: string) => {
+    const a = f.str(o, "horizontalAlignment", "left");
+    return a === "center" || a === "right" ? a : "left";
+  };
+  const vf = readFont(f, "value", { color: "fontColor" });
+  const lf = readFont(f, "label", { color: "fontColor" });
+  const accentOn = f.bool("accentBar", "show", false);
+  return {
+    tiles,
+    showValue: f.bool("value", "show", true),
+    showLabel: f.bool("label", "show", true),
+    labelAbove: f.str("label", "position", "belowValue") === "aboveValue",
+    align: alignOf("value"),
+    valueStyle: { ...cssFont(vf, { family: co.fontFace, size: f.num("value", "fontSize", co.fontSize), color: co.color }), textAlign: alignOf("value"), opacity: 1 - f.num("value", "transparency", 0) / 100 },
+    labelStyle: { ...cssFont(lf, { family: lb.fontFace, size: f.num("label", "fontSize", lb.fontSize + 1), color: theme.muted }), textAlign: alignOf("label"), opacity: 1 - f.num("label", "transparency", 0) / 100 },
+    accent: accentOn ? { color: f.color("accentBar", "color") ?? theme.dataColors[0], width: f.num("accentBar", "width", 4), position: f.str("accentBar", "position", "Left") as "Left" | "Right" | "Top" | "Bottom", opacity: 1 - f.num("accentBar", "transparency", 0) / 100 } : null,
+    orientation: f.num("layout", "orientation", 2) === 1 ? "column" : "row",
+  };
+}
+
 export interface MultiRowCardModel {
   cards: { title: string; items: { label: string; text: string }[] }[];
   /** First item of a card (the title line), the other values, and their captions. */
@@ -353,6 +411,7 @@ export interface MultiRowCardModel {
 
 export function buildMultiRowCard(visual: VisualModel, loaded: Extract<Loaded, { kind: "grouped" }>, theme: Theme): MultiRowCardModel {
   const f = new FormatReader(visual.json, theme, visual.visualType);
+  loaded = withFormatString(loaded, f);
   const q = loaded.query;
   const fields = visual.roles.Values ?? [];
   const cols = fields.map((pf, i) => ({ pf, pc: q.columns.find((c) => c.role === "Values" && c.order === i && c.kind !== "helper")! })).filter((x) => x.pc);
@@ -402,6 +461,7 @@ export interface KpiModel {
 
 export function buildKpi(visual: VisualModel, loaded: Extract<Loaded, { kind: "grouped" }>, theme: Theme): KpiModel {
   const f = new FormatReader(visual.json, theme, visual.visualType);
+  loaded = withFormatString(loaded, f);
   const q = loaded.query;
   const ind = columnsOf(q, "Indicator", "value")[0];
   const goal = columnsOf(q, "Goal", "value")[0];
