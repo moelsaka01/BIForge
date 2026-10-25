@@ -107,7 +107,8 @@ pub enum Define {
     Column { table: String, name: String, expr: Expr, span: Span },
     Table { name: String, expr: Expr, span: Span },
     Var(VarDef),
-    Function { name: String, params: Vec<String>, body: Expr, span: Span },
+    /// `lazy[i]`: parameter `i` is declared `EXPR` (evaluated where the body uses it) instead of `VAL` (evaluated once at the call).
+    Function { name: String, params: Vec<String>, lazy: Vec<bool>, body: Expr, span: Span },
 }
 
 #[derive(Debug, Clone, PartialEq)]

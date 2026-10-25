@@ -107,9 +107,22 @@ pub fn parse_query(src: &str) -> PResult<Query> {
                     p.expect_op(Op::Eq)?;
                     p.expect(Tok::LParen, "(")?;
                     let mut params = Vec::new();
+                    let mut lazy = Vec::new();
                     if p.peek() != &Tok::RParen {
                         loop {
                             params.push(p.ident("a parameter name")?);
+                            let mut by_expr = false;
+                            // `name : type [subtype] [VAL | EXPR]`; the type is read and not checked
+                            if p.eat(&Tok::Colon) {
+                                while !matches!(p.peek(), Tok::Comma | Tok::RParen | Tok::Eof) {
+                                    match p.bump().tok {
+                                        Tok::Ident(w) => by_expr |= w.eq_ignore_ascii_case("expr"),
+                                        Tok::Kw(_) => {}
+                                        _ => return Err(p.err_here(ErrorCode::GrammaticalError, "Expected a parameter type such as SCALAR, TABLE or ANYVAL.")),
+                                    }
+                                }
+                            }
+                            lazy.push(by_expr);
                             if !p.eat(&Tok::Comma) {
                                 break;
                             }
@@ -119,7 +132,7 @@ pub fn parse_query(src: &str) -> PResult<Query> {
                     p.expect_op(Op::Eq)?;
                     p.expect_op(Op::Gt)?;
                     let body = p.expr(0)?;
-                    q.defines.push(Define::Function { name, params, span: start.to(body.span), body });
+                    q.defines.push(Define::Function { name, params, lazy, span: start.to(body.span), body });
                 }
                 _ => break,
             }

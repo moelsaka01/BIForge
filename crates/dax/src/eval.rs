@@ -843,12 +843,33 @@ impl Engine {
             .collect()
     }
 
+    /// An engine over this one's data with calculated columns added for the duration of one query (`DEFINE COLUMN`): (table, column, DAX).
+    /// The other columns, calculated or not, are shared with this engine. A column that cannot be computed fails the query.
+    pub fn with_query_columns(&self, columns: &[(String, String, String)]) -> VResult<Engine> {
+        let mut model = self.data.model.clone();
+        let mut ids = Vec::new();
+        for (table, name, expression) in columns {
+            let id = model.add_calculated_column(table, name, expression).map_err(|e| EvalError::new(ErrorCode::UnrecognizedIdentifier, e.0))?;
+            ids.push(id);
+        }
+        let mut eng = Engine { data: self.data.with_model(model), column_errors: vec![] };
+        eng.process_columns(ids);
+        if let Some((t, c, msg)) = eng.column_errors.first() {
+            return Err(EvalError::eval(format!("The column '{t}'[{c}] defined in the query cannot be calculated: {msg}")));
+        }
+        Ok(eng)
+    }
+
     /// Computes calculated columns in dependency order. A column that fails is left BLANK and reported.
     fn process_calculated_columns(&mut self) {
         let calcs: Vec<ColId> = (0..self.data.model.tables.len())
             .flat_map(|t| self.data.model.columns_of(t).collect::<Vec<_>>())
             .filter(|c| self.data.model.column(*c).expression.is_some())
             .collect();
+        self.process_columns(calcs);
+    }
+
+    fn process_columns(&mut self, calcs: Vec<ColId>) {
         if calcs.is_empty() {
             return;
         }

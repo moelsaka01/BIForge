@@ -141,6 +141,25 @@ impl ModelData {
         Ok(ModelData { model, tables, rel_index, blank_rows: OnceLock::new(), identity: default_identity(), source: Some(source), load_error: std::sync::Mutex::new(None) })
     }
 
+    /// A copy of the loaded data over `model`, which is this model with calculated columns added at the end of tables (the new columns are
+    /// BLANK until they are computed). The values already loaded are shared, not copied.
+    pub fn with_model(&self, model: Model) -> ModelData {
+        let tables = self
+            .tables
+            .iter()
+            .enumerate()
+            .map(|(t, td)| {
+                let mut columns: Vec<OnceLock<Arc<Vec<Value>>>> = td.columns.iter().map(|s| s.get().map(|a| OnceLock::from(a.clone())).unwrap_or_default()).collect();
+                for _ in td.columns.len()..model.tables[t].columns.len() {
+                    columns.push(OnceLock::from(Arc::new(vec![Value::Blank; td.nrows])));
+                }
+                TableData { nrows: td.nrows, columns, dup_groups: OnceLock::new() }
+            })
+            .collect();
+        let rel_index = (0..model.relationships.len()).map(|_| OnceLock::new()).collect();
+        ModelData { model, tables, rel_index, blank_rows: OnceLock::new(), identity: self.identity.clone(), source: self.source.clone(), load_error: std::sync::Mutex::new(None) }
+    }
+
     /// The values of a column (read from the source on first use).
     pub fn column_values(&self, c: ColId) -> &Arc<Vec<Value>> {
         let t = &self.tables[c.table];

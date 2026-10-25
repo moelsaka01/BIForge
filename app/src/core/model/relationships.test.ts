@@ -110,6 +110,26 @@ describe("relationships", () => {
     expect(keys).toEqual(["toCardinality", "fromColumn", "toColumn"]);
   });
 
+  it("assume referential integrity and the security filter in both directions are stored as TMDL, omitted when off, and the security flag is kept but only counts with the direction Both", () => {
+    const p = withTables();
+    const { id } = addRelationship(p, { fromTable: "Sales", fromColumn: "ProductKey", toTable: "Product Info", toColumn: "ProductKey" }, nid);
+    const props = () => p.model.tmdl["relationships.tmdl"].nodes[0].props.map((x) => (typeof x.value === "object" && "Text" in x.value ? `${x.key}: ${x.value.Text}` : x.key));
+    expect(listRelationships(p)[0]).toMatchObject({ securityBoth: false, assumeRI: false });
+    updateRelationship(p, id, { assumeRI: true });
+    expect(props()).toEqual(["relyOnReferentialIntegrity", "fromColumn: Sales.ProductKey", "toColumn: 'Product Info'.ProductKey"]);
+    // the flag is kept while the direction is Single (the engine applies it with the direction Both only)
+    updateRelationship(p, id, { securityBoth: true });
+    expect(props()).toContain("securityFilteringBehavior: bothDirections");
+    updateRelationship(p, id, { crossFilter: "both" });
+    expect(props()).toEqual(["crossFilteringBehavior: bothDirections", "relyOnReferentialIntegrity", "securityFilteringBehavior: bothDirections", "fromColumn: Sales.ProductKey", "toColumn: 'Product Info'.ProductKey"]);
+    expect(listRelationships(p)[0]).toMatchObject({ securityBoth: true, assumeRI: true, crossFilter: "both" });
+    // a flag written as relyOnReferentialIntegrity: true (another writer) is read too, and turning both off leaves the defaults only
+    p.model.tmdl["relationships.tmdl"].nodes[0].props = p.model.tmdl["relationships.tmdl"].nodes[0].props.map((x) => (x.key === "relyOnReferentialIntegrity" ? { key: x.key, value: { Text: "true" } } : x));
+    expect(listRelationships(p)[0].assumeRI).toBe(true);
+    updateRelationship(p, id, { assumeRI: false, securityBoth: false, crossFilter: "single" });
+    expect(props()).toEqual(["fromColumn: Sales.ProductKey", "toColumn: 'Product Info'.ProductKey"]);
+  });
+
   it("delete and unknown ids", () => {
     const p = sampleProject();
     const before = listRelationships(p).length;

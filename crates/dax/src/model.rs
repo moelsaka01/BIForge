@@ -100,6 +100,12 @@ pub struct Relationship {
     pub cardinality: Cardinality,
     pub cross_filter: CrossFilter,
     pub active: bool,
+    /// "Apply security filter in both directions" (`securityFilteringBehavior: bothDirections`): with a cross-filter direction of Both, a
+    /// row-level security filter on the many side also hides the one-side rows that have no visible row left.
+    pub security_both: bool,
+    /// "Assume referential integrity" (`relyOnReferentialIntegrity`): kept for Power BI Desktop, which uses it for DirectQuery sources only.
+    /// BIForge imports its data, so it does not change a result here.
+    pub rely_on_ri: bool,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -184,7 +190,7 @@ impl Model {
             return Err(ModelError("A relationship must connect two different tables.".into()));
         }
         let name = format!("{}[{}] -> {}[{}]", from.0, from.1, to.0, to.1);
-        self.relationships.push(Relationship { name, from: f, to: t, cardinality, cross_filter: cross, active });
+        self.relationships.push(Relationship { name, from: f, to: t, cardinality, cross_filter: cross, active, security_both: false, rely_on_ri: false });
         Ok(self.relationships.len() - 1)
     }
 
@@ -300,6 +306,8 @@ impl Model {
         if let Some(name) = &n.name {
             self.relationships[id].name = name.clone();
         }
+        self.relationships[id].security_both = n.text_prop("securityFilteringBehavior") == Some("bothDirections");
+        self.relationships[id].rely_on_ri = n.has_flag("relyOnReferentialIntegrity") || n.text_prop("relyOnReferentialIntegrity") == Some("true");
         Ok(())
     }
 }
@@ -367,6 +375,32 @@ mod tests {
         assert_eq!((r.from.table, r.to.table), (s, m.table_id("Product Table").unwrap()));
         assert_eq!(r.cross_filter, CrossFilter::Both);
         assert!(!r.active);
+    }
+
+    #[test]
+    fn relationship_security_and_referential_integrity_flags_are_read() {
+        let t = biforge_model::tmdl::parse("table A
+	column K
+		dataType: int64
+table B
+	column K
+		dataType: int64
+").unwrap();
+        let plain = biforge_model::tmdl::parse("relationship r1
+	fromColumn: A.K
+	toColumn: B.K
+").unwrap();
+        let both = biforge_model::tmdl::parse("relationship r2
+	relyOnReferentialIntegrity
+	fromColumn: A.K
+	toColumn: B.K
+	crossFilteringBehavior: bothDirections
+	securityFilteringBehavior: bothDirections
+").unwrap();
+        let m = Model::from_tmdl([&t, &plain]).unwrap();
+        assert!(!m.relationships[0].security_both && !m.relationships[0].rely_on_ri);
+        let m = Model::from_tmdl([&t, &both]).unwrap();
+        assert!(m.relationships[0].security_both && m.relationships[0].rely_on_ri);
     }
 
     #[test]

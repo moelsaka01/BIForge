@@ -469,6 +469,37 @@ describe("ModelView", () => {
     fireEvent.click(within(screen.getByTestId("rel-editor")).getByText("Delete"));
     await waitFor(() => expect(listRelationships(s.session.store.project!)).toHaveLength(0));
   });
+  it("the relationship editor has the security filter in both directions (only with direction Both) and assume referential integrity", async () => {
+    const s = await modelSetup(false);
+    const { view } = renderModel(s, false);
+    drag("Fact.cust", "Dim.id");
+    await waitFor(() => expect(listRelationships(s.session.store.project!)).toHaveLength(1));
+    const id = listRelationships(s.session.store.project!)[0].id;
+    const rerender = () =>
+      view.rerender(<ModelView project={s.session.store.project!} session={s.session} registry={s.registry} engine={null} onError={() => undefined} />);
+    rerender();
+    fireEvent.click(screen.getByTestId(`rel-item-${id}`));
+    const editor = () => within(screen.getByTestId("rel-editor"));
+    const security = () => editor().getByLabelText(/Apply security filter in both directions/) as HTMLInputElement;
+    expect(security().disabled).toBe(true);
+    fireEvent.click(editor().getByLabelText(/Assume referential integrity/));
+    await waitFor(() => expect(listRelationships(s.session.store.project!)[0].assumeRI).toBe(true));
+    rerender();
+    fireEvent.change(editor().getByLabelText("Cross-filter direction"), { target: { value: "both" } });
+    await waitFor(() => expect(listRelationships(s.session.store.project!)[0].crossFilter).toBe("both"));
+    rerender();
+    expect(security().disabled).toBe(false);
+    fireEvent.click(security());
+    await waitFor(() => expect(listRelationships(s.session.store.project!)[0].securityBoth).toBe(true));
+    rerender();
+    expect(security().checked).toBe(true);
+    fireEvent.change(editor().getByLabelText("Cross-filter direction"), { target: { value: "single" } });
+    await waitFor(() => expect(listRelationships(s.session.store.project!)[0].crossFilter).toBe("single"));
+    rerender();
+    expect(security().disabled).toBe(true);
+    expect(security().checked).toBe(true); // kept in the file, applied again with the direction Both
+  });
+
 });
 
 describe("DataPane", () => {

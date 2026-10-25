@@ -1,7 +1,7 @@
-//! Runs DAX queries: `DEFINE` (MEASURE, VAR, TABLE) and one or more `EVALUATE` with ORDER BY / START AT.
+//! Runs DAX queries: `DEFINE` (MEASURE, COLUMN, FUNCTION, VAR, TABLE) and one or more `EVALUATE` with ORDER BY / START AT.
 
 use crate::ast::{Define, Query};
-use crate::bind::{BExpr, Binder, QueryScope};
+use crate::bind::{BExpr, Binder, FuncDef, QueryScope};
 use crate::diag::ErrorCode;
 use crate::eval::{Engine, Env, Evaluator, QueryMeasure, RowRef};
 use crate::sql::SqlExecutor;
@@ -25,7 +25,7 @@ impl Engine {
 
     pub fn query_with(&self, src: &str, sql: Option<&dyn SqlExecutor>) -> VResult<Vec<ResultTable>> {
         let q = crate::parser::parse_query(src)?;
-        run_query(self, &q, sql)
+        run_query(self, &q, src, sql)
     }
 }
 
@@ -34,7 +34,18 @@ struct Bound {
     evaluates: Vec<(BExpr, Vec<(BExpr, bool)>, Vec<BExpr>)>,
 }
 
-fn run_query(engine: &Engine, q: &Query, sql: Option<&dyn SqlExecutor>) -> VResult<Vec<ResultTable>> {
+fn run_query(engine: &Engine, q: &Query, src: &str, sql: Option<&dyn SqlExecutor>) -> VResult<Vec<ResultTable>> {
+    // DEFINE COLUMN: the columns are added to a copy of the model that only this query sees
+    let columns: Vec<(String, String, String)> = q
+        .defines
+        .iter()
+        .filter_map(|d| match d {
+            Define::Column { table, name, expr, .. } => src.get(expr.span.start..expr.span.end).map(|text| (table.clone(), name.clone(), text.to_string())),
+            _ => None,
+        })
+        .collect();
+    let derived = if columns.is_empty() { None } else { Some(engine.with_query_columns(&columns)?) };
+    let engine = derived.as_ref().unwrap_or(engine);
     let model = &engine.data.model;
     let mut scope = QueryScope::default();
     let mut measure_defs = Vec::new();
@@ -50,8 +61,15 @@ fn run_query(engine: &Engine, q: &Query, sql: Option<&dyn SqlExecutor>) -> VResu
                 scope.tables.insert(name.to_lowercase(), table_defs.len());
                 table_defs.push(expr);
             }
-            Define::Column { .. } => return Err(EvalError::new(ErrorCode::NotImplemented, "DEFINE COLUMN is not implemented in BIForge yet.")),
-            Define::Function { .. } => return Err(EvalError::new(ErrorCode::NotImplemented, "DEFINE FUNCTION is not implemented in BIForge yet.")),
+            Define::Column { .. } => {}
+            Define::Function { name, params, lazy, body, .. } => {
+                if crate::catalog::Catalog::builtin().get(&name.to_ascii_uppercase()).is_some() {
+                    return Err(EvalError::new(ErrorCode::InvalidParameter, format!("The function '{name}' has the name of a built-in DAX function.")));
+                }
+                if scope.functions.insert(name.to_lowercase(), FuncDef { params: params.clone(), lazy: lazy.clone(), body: body.clone() }).is_some() {
+                    return Err(EvalError::new(ErrorCode::InvalidParameter, format!("The function '{name}' is defined twice.")));
+                }
+            }
             Define::Var(_) => {}
         }
     }

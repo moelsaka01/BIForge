@@ -25,6 +25,8 @@ pub enum Tok {
     LBrace,
     RBrace,
     Comma,
+    /// `:` in the parameter list of `DEFINE FUNCTION`.
+    Colon,
     Eof,
 }
 
@@ -194,6 +196,10 @@ pub fn lex(src: &str) -> Lexed {
             }
             b',' => {
                 push(&mut out, Tok::Comma, i, i + 1);
+                i += 1;
+            }
+            b':' => {
+                push(&mut out, Tok::Colon, i, i + 1);
                 i += 1;
             }
             b'+' | b'-' | b'*' | b'/' | b'^' | b'&' | b'|' | b'=' | b'<' | b'>' => {

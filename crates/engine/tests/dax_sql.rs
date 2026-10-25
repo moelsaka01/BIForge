@@ -159,3 +159,18 @@ fn compiled_sql_is_readable_and_case_insensitive() {
     assert_eq!(a, b);
     assert!(matches!(a, Value::Int(n) if n > 0));
 }
+
+#[test]
+fn define_column_and_function_run_over_the_store_with_and_without_sql() {
+    let (store, dax) = setup();
+    let q = "DEFINE
+        COLUMN Sales[Net] = Sales[Quantity] * Sales[UnitPrice] * (1 - Sales[Discount])
+        FUNCTION Round2 = (x : scalar numeric) => ROUND(x, 2)
+     EVALUATE ROW(\"net\", Round2(SUM(Sales[Net])), \"viaX\", Round2(SUMX(Sales, Sales[Net])), \"rows\", COUNTROWS(FILTER(Sales, Sales[Net] > 100)))";
+    let plain = dax.query(q).unwrap_or_else(|e| panic!("{}", e.message));
+    let with_sql = dax.query_with(q, Some(&store)).unwrap_or_else(|e| panic!("{}", e.message));
+    assert_eq!(plain, with_sql, "the SQL path must not read a column the store does not have");
+    assert_eq!(plain[0].rows[0][0], plain[0].rows[0][1]);
+    // a plain query still sees only the model's columns afterwards
+    assert!(dax.query("EVALUATE ROW(\"x\", SUM(Sales[Net]))").is_err());
+}

@@ -66,3 +66,23 @@ fn a_filter_that_errors_fails_the_request() {
     let bad = role("Bad", "Region", "[Nope] = 1");
     assert!(Engine::new_secured(m, &src, &[&bad], "u").is_err());
 }
+
+#[test]
+fn a_security_filter_on_the_many_side_reaches_the_one_side_only_when_the_relationship_applies_it_both_ways() {
+    let (mut m, src) = model();
+    let small = role("Small", "Sales", "[Qty] < 25");
+    let regions = |m: &Model| {
+        let e = Engine::new_secured(m.clone(), &src, &[&small], "u").unwrap();
+        e.eval_scalar("COUNTROWS(Region)").unwrap()
+    };
+    // by default a filter flows downhill only: every region stays, also North, whose only sale (30) is hidden
+    assert_eq!(regions(&m), Value::Int(3));
+    // both directions needs the cross-filter direction Both too
+    m.relationships[0].security_both = true;
+    assert_eq!(regions(&m), Value::Int(3));
+    m.relationships[0].cross_filter = CrossFilter::Both;
+    assert_eq!(regions(&m), Value::Int(2)); // East and West
+    // the sales that remain are the same either way
+    let e = Engine::new_secured(m.clone(), &src, &[&small], "u").unwrap();
+    assert_eq!(e.eval_measure("Total").unwrap(), Value::Int(30));
+}

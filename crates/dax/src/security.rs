@@ -8,6 +8,8 @@
 //! * a filter on a table also removes the rows of tables on the many side of an active relationship whose key no
 //!   longer has a visible row on the one side (the filter flows along relationships to the tables it can filter);
 //!   rows without any match count as the "blank member" and are hidden as well;
+//! * a relationship that applies the security filter in both directions (and filters in both directions) also hides
+//!   the one-side rows that no visible many-side row refers to;
 //! * USERNAME() and USERPRINCIPALNAME() return the identity the host assigned to the user.
 //!
 //! The protection is data pruning: the engine the user queries is built from the visible rows only, so no
@@ -17,7 +19,7 @@ use crate::data::{DataSource, ModelData};
 use crate::bind::{Binder, QueryScope};
 use crate::eval::{Engine, Env, Evaluator, RowRef};
 use crate::filter::RowSet;
-use crate::model::{Cardinality, Model, TableId};
+use crate::model::{Cardinality, CrossFilter, Model, TableId};
 use crate::value::{Key, Value};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -112,8 +114,9 @@ fn visible_rows(base: &Engine, roles: &[&Role]) -> Result<HashMap<TableId, RowSe
                 continue;
             }
             for (from, to) in [(rel.from, rel.to), (rel.to, rel.from)] {
-                if from == to || (rel.cardinality == Cardinality::ManyToOne && from == rel.to) {
-                    continue; // a one-to-many relationship only filters downhill
+                let uphill_allowed = rel.security_both && rel.cross_filter == CrossFilter::Both;
+                if from == to || (rel.cardinality == Cardinality::ManyToOne && from == rel.to && !uphill_allowed) {
+                    continue; // a one-to-many relationship only filters downhill, unless it applies the security filter in both directions
                 }
                 let Some(to_mask) = masks.get(&to.table) else { continue };
                 let allowed: HashSet<Key> = to_mask.iter().filter(|r| (*r as usize) < data.nrows(to.table)).map(|r| data.value(to, r).key()).collect();

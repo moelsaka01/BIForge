@@ -52,9 +52,20 @@ const ENUM_WORDS: &[&str] = &[
     "INTEGER", "DOUBLE", "STRING", "BOOLEAN", "CURRENCY", "DATETIME", "REL", "ABS", "FIRST", "LAST", "KEEP", "PARTITIONS", "LOW", "HIGH", "DEFAULT",
 ];
 
+/// A function defined in a query (`DEFINE FUNCTION`): calls are bound by putting the body in place with the arguments bound to its parameters.
+#[derive(Clone)]
+pub struct FuncDef {
+    pub params: Vec<String>,
+    /// Parameters declared `EXPR`: the argument is evaluated wherever the body uses the parameter.
+    pub lazy: Vec<bool>,
+    pub body: Expr,
+}
+
 /// Names a query adds on top of the model.
 #[derive(Default, Clone)]
 pub struct QueryScope {
+    /// DEFINE FUNCTION names (lower case).
+    pub functions: HashMap<String, FuncDef>,
     /// DEFINE MEASURE names (lower case) -> index.
     pub measures: HashMap<String, usize>,
     /// DEFINE TABLE names (lower case) -> index.
@@ -68,6 +79,10 @@ pub struct Binder<'a> {
     pub catalog: &'a Catalog,
     pub query: &'a QueryScope,
     scopes: Vec<(String, usize)>,
+    /// Parameters of the function being bound that are evaluated where they are used (lower case name, bound argument).
+    lazy_params: Vec<(String, BExpr)>,
+    /// The query functions being bound (a function cannot call itself).
+    fn_stack: Vec<String>,
     next_slot: usize,
 }
 
@@ -75,7 +90,7 @@ pub type BResult<T> = Result<T, Diagnostic>;
 
 impl<'a> Binder<'a> {
     pub fn new(model: &'a Model, query: &'a QueryScope, first_slot: usize) -> Binder<'a> {
-        Binder { model, catalog: Catalog::builtin(), query, scopes: query.vars.clone(), next_slot: first_slot }
+        Binder { model, catalog: Catalog::builtin(), query, scopes: query.vars.clone(), lazy_params: Vec::new(), fn_stack: Vec::new(), next_slot: first_slot }
     }
 
     pub fn next_slot(&self) -> usize {
@@ -128,6 +143,9 @@ impl<'a> Binder<'a> {
                 None => b(BKind::RowCol(name.clone())),
             },
             ExprKind::Name(name) => {
+                if let Some((_, x)) = self.lazy_params.iter().rev().find(|(n, _)| *n == name.to_lowercase()) {
+                    return Ok(x.clone());
+                }
                 if let Some(s) = self.lookup_var(name) {
                     return b(BKind::Var(s));
                 }
@@ -150,6 +168,39 @@ impl<'a> Binder<'a> {
                     Some(t) => b(BKind::Table(t)),
                     None => Err(Diagnostic::new(ErrorCode::UnrecognizedIdentifier, format!("Cannot find table '{name}'."), span)),
                 }
+            }
+            ExprKind::Call { name, name_span, args } if self.query.functions.contains_key(&name.to_lowercase()) => {
+                let key = name.to_lowercase();
+                let f = self.query.functions[&key].clone();
+                if self.fn_stack.contains(&key) {
+                    return Err(Diagnostic::new(ErrorCode::InvalidParameter, format!("The function '{name}' calls itself; a recursive function is not supported."), *name_span));
+                }
+                if args.len() < f.params.len() {
+                    return Err(Diagnostic::new(ErrorCode::MissingParameters, format!("Too few arguments were passed to the {name} function. It takes {} argument(s).", f.params.len()), span));
+                }
+                if args.len() > f.params.len() {
+                    return Err(Diagnostic::new(ErrorCode::TooManyParameters, format!("Too many arguments were passed to the {name} function. It takes {} argument(s).", f.params.len()), span));
+                }
+                // the arguments are bound where the call is; the body sees its parameters and the query's variables, not the caller's
+                let bound = args.iter().map(|a| self.bind(a)).collect::<BResult<Vec<_>>>()?;
+                let saved_scopes = std::mem::replace(&mut self.scopes, self.query.vars.clone());
+                let saved_lazy = std::mem::take(&mut self.lazy_params);
+                self.fn_stack.push(key);
+                let mut lets = Vec::new();
+                for ((p, lazy), arg) in f.params.iter().zip(&f.lazy).zip(bound) {
+                    if *lazy {
+                        self.lazy_params.push((p.to_lowercase(), arg));
+                    } else {
+                        let slot = self.alloc_slot();
+                        self.scopes.push((p.to_lowercase(), slot));
+                        lets.push((slot, arg));
+                    }
+                }
+                let body = self.bind(&f.body);
+                self.fn_stack.pop();
+                self.scopes = saved_scopes;
+                self.lazy_params = saved_lazy;
+                b(BKind::Let(lets, Box::new(body?)))
             }
             ExprKind::Call { name, name_span, args } => {
                 let up = name.to_ascii_uppercase();

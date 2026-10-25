@@ -381,6 +381,12 @@ export function ModelView({ project, session, registry, engine, onError, propert
                 <option value="both">Both</option>
               </select>
             </label>
+            <label style={{ display: "block" }} title="Only with the cross-filter direction Both: a security filter on the many side then also hides the one side rows that have no visible row left.">
+              <input type="checkbox" disabled={sel.crossFilter !== "both"} checked={sel.securityBoth} onChange={(e) => void run("model.updateRelationship", { id: sel.id, patch: { securityBoth: e.target.checked } })} /> Apply security filter in both directions
+            </label>
+            <label style={{ display: "block" }} title="Kept in the file for Power BI Desktop, which uses it for DirectQuery sources only. BIForge imports the data, so it changes no result here.">
+              <input type="checkbox" checked={sel.assumeRI} onChange={(e) => void run("model.updateRelationship", { id: sel.id, patch: { assumeRI: e.target.checked } })} /> Assume referential integrity
+            </label>
             <label style={{ display: "block" }}>
               <input type="checkbox" checked={sel.isActive} onChange={(e) => void run("model.updateRelationship", { id: sel.id, patch: { isActive: e.target.checked } })} /> Make this relationship active
             </label>

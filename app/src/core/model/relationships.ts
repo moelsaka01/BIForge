@@ -18,6 +18,10 @@ export interface Relationship {
   toCardinality: EndCardinality;
   crossFilter: CrossFilter;
   isActive: boolean;
+  /** "Apply security filter in both directions": a row-level security filter on the many side also hides the one side rows it leaves without a visible row. It applies only together with the cross-filter direction Both (BIForge keeps the setting when the direction changes). */
+  securityBoth: boolean;
+  /** "Assume referential integrity": kept for Power BI Desktop (it uses it for DirectQuery sources only); it does not change a result in BIForge. */
+  assumeRI: boolean;
 }
 
 export interface NewRelationship {
@@ -29,6 +33,8 @@ export interface NewRelationship {
   toCardinality?: EndCardinality;
   crossFilter?: CrossFilter;
   isActive?: boolean;
+  securityBoth?: boolean;
+  assumeRI?: boolean;
 }
 
 export function quoteIdent(s: string): string {
@@ -56,6 +62,8 @@ function toView(n: TmdlNode): Relationship | null {
     toCardinality: card(textProp(n, "toCardinality"), "one"),
     crossFilter: textProp(n, "crossFilteringBehavior") === "bothDirections" ? "both" : "single",
     isActive: textProp(n, "isActive") !== "false",
+    securityBoth: textProp(n, "securityFilteringBehavior") === "bothDirections",
+    assumeRI: n.props.some((x) => x.key === "relyOnReferentialIntegrity" && (x.value === "Flag" || (typeof x.value === "object" && "Text" in x.value && x.value.Text === "true"))),
   };
 }
 
@@ -78,6 +86,8 @@ function writeProps(n: TmdlNode, r: Relationship): void {
   setProp(n, "toCardinality", r.toCardinality === "one" ? null : r.toCardinality);
   setProp(n, "crossFilteringBehavior", r.crossFilter === "both" ? "bothDirections" : null);
   setProp(n, "isActive", r.isActive ? null : "false");
+  if (r.assumeRI) n.props.push({ key: "relyOnReferentialIntegrity", value: "Flag" });
+  setProp(n, "securityFilteringBehavior", r.securityBoth ? "bothDirections" : null);
   setProp(n, "fromColumn", ref(r.fromTable, r.fromColumn));
   setProp(n, "toColumn", ref(r.toTable, r.toColumn));
 }
@@ -151,6 +161,8 @@ export function addRelationship(p: Project, spec: NewRelationship, newId: () => 
     toCardinality: spec.toCardinality ?? "one",
     crossFilter: spec.crossFilter ?? "single",
     isActive: spec.isActive ?? true,
+    securityBoth: spec.securityBoth ?? false,
+    assumeRI: spec.assumeRI ?? false,
   };
   let createdInactive = false;
   if (rel.isActive && wouldBeAmbiguous(existing.filter((r) => r.isActive), from.table, to.table)) {
@@ -165,7 +177,7 @@ export function addRelationship(p: Project, spec: NewRelationship, newId: () => 
   return { id: rel.id, createdInactive };
 }
 
-export type RelationshipPatch = Partial<Pick<Relationship, "fromCardinality" | "toCardinality" | "crossFilter" | "isActive">>;
+export type RelationshipPatch = Partial<Pick<Relationship, "fromCardinality" | "toCardinality" | "crossFilter" | "isActive" | "securityBoth" | "assumeRI">>;
 
 export function updateRelationship(p: Project, id: string, patch: RelationshipPatch): void {
   const n = relNodes(p).find((x) => x.name === id);

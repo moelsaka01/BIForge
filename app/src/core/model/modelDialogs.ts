@@ -112,6 +112,8 @@ export function modelDialogFor(id: ModelDialogId, c: ModelDialogCtx): DialogDef 
           },
           { kind: "select", key: "crossFilter", label: "Cross-filter direction", options: [{ value: "single", label: "Single" }, { value: "both", label: "Both" }], default: "single" },
           { kind: "check", key: "active", label: "Make this relationship active", default: true },
+          { kind: "check", key: "securityBoth", label: "Apply security filter in both directions (needs the cross-filter direction Both)", default: false },
+          { kind: "check", key: "assumeRI", label: "Assume referential integrity (kept for Power BI Desktop; changes no result in BIForge)", default: false },
         ],
         build: (v) => {
           const [fromTable, toTable] = [String(v.fromTable ?? ""), String(v.toTable ?? "")];
@@ -121,7 +123,7 @@ export function modelDialogFor(id: ModelDialogId, c: ModelDialogCtx): DialogDef 
           const [a, b] = String(v.cardinality ?? "manyToOne") === "manyToOne" ? ["many", "one"] : v.cardinality === "oneToOne" ? ["one", "one"] : v.cardinality === "oneToMany" ? ["one", "many"] : ["many", "many"];
           return {
             command: "model.addRelationship",
-            args: { fromTable, fromColumn, toTable, toColumn, fromCardinality: a, toCardinality: b, crossFilter: v.crossFilter === "both" ? "both" : "single", isActive: v.active !== false },
+            args: { fromTable, fromColumn, toTable, toColumn, fromCardinality: a, toCardinality: b, crossFilter: v.crossFilter === "both" ? "both" : "single", isActive: v.active !== false, securityBoth: v.securityBoth === true && v.crossFilter === "both", assumeRI: v.assumeRI === true },
           };
         },
       };
