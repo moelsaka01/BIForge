@@ -222,6 +222,15 @@ export const VISUAL_TYPES: VisualTypeDef[] = [
     glyph: "🌐",
   },
   {
+    // regions of the built-in maps (world countries, US states) colored by a value; a custom TopoJSON map is not supported
+    id: "shapeMap",
+    label: "Shape map",
+    family: "map",
+    roles: [{ name: "Category", label: "Location", accepts: "column", max: 1 }, { name: "Size", label: "Color saturation", accepts: "value", max: 1 }],
+    size: { width: 420, height: 300 },
+    glyph: "◩",
+  },
+  {
     id: "filledMap",
     label: "Filled map",
     family: "map",

@@ -976,7 +976,7 @@ function buildChartRaw(inp: ChartInput): ChartBuild | null {
     case "map": {
       const gaz = gazetteer();
       if (!gaz) return null;
-      return inp.visual.visualType === "filledMap" ? filledMap(inp, gaz) : bubbleMap(inp, gaz);
+      return inp.visual.visualType === "filledMap" || inp.visual.visualType === "shapeMap" ? filledMap(inp, gaz) : bubbleMap(inp, gaz);
     }
     default:
       return null;

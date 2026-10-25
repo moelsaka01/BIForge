@@ -191,6 +191,7 @@ const SCENARIOS: Record<string, Scenario> = {
   treemap: chart("treemap", { Group: [Cat, Sub], Values: [Qty] }, [[t("Bikes"), t("Road"), n(30)], [t("Bikes"), t("Mountain"), n(50)], [t("Shoes"), t("Run"), n(20)]]),
   scatterChart: chart("scatterChart", { Category: [Prod], Series: [Country], X: [Cost], Y: [Price], Size: [Qty] }, [[t("A"), t("France"), d(3), d(4), n(5)], [t("B"), t("Canada"), d(6), d(1), n(9)], [t("C"), t("France"), d(8), d(7), n(2)]]),
   map: chart("map", { Category: [City], Series: [Country], Size: [Qty] }, [[t("Seattle"), t("United States"), n(30)], [t("Lyon"), t("France"), n(50)], [t("Paris"), t("France"), n(70)], [t("Toronto"), t("Canada"), n(10)]]),
+  shapeMap: chart("shapeMap", { Category: [Country], Size: [Qty] }, [[t("France"), n(30)], [t("Canada"), n(50)], [t("Germany"), n(20)]]),
   filledMap: chart("filledMap", { Category: [Country], Size: [Qty] }, [[t("France"), n(30)], [t("Canada"), n(50)], [t("Germany"), n(20)]]),
   waterfallChart: chart("waterfallChart", { Category: [Cat], Y: [Qty] }, [[t("Accessories"), n(30)], [t("Bikes"), n(-50)], [t("Shoes"), n(20)]]),
   gauge: chart("gauge", { Y: [Qty], TargetValue: [Price] }, [[n(60), d(80)]]),

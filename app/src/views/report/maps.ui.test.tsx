@@ -112,6 +112,14 @@ describe("maps", () => {
     expect(screen.getByTestId("chart-notice").textContent).toMatch(/1 location not drawn.*: \(Blank\)$/);
   });
 
+  it("a shape map draws the regions of the built-in world map", async () => {
+    const t = setup();
+    await t.run("report.visual.add", { type: "shapeMap", position: { width: 600, height: 400 }, fields: [{ role: "Category", field: Country }, { role: "Size", field: Qty }] });
+    render(<t.Host />);
+    const chart = await screen.findByRole("img", { name: "Shape map" });
+    await waitFor(() => expect(chart.querySelectorAll("path").length).toBeGreaterThan(100));
+  });
+
   it("a filled map draws the countries; places the data does not know are listed under the map", async () => {
     const t = setup();
     await t.run("report.visual.add", { type: "filledMap", position: { width: 600, height: 400 }, fields: [{ role: "Category", field: Country }, { role: "Size", field: Qty }] });

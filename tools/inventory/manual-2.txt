@@ -33,7 +33,7 @@ D | Slicer: text slicer / list slicer variants (new slicer)
 D | Slicer: button slicer
 N | Basic map (bubble)
 N | Filled map
-N | Shape map
+P | Shape map
 N | Azure map (excluded as cloud tiles; local boundary version only)
 D | Decomposition tree
 D | Key influencers
