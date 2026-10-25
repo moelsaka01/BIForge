@@ -27,6 +27,8 @@ const visualCards = JSON.parse(rd("visual-cards.json"));
 // properties are drawn, Partial when some are, Not started when none is (or the visual type is not implemented).
 const caps = JSON.parse(fs.readFileSync(path.join(root, "app/src/core/format/capabilities.json"), "utf8"));
 const drawnMap = JSON.parse(fs.readFileSync(path.join(root, "app/src/core/format/rendered.json"), "utf8"));
+// header buttons of Power BI service features (pin to dashboard, comments, alerts, follow, Copilot summaries): excluded with the cloud features, not counted
+const CLOUD_ONLY = new Set(JSON.parse(fs.readFileSync(path.join(root, "app/src/core/format/cloudOnly.json"), "utf8")));
 const CONTAINER = new Set(["title", "subTitle", "divider", "spacing", "background", "padding", "lockAspect", "border", "dropShadow", "visualLink", "visualTooltip", "stylePreset", "visualHeader", "visualHeaderTooltip"]);
 function cardStatus(vis, card) {
   const id = caps.visuals[vis]?.[card];
@@ -34,7 +36,7 @@ function cardStatus(vis, card) {
   // a container object (title, header, tooltip, ...) can only hold the property names of the published PBIR schema; the theme schema
   // lists a few more (for example showActionsInTooltips) that a project Power BI can open could not store, so they are not editable
   const allowed = CONTAINER.has(card) ? new Set(caps.container[card] ?? []) : null;
-  const props = Object.entries(caps.cards[id]).filter(([p, k]) => k[0] !== "x" && (!allowed || allowed.has(p))).map(([p]) => p);
+  const props = Object.entries(caps.cards[id]).filter(([p, k]) => k[0] !== "x" && (!allowed || allowed.has(p)) && !CLOUD_ONLY.has(`${card}.${p}`)).map(([p]) => p);
   if (card === "general") props.push(...(props.includes("altText") ? [] : ["altText"]));
   const d = new Set([...(drawnMap["*"]?.[card] ?? []), ...(drawnMap[vis]?.[card] ?? [])]);
   const drawn = props.filter((p) => d.has(p)).length;

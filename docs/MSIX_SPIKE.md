@@ -1,0 +1,46 @@
+# MSIX spike (2026-10-25)
+
+Goal: find out what a Microsoft Store build of BIForge needs. Nothing was submitted, no account was used, nothing was installed.
+
+## What was built and checked
+
+* `tools/msix/build-msix.ps1` packs the release build (`npx tauri build --no-bundle`, 7 min 10 s to compile, `biforge-app.exe` 75.9 MB) with the manifest `tools/msix/AppxManifest.xml.in` into `target/msix/BIForge.msix` (30 MB, x64, `Windows.FullTrustApplication`, capability `runFullTrust`, the `biforge:` protocol and the `.biforge` file type declared). It signs with a throw-away certificate that it creates in the user's store, exports and removes again.
+* `makeappx pack` accepted the manifest and package (its schema validation passed). `signtool verify /pa` reports "terminated in a root certificate which is not trusted", as expected for a test certificate.
+* The executable has ASLR, high-entropy ASLR, DEP and terminal-server awareness; **Control Flow Guard is off**; it has no Authenticode signature; its manifest does not ask for administrator rights.
+* This PC: Windows 11 Home 26200, WebView2 runtime 155 installed, **Smart App Control is off**, so the Smart App Control test of the plan could not be made here (it needs a PC where it is on, which cannot be switched on again without a reset).
+
+## What could not be done: the Windows App Certification Kit
+
+`appcert.exe test` stops with "The requested operation requires elevation", and a self-signed package also needs its certificate trusted on the machine (LocalMachine\TrustedPeople) before the kit can install it. Both are changes to the PC that only the owner should make.
+
+**Owner step (about 10 minutes, nothing leaves the PC):** open the Start menu, type `PowerShell`, right-click "Windows PowerShell", choose "Run as administrator", answer Yes, then paste:
+
+```powershell
+cd C:\dev\BIForge
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\msix\run-wack.ps1
+```
+
+The script trusts the test certificate only for the run (and removes it again), runs the kit, and prints the failed and warning tests; the full report is `target\msix\wack-report.xml`. Tell me what it prints and I will fix what is in BIForge's hands.
+
+## What I expect to be a problem (not verified)
+
+1. **Self-update must go.** The Tauri updater downloads and runs a new installer; Store apps update only through the Store. A Store build compiles the updater plugin out (a Cargo feature, for example `store`), hides About > "Check for updates" and the update dialog, and stops the startup check (`updateCommands.ts`, `Dialogs.tsx`, `App.tsx`).
+2. **`runFullTrust` is a restricted capability.** The Store review asks why; the answer is "a desktop application that reads and writes the user's project folders and local data sources".
+3. **Registration of `biforge://` and `.biforge`.** In the package they come from the manifest (done in the template); the installer-time registration of the NSIS/MSI builds does not apply. The app already reads the link or file from the command line, which is how a packaged activation arrives.
+4. **Per-user data moves.** A packaged app's writes to `%APPDATA%` / `%LOCALAPPDATA%` (including the WebView2 profile that holds the interface settings and the recent list) are redirected into the package's own folder and removed when the app is uninstalled. Settings of an NSIS install are not visible to the packaged app. Project folders the user picks are real paths and unaffected; Windows Credential Manager works for full-trust packages.
+5. **WebView2.** Windows 11 has the Evergreen runtime. A Store package cannot run the bootstrapper; for Windows 10 the options are to require the runtime (show a link when it is missing) or ship the fixed-version runtime (about 150 MB).
+6. **Version.** The Store wants the fourth number to be 0 and the first not to be 0 (check the current Partner Center rule before submitting); BIForge is 0.1.1 today.
+7. **Identity.** The Store replaces `Publisher` and fixes `Name` to the reserved product name; both come from Partner Center, not from the manifest template.
+8. **Other tests that may complain:** missing scaled tile assets (only single files are packed), Control Flow Guard (enable `-C control-flow-guard` for the release profile), the unsigned `biforge-cli.exe` and `biforge-server.exe` (not in the package: they would need separate execution aliases), Windows PowerShell started as a child process by the OLE DB connector and the optional Python and R script sources (allowed for full trust, to be described in the certification notes).
+
+## Cost
+
+Microsoft announced on 2025-09-10 that registering as an individual developer is free (no credit card); some older pages still show a one-time $19 fee and $99 for companies. Check the registration page when the owner decides, because the project rule is zero cost and no payment card ever: only a free individual registration is acceptable.
+Sources: <https://blogs.windows.com/windowsdeveloper/2025/09/10/free-developer-registration-for-individual-developers-on-microsoft-store/>, <https://developer.microsoft.com/en-us/store/register>.
+
+## Next steps
+
+1. Owner: run the WACK step above and send the result.
+2. Add the `store` Cargo feature (no updater) and a CI job that builds the MSIX unsigned for the Store (the Store signs it itself).
+3. Decide Windows 10 support (WebView2) and the version number scheme.
+4. Only then, and only if the registration is free, create the individual Partner Center account (owner action) and reserve the name.

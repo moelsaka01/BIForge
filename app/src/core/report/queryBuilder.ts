@@ -48,6 +48,8 @@ export interface QueryOptions {
   filters: FilterDef[];
   tuples?: TupleFilter[];
   drill?: DrillState;
+  /** Drill position of the legend hierarchy (a chart whose Series role holds several fields). */
+  seriesDrill?: DrillState;
 }
 
 export interface Slot {
@@ -77,13 +79,14 @@ export function drillPlan(cats: FieldRef[], drill: DrillState = NO_DRILL): { fie
   return { fields: [cats[level]], filters };
 }
 
-function slotsFor(v: VisualModel, family: VisualFamily, drill?: DrillState): { groups: Slot[]; values: Slot[]; extra: FilterDef[] } {
+function slotsFor(v: VisualModel, family: VisualFamily, drill?: DrillState, seriesDrill?: DrillState): { groups: Slot[]; values: Slot[]; extra: FilterDef[] } {
   const slot = (role: string, fs: FieldRef[]): Slot[] => fs.map((field, order) => ({ role, field, order }));
   const roleSlots = (role: string) => slot(role, rolesOf(v, role));
   switch (family) {
     case "cartesian": {
       const dp = drillPlan(rolesOf(v, "Category"), drill);
-      return { groups: dedupe([...slot("Category", dp.fields), ...roleSlots("Series"), ...roleSlots("Rows")]), values: [...roleSlots("Y"), ...roleSlots("Y2")], extra: dp.filters };
+      const sp = drillPlan(rolesOf(v, "Series"), seriesDrill);
+      return { groups: dedupe([...slot("Category", dp.fields), ...slot("Series", sp.fields), ...roleSlots("Rows")]), values: [...roleSlots("Y"), ...roleSlots("Y2")], extra: [...dp.filters, ...sp.filters] };
     }
     case "pie":
     case "funnel":
@@ -160,7 +163,7 @@ export function expandFieldParameters(slots: Slot[], model: ModelInfo, filters: 
 export function buildVisualQuery(v: VisualModel, model: ModelInfo, opt: QueryOptions): BuiltQuery | null {
   const type = visualType(v.visualType);
   if (!type) return null;
-  const s0 = slotsFor(v, type.family, opt.drill);
+  const s0 = slotsFor(v, type.family, opt.drill, opt.seriesDrill);
   const g = expandFieldParameters(s0.groups, model, opt.filters, false);
   const val = expandFieldParameters(s0.values, model, g.filters, true);
   const { groups, values, extra } = { groups: g.slots, values: val.slots, extra: s0.extra };
@@ -174,7 +177,7 @@ export function buildVisualQuery(v: VisualModel, model: ModelInfo, opt: QueryOpt
 export function buildTotalsQuery(v: VisualModel, model: ModelInfo, opt: QueryOptions): BuiltQuery | null {
   const type = visualType(v.visualType);
   if (!type) return null;
-  const { values } = slotsFor(v, type.family, opt.drill);
+  const { values } = slotsFor(v, type.family, opt.drill, opt.seriesDrill);
   return values.length ? assemble(model, [], values, opt.filters, opt.tuples ?? [], null, false) : null;
 }
 

@@ -7,6 +7,7 @@ import type { FormatReader } from "./formatReader";
 import type { Theme } from "./theme";
 import { linkModel, type LinkModel } from "./linkModel";
 import { headerTooltip, tooltipLook, type HeaderTooltip, type TooltipLook } from "./tooltipLook";
+import { NO_HEADER, type HeaderButtons, type HeaderContext } from "./headerButtons";
 
 export interface TextBlock {
   text: string;
@@ -30,7 +31,7 @@ export interface ContainerModel {
   headerShown: boolean;
   headerStyle: CSSProperties;
   /** Which buttons of the hover toolbar are on. */
-  headerButtons: { drillUp: boolean; drillToggle: boolean; nextLevel: boolean; expandAll: boolean; options: boolean; personalize: boolean };
+  headerButtons: HeaderButtons;
   /** type: "Default" or "Canvas" (a report page is the tooltip). */
   tooltip: { show: boolean; type: string; section: string; look: TooltipLook };
   lockAspect: boolean;
@@ -50,6 +51,8 @@ export interface ContainerInput {
   noAutoText: boolean;
   /** Whether the visual header shows when the visual does not say (Options > Report settings). */
   headerDefault?: boolean;
+  /** The visual's situation, which decides which header buttons apply (without it none of the situational ones does). */
+  header?: HeaderContext;
 }
 
 const ALIGN: Record<string, CSSProperties["textAlign"]> = { left: "left", center: "center", right: "right", Left: "left", Center: "center", Right: "right" };
@@ -83,8 +86,17 @@ function block(f: FormatReader, theme: Theme, object: "title" | "subTitle", text
   return { text, style, level: heading ? Number(heading[1]) : null, height: Math.round(size) + 12 };
 }
 
+/** The header's background: white at 85 % unless a color is set; the transparency setting lets more of the visual show through. */
+function headerBackground(f: FormatReader): string {
+  const color = f.color("visualHeader", "background");
+  const transparency = f.num("visualHeader", "transparency", -1);
+  if (transparency < 0) return color ?? "#ffffffd9";
+  return `color-mix(in srgb, ${color ?? "#ffffff"} ${Math.round(100 - Math.min(100, transparency))}%, transparent)`;
+}
+
 export function buildContainer(inp: ContainerInput): ContainerModel {
   const { f, theme } = inp;
+  const header = inp.header ?? NO_HEADER;
   const t = theme.textClasses.title;
   const customText = f.str("title", "text", "");
   const showTitleSetting = f.bool("title", "show", inp.titleByDefault);
@@ -148,7 +160,7 @@ export function buildContainer(inp: ContainerInput): ContainerModel {
     altText: f.str("general", "altText", ""),
     headerShown: f.bool("visualHeader", "show", inp.headerDefault ?? true),
     headerStyle: {
-      background: f.color("visualHeader", "background") ?? "#ffffffd9",
+      background: headerBackground(f),
       color: f.color("visualHeader", "foreground") ?? "#222222",
       border: f.color("visualHeader", "border") ? `1px solid ${f.color("visualHeader", "border")}` : undefined,
     },
@@ -159,6 +171,15 @@ export function buildContainer(inp: ContainerInput): ContainerModel {
       expandAll: f.bool("visualHeader", "showDrillDownExpandButton", true),
       options: f.bool("visualHeader", "showOptionsMenu", true),
       personalize: f.bool("visualHeader", "showPersonalizeVisualButton", true),
+      roleSelector: f.bool("visualHeader", "showDrillRoleSelector", true) && header.drillRoles.length > 1,
+      filters: f.bool("visualHeader", "showFilterRestatementButton", true) && header.filters > 0,
+      focus: f.bool("visualHeader", "showFocusModeButton", true) && header.focusable,
+      seeData: f.bool("visualHeader", "showSeeDataLayoutToggleButton", true) && header.tabular,
+      copyImage: f.bool("visualHeader", "showCopyVisualImageButton", false) && inp.header !== undefined,
+      tooltip: f.bool("visualHeader", "showTooltipButton", true),
+      information: f.bool("visualHeader", "showVisualInformationButton", true) && !!header.status.information,
+      warning: f.bool("visualHeader", "showVisualWarningButton", true) && !!header.status.warning,
+      error: f.bool("visualHeader", "showVisualErrorButton", true) && !!header.status.error,
     },
     tooltip: { show: f.bool("visualTooltip", "show", true), type: f.str("visualTooltip", "type", "Default"), section: f.str("visualTooltip", "section", ""), look: tooltipLook(f) },
     lockAspect: f.bool("lockAspect", "show", false),

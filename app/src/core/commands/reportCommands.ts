@@ -6,6 +6,7 @@ import type { Project } from "../model/types";
 import * as bm from "../report/bookmarks";
 import { lit, type FieldRef, type Lit } from "../report/fields";
 import type { FilterDef } from "../report/filters";
+import type { DrillRole } from "../report/headerButtons";
 import { drillthroughFilters, drillthroughTargets, type SelectedPoint } from "../report/interactions";
 import type { J } from "../report/pbir";
 import * as ops from "../report/reportOps";
@@ -503,6 +504,7 @@ export function registerReportCommands(r: CommandRegistry<Session>): void {
   });
 
   // ---- view state (not part of the document) ----
+  const roleOf = (a: Record<string, unknown>): DrillRole => (a.role === "Series" ? "Series" : "Category");
   const view = (id: string, label: string, run: (s: Session, a: Record<string, unknown>) => void) => reg(id, label, (s, a) => run(s, (a ?? {}) as Record<string, unknown>), { enabled: hasProject });
   view("report.view.select", "Select data point", (s, a) => {
     const x = need<{ page: string; visual: string; point: SelectedPoint }>(a, ["page", "visual", "point"]);
@@ -515,18 +517,30 @@ export function registerReportCommands(r: CommandRegistry<Session>): void {
   view("report.view.clearSelection", "Clear selection", (s) => s.report.clearSelection());
   view("report.view.drillDown", "Drill down", (s, a) => {
     const x = need<{ visual: string; levels: number; value: Lit }>(a, ["visual", "levels", "value"]);
-    s.report.drillDown(x.visual, x.levels, x.value);
+    s.report.drillDown(x.visual, x.levels, x.value, roleOf(a));
   });
-  view("report.view.drillUp", "Drill up", (s, a) => s.report.drillUp(need<{ visual: string }>(a, ["visual"]).visual));
+  view("report.view.drillUp", "Drill up", (s, a) => s.report.drillUp(need<{ visual: string }>(a, ["visual"]).visual, roleOf(a)));
   view("report.view.nextLevel", "Go to the next level", (s, a) => {
     const x = need<{ visual: string; levels: number }>(a, ["visual", "levels"]);
-    s.report.nextLevel(x.visual, x.levels);
+    s.report.nextLevel(x.visual, x.levels, roleOf(a));
   });
   view("report.view.expandAll", "Expand all down one level", (s, a) => {
     const x = need<{ visual: string; levels: number }>(a, ["visual", "levels"]);
-    s.report.expandAll(x.visual, x.levels);
+    s.report.expandAll(x.visual, x.levels, roleOf(a));
   });
   view("report.view.resetDrill", "Reset drill", (s, a) => s.report.resetDrill(need<{ visual: string }>(a, ["visual"]).visual));
+  view("report.view.drillRole", "Drill role", (s, a) => {
+    const x = need<{ visual: string; role: DrillRole }>(a, ["visual", "role"]);
+    if (x.role !== "Category" && x.role !== "Series") throw new Error("A drill role is Category or Series.");
+    s.report.setDrillRole(x.visual, x.role);
+  });
+  view("report.view.focus", "Focus mode", (s, a) => {
+    const v = (a.visual as string | null | undefined) ?? null;
+    if (v !== null && !s.store.project) throw new Error("Open a project first.");
+    s.report.setFocus(v);
+  });
+  view("report.view.exitFocus", "Back to report", (s) => s.report.setFocus(null));
+  view("report.view.asTable", "See data as a table", (s, a) => s.report.toggleAsTable(need<{ visual: string }>(a, ["visual"]).visual));
   view("report.view.drillMode", "Drill mode", (s, a) => {
     const v = (a.visual as string | null | undefined) ?? null;
     s.report.setDrillMode(s.report.getSnapshot().drillMode === v ? null : v);

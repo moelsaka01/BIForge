@@ -4,6 +4,7 @@
 import { CONTAINER_OBJECTS, GENERAL_ORDER, visualObjects, type CardProps, type Kind } from "./capabilities";
 import { cardLabel, optionLabel, propGroup, propLabel } from "./labels";
 import rendered from "./rendered.json";
+import cloudOnly from "./cloudOnly.json";
 
 export type PropType = "bool" | "text" | "number" | "color" | "enum";
 
@@ -51,6 +52,9 @@ export interface CardContext {
 }
 
 const NONE = [{ value: "", label: "(none)" }];
+
+/** Settings of Power BI service features (pin to dashboard, comments, alerts, follow, Copilot summaries): BIForge has none of them, so the pane does not list them. */
+const CLOUD_ONLY: ReadonlySet<string> = new Set(cloudOnly);
 
 /** Defaults shown for an unset property (the renderers use the same values when the setting is absent). */
 const DEFAULTS: Record<string, boolean | number | string> = {
@@ -160,7 +164,7 @@ function cardFrom(visualType: string, object: string, props: CardProps, ctx: Car
   const hidden = HIDDEN[object];
   const defs: PropDef[] = [];
   for (const [key, kind] of Object.entries(props)) {
-    if (hidden?.has(key) || opt.skip?.has(key)) continue;
+    if (hidden?.has(key) || opt.skip?.has(key) || CLOUD_ONLY.has(`${object}.${key}`)) continue;
     if (opt.only && !opt.only.has(key)) continue;
     const d = propDef(object, key, kind, ctx, drawn.has(key));
     if (d) defs.push(d);

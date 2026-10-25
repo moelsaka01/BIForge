@@ -4,11 +4,19 @@ import type { FilterDef } from "./filters";
 import { samePoint, toggleSelection, type SelectedPoint, type Selection } from "./interactions";
 import type { DrillState } from "./queryBuilder";
 import { NO_DRILL } from "./queryBuilder";
+import { drillKey, type DrillRole } from "./headerButtons";
 
 export interface ViewSnapshot {
   page: string | null;
   selection: Selection | null;
+  /** Drill positions by visual; the legend hierarchy of a visual is kept under `visual#Series` (see drillKey). */
   drill: Record<string, DrillState>;
+  /** The hierarchy a visual's drill buttons follow, for a visual that has a category and a legend hierarchy. */
+  drillRole: Record<string, DrillRole>;
+  /** Focus mode: the visual that fills the page. */
+  focus: string | null;
+  /** Visuals that show their data as a table instead of the picture. */
+  asTable: string[];
   /** Drillthrough in effect on the current page: the page it came from and the filters it applied. */
   drillthrough: { from: string; fromSelection: Selection | null; filters: FilterDef[] } | null;
   collapsed: Record<string, string[]>;
@@ -33,7 +41,7 @@ export interface ViewSnapshot {
 }
 
 export class ReportRuntime {
-  private snap: ViewSnapshot = { page: null, selection: null, drill: {}, drillthrough: null, collapsed: {}, epoch: 0, drillMode: null, editInteractions: null, paused: false, refreshTick: 0, formatFocus: null, canvas: [], clipboard: null, mobile: false };
+  private snap: ViewSnapshot = { page: null, selection: null, drill: {}, drillRole: {}, focus: null, asTable: [], drillthrough: null, collapsed: {}, epoch: 0, drillMode: null, editInteractions: null, paused: false, refreshTick: 0, formatFocus: null, canvas: [], clipboard: null, mobile: false };
   private listeners = new Set<() => void>();
 
   getSnapshot = (): ViewSnapshot => this.snap;
@@ -63,7 +71,7 @@ export class ReportRuntime {
   /** Switches page; selections and drillthrough belong to the page they were made on. */
   goToPage(page: string): void {
     if (page === this.snap.page) return;
-    this.set({ page, selection: null, drillthrough: null, editInteractions: null, drillMode: null, canvas: [] });
+    this.set({ page, selection: null, drillthrough: null, editInteractions: null, drillMode: null, canvas: [], focus: null });
   }
 
   /** Called when the document's pages change: drops state that refers to pages or visuals that are gone. */
@@ -73,8 +81,13 @@ export class ReportRuntime {
     const patch: Partial<ViewSnapshot> = {};
     if (this.snap.page && !names.has(this.snap.page)) patch.page = pages[0]?.name ?? null;
     if (this.snap.selection && (!names.has(this.snap.selection.page) || !visuals.has(this.snap.selection.visual))) patch.selection = null;
-    const drill = Object.fromEntries(Object.entries(this.snap.drill).filter(([v]) => visuals.has(v)));
+    const drill = Object.fromEntries(Object.entries(this.snap.drill).filter(([v]) => visuals.has(v.replace(/#Series$/, ""))));
     if (Object.keys(drill).length !== Object.keys(this.snap.drill).length) patch.drill = drill;
+    const drillRole = Object.fromEntries(Object.entries(this.snap.drillRole).filter(([v]) => visuals.has(v)));
+    if (Object.keys(drillRole).length !== Object.keys(this.snap.drillRole).length) patch.drillRole = drillRole;
+    if (this.snap.focus && !visuals.has(this.snap.focus)) patch.focus = null;
+    const asTable = this.snap.asTable.filter((v) => visuals.has(v));
+    if (asTable.length !== this.snap.asTable.length) patch.asTable = asTable;
     if (this.snap.drillMode && !visuals.has(this.snap.drillMode)) patch.drillMode = null;
     if (this.snap.editInteractions && !visuals.has(this.snap.editInteractions)) patch.editInteractions = null;
     const canvas = this.snap.canvas.filter((v) => visuals.has(v));
@@ -120,48 +133,67 @@ export class ReportRuntime {
 
   // ---- drilling ----
 
-  drillOf(visual: string): DrillState {
-    return this.snap.drill[visual] ?? NO_DRILL;
+  drillOf(visual: string, role: DrillRole = "Category"): DrillState {
+    return this.snap.drill[drillKey(visual, role)] ?? NO_DRILL;
   }
 
-  private setDrill(visual: string, d: DrillState): void {
+  private setDrill(visual: string, d: DrillState, role: DrillRole = "Category"): void {
     const drill = { ...this.snap.drill };
-    if (d.level === 0 && !d.expand && d.path.length === 0) delete drill[visual];
-    else drill[visual] = d;
+    const key = drillKey(visual, role);
+    if (d.level === 0 && !d.expand && d.path.length === 0) delete drill[key];
+    else drill[key] = d;
     this.set({ drill, selection: this.snap.selection?.visual === visual ? null : this.snap.selection });
   }
 
   /** Drill down on a data point of a visual with `levels` category fields. */
-  drillDown(visual: string, levels: number, point: SelectedPoint["values"][number]): void {
-    const d = this.drillOf(visual);
+  drillDown(visual: string, levels: number, point: SelectedPoint["values"][number], role: DrillRole = "Category"): void {
+    const d = this.drillOf(visual, role);
     if (d.level >= levels - 1) return;
     const path = [...d.path];
     path[d.level] = point;
-    this.setDrill(visual, { level: d.level + 1, path, expand: false });
+    this.setDrill(visual, { level: d.level + 1, path, expand: false }, role);
   }
 
-  drillUp(visual: string): void {
-    const d = this.drillOf(visual);
+  drillUp(visual: string, role: DrillRole = "Category"): void {
+    const d = this.drillOf(visual, role);
     if (d.level === 0) return;
-    this.setDrill(visual, { level: d.level - 1, path: d.path.slice(0, d.level - 1), expand: false });
+    this.setDrill(visual, { level: d.level - 1, path: d.path.slice(0, d.level - 1), expand: false }, role);
   }
 
   /** Show the next level for all values ("go to the next level in the hierarchy"). */
-  nextLevel(visual: string, levels: number): void {
-    const d = this.drillOf(visual);
+  nextLevel(visual: string, levels: number, role: DrillRole = "Category"): void {
+    const d = this.drillOf(visual, role);
     if (d.level >= levels - 1) return;
-    this.setDrill(visual, { level: d.level + 1, path: [...d.path, null].slice(0, d.level + 1), expand: false });
+    this.setDrill(visual, { level: d.level + 1, path: [...d.path, null].slice(0, d.level + 1), expand: false }, role);
   }
 
   /** Show all levels down to the next one ("expand all down one level"). */
-  expandAll(visual: string, levels: number): void {
-    const d = this.drillOf(visual);
+  expandAll(visual: string, levels: number, role: DrillRole = "Category"): void {
+    const d = this.drillOf(visual, role);
     if (d.level >= levels - 1) return;
-    this.setDrill(visual, { level: d.level + 1, path: d.path, expand: true });
+    this.setDrill(visual, { level: d.level + 1, path: d.path, expand: true }, role);
   }
 
   resetDrill(visual: string): void {
-    this.setDrill(visual, NO_DRILL);
+    this.setDrill(visual, NO_DRILL, "Category");
+    this.setDrill(visual, NO_DRILL, "Series");
+  }
+
+  /** The drill role selector: the hierarchy the drill buttons of this visual follow. */
+  setDrillRole(visual: string, role: DrillRole): void {
+    if (this.snap.drillRole[visual] === role) return;
+    this.set({ drillRole: { ...this.snap.drillRole, [visual]: role }, drillMode: this.snap.drillMode === visual ? null : this.snap.drillMode });
+  }
+
+  /** Focus mode: a visual fills the page (null leaves it). */
+  setFocus(visual: string | null): void {
+    if (this.snap.focus !== visual) this.set({ focus: visual, canvas: [], editInteractions: null });
+  }
+
+  /** See data as a table / back to the visual. */
+  toggleAsTable(visual: string): void {
+    const on = this.snap.asTable.includes(visual);
+    this.set({ asTable: on ? this.snap.asTable.filter((v) => v !== visual) : [...this.snap.asTable, visual] });
   }
 
   setDrillMode(visual: string | null): void {

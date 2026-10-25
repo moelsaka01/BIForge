@@ -21,6 +21,7 @@ import {
 import type { FilterDef } from "./filters";
 import type { PageModel, VisualModel } from "./visualDoc";
 import { visualType } from "./visualTypes";
+import { drillKey } from "./headerButtons";
 
 /** Everything outside the document that changes what a visual shows. */
 export interface ViewState {
@@ -144,7 +145,7 @@ export class ReportData {
       const src = page.visuals.find((v) => v.name === sel!.visual);
       mode = src ? resolveInteraction(page, src, visual) : "none";
     } else sel = null;
-    const base: QueryOptions = { filters, drill: view.drill[visual.name] ?? NO_DRILL };
+    const base: QueryOptions = { filters, drill: view.drill[visual.name] ?? NO_DRILL, seriesDrill: view.drill[drillKey(visual.name, "Series")] ?? NO_DRILL };
     if (mode === "filter") base.tuples = selectionTuples(sel, mode);
 
     if (type.family === "matrix") {
