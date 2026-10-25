@@ -3337,5 +3337,20 @@
    "strokeWidth",
    "transparency"
   ]
+ },
+ "page": {
+  "background": [
+   "color",
+   "image",
+   "transparency"
+  ],
+  "displayArea": [
+   "verticalAlignment"
+  ],
+  "outspace": [
+   "color",
+   "image",
+   "transparency"
+  ]
  }
 }

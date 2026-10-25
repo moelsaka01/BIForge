@@ -14,6 +14,7 @@ import { FiltersPane } from "./FiltersPane";
 import { MobileLayoutPane, mobilePageOf } from "./MobileLayoutPane";
 import { MOBILE_MIN_HEIGHT } from "../../core/report/reportOps";
 import { PageCanvas } from "./PageCanvas";
+import { layerStyle, readVerticalAlignment, readWallpaper } from "../../core/report/pageFormat";
 import { PageTabs } from "./PageTabs";
 import { ReportContext, useReport, type Dispatch, type MenuItem as CtxMenuItem, type ReportCtx } from "./reportContext";
 import { VisualizationsPane } from "./VisualizationsPane";
@@ -187,7 +188,7 @@ export function ReportView(p: ReportViewProps) {
               )}
             </div>
           )}
-          <div ref={area} className="report-canvas" style={snap.mobile ? { display: "flex" } : undefined}>
+          <div ref={area} className="report-canvas" data-testid="wallpaper" style={{ ...(snap.mobile ? { display: "flex" } : {}), ...layerStyle(readWallpaper(page.json), null), ...(readVerticalAlignment(page.json) === "Middle" && !snap.mobile ? { alignItems: "center" } : {}) }}>
             {snap.mobile ? (
               <>
                 <MobileLayoutPane page={page} />

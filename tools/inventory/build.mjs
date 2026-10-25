@@ -77,7 +77,7 @@ const num = areas.length;
   const a = { name: `${num + 1}. Format pane cards per visual (generated from the visual styles of Desktop 2.158; status measured by the rendered-coverage test: Done-tested = every editable property is drawn, Partial = some are)`, groups: [] };
   for (const [vis, cards] of Object.entries(visualCards)) {
     if (EXCLUDED_VISUALS.has(vis)) continue;
-    const exists = implVisuals.has(alias[vis] ?? vis);
+    const exists = implVisuals.has(alias[vis] ?? vis) || vis === "page"; // the page cards are measured by coverage.test.ts (measurePage)
     const items = Object.entries(cards).filter(([c]) => c !== "*").map(([c, props]) => {
       const st = exists ? cardStatus(alias[vis] ?? vis, c) : { s: "N", drawn: 0, total: props.length };
       return { s: st.s, t: exists && st.total ? `${c} (${st.drawn} of ${st.total} properties drawn)` : `${c} (${props.length} properties)` };

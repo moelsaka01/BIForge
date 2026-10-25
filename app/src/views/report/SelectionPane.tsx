@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button, Input } from "@fluentui/react-components";
 import { treeRows } from "../../core/report/groups";
-import { visualDisplayName } from "../../core/report/reportOps";
+import { tabOrderSorted, visualDisplayName } from "../../core/report/reportOps";
 import type { GroupModel, VisualModel } from "../../core/report/visualDoc";
 import { visualType } from "../../core/report/visualTypes";
 import { useReport } from "./reportContext";
@@ -11,9 +11,11 @@ export function SelectionPane() {
   const c = useReport();
   const page = c.pages.find((p) => p.name === c.snap.page) ?? c.pages[0];
   const [renaming, setRenaming] = useState<string | null>(null);
+  const [tabMode, setTabMode] = useState(false);
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
   if (!page) return null;
   const rows = treeRows(page, collapsed);
+  const tabbed = tabOrderSorted(page.visuals);
   const isGroup = (i: VisualModel | GroupModel): i is GroupModel => "displayName" in i;
   const label = (i: VisualModel | GroupModel) => (isGroup(i) ? i.displayName : (visualDisplayName(i.json) ?? visualType(i.visualType)?.label ?? i.visualType));
   const selected = new Set(c.snap.canvas);
@@ -22,8 +24,28 @@ export function SelectionPane() {
   const siblings = (i: VisualModel | GroupModel) => rows.filter((r) => r.item.parent === i.parent);
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6, padding: 8, height: "100%", overflow: "auto" }} aria-label="Selection pane">
-      <div style={{ fontSize: 12, opacity: 0.7 }}>Layer order on {page.displayName}: the top item is in front.</div>
-      <div role="tree" aria-label="Visuals and groups" style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+      <div style={{ display: "flex", gap: 4 }}>
+        <Button size="small" appearance={tabMode ? "subtle" : "primary"} aria-pressed={!tabMode} onClick={() => setTabMode(false)}>Layer order</Button>
+        <Button size="small" appearance={tabMode ? "primary" : "subtle"} aria-pressed={tabMode} onClick={() => setTabMode(true)}>Tab order</Button>
+      </div>
+      {tabMode && (
+        <div role="list" aria-label="Tab order" style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          <div style={{ fontSize: 12, opacity: 0.7 }}>The order Tab moves through the visuals of {page.displayName}, first to last.</div>
+          {tabbed.map((v, n) => {
+            const name = label(v);
+            return (
+              <div key={v.name} role="listitem" style={{ display: "flex", alignItems: "center", gap: 2 }}>
+                <span style={{ width: 20, textAlign: "right", opacity: 0.6 }}>{n + 1}</span>
+                <button aria-label={`Select ${name} in tab order`} onClick={() => c.dispatch("report.canvas.select", { names: [v.name] })} style={{ flex: 1, textAlign: "left", border: "none", background: "transparent", color: "inherit", padding: "4px 6px", cursor: "pointer", font: "inherit" }}>{name}</button>
+                <Button size="small" appearance="subtle" aria-label={`Move ${name} earlier in tab order`} disabled={n === 0} onClick={() => c.dispatch("report.visual.moveInTabOrder", { page: page.name, visual: v.name, dir: "up" })}>↑</Button>
+                <Button size="small" appearance="subtle" aria-label={`Move ${name} later in tab order`} disabled={n === tabbed.length - 1} onClick={() => c.dispatch("report.visual.moveInTabOrder", { page: page.name, visual: v.name, dir: "down" })}>↓</Button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {!tabMode && <div style={{ fontSize: 12, opacity: 0.7 }}>Layer order on {page.displayName}: the top item is in front.</div>}
+      {!tabMode && <div role="tree" aria-label="Visuals and groups" style={{ display: "flex", flexDirection: "column", gap: 2 }}>
         {rows.map((r) => {
           const i = r.item;
           const name = label(i);
@@ -88,7 +110,7 @@ export function SelectionPane() {
           );
         })}
         {rows.length === 0 && <div style={{ fontSize: 12 }}>This page has no visuals.</div>}
-      </div>
+      </div>}
     </div>
   );
 }

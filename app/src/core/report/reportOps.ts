@@ -161,6 +161,41 @@ export function setPageSize(p: Project, page: string, width: number, height: num
   j.height = Math.round(height);
 }
 
+/** Sets (or, with null, removes) one property of a page object: "background" (canvas background) or "outspace" (wallpaper). */
+export function setPageFormat(p: Project, page: string, object: "background" | "outspace" | "displayArea", prop: string, value: Lit | null): void {
+  const j = pageJson(p, page);
+  const objects = (j.objects ??= {});
+  const bag = ((objects[object] ??= [{ properties: {} }])[0].properties ??= {});
+  if (value === null) delete bag[prop];
+  else bag[prop] = litExpr(value);
+  if (Object.keys(bag).length === 0) delete objects[object];
+  if (Object.keys(objects).length === 0) delete j.objects;
+}
+
+/** The picture of the canvas background or wallpaper: stored as a data address, like the image visual. */
+export function setPageImage(p: Project, page: string, object: "background" | "outspace", uri: string | null, name = "image"): void {
+  const j = pageJson(p, page);
+  if (uri === null) {
+    setPageFormat(p, page, object, "image", null);
+    return;
+  }
+  const objects = (j.objects ??= {});
+  const bag = ((objects[object] ??= [{ properties: {} }])[0].properties ??= {});
+  const prev = bag.image?.image?.scaling;
+  bag.image = { image: { name: litExpr({ t: "string", v: name }), url: litExpr({ t: "string", v: uri }), scaling: prev ?? litExpr({ t: "string", v: "Normal" }) } };
+}
+
+export function setPageImageFit(p: Project, page: string, object: "background" | "outspace", fit: "Normal" | "Fit" | "Fill"): void {
+  const j = pageJson(p, page);
+  const img = j.objects?.[object]?.[0]?.properties?.image?.image;
+  if (!img) throw new ReportError("Choose a picture first.");
+  img.scaling = litExpr({ t: "string", v: fit });
+}
+
+export function setPageDisplayOption(p: Project, page: string, option: "FitToPage" | "FitToWidth" | "ActualSize"): void {
+  pageJson(p, page).displayOption = option;
+}
+
 export function setPageHidden(p: Project, page: string, hidden: boolean): void {
   const j = pageJson(p, page);
   if (hidden) j.visibility = "HiddenInViewMode";
@@ -369,6 +404,35 @@ export function moveInOrder(p: Project, page: string, visual: string, dir: "up" 
   }
   all[i].position.z = zb;
   all[j].position.z = za;
+}
+
+/** The keyboard (Tab) order of a page: the visuals sorted by their tab order, the stacking order where none is stored. */
+export function tabOrderSorted<T extends { name: string; position: { z: number; tabOrder?: number } }>(visuals: T[]): T[] {
+  return [...visuals].sort((a, b) => (a.position.tabOrder ?? a.position.z) - (b.position.tabOrder ?? b.position.z) || a.name.localeCompare(b.name));
+}
+
+/** The visual after (or before) the current one in the tab order; wraps around. */
+export function nextInTabOrder<T extends { name: string; position: { z: number; tabOrder?: number } }>(visuals: T[], current: string | null, back = false): T | null {
+  const list = tabOrderSorted(visuals);
+  if (list.length === 0) return null;
+  const at = list.findIndex((v) => v.name === current);
+  if (at < 0) return back ? list[list.length - 1] : list[0];
+  return list[(at + (back ? -1 : 1) + list.length) % list.length];
+}
+
+/** Moves a visual one step in the tab order; every visual of the page gets a consecutive number. */
+export function moveInTabOrder(p: Project, page: string, visual: string, dir: "up" | "down"): void {
+  const js = Object.keys(files(p))
+    .filter((k) => k.startsWith(visualPrefix(page)) && k.endsWith("/visual.json"))
+    .map((k) => files(p)[k])
+    .sort((a, b) => (a.position?.tabOrder ?? a.position?.z ?? 0) - (b.position?.tabOrder ?? b.position?.z ?? 0) || String(a.name).localeCompare(String(b.name)));
+  const i = js.findIndex((j) => j.name === visual);
+  if (i < 0) throw new Error("No such visual.");
+  const j = dir === "up" ? i - 1 : i + 1;
+  if (j >= 0 && j < js.length) [js[i], js[j]] = [js[j], js[i]];
+  js.forEach((x, n) => {
+    x.position = { ...(x.position ?? {}), tabOrder: n };
+  });
 }
 
 // ---- sync slicers ------------------------------------------------------------------------------

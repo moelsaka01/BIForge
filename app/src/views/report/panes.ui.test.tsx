@@ -61,6 +61,31 @@ describe("Selection pane", () => {
   });
 });
 
+describe("Selection pane: tab order", () => {
+  it("lists the visuals in tab order; the arrows change it and Tab on the canvas follows it", async () => {
+    const t = setup();
+    await t.run("report.visual.add", { type: "textbox" });
+    await t.run("report.visual.add", { type: "shape" });
+    render(<t.Host />);
+    const pane = await screen.findByLabelText("Selection pane");
+    fireEvent.click(within(pane).getByRole("button", { name: "Tab order" }));
+    const order = () => within(within(pane).getByRole("list", { name: "Tab order" })).getAllByRole("listitem").map((li) => li.textContent?.replace(/[0-9↑↓]/g, ""));
+    expect(order()).toEqual(["Text box", "Shape"]);
+    fireEvent.click(within(pane).getByRole("button", { name: "Move Shape earlier in tab order" }));
+    await waitFor(() => expect(order()).toEqual(["Shape", "Text box"]));
+    expect(t.vs().find((v) => v.visualType === "shape")!.position.tabOrder).toBe(0);
+    const canvas = await screen.findByRole("region", { name: /^Page / });
+    fireEvent.keyDown(canvas, { key: "Tab" });
+    const shape = t.vs().find((v) => v.visualType === "shape")!.name;
+    const text = t.vs().find((v) => v.visualType === "textbox")!.name;
+    await waitFor(() => expect(t.session.report.getSnapshot().canvas).toEqual([shape]));
+    fireEvent.keyDown(canvas, { key: "Tab" });
+    await waitFor(() => expect(t.session.report.getSnapshot().canvas).toEqual([text]));
+    fireEvent.keyDown(canvas, { key: "Tab", shiftKey: true });
+    await waitFor(() => expect(t.session.report.getSnapshot().canvas).toEqual([shape]));
+  });
+});
+
 describe("Sync slicers pane", () => {
   it("asks for a slicer first; Apply syncs the chosen pages and Stop syncing ends it", async () => {
     const t = setup();

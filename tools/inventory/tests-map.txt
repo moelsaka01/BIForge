@@ -404,3 +404,8 @@
 9|Sample reports (own) => app/src/core/session/sample.test.ts :: creates a project with four tables
 7|Show visuals as tables (Ctrl+Shift+F11) => app/src/core/commands/reportCommands.test.ts :: Ctrl\+Shift\+F11 shows the selected visuals
 26|Ctrl+Shift+F11 show visuals as tables => app/src/core/commands/reportCommands.test.ts :: Ctrl\+Shift\+F11 shows the selected visuals
+12|Tab order => app/src/views/report/panes.ui.test.tsx :: lists the visuals in tab order
+12|Selection pane (rename, show/hide, reorder, tab order) => app/src/views/report/panes.ui.test.tsx :: lists the visuals in tab order ;; app/src/views/report/panes.ui.test.tsx :: lists visuals front first
+12|Page size (16:9, 4:3, Letter, Tooltip, Custom) => app/src/core/report/pageFormat.test.ts :: the size presets are 16:9 ;; app/src/views/report/pageFormat.ui.test.tsx :: the Format tab is the page's
+12|Page background => app/src/views/report/pageFormat.ui.test.tsx :: the canvas background color and transparency are stored and drawn ;; app/src/views/report/pageFormat.ui.test.tsx :: background picture is drawn behind the visuals
+12|Wallpaper and canvas background image => app/src/views/report/pageFormat.ui.test.tsx :: a wallpaper color and picture fill the area

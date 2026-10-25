@@ -3,14 +3,18 @@ import { boxesInRect } from "../../core/report/arrange";
 import { boundsOf, snapMove, snapResize, type GuideLine } from "../../core/report/guides";
 import { ancestorChain, descendantNames, effectivelyHidden, previewPosition, selectionTarget } from "../../core/report/groups";
 import { readLitProp } from "../../core/report/pbir";
+import { layerStyle, readCanvasBackground } from "../../core/report/pageFormat";
+import { nextInTabOrder } from "../../core/report/reportOps";
 import type { GroupModel, PageModel, Position } from "../../core/report/visualDoc";
 import { useReport } from "./reportContext";
 import { VisualFrame, type Handle } from "./VisualFrame";
 
 export function pageBackground(page: PageModel, fallback: string): string {
-  const l = readLitProp(page.json.objects?.background?.[0]?.properties?.color);
-  return l && l.t === "string" ? l.v : fallback;
+  return readCanvasBackground(page.json).color ?? fallback;
 }
+
+/** The picture part of a layer style (the color is drawn by the page itself). */
+const pictureOnly = (st: ReturnType<typeof layerStyle>): React.CSSProperties => ({ backgroundImage: st.backgroundImage, backgroundRepeat: st.backgroundRepeat, backgroundPosition: st.backgroundPosition, backgroundSize: st.backgroundSize });
 
 interface Drag {
   name: string;
@@ -248,6 +252,14 @@ export function PageCanvas(p: PageCanvasProps) {
     const target = e.target as HTMLElement;
     if (target.closest("input, textarea, select, [contenteditable]")) return;
     const mod = e.ctrlKey || e.metaKey;
+    if (e.key === "Tab" && !mod && !e.altKey) {
+      const next = nextInTabOrder(page.visuals.filter((v) => !v.hidden), selection.length === 1 ? selection[0] : null, e.shiftKey);
+      if (next) {
+        e.preventDefault();
+        p.onSelection([next.name]);
+      }
+      return;
+    }
     if (mod && e.key.toLowerCase() === "a") {
       e.preventDefault();
       p.onSelection(topItems.filter((v) => !v.hidden).map((v) => v.name));
@@ -348,8 +360,9 @@ export function PageCanvas(p: PageCanvasProps) {
           root.current?.setPointerCapture?.(e.pointerId);
           setBand({ x0: pt.x, y0: pt.y, x1: pt.x, y1: pt.y, additive });
         }}
-        style={{ position: "absolute", left: 0, top: 0, width: page.width, height: page.height, transform: `scale(${scale})`, transformOrigin: "0 0", background: pageBackground(page, c.theme.pageBackground), boxShadow: "0 1px 6px rgba(0,0,0,.25)", outline: "none", overflow: "hidden", ...gridStyle(c.canvas.gridlines, c.canvas.gridSize, c.theme.dark) }}
+        style={{ position: "absolute", left: 0, top: 0, width: page.width, height: page.height, transform: `scale(${scale})`, transformOrigin: "0 0", backgroundColor: layerStyle(readCanvasBackground(page.json), c.theme.pageBackground).backgroundColor, boxShadow: "0 1px 6px rgba(0,0,0,.25)", outline: "none", overflow: "hidden", ...gridStyle(c.canvas.gridlines, c.canvas.gridSize, c.theme.dark) }}
       >
+        {readCanvasBackground(page.json).image && <div data-testid="page-picture" aria-hidden style={{ position: "absolute", inset: 0, pointerEvents: "none", ...pictureOnly(layerStyle(readCanvasBackground(page.json), null)), opacity: 1 - readCanvasBackground(page.json).transparency / 100 }} />}
         {c.snap.focus && page.visuals.some((v) => v.name === c.snap.focus) && (
           <button
             type="button"

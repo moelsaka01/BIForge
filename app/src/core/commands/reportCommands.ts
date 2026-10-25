@@ -102,6 +102,32 @@ export function registerReportCommands(r: CommandRegistry<Session>): void {
     const x = need<{ page: string; width: number; height: number }>(a, ["page", "width", "height"]);
     edit(s, "Page size", (p) => ops.setPageSize(p, x.page, x.width, x.height));
   });
+  reg("report.page.format", "Format page", (s, a) => {
+    const x = need<{ page: string; object: "background" | "outspace" | "displayArea"; prop: string; value: Lit | null }>(a, ["page", "object", "prop"]);
+    if (x.object !== "background" && x.object !== "outspace" && x.object !== "displayArea") throw new Error("A page has a background, a wallpaper and an alignment.");
+    edit(s, "Format page", (p) => ops.setPageFormat(p, x.page, x.object, x.prop, x.value ?? null));
+  });
+  reg("report.page.setDisplay", "Page view", (s, a) => {
+    const x = need<{ page: string; option: "FitToPage" | "FitToWidth" | "ActualSize" }>(a, ["page", "option"]);
+    edit(s, "Page view", (p) => ops.setPageDisplayOption(p, x.page, x.option));
+  });
+  reg("report.page.chooseImage", "Choose background picture", async (s, a) => {
+    const x = need<{ page: string; object: "background" | "outspace" }>(a, ["page", "object"]);
+    const path = await s.dialogs.pickFile("Picture", ["png", "jpg", "jpeg", "gif", "svg", "webp"]);
+    if (path) await r.execute("report.page.setImage", { ...x, path }).then((res) => { if (!res.ok) throw new Error(res.message); });
+  });
+  reg("report.page.setImage", "Choose background picture", async (s, a) => {
+    const x = need<{ page: string; object: "background" | "outspace"; path?: string; uri?: string | null; fit?: "Normal" | "Fit" | "Fill" }>(a, ["page", "object"]);
+    let uri = x.uri;
+    if (x.path) {
+      if (!s.io.readImage) throw new Error("Choosing an image is not available here.");
+      uri = await s.io.readImage(x.path);
+    }
+    edit(s, "Page picture", (p) => {
+      if (x.fit && uri === undefined) ops.setPageImageFit(p, x.page, x.object, x.fit);
+      else ops.setPageImage(p, x.page, x.object, uri ?? null, x.path?.split(/[\/]/).pop());
+    });
+  });
   reg("report.page.setHidden", "Hide page", (s, a) => {
     const x = need<{ page: string; hidden: boolean }>(a, ["page", "hidden"]);
     edit(s, x.hidden ? "Hide page" : "Show page", (p) => ops.setPageHidden(p, x.page, x.hidden));
@@ -315,6 +341,10 @@ export function registerReportCommands(r: CommandRegistry<Session>): void {
   reg("report.visual.moveInOrder", "Bring forward / send backward", (s, a) => {
     const x = need<{ page: string; visual: string; dir: "up" | "down" }>(a, ["page", "visual", "dir"]);
     edit(s, "Change stacking order", (p) => ops.moveInOrder(p, x.page, x.visual, x.dir));
+  });
+  reg("report.visual.moveInTabOrder", "Move in tab order", (s, a) => {
+    const x = need<{ page: string; visual: string; dir: "up" | "down" }>(a, ["page", "visual", "dir"]);
+    edit(s, "Change tab order", (p) => ops.moveInTabOrder(p, x.page, x.visual, x.dir));
   });
   reg("report.visual.delete", "Delete visual", (s, a) => {
     const x = need<{ page: string; visual: string }>(a, ["page", "visual"]);

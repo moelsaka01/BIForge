@@ -6,6 +6,7 @@ import type { PageModel, VisualModel } from "../../core/report/visualDoc";
 import { VISUAL_TYPES, visualType } from "../../core/report/visualTypes";
 import { analyticsCards } from "../../core/report/formatSchema";
 import { GroupPane } from "./GroupPane";
+import { PageFormatPane } from "./PageFormatPane";
 import { FormatPane } from "./FormatPane";
 import { useReport } from "./reportContext";
 
@@ -94,8 +95,8 @@ export function VisualizationsPane(p: VisualizationsPaneProps) {
       <div style={{ padding: "6px 8px 0" }}>
         <TabList size="small" selectedValue={tab} onTabSelect={(_, d) => setTab(d.value as typeof tab)}>
           <Tab value="build">Build visual</Tab>
-          <Tab value="format" disabled={!visual}>
-            Format visual
+          <Tab value="format">
+            {visual ? "Format visual" : "Format page"}
           </Tab>
           <Tab value="analytics" disabled={!visual || analyticsCards(visual.visualType).length === 0}>
             Analytics
@@ -105,6 +106,10 @@ export function VisualizationsPane(p: VisualizationsPaneProps) {
       {tab === "analytics" && visual ? (
         <div style={{ flex: 1, minHeight: 0 }}>
           <FormatPane analytics page={page} visual={visual} pages={c.pages} dispatch={c.dispatch} />
+        </div>
+      ) : tab === "format" && !visual ? (
+        <div style={{ flex: 1, minHeight: 0 }}>
+          <PageFormatPane page={page} />
         </div>
       ) : tab === "format" && visual ? (
         <div style={{ flex: 1, minHeight: 0 }}>

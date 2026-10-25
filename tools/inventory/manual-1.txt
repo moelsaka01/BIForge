@@ -213,8 +213,8 @@ N | New / Edit / Hide fields / Templates / Add function
 ## 12. Report canvas and page features
 ### Canvas
 D | Pages and page tabs: add, rename, reorder, duplicate, delete, hide
-P | Page size (16:9, 4:3, Letter, Tooltip, Custom)
-P | Page background
+D | Page size (16:9, 4:3, Letter, Tooltip, Custom)
+D | Page background
 D | Visual frames: drag, resize (8 handles), nudge, delete, z-order, duplicate
 D | Zoom: fit, 50%, 75%, 100%, 150%
 D | Multi-selection with rubber band and Shift/Ctrl click
@@ -222,12 +222,12 @@ D | Align and distribute with smart guides
 D | Group visuals and nested groups
 D | Copy and paste visuals between pages and reports
 D | Rotation (shapes, images, text box)
-P | Selection pane (rename, show/hide, reorder, tab order)
-N | Wallpaper and canvas background image
+D | Selection pane (rename, show/hide, reorder, tab order)
+D | Wallpaper and canvas background image
 D | Gridlines, snap to grid, lock objects
 D | Mobile layout canvas (phone portrait)
 D | Alt text for visuals
-N | Tab order
+D | Tab order
 D | Per-visual header icons (focus mode, more options, filters)
 ### Interactions
 D | Cross-filter and cross-highlight

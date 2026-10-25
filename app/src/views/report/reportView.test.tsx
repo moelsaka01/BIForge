@@ -104,7 +104,7 @@ describe("ReportView: drawing", () => {
     await t.run("report.theme.apply", { builtin: "BIForge Dark" });
     render(<t.Host />);
     const region = await screen.findByRole("region", { name: /Page Page 1/ });
-    expect(region.style.background).toMatch(/rgb\(17, 17, 17\)|#111111/);
+    expect(region.style.backgroundColor).toMatch(/rgb\(17, 17, 17\)|#111111/);
   });
 });
 

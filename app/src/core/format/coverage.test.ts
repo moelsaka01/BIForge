@@ -25,6 +25,8 @@ import { DEFAULT_THEME } from "../report/theme";
 import { setFormat, setRawProp, type VisualModel } from "../report/visualDoc";
 import { VISUAL_TYPES } from "../report/visualTypes";
 import { loadGazetteer } from "../report/geo";
+import caps from "./capabilities.json";
+import { pageLook } from "../report/pageFormat";
 import { CONTAINER_OBJECTS, visualObjects, type Kind } from "./capabilities";
 import { analyticsCards } from "./engine";
 
@@ -348,6 +350,33 @@ function measure(scenarioOf: Scenario, visualType: string, objects: string[]): R
   return out;
 }
 
+/** The page cards (background, wallpaper, page alignment): each property is set on page.json and the page look compared. */
+function measurePage(): Record<string, string[]> {
+  const out: Record<string, string[]> = {};
+  const cardIds = (caps as unknown as { visuals: Record<string, Record<string, string>>; cards: Record<string, Record<string, Kind>> });
+  for (const [object, id] of Object.entries(cardIds.visuals.page)) {
+    if (!["background", "outspace", "displayArea"].includes(object)) continue;
+    for (const [prop, kind] of Object.entries(cardIds.cards[id])) {
+      if (kind[0] === "x") continue;
+      const baseline = JSON.stringify(pageLook({ name: "p" }));
+      for (const value of testValues(prop, kind)) {
+        const json: Record<string, unknown> = { name: "p", objects: { [object]: [{ properties: { [prop]: litExpr(value) } }] } };
+        if (JSON.stringify(pageLook(json)) !== baseline) {
+          (out[object] ??= []).push(prop);
+          break;
+        }
+      }
+    }
+  }
+  // a picture is stored as an image object (name, url, scaling), which the capability list marks as not editable in the generic pane
+  for (const object of ["background", "outspace"]) {
+    const json = { name: "p", objects: { [object]: [{ properties: { image: { image: { name: litExpr(lit.str("a")), url: litExpr(lit.str("data:image/png;base64,AA")), scaling: litExpr(lit.str("Fit")) } } } }] } };
+    if (JSON.stringify(pageLook(json)) !== JSON.stringify(pageLook({ name: "p" }))) (out[object] ??= []).push("image");
+  }
+  for (const k of Object.keys(out)) out[k] = [...new Set(out[k])].sort();
+  return out;
+}
+
 function computeAll(): Coverage {
   const result: Coverage = {};
   const containerNames = [...CONTAINER_OBJECTS, "general"];
@@ -367,6 +396,7 @@ function computeAll(): Coverage {
     if (SM_TYPES.includes(id)) Object.assign(own, measure(smScenario(id), id, ["smallMultiplesLayout", "subheader"]));
     if (Object.keys(own).length) result[id] = own;
   }
+  result.page = measurePage();
   return result;
 }
 
