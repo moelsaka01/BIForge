@@ -3158,6 +3158,14 @@
    "underline"
   ]
  },
+ "aiNarratives": {
+  "text": [
+   "fontColor",
+   "fontFamily",
+   "fontSize",
+   "textAlignment"
+  ]
+ },
  "multiRowCard": {
   "general": [
    "formatString"

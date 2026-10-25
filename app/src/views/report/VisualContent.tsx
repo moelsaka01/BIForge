@@ -14,7 +14,8 @@ import { ChartView } from "./ChartView";
 import { registerWorld } from "./echartsSetup";
 import { DecompositionTreeView } from "./DecompositionTreeView";
 import { KeyInfluencersView } from "./KeyInfluencersView";
-import { CardView, KpiView, MatrixView, MultiRowCardView, NewCardView, TableView } from "./DomVisuals";
+import { CardView, KpiView, MatrixView, MultiRowCardView, NarrativeView, NewCardView, TableView } from "./DomVisuals";
+import { buildNarrative } from "../../core/report/narrative";
 import { useReport } from "./reportContext";
 import { readSlicer } from "../../core/report/slicerSettings";
 import { HierarchySlicerView } from "./HierarchySlicerView";
@@ -235,6 +236,8 @@ export function VisualContent({ page, visual, width, height, runOnClick, onInfo 
       ) : (
         <CardView model={buildCard(visual, loaded, c.theme)} theme={c.theme} width={width} height={height} />
       );
+    case "narrative":
+      return <NarrativeView model={buildNarrative(visual, loaded, c.theme)} theme={c.theme} width={width} height={height} />;
     case "kpi":
       return <KpiView model={buildKpi(visual, loaded, c.theme)} theme={c.theme} width={width} height={height} />;
     default: {

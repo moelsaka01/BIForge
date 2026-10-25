@@ -149,7 +149,7 @@ Last updated: 2026-10-25 (see PROGRESS.md; the status table below is generated b
 | Title bar and window | 13 | 11 | 0 | 2 |
 | File menu and backstage | 20 | 12 | 1 | 7 |
 | Report view ribbon: Home tab | 19 | 14 | 1 | 4 |
-| Report view ribbon: Insert tab | 19 | 9 | 2 | 8 |
+| Report view ribbon: Insert tab | 19 | 9 | 3 | 7 |
 | Report view ribbon: Modeling tab | 22 | 14 | 0 | 8 |
 | Report view ribbon: View tab | 19 | 15 | 0 | 4 |
 | Report view ribbon: Optimize tab | 4 | 2 | 0 | 2 |
@@ -157,7 +157,7 @@ Last updated: 2026-10-25 (see PROGRESS.md; the status table below is generated b
 | Report view ribbon: External Tools tab | 2 | 0 | 0 | 2 |
 | Report view contextual tabs | 35 | 24 | 2 | 9 |
 | Report canvas and page features | 53 | 39 | 2 | 12 |
-| Visuals | 76 | 49 | 0 | 27 |
+| Visuals | 76 | 49 | 1 | 26 |
 | Table view | 18 | 10 | 0 | 8 |
 | Model view | 23 | 14 | 3 | 6 |
 | DAX query view | 15 | 6 | 0 | 9 |
@@ -173,10 +173,10 @@ Last updated: 2026-10-25 (see PROGRESS.md; the status table below is generated b
 | Keyboard shortcuts | 37 | 22 | 1 | 14 |
 | Export, print and file formats | 15 | 3 | 0 | 12 |
 | Accessibility and platform | 12 | 2 | 0 | 10 |
-| Format pane cards per visual | 1264 | 664 | 237 | 363 |
+| Format pane cards per visual | 1264 | 680 | 238 | 346 |
 | DAX functions | 317 | 297 | 0 | 20 |
 | M standard library | 652 | 421 | 0 | 231 |
-| **Total** | **3008** | **1797** | **274** | **937** |
+| **Total** | **3008** | **1813** | **277** | **918** |
 <!-- inventory-status:end -->
 
 ## Online track (Publish & Share; plan in docs/ONLINE_PLAN.md)

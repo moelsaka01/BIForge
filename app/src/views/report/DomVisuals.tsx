@@ -3,6 +3,7 @@ import { useMemo, useRef, useState, type CSSProperties } from "react";
 import { valueToLit } from "../../core/report/chartData";
 import type { FieldRef } from "../../core/report/fields";
 import type { SelectedPoint } from "../../core/report/interactions";
+import type { NarrativeModel } from "../../core/report/narrative";
 import type { CardModel, CellStyle, KpiModel, MatrixModel, MultiRowCardModel, NewCardModel, TableModel } from "../../core/report/tableModels";
 import type { Theme } from "../../core/report/theme";
 import { fieldKey } from "../../core/report/fields";
@@ -252,6 +253,18 @@ export function NewCardView({ model, theme, width, height }: { model: NewCardMod
         );
       })}
       {model.tiles.length === 0 && <span style={{ color: theme.muted }}>No data</span>}
+    </div>
+  );
+}
+
+export function NarrativeView({ model, theme, width, height }: { model: NarrativeModel; theme: Theme; width: number; height: number }) {
+  return (
+    <div data-testid="narrative" style={{ width, height, boxSizing: "border-box", padding: 10, overflow: "auto", ...model.style }}>
+      {model.sentences.map((sent, i) => (
+        <p key={i} style={{ margin: "0 0 6px" }}>
+          {sent.map((seg, j) => (seg.strong ? <strong key={j}>{seg.text}</strong> : <span key={j}>{seg.text}</span>))}
+        </p>
+      ))}
     </div>
   );
 }

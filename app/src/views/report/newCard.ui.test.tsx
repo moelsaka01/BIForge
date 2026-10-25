@@ -49,3 +49,25 @@ describe("Card (new)", () => {
     expect(first.firstElementChild?.getAttribute("data-testid")).toBe("new-card-label");
   });
 });
+
+describe("Smart narrative", () => {
+  it("writes the summary of its fields into the visual", async () => {
+    const session = new Session(new FakeIO(), new FakeDialogs());
+    session.store.load(fixtureProject());
+    const registry = createRegistry(session);
+    session.report.goToPage("page1");
+    const dax = new FakeDax();
+    dax.handler = () => ({ results: [result(["a", "b"], [[cell("Bikes", "text"), cell("70")], [cell("Clothing", "text"), cell("30")]])], elapsedMs: 1 });
+    function Host() {
+      const doc = useSyncExternalStore(session.store.subscribe, session.store.getSnapshot);
+      return <ReportView project={doc.project!} runtime={session.report} dax={dax} dispatch={(id, a) => void registry.execute(id, a)} dataEpoch={0} docks={plainDocks} />;
+    }
+    const r = await registry.execute("report.visual.add", { type: "aiNarratives", fields: [{ role: "Category", field: { kind: "column", table: "Product", name: "Category" } }, { role: "Values", field: agg("Sales", "Quantity", 0) }] });
+    expect(r.ok).toBe(true);
+    render(<Host />);
+    const box = await screen.findByTestId("narrative");
+    await waitFor(() => expect(box.textContent).toMatch(/Bikes has the highest Sum of Quantity \(70\), 70% of the total\./));
+    expect(box.textContent).toMatch(/Clothing has the lowest \(30\)/);
+    expect(box.querySelectorAll("strong").length).toBeGreaterThan(3);
+  });
+});

@@ -84,7 +84,7 @@ D | New visual
 N | Visuals gallery group
 N | Visual from file
 N | Q&A visual (local)
-N | Smart narrative
+P | Smart narrative
 D | Key influencers
 D | Decomposition tree
 N | Find anomalies
