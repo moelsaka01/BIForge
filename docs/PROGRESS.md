@@ -496,3 +496,5 @@ Late in the session every process start on this PC took 20 to 30 s (python --ver
 1. `npx tauri build --debug --no-bundle` then `npm run e2e` on the fresh build (started at the end of this part; result below if it finished).
 2. Remaining N by size: Paginated report visual (21 cards), x-axis reference lines, actionButtonSection (35 cards per chart), underline in chart text (ECharts cannot), responsive, zoom slider tooltip, report-level cards (Report/Filter card/Visual group measurement), page cards pageSize/pageInformation.
 3. Options with real effect still missing: type detection, null handling, native query approval, tracing; keyboard: Shift+Arrow resize (conflicts with the existing move by 10), F2 rename, Ctrl+F6.
+
+- **e2e (fresh debug build, all flows): 100 checks passed, 0 failed.**
