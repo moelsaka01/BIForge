@@ -83,6 +83,13 @@ export function ChartView(p: ChartViewProps) {
 
   return (
     <div style={{ position: "relative", width: p.width, height: p.height }}>
+      {p.build.plotImage && (
+        <div
+          data-testid="plot-image"
+          aria-hidden
+          style={{ position: "absolute", left: p.build.plotImage.margins.left, right: p.build.plotImage.margins.right, top: p.build.plotImage.margins.top, bottom: p.build.plotImage.margins.bottom, pointerEvents: "none", backgroundImage: `url("${p.build.plotImage.url.replace(/"/g, "%22")}")`, backgroundRepeat: "no-repeat", backgroundPosition: "center", backgroundSize: p.build.plotImage.size, opacity: p.build.plotImage.opacity }}
+        />
+      )}
       <div ref={host} role="img" aria-label={p.label} style={{ width: p.width, height: p.height }} data-testid="chart" />
       {tools && (
         <div role="toolbar" aria-label="Map tools" style={{ position: "absolute", top: 6, right: 6, display: "flex", flexDirection: "column", gap: 4 }} onPointerDown={(e) => e.stopPropagation()}>

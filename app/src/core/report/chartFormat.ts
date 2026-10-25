@@ -345,6 +345,25 @@ export function referenceLineShade(f: FormatReader, theme: Theme, spec: LineSpec
   return pair;
 }
 
+// ---- plot area picture -----------------------------------------------------------------------------------------
+
+export interface PlotImage {
+  url: string;
+  /** CSS background-size for the picture. */
+  size: string;
+  /** 0 to 1. */
+  opacity: number;
+}
+
+/** The plot area's picture (plotArea > Image): drawn behind the chart, inside the margins of the plot area. */
+export function plotImage(f: FormatReader): PlotImage | null {
+  const source = f.str("plotArea", "sourceType", "imageUrl");
+  const url = source === "imageData" ? f.str("plotArea", "imageData", "") : f.str("plotArea", "url", "");
+  if (!url) return null;
+  const fit = f.str("plotArea", "fit", "Normal");
+  return { url, size: fit === "Fit" ? "contain" : fit === "Fill" ? "cover" : fit === "Stretch" ? "100% 100%" : "auto", opacity: opacityOf(f.num("plotArea", "transparency", 0)) };
+}
+
 // ---- zoom slider -----------------------------------------------------------------------------------------
 
 /** The zoom card: sliders on the category axis and/or the value axis. Returns the dataZoom entries and the room they need. */

@@ -9,7 +9,7 @@ import { FormatReader } from "./formatReader";
 import type { Loaded } from "./dataLoader";
 import type { SelectedPoint } from "./interactions";
 import { formatCompact, formatNumber } from "./numberFormat";
-import { axisBlock, CAP, dashOf, gridFor, labelBlock, labelDefaults, legendBlock, lineSeriesStyle, referenceLineMark, referenceLineShade, sliceItemStyle, valueText, zoomBlock, type LineSpec } from "./chartFormat";
+import { axisBlock, plotImage, type PlotImage, CAP, dashOf, gridFor, labelBlock, labelDefaults, legendBlock, lineSeriesStyle, referenceLineMark, referenceLineShade, sliceItemStyle, valueText, zoomBlock, type LineSpec } from "./chartFormat";
 import { echartsText, opacityOf, readFont } from "../format/styles";
 import { seriesColor, type Theme } from "./theme";
 import type { VisualModel } from "./visualDoc";
@@ -40,6 +40,8 @@ export interface ChartBuild {
   /** Something the person should know about the drawing, shown under the chart (for example locations a map could not place). */
   notice?: string;
   /** Buttons drawn on a map (zoom, lasso) and where its points are, so that a lasso can pick the points inside a rectangle. */
+  /** The picture of the plot area and the margins around the plot area it fills, in pixels. */
+  plotImage?: PlotImage & { margins: { left: number; right: number; top: number; bottom: number } };
   mapTools?: { zoom: boolean; lasso: boolean; points: { series: number; index: number; lon: number; lat: number }[] };
 }
 
@@ -884,6 +886,12 @@ export function buildChart(inp0: ChartInput): ChartBuild | null {
     const f = new FormatReader(inp.visual.json, inp.theme, inp.visual.visualType);
     styleTooltip(b.option, f);
     styleLegendTitle(b.option, f, inp.theme);
+    const img = plotImage(f);
+    const g = Array.isArray(b.option.grid) ? b.option.grid[0] : b.option.grid;
+    if (img && g) {
+      const px = (v: unknown, d: number) => (typeof v === "number" ? v : d);
+      b.plotImage = { ...img, margins: { left: px(g.left, 8), right: px(g.right, 12), top: px(g.top, 8), bottom: px(g.bottom, 8) } };
+    }
   }
   return b;
 }

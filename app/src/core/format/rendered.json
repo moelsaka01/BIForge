@@ -237,7 +237,13 @@
    "titleText"
   ],
   "plotArea": [
-   "color"
+   "color",
+   "colorTransparency",
+   "fit",
+   "imageData",
+   "sourceType",
+   "transparency",
+   "url"
   ],
   "referenceLine": [
    "dashArray",
@@ -431,7 +437,13 @@
    "titleText"
   ],
   "plotArea": [
-   "color"
+   "color",
+   "colorTransparency",
+   "fit",
+   "imageData",
+   "sourceType",
+   "transparency",
+   "url"
   ],
   "referenceLine": [
    "dashArray",
@@ -626,7 +638,13 @@
    "titleText"
   ],
   "plotArea": [
-   "color"
+   "color",
+   "colorTransparency",
+   "fit",
+   "imageData",
+   "sourceType",
+   "transparency",
+   "url"
   ],
   "valueAxis": [
    "axisStyle",
@@ -789,7 +807,13 @@
    "titleText"
   ],
   "plotArea": [
-   "color"
+   "color",
+   "colorTransparency",
+   "fit",
+   "imageData",
+   "sourceType",
+   "transparency",
+   "url"
   ],
   "valueAxis": [
    "axisStyle",
@@ -947,7 +971,13 @@
    "titleText"
   ],
   "plotArea": [
-   "color"
+   "color",
+   "colorTransparency",
+   "fit",
+   "imageData",
+   "sourceType",
+   "transparency",
+   "url"
   ],
   "valueAxis": [
    "axisStyle",
@@ -1081,7 +1111,13 @@
    "titleText"
   ],
   "plotArea": [
-   "color"
+   "color",
+   "colorTransparency",
+   "fit",
+   "imageData",
+   "sourceType",
+   "transparency",
+   "url"
   ],
   "valueAxis": [
    "axisStyle",
@@ -1235,7 +1271,13 @@
    "transparency"
   ],
   "plotArea": [
-   "color"
+   "color",
+   "colorTransparency",
+   "fit",
+   "imageData",
+   "sourceType",
+   "transparency",
+   "url"
   ],
   "referenceLine": [
    "dashArray",
@@ -1444,7 +1486,13 @@
    "transparency"
   ],
   "plotArea": [
-   "color"
+   "color",
+   "colorTransparency",
+   "fit",
+   "imageData",
+   "sourceType",
+   "transparency",
+   "url"
   ],
   "referenceLine": [
    "dashArray",
@@ -1656,7 +1704,13 @@
    "transparency"
   ],
   "plotArea": [
-   "color"
+   "color",
+   "colorTransparency",
+   "fit",
+   "imageData",
+   "sourceType",
+   "transparency",
+   "url"
   ],
   "valueAxis": [
    "axisStyle",
@@ -1831,7 +1885,13 @@
    "transparency"
   ],
   "plotArea": [
-   "color"
+   "color",
+   "colorTransparency",
+   "fit",
+   "imageData",
+   "sourceType",
+   "transparency",
+   "url"
   ],
   "valueAxis": [
    "axisStyle",
@@ -1934,7 +1994,13 @@
    "titleText"
   ],
   "plotArea": [
-   "color"
+   "color",
+   "colorTransparency",
+   "fit",
+   "imageData",
+   "sourceType",
+   "transparency",
+   "url"
   ],
   "valueAxis": [
    "axisStyle",
@@ -2083,7 +2149,13 @@
    "transparency"
   ],
   "plotArea": [
-   "color"
+   "color",
+   "colorTransparency",
+   "fit",
+   "imageData",
+   "sourceType",
+   "transparency",
+   "url"
   ],
   "referenceLine": [
    "dashArray",
@@ -2307,7 +2379,13 @@
    "transparency"
   ],
   "plotArea": [
-   "color"
+   "color",
+   "colorTransparency",
+   "fit",
+   "imageData",
+   "sourceType",
+   "transparency",
+   "url"
   ],
   "valueAxis": [
    "axisStyle",
@@ -2610,7 +2688,13 @@
    "transparency"
   ],
   "plotArea": [
-   "color"
+   "color",
+   "colorTransparency",
+   "fit",
+   "imageData",
+   "sourceType",
+   "transparency",
+   "url"
   ],
   "valueAxis": [
    "axisStyle",
@@ -2776,7 +2860,13 @@
    "titleText"
   ],
   "plotArea": [
-   "color"
+   "color",
+   "colorTransparency",
+   "fit",
+   "imageData",
+   "sourceType",
+   "transparency",
+   "url"
   ],
   "sentimentColors": [
    "decreaseFill",

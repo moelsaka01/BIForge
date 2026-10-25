@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { createRegistry } from "../../core/commands/builtin";
 import { installDomStubs } from "../../core/testing/domStubs";
-import { FakeDax, result } from "../../core/testing/fakeDax";
+import { FakeDax, cell, result } from "../../core/testing/fakeDax";
 import { FakeDialogs, FakeIO } from "../../core/testing/fakes";
 import { Session } from "../../core/session/session";
 import { agg, column, lit } from "../../core/report/fields";
@@ -176,5 +176,32 @@ describe("Size and position", () => {
     await waitFor(() => expect(t.visual().position.width).toBe(333));
     await t.run("edit.undo");
     await waitFor(() => expect(t.visual().position.width).not.toBe(333));
+  });
+});
+
+describe("plot area picture", () => {
+  it("a chart draws the picture of its plot area behind the plot, with its fit and transparency", async () => {
+    const session = new Session(new FakeIO(), new FakeDialogs());
+    session.store.load(fixtureProject());
+    const registry = createRegistry(session);
+    session.report.goToPage("page1");
+    const dax = new FakeDax();
+    dax.handler = () => ({ results: [result(["a", "b"], [[cell("Bikes", "text"), cell("1")]])], elapsedMs: 1 });
+    const run = async (id: string, args?: unknown) => {
+      const r = await registry.execute(id, args);
+      if (!r.ok) throw new Error(r.message);
+    };
+    function Host() {
+      const doc = useSyncExternalStore(session.store.subscribe, session.store.getSnapshot);
+      return <ReportView project={doc.project!} runtime={session.report} dax={dax} dispatch={(id, a) => void registry.execute(id, a)} dataEpoch={0} docks={plainDocks} />;
+    }
+    await run("report.visual.add", { type: "clusteredColumnChart", fields: [{ role: "Category", field: Cat }, { role: "Y", field: Qty }] });
+    const name = parsePage(session.store.project!, "page1")!.visuals[0].name;
+    await run("report.format.set", { page: "page1", visual: name, object: "plotArea", prop: "url", value: lit.str("data:image/png;base64,AA") });
+    await run("report.format.set", { page: "page1", visual: name, object: "plotArea", prop: "transparency", value: lit.num(50) });
+    render(<Host />);
+    const img = await screen.findByTestId("plot-image");
+    expect(img.style.backgroundImage).toContain("data:image/png");
+    expect(img.style.opacity).toBe("0.5");
   });
 });

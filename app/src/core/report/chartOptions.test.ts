@@ -96,6 +96,22 @@ describe("cartesian charts", () => {
     expect(ao.series[0].stack).toBe("total");
   });
 
+  it("plot area picture: a URL or data address, fit and transparency; none without one", () => {
+    const v = visualOf("clusteredColumnChart", { Category: [Cat], Y: [Qty] });
+    const rows = [[c("Bikes"), c(120)]];
+    expect(build(v, grouped(v, rows)).plotImage).toBeUndefined();
+    setFormat(v.json, "plotArea", "url", lit.str("data:image/png;base64,AA"));
+    setFormat(v.json, "plotArea", "fit", lit.str("Fill"));
+    setFormat(v.json, "plotArea", "transparency", lit.num(40));
+    const img = build(v, grouped(v, rows)).plotImage!;
+    expect(img).toMatchObject({ url: "data:image/png;base64,AA", size: "cover", opacity: 0.6 });
+    expect(img.margins.left).toBeGreaterThanOrEqual(0);
+    setFormat(v.json, "plotArea", "sourceType", lit.str("imageData"));
+    expect(build(v, grouped(v, rows)).plotImage).toBeUndefined(); // the data address is empty
+    setFormat(v.json, "plotArea", "imageData", lit.str("data:image/png;base64,BB"));
+    expect(build(v, grouped(v, rows)).plotImage?.url).toBe("data:image/png;base64,BB");
+  });
+
   it("combo chart: columns on the first axis, lines on the second", () => {
     const v = visualOf("lineClusteredColumnComboChart", { Category: [Cat], Y: [Qty], Y2: [Price] });
     const o = build(v, grouped(v, [[c("Bikes"), c(120), c(850.5, "real")]])).option;

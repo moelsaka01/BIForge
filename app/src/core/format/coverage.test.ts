@@ -118,6 +118,7 @@ const ENABLE: Record<string, Record<string, Lit>> = {
   subTotals: { rowSubtotals: lit.bool(true), columnSubtotals: lit.bool(true) },
   heatMap: { show: lit.bool(true) },
   zoom: { show: lit.bool(true) },
+  plotArea: { url: lit.str("data:image/png;base64,AA"), color: lit.str("#abcdef") },
   smallMultiplesLayout: { backgroundColor: lit.str("#eeeeee") },
 };
 
@@ -126,6 +127,8 @@ const WITH: Record<string, Record<string, Record<string, Lit>>> = {
   // custom spacing only replaces the default gaps once the switch is on
   spacing: { customizeSpacing: { spaceBelowTitle: lit.num(9) } },
   valueAxis: { labelDisplayUnits: { labelPrecision: lit.num(2) } },
+  // the picture of the plot area comes from the data address when the source says so
+  plotArea: { imageData: { sourceType: lit.str("imageData") } },
   labels: { labelDisplayUnits: { labelPrecision: lit.num(2) } },
   mapControls: { zoomLevel: { autoZoom: lit.bool(false) } },
   smallMultiplesLayout: { columnCount: { layoutType: lit.str("custom") }, rowCount: { layoutType: lit.str("custom") } },
