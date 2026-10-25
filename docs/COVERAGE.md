@@ -156,7 +156,7 @@ Last updated: 2026-10-25 (see PROGRESS.md; the status table below is generated b
 | Report view ribbon: Help tab | 5 | 3 | 0 | 2 |
 | Report view ribbon: External Tools tab | 2 | 0 | 0 | 2 |
 | Report view contextual tabs | 35 | 24 | 2 | 9 |
-| Report canvas and page features | 53 | 36 | 0 | 17 |
+| Report canvas and page features | 53 | 39 | 2 | 12 |
 | Visuals | 76 | 46 | 0 | 30 |
 | Table view | 18 | 10 | 0 | 8 |
 | Model view | 23 | 14 | 3 | 6 |
@@ -172,11 +172,11 @@ Last updated: 2026-10-25 (see PROGRESS.md; the status table below is generated b
 | Dialogs | 48 | 27 | 0 | 21 |
 | Keyboard shortcuts | 37 | 22 | 1 | 14 |
 | Export, print and file formats | 15 | 3 | 0 | 12 |
-| Accessibility and platform | 12 | 1 | 1 | 10 |
+| Accessibility and platform | 12 | 2 | 0 | 10 |
 | Format pane cards per visual | 1264 | 589 | 245 | 430 |
 | DAX functions | 317 | 297 | 0 | 20 |
 | M standard library | 652 | 421 | 0 | 231 |
-| **Total** | **3008** | **1715** | **281** | **1012** |
+| **Total** | **3008** | **1719** | **282** | **1007** |
 <!-- inventory-status:end -->
 
 ## Online track (Publish & Share; plan in docs/ONLINE_PLAN.md)

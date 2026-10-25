@@ -4,7 +4,7 @@ import type { Value } from "../../core/report/cells";
 import { labelOf, valueToLit } from "../../core/report/chartData";
 import { column, fieldKey, fieldLabel, litEqual, litText, measure, type FieldRef, type Lit } from "../../core/report/fields";
 import { fieldForRole } from "../../core/report/fieldRouting";
-import { readFilters, type CmpOp, type Cond, type FilterDef, type SimpleCond, type TextOp } from "../../core/report/filters";
+import { readFilters, type RelUnit, type CmpOp, type Cond, type FilterDef, type SimpleCond, type TextOp } from "../../core/report/filters";
 import { isDateField, isNumericColumn } from "../../core/report/modelInfo";
 import type { FilterScope } from "../../core/report/reportOps";
 import type { PageModel, VisualModel } from "../../core/report/visualDoc";
@@ -14,10 +14,10 @@ import { fieldFromDrag } from "./VisualizationsPane";
 let seq = 0;
 const newFilterName = () => `f${Date.now().toString(36)}${(seq++).toString(36)}`;
 
-type Mode = "basic" | "advanced" | "topN";
+type Mode = "basic" | "advanced" | "topN" | "relative";
 
 function modeOf(c: Cond): Mode {
-  return c.kind === "in" || c.kind === "notIn" ? "basic" : c.kind === "topN" ? "topN" : "advanced";
+  return c.kind === "in" || c.kind === "notIn" ? "basic" : c.kind === "topN" ? "topN" : c.kind === "relativeDate" ? "relative" : "advanced";
 }
 
 const TEXT_OPS: { v: TextOp | CmpOp | "blank" | "notBlank"; label: string }[] = [
@@ -77,8 +77,13 @@ function FilterCard({ def, scope, visualFields }: { def: FilterDef; scope: Filte
   const [join, setJoin] = useState<"and" | "or">(adv?.op ?? "and");
   const [top, setTop] = useState({ dir: (def.cond.kind === "topN" ? def.cond.dir : "top") as "top" | "bottom", n: def.cond.kind === "topN" ? def.cond.n : 5, by: def.cond.kind === "topN" ? def.cond.by : (visualFields.find((f) => f.kind !== "column") ?? null) });
   const [error, setError] = useState<string | null>(null);
+  const [open, setOpen] = useState(true);
+  const [rel, setRel] = useState({ op: (def.cond.kind === "relativeDate" ? def.cond.op : "last") as "last" | "this" | "next", n: def.cond.kind === "relativeDate" ? def.cond.n : 7, unit: (def.cond.kind === "relativeDate" ? def.cond.unit : "days") as RelUnit, today: def.cond.kind === "relativeDate" ? def.cond.includeToday : true });
+  // a locked filter cannot be changed by readers of the report (view mode)
+  const locked = c.readOnly && !!def.locked;
 
   const write = (cond: Cond) => c.dispatch("report.filter.upsert", { scope, filter: { ...def, cond } });
+  const flag = (patch: Partial<Pick<FilterDef, "hidden" | "locked">>) => c.dispatch("report.filter.upsert", { scope, filter: { ...def, ...patch } });
   const remove = () => c.dispatch("report.filter.remove", { scope, name: def.name });
 
   useEffect(() => {
@@ -124,10 +129,17 @@ function FilterCard({ def, scope, visualFields }: { def: FilterDef; scope: Filte
     write({ kind: "topN", n: Math.floor(top.n), dir: top.dir, by: top.by });
   };
 
+  const applyRel = () => {
+    if (rel.op !== "this" && !(rel.n >= 0)) return setError("Enter how many units.");
+    setError(null);
+    write({ kind: "relativeDate", op: rel.op, n: Math.floor(rel.n), unit: rel.unit, includeToday: rel.today });
+  };
+
   const modes: { v: Mode; label: string; show: boolean }[] = [
     { v: "basic", label: "Basic filtering", show: field.kind === "column" },
     { v: "advanced", label: "Advanced filtering", show: true },
     { v: "topN", label: "Top N", show: field.kind === "column" },
+    { v: "relative", label: "Relative date", show: dateCol },
   ];
   const ops = kind === "text" ? TEXT_OPS : NUM_OPS;
   const rowUi = (r: Row, set: (r: Row) => void, label: string) => (
@@ -149,14 +161,28 @@ function FilterCard({ def, scope, visualFields }: { def: FilterDef; scope: Filte
     <section aria-label={`Filter on ${fieldLabel(field)}`} data-filter={def.name} style={{ border: "1px solid #ccc", borderRadius: 4, padding: 6, display: "flex", flexDirection: "column", gap: 4 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
         <strong style={{ flex: 1, fontSize: 12, overflow: "hidden", textOverflow: "ellipsis" }}>{fieldLabel(field)}</strong>
-        <Button size="small" appearance="subtle" aria-label={`Clear filter on ${fieldLabel(field)}`} onClick={() => write({ kind: "in", values: [] })}>
+        <Button size="small" appearance="subtle" aria-expanded={open} aria-label={`${open ? "Collapse" : "Expand"} filter on ${fieldLabel(field)}`} onClick={() => setOpen(!open)}>
+          {open ? "▾" : "▸"}
+        </Button>
+        <Button size="small" appearance="subtle" aria-pressed={!!def.locked} aria-label={`Lock filter on ${fieldLabel(field)}`} title="Lock: readers of the report cannot change it" disabled={locked} onClick={() => flag({ locked: !def.locked })}>
+          {def.locked ? "🔒" : "🔓"}
+        </Button>
+        <Button size="small" appearance="subtle" aria-pressed={!!def.hidden} aria-label={`Hide filter on ${fieldLabel(field)}`} title="Hide: readers of the report do not see it" disabled={locked} onClick={() => flag({ hidden: !def.hidden })}>
+          {def.hidden ? "◌" : "◉"}
+        </Button>
+        <Button size="small" appearance="subtle" disabled={locked} aria-label={`Clear filter on ${fieldLabel(field)}`} onClick={() => write({ kind: "in", values: [] })}>
           Clear
         </Button>
-        <Button size="small" appearance="subtle" aria-label={`Remove filter on ${fieldLabel(field)}`} onClick={remove}>
+        <Button size="small" appearance="subtle" disabled={locked} aria-label={`Remove filter on ${fieldLabel(field)}`} onClick={remove}>
           ✕
         </Button>
       </div>
-      <div style={{ fontSize: 11, opacity: 0.75 }}>{summary}</div>
+      <div style={{ fontSize: 11, opacity: 0.75 }}>
+        {summary}
+        {def.locked ? " (locked)" : ""}
+        {def.hidden ? " (hidden)" : ""}
+      </div>
+      <fieldset disabled={locked} style={{ border: "none", padding: 0, margin: 0, minWidth: 0, display: open ? "flex" : "none", flexDirection: "column", gap: 4 }}>
       <Select size="small" aria-label={`Filter type for ${fieldLabel(field)}`} value={mode} onChange={(_, d) => (setMode(d.value as Mode), setError(null))}>
         {modes.filter((m) => m.show).map((m) => (
           <option key={m.v} value={m.v}>
@@ -166,6 +192,10 @@ function FilterCard({ def, scope, visualFields }: { def: FilterDef; scope: Filte
       </Select>
       {mode === "basic" && (
         <>
+          <Select size="small" aria-label="Include or exclude" value={cond.kind === "notIn" ? "exclude" : "include"} onChange={(_, d) => write({ kind: d.value === "exclude" ? "notIn" : "in", values: cond.kind === "in" || cond.kind === "notIn" ? cond.values : [] })}>
+            <option value="include">Include</option>
+            <option value="exclude">Exclude</option>
+          </Select>
           <Input size="small" placeholder="Search" aria-label="Search values" value={q} onChange={(_, d) => setQ(d.value)} />
           <div style={{ maxHeight: 160, overflow: "auto" }}>
             {values === null && <span style={{ fontSize: 11 }}>Loading…</span>}
@@ -217,11 +247,34 @@ function FilterCard({ def, scope, visualFields }: { def: FilterDef; scope: Filte
           </Button>
         </>
       )}
+      {mode === "relative" && (
+        <>
+          <div style={{ display: "flex", gap: 4 }}>
+            <Select size="small" aria-label="Relative date: when" value={rel.op} onChange={(_, d) => setRel({ ...rel, op: d.value as typeof rel.op })}>
+              <option value="last">Is in the last</option>
+              <option value="this">Is in this</option>
+              <option value="next">Is in the next</option>
+            </Select>
+            {rel.op !== "this" && <Input size="small" aria-label="Relative date: number" type="number" style={{ width: 64 }} value={String(rel.n)} onChange={(_, d) => setRel({ ...rel, n: Number(d.value) })} />}
+            <Select size="small" aria-label="Relative date: unit" value={rel.unit} onChange={(_, d) => setRel({ ...rel, unit: d.value as RelUnit })}>
+              <option value="days">days</option>
+              <option value="weeks">weeks</option>
+              <option value="months">months</option>
+              <option value="years">years</option>
+            </Select>
+          </div>
+          {rel.op !== "this" && <Checkbox size="medium" checked={rel.today} label="Include today" onChange={(_, d) => setRel({ ...rel, today: !!d.checked })} />}
+          <Button size="small" appearance="primary" onClick={applyRel}>
+            Apply filter
+          </Button>
+        </>
+      )}
       {error && (
         <div role="alert" style={{ color: "#c50f1f", fontSize: 11 }}>
           {error}
         </div>
       )}
+      </fieldset>
     </section>
   );
 }
@@ -230,8 +283,10 @@ function allValueFields(c: ReturnType<typeof useReport>): FieldRef[] {
   return c.model.tables().flatMap((t) => c.model.measures(t).map((m) => measure(t, m)));
 }
 
-function Section({ title, scope, defs, hint, visualFields, page }: { title: string; scope: FilterScope; defs: FilterDef[]; hint: string; visualFields: FieldRef[]; page: PageModel }) {
+function Section({ title, scope, defs, hint, visualFields, page, needle = "" }: { title: string; scope: FilterScope; defs: FilterDef[]; hint: string; visualFields: FieldRef[]; page: PageModel; needle?: string }) {
   const c = useReport();
+  // readers of the report do not see hidden filters; the search narrows the list by field name
+  const listed = defs.filter((d) => !(c.readOnly && d.hidden) && fieldLabel(d.field).toLowerCase().includes(needle.toLowerCase()));
   const add = (f: FieldRef) => {
     const asFilter = f.kind === "agg" ? column(f.table, f.name) : f;
     c.dispatch("report.filter.upsert", { scope, filter: { name: newFilterName(), field: asFilter, cond: { kind: "in", values: [] } } });
@@ -240,7 +295,7 @@ function Section({ title, scope, defs, hint, visualFields, page }: { title: stri
   return (
     <div role="group" aria-label={title} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
       <div style={{ fontSize: 12, fontWeight: 600 }}>{title}</div>
-      {defs.map((d) => (
+      {listed.map((d) => (
         <FilterCard key={d.name} def={d} scope={scope} visualFields={visualFields} />
       ))}
       <div
@@ -272,12 +327,29 @@ function Section({ title, scope, defs, hint, visualFields, page }: { title: stri
 export function FiltersPane({ page, visual }: { page: PageModel; visual: VisualModel | null }) {
   const c = useReport();
   const reportDefs = useMemo(() => readFilters(c.project.report.files["report.json"] as never).defs, [c.project]);
+  const [needle, setNeedle] = useState("");
   const vfields = visual ? Object.values(visual.roles).flat().map((x) => x.field) : [];
+  const clearAll = () => {
+    const scopes: { scope: FilterScope; defs: FilterDef[] }[] = [
+      ...(visual && visual.visualType !== "slicer" ? [{ scope: { level: "visual", page: page.name, visual: visual.name } as FilterScope, defs: visual.filters.defs.filter((d) => d.name !== "slicer") }] : []),
+      { scope: { level: "page", page: page.name }, defs: page.filters.defs.filter((d) => !d.name.startsWith("dt_")) },
+      { scope: { level: "report" }, defs: reportDefs },
+    ];
+    for (const s of scopes) for (const d of s.defs) if (!(d.locked && c.readOnly)) c.dispatch("report.filter.upsert", { scope: s.scope, filter: { ...d, cond: { kind: "in", values: [] } } });
+  };
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: 8, height: "100%", overflow: "auto" }} aria-label="Filters pane">
-      {visual && visual.visualType !== "slicer" && <Section title="Filters on this visual" scope={{ level: "visual", page: page.name, visual: visual.name }} defs={visual.filters.defs.filter((d) => d.name !== "slicer")} hint="Drag fields here or pick one below" visualFields={vfields} page={page} />}
-      <Section title="Filters on this page" scope={{ level: "page", page: page.name }} defs={page.filters.defs.filter((d) => !d.name.startsWith("dt_"))} hint="Filters here apply to every visual on this page" visualFields={vfields} page={page} />
-      <Section title="Filters on all pages" scope={{ level: "report" }} defs={reportDefs} hint="Filters here apply to every page" visualFields={vfields} page={page} />
+      <div style={{ display: "flex", gap: 4 }}>
+        <Input size="small" style={{ flex: 1 }} placeholder="Search filters" aria-label="Search filters" value={needle} onChange={(_, d) => setNeedle(d.value)} />
+        {!c.readOnly && (
+          <Button size="small" aria-label="Clear all filters" onClick={() => clearAll()}>
+            Clear all
+          </Button>
+        )}
+      </div>
+      {visual && visual.visualType !== "slicer" && <Section title="Filters on this visual" scope={{ level: "visual", page: page.name, visual: visual.name }} defs={visual.filters.defs.filter((d) => d.name !== "slicer")} hint="Drag fields here or pick one below" visualFields={vfields} page={page} needle={needle} />}
+      <Section title="Filters on this page" scope={{ level: "page", page: page.name }} defs={page.filters.defs.filter((d) => !d.name.startsWith("dt_"))} hint="Filters here apply to every visual on this page" visualFields={vfields} page={page} needle={needle} />
+      <Section title="Filters on all pages" scope={{ level: "report" }} defs={reportDefs} hint="Filters here apply to every page" visualFields={vfields} page={page} needle={needle} />
       {page.type === "Drillthrough" && <div style={{ fontSize: 11, opacity: 0.7 }}>Drillthrough fields of this page are set in the page's context menu.</div>}
     </div>
   );

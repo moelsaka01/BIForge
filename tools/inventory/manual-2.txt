@@ -603,7 +603,7 @@ N | Screen reader names for ribbon, panes and visuals
 N | High-contrast mode
 N | Focus indicators
 N | Text scaling
-P | Alt text and tab order for visuals
+D | Alt text and tab order for visuals
 N | Localization of UI strings
 D | Windows window smoke test
 N | Installer (NSIS)

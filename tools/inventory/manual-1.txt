@@ -259,13 +259,13 @@ D | Reset theme to default
 D | Report, page and visual level filters
 D | Basic list, advanced (two conditions), Top N / Bottom N
 D | Measure filters
-N | Relative date and relative time filters
+P | Relative date and relative time filters
 N | Filter on a hierarchy
 D | Require single selection
-N | Lock and hide filter
+D | Lock and hide filter
 N | Filter pane formatting (colors, fonts, size)
-N | Switch filter type (Basic, Advanced, Top N, Relative date, Relative time)
-N | Include / exclude mode
-N | Collapse and expand filter cards, search in filters
+P | Switch filter type (Basic, Advanced, Top N, Relative date, Relative time)
+D | Include / exclude mode
+D | Collapse and expand filter cards, search in filters
 N | Drillthrough filters, keep all filters
 N | Clear all / Apply all filters (button mode)

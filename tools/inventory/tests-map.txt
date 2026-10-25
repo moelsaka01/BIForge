@@ -409,3 +409,7 @@
 12|Page size (16:9, 4:3, Letter, Tooltip, Custom) => app/src/core/report/pageFormat.test.ts :: the size presets are 16:9 ;; app/src/views/report/pageFormat.ui.test.tsx :: the Format tab is the page's
 12|Page background => app/src/views/report/pageFormat.ui.test.tsx :: the canvas background color and transparency are stored and drawn ;; app/src/views/report/pageFormat.ui.test.tsx :: background picture is drawn behind the visuals
 12|Wallpaper and canvas background image => app/src/views/report/pageFormat.ui.test.tsx :: a wallpaper color and picture fill the area
+28|Alt text and tab order for visuals => app/src/views/report/panes.ui.test.tsx :: lists the visuals in tab order ;; app/src/core/commands/arrangeCommands.test.ts :: 
+12|Lock and hide filter => app/src/views/report/filtersPane.ui.test.tsx :: lock and hide are stored ;; app/src/views/report/filtersPane.ui.test.tsx :: readers of the report
+12|Include / exclude mode => app/src/views/report/filtersPane.ui.test.tsx :: Include / Exclude turns
+12|Collapse and expand filter cards, search in filters => app/src/views/report/filtersPane.ui.test.tsx :: a card collapses
