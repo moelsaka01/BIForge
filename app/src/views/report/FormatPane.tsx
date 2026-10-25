@@ -3,6 +3,8 @@ import { Accordion, AccordionHeader, AccordionItem, AccordionPanel, Button, Inpu
 import { fieldKey, fieldLabel, lit, type FieldRef, type Lit } from "../../core/report/fields";
 import { analyticsCards, generalCards, visualCards, type CardContext, type CardDef, type PropDef } from "../../core/report/formatSchema";
 import { listBookmarks } from "../../core/report/bookmarks";
+import { resolveTheme } from "../../core/report/theme";
+import { defaultPreset, presetChoices } from "../../core/report/stylePresets";
 import { readTextbox } from "../../core/report/staticVisuals";
 import { litExpr, queryRefOf } from "../../core/report/pbir";
 import { getFormat, getRawProp, type PageModel, type VisualModel } from "../../core/report/visualDoc";
@@ -186,6 +188,10 @@ export function FormatPane(p: FormatPaneProps) {
     pages: p.pages.filter((x) => !x.type).map((x) => ({ name: x.name, displayName: x.displayName })),
     tooltipPages: p.pages.filter((x) => x.type === "Tooltip").map((x) => ({ name: x.name, displayName: x.displayName })),
     bookmarks: listBookmarks(rc.project).map((b) => ({ id: b.id, name: b.name })),
+    stylePresets: {
+      options: presetChoices(p.visual.visualType, resolveTheme(rc.project), (() => { const n = getFormat(p.visual.json, "stylePreset", "name"); return n && n.t === "string" ? n.v : null; })()),
+      default: defaultPreset(p.visual.visualType),
+    },
   };
   const cards: CardDef[] = p.analytics ? analyticsCards(p.visual.visualType, ctx) : tab === "visual" ? visualCards(p.visual.visualType, ctx) : generalCards(p.visual.visualType, ctx);
   const shown = cards

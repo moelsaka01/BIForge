@@ -2,6 +2,7 @@
 // visual styles, then the built-in default.
 import { getFormat, getRawProp } from "./visualDoc";
 import { themeStyle, type Theme } from "./theme";
+import { presetValue } from "./stylePresets";
 import type { J } from "./pbir";
 
 export class FormatReader {
@@ -18,6 +19,14 @@ export class FormatReader {
       // a series-specific entry falls back to the visual-wide one
       const all = getFormat(this.json, object, prop);
       if (all && all.t !== "null") return all.v;
+    }
+    // the style preset the visual names (one the theme defines, or a built-in table preset) comes before the theme's default style
+    if (object !== "stylePreset") {
+      const preset = getFormat(this.json, "stylePreset", "name");
+      if (preset && preset.t === "string") {
+        const v = presetValue(this.theme, this.visualType, preset.v, object, prop);
+        if (v !== null) return v;
+      }
     }
     return themeStyle(this.theme, this.visualType, object, prop);
   }

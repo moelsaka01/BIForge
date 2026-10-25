@@ -34,22 +34,3 @@ describe("container spacing and shadow", () => {
     expect(px(shadow([["preset", lit.str("Custom")], ["angle", lit.num(0)], ["shadowDistance", lit.num(5)]]))).toEqual([5, 0]);
   });
 });
-
-describe("style presets", () => {
-  it("Default changes nothing, Boxed turns on border, radius and shadow, Minimal drops the background; explicit settings still win", () => {
-    const look = (props: Parameters<typeof build>[0]) => build(props).look;
-    const dflt = look([]);
-    expect(look([["stylePreset", "name", lit.str("Default")]])).toEqual(dflt);
-    const boxed = look([["stylePreset", "name", lit.str("Boxed")]]);
-    expect(boxed.border).not.toBe(dflt.border);
-    expect(boxed.borderRadius).toBe(4);
-    expect(boxed.boxShadow).toBeTruthy();
-    expect(dflt.boxShadow).toBeFalsy();
-    expect(look([["stylePreset", "name", lit.str("Minimal")]]).background).toBe("transparent");
-    // a name nobody defined (a file from elsewhere) behaves like Default
-    expect(look([["stylePreset", "name", lit.str("Fancy")]])).toEqual(dflt);
-    // the visual's own border setting overrides the preset
-    expect(look([["stylePreset", "name", lit.str("Boxed")], ["border", "show", lit.bool(false)]]).border).toBe(dflt.border);
-    expect(look([["stylePreset", "name", lit.str("Boxed")], ["border", "radius", lit.num(9)]]).borderRadius).toBe(9);
-  });
-});

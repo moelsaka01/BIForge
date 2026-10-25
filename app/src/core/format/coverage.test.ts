@@ -60,7 +60,7 @@ function testValues(prop: string, kind: Kind): Lit[] {
       return [lit.str("#123456")];
     case "s":
       // a dash pattern must be one to be read
-      if (prop === "name") return [lit.str("Boxed")]; // the Style preset card
+      if (prop === "name") return [lit.str("Zz")]; // the Style preset card: a preset of the theme used by the container scenario
       return [lit.str(/fontFamily/i.test(prop) ? "Courier New" : /dashArray/i.test(prop) ? "4 2" : /FormatString/i.test(prop) ? "0.000" : "Zz")];
     case "f":
       return [lit.num(Math.min(kind[2], Math.max(kind[1], 20)))];
@@ -241,6 +241,9 @@ const smScenario = (type: string): Scenario => ({
     }),
 });
 
+/** A theme that defines a preset (named like the test value of the Style preset card) for every visual, so that choosing it changes the look. */
+const PRESET_THEME = { ...DEFAULT_THEME, visualStyles: { "*": { Zz: { background: [{ show: false }] } } } };
+
 /** Same function for every visual type: the look of the container. */
 const containerScenario: Scenario = {
   // a title, a subtitle and a divider are on, so that the spacing between them can be seen
@@ -251,7 +254,7 @@ const containerScenario: Scenario = {
     setFormat(v.json, "divider", "show", lit.bool(true));
     return v;
   },
-  render: (v) => buildContainer({ f: new FormatReader(v.json, DEFAULT_THEME, v.visualType), theme: DEFAULT_THEME, autoTitle: "Auto", titleByDefault: true, noAutoText: false }),
+  render: (v) => buildContainer({ f: new FormatReader(v.json, PRESET_THEME, v.visualType), theme: PRESET_THEME, autoTitle: "Auto", titleByDefault: true, noAutoText: false }),
 };
 
 // ---- probing a result ---------------------------------------------------------------------------------------------

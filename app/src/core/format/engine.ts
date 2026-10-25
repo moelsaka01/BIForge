@@ -4,7 +4,6 @@
 import { CONTAINER_OBJECTS, GENERAL_ORDER, visualObjects, type CardProps, type Kind } from "./capabilities";
 import { cardLabel, optionLabel, propGroup, propLabel } from "./labels";
 import rendered from "./rendered.json";
-import { STYLE_PRESETS } from "../report/containerModel";
 
 export type PropType = "bool" | "text" | "number" | "color" | "enum";
 
@@ -47,6 +46,8 @@ export interface CardContext {
   /** Pages of type Tooltip (a visual's tooltip can show one). */
   tooltipPages?: { name: string; displayName: string }[];
   bookmarks: { id: string; name: string }[];
+  /** The Style preset list of the visual: Base or the built-in table presets, and the presets the report theme defines. */
+  stylePresets?: { options: { value: string; label: string }[]; default: string };
 }
 
 const NONE = [{ value: "", label: "(none)" }];
@@ -125,7 +126,7 @@ export function propDef(object: string, key: string, kind: Kind, ctx: CardContex
     case "f":
       return { ...base, type: "number", min: kind[1], max: kind[2], auto: "Theme" };
     case "s": {
-      if (object === "stylePreset" && key === "name") return { ...base, type: "enum", options: Object.keys(STYLE_PRESETS).map((n) => ({ value: n, label: n })), default: "Default" };
+      if (object === "stylePreset" && key === "name") return { ...base, type: "enum", options: ctx?.stylePresets?.options ?? [{ value: "", label: "Base" }], default: ctx?.stylePresets?.default ?? "" };
       if (object === "visualLink" && key === "navigationSection") return { ...base, type: "enum", options: ctx?.pages.length ? ctx.pages.map((p) => ({ value: p.name, label: p.displayName })) : NONE, auto: "Choose a page" };
       if (object === "visualLink" && key === "bookmark") return { ...base, type: "enum", options: ctx?.bookmarks.length ? ctx.bookmarks.map((b) => ({ value: b.id, label: b.name })) : NONE, auto: "Choose a bookmark" };
       if (object === "visualTooltip" && key === "section") return { ...base, type: "enum", options: ctx?.tooltipPages?.length ? ctx.tooltipPages.map((p) => ({ value: p.name, label: p.displayName })) : NONE, auto: "Choose a tooltip page" };

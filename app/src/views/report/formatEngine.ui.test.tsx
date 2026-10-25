@@ -117,23 +117,45 @@ describe("the schema-driven Format pane", () => {
 });
 
 describe("Style preset", () => {
-  it("the General tab offers BIForge's presets; Boxed draws a border, rounded corners and a shadow, Minimal removes the background", async () => {
-    const t = setup();
-    await t.run("report.visual.add", { type: "clusteredColumnChart", fields: [{ role: "Category", field: Cat }, { role: "Y", field: Qty }] });
+  const open = async (t: ReturnType<typeof setup>, type: string, fields: { role: string; field: typeof Cat }[]) => {
+    await t.run("report.visual.add", { type, fields });
     render(<t.Host />);
     await select(t.visual().name);
     fireEvent.click(await screen.findByRole("tab", { name: "Format visual" }));
     fireEvent.click(await screen.findByRole("tab", { name: "General" }));
-    const el = await card("stylePreset");
+    return card("stylePreset");
+  };
+  const optionsOf = (el: HTMLElement) => Array.from((within(el).getByLabelText("Name") as HTMLSelectElement).options).map((o) => [o.value, o.textContent]);
+
+  it("a table offers Power BI's presets under their stored names, and choosing one writes the name and restyles the table", async () => {
+    const t = setup();
+    const el = await open(t, "tableEx", [{ role: "Values", field: Cat }, { role: "Values", field: Qty as never }]);
+    expect(optionsOf(el)).toEqual([
+      ["Default", "Default"], ["None", "None"], ["Minimal", "Minimal"], ["BoldHeader", "Bold header"], ["AlternatingRowsNew", "Alternating rows"], ["ContrastAlternatingRows", "Contrast alternating rows"],
+      ["FlashyRows", "Flashy rows"], ["BoldHeaderFlashyRows", "Bold header flashy rows"], ["Sparse", "Sparse"], ["Condensed", "Condensed"],
+    ]);
+    expect((within(el).getByLabelText("Name") as HTMLSelectElement).value).toBe("Default");
+    fireEvent.change(within(el).getByLabelText("Name"), { target: { value: "BoldHeader" } });
+    await waitFor(() => expect(getFormat(t.visual().json, "stylePreset", "name")).toEqual(lit.str("BoldHeader")));
+    const head = () => document.querySelector("[role=columnheader]") as HTMLElement;
+    await waitFor(() => expect(head().style.background || head().getAttribute("style")).toBeTruthy());
+    const before = head().getAttribute("style");
+    fireEvent.change(within(el).getByLabelText("Name"), { target: { value: "Minimal" } });
+    await waitFor(() => expect(getFormat(t.visual().json, "stylePreset", "name")).toEqual(lit.str("Minimal")));
+    await waitFor(() => expect(head().getAttribute("style")).not.toBe(before));
+  });
+
+  it("a chart has only Base until the report theme defines presets for it; then they are listed and choosing one is drawn", async () => {
+    const t = setup();
+    const el = await open(t, "clusteredColumnChart", [{ role: "Category", field: Cat }, { role: "Y", field: Qty as never }]);
+    expect(optionsOf(el)).toEqual([["", "Base"]]);
+    await t.run("report.theme.apply", { json: JSON.stringify({ name: "With presets", visualStyles: { "*": { Boxed: { border: [{ show: true, radius: 4 }], dropShadow: [{ show: true }] }, Plain: { background: [{ show: false }] } } } }) });
+    await waitFor(() => expect(optionsOf(el).map((o) => o[0])).toEqual(["", "Boxed", "Plain"]));
     const frame = () => document.querySelector(`[data-visual="${t.visual().name}"]`) as HTMLElement;
-    const choose = async (name: string) => {
-      fireEvent.change(within(el).getByLabelText("Name"), { target: { value: name } });
-      await waitFor(() => expect(getFormat(t.visual().json, "stylePreset", "name")).toEqual(lit.str(name)));
-    };
-    expect(Array.from((within(el).getByLabelText("Name") as HTMLSelectElement).options).map((o) => o.value)).toContain("Boxed");
-    await choose("Boxed");
+    fireEvent.change(within(el).getByLabelText("Name"), { target: { value: "Boxed" } });
+    await waitFor(() => expect(getFormat(t.visual().json, "stylePreset", "name")).toEqual(lit.str("Boxed")));
     await waitFor(() => expect(frame().querySelector("[data-container-look]")?.getAttribute("style") ?? frame().getAttribute("style")).toMatch(/box-shadow/));
-    await choose("Minimal");
+    fireEvent.change(within(el).getByLabelText("Name"), { target: { value: "Plain" } });
     await waitFor(() => expect((frame().querySelector("[data-container-look]") ?? frame()).getAttribute("style")).not.toMatch(/box-shadow/));
   });
 });
