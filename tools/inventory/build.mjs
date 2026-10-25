@@ -42,7 +42,7 @@ function cardStatus(vis, card) {
   return { s, drawn, total: props.length };
 }
 const vt = fs.readFileSync(path.join(root, "app/src/core/report/visualTypes.ts"), "utf8");
-const implVisuals = new Set([...vt.matchAll(/cartesian\("([A-Za-z]+)"/g), ...vt.matchAll(/\bid: "([A-Za-z]+)"/g)].map((m) => m[1]));
+const implVisuals = new Set([...vt.matchAll(/cartesian\("([A-Za-z]+)"/g), ...vt.matchAll(/\bid: "([A-Za-z]+)"/g), ...vt.matchAll(/staticType\("([A-Za-z]+)"/g)].map((m) => m[1]));
 const alias = {};
 const friendly = {
   report: "Report (filter pane)", page: "Page", filter: "Filter card", group: "Visual group", actionButton: "Button", bookmarkNavigator: "Bookmark navigator", textbox: "Text box", pageNavigator: "Page navigator", shape: "Shape",

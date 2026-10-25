@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Template of the MSIX spike (tools/msix/build-msix.ps1 fills %VERSION% and %PUBLISHER%). Not used by any release. -->
+<Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+         xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+         xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+         IgnorableNamespaces="uap rescap">
+  <Identity Name="BIForge.BIForge" Publisher="%PUBLISHER%" Version="%VERSION%" ProcessorArchitecture="x64" />
+  <Properties>
+    <DisplayName>BIForge</DisplayName>
+    <PublisherDisplayName>BIForge contributors</PublisherDisplayName>
+    <Logo>Assets\StoreLogo.png</Logo>
+  </Properties>
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.26100.0" />
+  </Dependencies>
+  <Resources>
+    <Resource Language="en-us" />
+  </Resources>
+  <Applications>
+    <Application Id="BIForge" Executable="biforge-app.exe" EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements DisplayName="BIForge"
+                          Description="Open-source desktop app for building business intelligence reports"
+                          BackgroundColor="transparent"
+                          Square150x150Logo="Assets\Square150x150Logo.png"
+                          Square44x44Logo="Assets\Square44x44Logo.png" />
+      <Extensions>
+        <!-- biforge:// links (the Tauri deep-link plugin writes registry keys instead when it is not packaged) -->
+        <uap:Extension Category="windows.protocol">
+          <uap:Protocol Name="biforge">
+            <uap:DisplayName>BIForge link</uap:DisplayName>
+          </uap:Protocol>
+        </uap:Extension>
+        <!-- .biforge shared report packages -->
+        <uap:Extension Category="windows.fileTypeAssociation">
+          <uap:FileTypeAssociation Name="biforgepackage">
+            <uap:DisplayName>BIForge shared report</uap:DisplayName>
+            <uap:SupportedFileTypes>
+              <uap:FileType>.biforge</uap:FileType>
+            </uap:SupportedFileTypes>
+          </uap:FileTypeAssociation>
+        </uap:Extension>
+      </Extensions>
+    </Application>
+  </Applications>
+  <Capabilities>
+    <rescap:Capability Name="runFullTrust" />
+  </Capabilities>
+</Package>
