@@ -14,6 +14,7 @@ export const tauriIO: ProjectIO = storedIO({
   writeSampleData: (root) => invoke<string[]>("write_sample_data", { root }),
   readImage: (path) => invoke<string>("read_image_data_uri", { path }),
   openUrl: (url) => invoke<void>("open_url", { url }),
+  runScriptVisual: (r) => invoke<string>("run_script_visual", { language: r.language, code: r.code, csv: r.csv, home: r.home || null, width: r.width, height: r.height, timeoutMinutes: r.timeoutMinutes ?? null }),
 });
 
 // real-window UI test seam (see test_pick in commands.rs): answers from BIFORGE_TEST_PICKS when it is set

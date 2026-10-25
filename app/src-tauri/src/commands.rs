@@ -163,6 +163,18 @@ pub fn read_image_data_uri(path: String) -> Result<String, String> {
     Ok(format!("data:{mime};base64,{}", base64::engine::general_purpose::STANDARD.encode(bytes)))
 }
 
+/// Runs a script visual with the user's own Python or R: the data of the visual goes in as `dataset`, a PNG data address comes back.
+/// Runs on a worker thread so that the window stays responsive while the script works.
+#[tauri::command]
+pub async fn run_script_visual(language: String, code: String, csv: String, home: Option<String>, width: u32, height: u32, timeout_minutes: Option<u64>) -> Result<String, String> {
+    let png = tauri::async_runtime::spawn_blocking(move || biforge_engine::sources::script_src::run_visual_script(&language, &code, &csv, home.as_deref(), width, height, timeout_minutes))
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| e.to_string())?;
+    use base64::Engine as _;
+    Ok(format!("data:image/png;base64,{}", base64::engine::general_purpose::STANDARD.encode(png)))
+}
+
 /// Opens an http(s) address in the default browser.
 #[tauri::command]
 pub fn open_url(url: String) -> Result<(), String> {

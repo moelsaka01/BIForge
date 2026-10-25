@@ -83,6 +83,7 @@ fn main() {
             commands::test_pick,
             commands::read_image_data_uri,
             commands::open_url,
+            commands::run_script_visual,
             commands::tmdl_parse,
             commands::write_sample_data,
             dax::dax_catalog,

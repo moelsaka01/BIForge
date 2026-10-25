@@ -39,8 +39,8 @@ D | Decomposition tree
 D | Key influencers
 P | Q&A
 P | Smart narrative
-N | R script visual (needs local R)
-N | Python script visual (needs local Python)
+P | R script visual (needs local R)
+D | Python script visual (needs local Python)
 N | Paginated report visual (local .rdl)
 N | Custom visual import from file (.pbiviz)
 D | Small multiples on supported visuals

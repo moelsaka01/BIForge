@@ -5,7 +5,9 @@ import { ancestorChain, descendantNames, effectivelyHidden, previewPosition, sel
 import { readLitProp } from "../../core/report/pbir";
 import { layerStyle, readCanvasBackground } from "../../core/report/pageFormat";
 import { nextInTabOrder } from "../../core/report/reportOps";
-import type { GroupModel, PageModel, Position } from "../../core/report/visualDoc";
+import { getGroupFormat, type GroupModel, type PageModel, type Position } from "../../core/report/visualDoc";
+import { FormatReader } from "../../core/report/formatReader";
+import type { Theme } from "../../core/report/theme";
 import { useReport } from "./reportContext";
 import { VisualFrame, type Handle } from "./VisualFrame";
 
@@ -39,8 +41,17 @@ interface Band {
 
 const MIN = 40;
 
+/** True when the visual (Format > General > Lock aspect) or the group keeps its width-to-height ratio while resized. */
+export function aspectLocked(page: PageModel, name: string, theme: Theme): boolean {
+  const v = page.visuals.find((x) => x.name === name);
+  if (v) return new FormatReader(v.json, theme, v.visualType).bool("lockAspect", "show", false);
+  const g = page.groups.find((x) => x.name === name);
+  const l = g ? getGroupFormat(g.json, "lockAspect", "show") : null;
+  return l?.t === "bool" && l.v;
+}
+
 /** Applies a pointer movement of (dx, dy) page pixels to a position, keeping the visual on the page. */
-export function dragPosition(orig: Position, mode: "move" | Handle, dx: number, dy: number, pageW: number, pageH: number): Position {
+export function dragPosition(orig: Position, mode: "move" | Handle, dx: number, dy: number, pageW: number, pageH: number, lockAspect = false): Position {
   let { x, y, width, height } = orig;
   if (mode === "move") {
     x = Math.min(Math.max(0, orig.x + dx), Math.max(0, pageW - width));
@@ -57,6 +68,25 @@ export function dragPosition(orig: Position, mode: "move" | Handle, dx: number, 
       const ny = Math.min(Math.max(0, orig.y + dy), orig.y + orig.height - MIN);
       height = orig.y + orig.height - ny;
       y = ny;
+    }
+    if (lockAspect && orig.height > 0) {
+      // Lock aspect (Format > General > Lock aspect): the width-to-height ratio stays, the opposite edge or corner stays put
+      const ratio = orig.width / orig.height;
+      if (mode === "e" || mode === "w") height = width / ratio;
+      else if (mode === "n" || mode === "s") width = height * ratio;
+      else {
+        const k = Math.max(width / orig.width, height / orig.height);
+        width = orig.width * k;
+        height = orig.height * k;
+      }
+      // keep it on the page, with the same ratio
+      const room = (mode.includes("w") ? orig.x + orig.width : pageW - orig.x) / width;
+      const roomH = (mode.includes("n") ? orig.y + orig.height : pageH - orig.y) / height;
+      const fit = Math.min(1, room, roomH);
+      width *= fit;
+      height *= fit;
+      if (mode.includes("w")) x = orig.x + orig.width - width;
+      if (mode.includes("n")) y = orig.y + orig.height - height;
     }
   }
   return { ...orig, x: Math.round(x), y: Math.round(y), width: Math.round(width), height: Math.round(height) };
@@ -194,7 +224,7 @@ export function PageCanvas(p: PageCanvasProps) {
     if (!drag) return;
     const dx = (e.clientX - drag.startX) / scale;
     const dy = (e.clientY - drag.startY) / scale;
-    let cur = drag.mode === "move" ? dragGroup(drag.origs, dx, dy, page.width, page.height) : { [drag.name]: dragPosition(drag.origs[drag.name], drag.mode, dx, dy, page.width, page.height) };
+    let cur = drag.mode === "move" ? dragGroup(drag.origs, dx, dy, page.width, page.height) : { [drag.name]: dragPosition(drag.origs[drag.name], drag.mode, dx, dy, page.width, page.height, aspectLocked(page, drag.name, c.theme)) };
     // smart guides and the grid: Alt held down turns snapping off for this move
     const snapOpt = { guides: c.canvas.smartGuides, threshold: 6 / scale, grid: c.canvas.snapToGrid ? c.canvas.gridSize : null };
     let lines: GuideLine[] = [];

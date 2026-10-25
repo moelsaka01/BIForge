@@ -3210,6 +3210,18 @@
    "show"
   ]
  },
+ "scriptVisual": {
+  "script": [
+   "provider",
+   "source"
+  ]
+ },
+ "pythonVisual": {
+  "script": [
+   "provider",
+   "source"
+  ]
+ },
  "multiRowCard": {
   "general": [
    "formatString"

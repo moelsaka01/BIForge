@@ -35,6 +35,8 @@ export interface ProjectIO {
   readImage?(path: string): Promise<string>;
   /** Opens an http(s) address in the user's browser. */
   openUrl?(url: string): Promise<void>;
+  /** Runs a script visual with the user's own Python or R; resolves with the plot as a data: URI (png). */
+  runScriptVisual?(req: { language: "python" | "r"; code: string; csv: string; home?: string; width: number; height: number; timeoutMinutes?: number }): Promise<string>;
 }
 
 export interface Dialogs {

@@ -342,6 +342,21 @@ export function registerReportCommands(r: CommandRegistry<Session>): void {
     const x = need<{ page: string; visual: string; dir: "up" | "down" }>(a, ["page", "visual", "dir"]);
     edit(s, "Change stacking order", (p) => ops.moveInOrder(p, x.page, x.visual, x.dir));
   });
+  // A script visual runs the user's own Python or R on the data of the visual, only when asked (the Run button).
+  reg("report.script.run", "Run script", async (s, a) => {
+    const x = need<{ visual: string; language: "python" | "r"; code: string; csv: string; width: number; height: number }>(a, ["visual", "language", "code", "csv"]);
+    if (!s.io.runScriptVisual) throw new Error("Running a script is not available here.");
+    const o = s.shell.settings.getSnapshot().options;
+    const home = String(o[x.language === "r" ? "r.home" : "python.home"] ?? "");
+    const minutes = o[x.language === "r" ? "r.timeout" : "python.timeout"];
+    s.report.setScriptRun(x.visual, { status: "running" });
+    try {
+      const image = await s.io.runScriptVisual({ language: x.language, code: x.code, csv: x.csv, home: home || undefined, width: x.width || 640, height: x.height || 400, timeoutMinutes: typeof minutes === "number" ? minutes : undefined });
+      s.report.setScriptRun(x.visual, { status: "done", image });
+    } catch (e) {
+      s.report.setScriptRun(x.visual, { status: "error", error: e instanceof Error ? e.message : String(e) });
+    }
+  });
   reg("report.visual.moveInTabOrder", "Move in tab order", (s, a) => {
     const x = need<{ page: string; visual: string; dir: "up" | "down" }>(a, ["page", "visual", "dir"]);
     edit(s, "Change tab order", (p) => ops.moveInTabOrder(p, x.page, x.visual, x.dir));

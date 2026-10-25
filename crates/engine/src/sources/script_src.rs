@@ -43,7 +43,7 @@ fn works(language: &str, exe: &Path) -> bool {
         c.creation_flags(0x0800_0000);
     }
     let Ok(mut child) = c.spawn() else { return false };
-    let end = Instant::now() + Duration::from_secs(10);
+    let end = Instant::now() + Duration::from_secs(45); // a first start on a PC with a virus scanner can take half a minute
     loop {
         match child.try_wait() {
             Ok(Some(_)) => break,
@@ -263,6 +263,128 @@ pub fn read(spec: &SourceSpec) -> Result<RawTable> {
         Some(t) => tables.into_iter().find(|(n, _)| n == t).map(|(_, r)| r).ok_or_else(|| EngineError::Source(format!("The script made no table named \"{t}\"."))),
         None => Ok(tables.remove(0).1),
     }
+}
+
+// ---- script visuals ------------------------------------------------------------------------------------------------
+
+const PY_VISUAL_WRAPPER: &str = r#"import os, sys
+plot = os.environ["BIFORGE_PLOT"]
+try:
+    import matplotlib
+    matplotlib.use("Agg")
+except ImportError:
+    pass
+try:
+    import pandas as pd
+except ImportError:
+    sys.stderr.write("The pandas package is not installed. Run: python -m pip install pandas\n")
+    sys.exit(3)
+dataset = pd.read_csv(os.environ["BIFORGE_DATA"], encoding="utf-8")
+g = {"__name__": "__main__", "dataset": dataset}
+with open(os.environ["BIFORGE_SCRIPT"], encoding="utf-8") as f:
+    exec(compile(f.read(), "script", "exec"), g)
+try:
+    import matplotlib.pyplot as plt
+    if plt.get_fignums() and not os.path.exists(plot):
+        plt.savefig(plot, dpi=100, bbox_inches="tight")
+except ImportError:
+    pass
+if not os.path.exists(plot):
+    sys.stderr.write("The script drew nothing. Draw with matplotlib, for example: import matplotlib.pyplot as plt; plt.plot(dataset.iloc[:, 0]). (matplotlib is installed with: python -m pip install matplotlib)\n")
+    sys.exit(4)
+"#;
+
+const R_VISUAL_WRAPPER: &str = r#"plot <- Sys.getenv("BIFORGE_PLOT")
+png(plot, width = as.integer(Sys.getenv("BIFORGE_W")), height = as.integer(Sys.getenv("BIFORGE_H")))
+dataset <- read.csv(Sys.getenv("BIFORGE_DATA"), check.names = FALSE, fileEncoding = "UTF-8", stringsAsFactors = FALSE)
+env <- new.env()
+assign("dataset", dataset, envir = env)
+sys.source(Sys.getenv("BIFORGE_SCRIPT"), envir = env)
+invisible(dev.off())
+if (!file.exists(plot) || file.info(plot)$size == 0) {
+  stop("The script drew nothing. Draw with the base graphics, for example: plot(dataset[[1]])")
+}
+"#;
+
+/// Runs a script visual: the script sees the data as `dataset` (a pandas DataFrame, an R data.frame) and draws a plot;
+/// the PNG of the plot comes back. A Python script may also write a PNG to the path in BIFORGE_PLOT itself.
+pub fn run_visual(interpreter: &Path, language: &str, code: &str, csv: &str, width: u32, height: u32, timeout: Duration) -> Result<Vec<u8>> {
+    use std::io::Read;
+    let dir = std::env::temp_dir().join(format!("biforge-visual-{}-{}", std::process::id(), std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or(0)));
+    std::fs::create_dir_all(&dir).map_err(err)?;
+    let result = (|| -> Result<Vec<u8>> {
+        let (script_name, wrapper_name, wrapper) = if language == "r" { ("script.R", "run.R", R_VISUAL_WRAPPER) } else { ("script.py", "run.py", PY_VISUAL_WRAPPER) };
+        std::fs::write(dir.join(script_name), code).map_err(err)?;
+        std::fs::write(dir.join(wrapper_name), wrapper).map_err(err)?;
+        std::fs::write(dir.join("dataset.csv"), csv.as_bytes()).map_err(err)?;
+        let plot = dir.join("plot.png");
+        let mut cmd = Command::new(interpreter);
+        if language == "r" {
+            cmd.arg("--vanilla");
+        }
+        cmd.arg(dir.join(wrapper_name))
+            .current_dir(&dir)
+            .env("BIFORGE_SCRIPT", dir.join(script_name))
+            .env("BIFORGE_DATA", dir.join("dataset.csv"))
+            .env("BIFORGE_PLOT", &plot)
+            .env("BIFORGE_W", width.clamp(50, 4000).to_string())
+            .env("BIFORGE_H", height.clamp(50, 4000).to_string())
+            .env("MPLBACKEND", "Agg")
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            cmd.creation_flags(0x0800_0000);
+        }
+        let mut child = cmd.spawn().map_err(|e| err(format!("could not start {}: {e}", interpreter.display())))?;
+        let mut so = child.stdout.take().unwrap();
+        let mut se = child.stderr.take().unwrap();
+        let t_out = std::thread::spawn(move || {
+            let mut s = String::new();
+            let _ = so.read_to_string(&mut s);
+            s
+        });
+        let t_err = std::thread::spawn(move || {
+            let mut s = String::new();
+            let _ = se.read_to_string(&mut s);
+            s
+        });
+        let end = Instant::now() + timeout;
+        let status = loop {
+            match child.try_wait().map_err(err)? {
+                Some(s) => break s,
+                None if Instant::now() >= end => {
+                    let _ = child.kill();
+                    return Err(err(format!("the script did not finish in {} seconds and was stopped", timeout.as_secs())));
+                }
+                None => std::thread::sleep(Duration::from_millis(50)),
+            }
+        };
+        let _ = t_out.join();
+        let stderr = t_err.join().unwrap_or_default();
+        if !status.success() {
+            let lines: Vec<&str> = stderr.lines().filter(|l| !l.trim().is_empty()).collect();
+            let tail = lines.iter().rev().take(6).rev().cloned().collect::<Vec<_>>().join(" | ");
+            return Err(err(if tail.is_empty() { format!("the script ended with an error ({status})") } else { tail }));
+        }
+        std::fs::read(&plot).map_err(|_| err("the script drew nothing"))
+    })();
+    let _ = std::fs::remove_dir_all(&dir);
+    result
+}
+
+/// Finds the interpreter and runs a script visual (the script and the data come from the report; nothing leaves the computer).
+pub fn run_visual_script(language: &str, code: &str, csv: &str, home: Option<&str>, width: u32, height: u32, timeout_minutes: Option<u64>) -> Result<Vec<u8>> {
+    if language != "python" && language != "r" {
+        return Err(EngineError::Source(format!("Unknown script language \"{language}\" (python or r).")));
+    }
+    if code.trim().is_empty() {
+        return Err(EngineError::Source("The script is empty.".into()));
+    }
+    let exe = find_interpreter(language, home)?;
+    run_visual(&exe, language, code, csv, width, height, timeout_of(timeout_minutes))
 }
 
 #[cfg(test)]

@@ -21,6 +21,7 @@ import { readSlicer } from "../../core/report/slicerSettings";
 import { HierarchySlicerView } from "./HierarchySlicerView";
 import { SlicerView, TextSlicerView } from "./SlicerView";
 import { QnaView } from "./QnaView";
+import { ScriptVisualView } from "./ScriptVisualView";
 import { DataTableView } from "./DataTableView";
 import { drillKey, fieldsOfRole, type VisualStatus } from "../../core/report/headerButtons";
 import { BookmarkNavigatorView, ButtonView, ImageView, PageNavigatorView, ShapeView, TextboxView } from "./StaticVisuals";
@@ -238,6 +239,8 @@ export function VisualContent({ page, visual, width, height, runOnClick, onInfo 
       ) : (
         <CardView model={buildCard(visual, loaded, c.theme)} theme={c.theme} width={width} height={height} />
       );
+    case "script":
+      return <ScriptVisualView page={page} visual={visual} loaded={loaded} width={width} height={height} />;
     case "narrative":
       return <NarrativeView model={buildNarrative(visual, loaded, c.theme)} theme={c.theme} width={width} height={height} />;
     case "kpi":

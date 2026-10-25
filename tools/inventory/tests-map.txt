@@ -423,3 +423,4 @@
 9|Documentation links (open the default browser) => app/src/core/commands/helpCommands.test.ts :: Documentation \(F1\)
 9|Report an issue / Submit an idea (GitHub issues) => app/src/core/commands/helpCommands.test.ts :: Report an issue
 26|F1 help => app/src/core/commands/helpCommands.test.ts :: Documentation \(F1\)
+13|Python script visual (needs local Python) => app/src/views/report/scriptVisual.ui.test.tsx :: never run by themselves ;; crates/engine/tests/it/scripts_live.rs :: python_visual_gets_the_data_as_dataset

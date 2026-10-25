@@ -81,11 +81,11 @@ export const OPTION_PAGES: OptionPage[] = [
   },
   {
     id: "g.r", scope: "global", label: "R scripting",
-    settings: [t("r.home", "R home directory", ""), t("r.ide", "R IDE", ""), n("r.timeout", "Script timeout (minutes)", 30, 1, 600)],
+    settings: [t("r.home", "R home directory", "", true, "Used by R script visuals."), t("r.ide", "R IDE", ""), n("r.timeout", "Script timeout (minutes)", 30, 1, 600, true, "Used by R script visuals.")],
   },
   {
     id: "g.python", scope: "global", label: "Python scripting",
-    settings: [t("python.home", "Python home directory", ""), t("python.ide", "Python IDE", ""), n("python.timeout", "Script timeout (minutes)", 30, 1, 600)],
+    settings: [t("python.home", "Python home directory", "", true, "Used by Python visuals."), t("python.ide", "Python IDE", ""), n("python.timeout", "Script timeout (minutes)", 30, 1, 600, true, "Used by Python visuals.")],
   },
   {
     id: "g.security", scope: "global", label: "Security",

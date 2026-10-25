@@ -97,6 +97,7 @@ function slotsFor(v: VisualModel, family: VisualFamily, drill?: DrillState): { g
       return { groups: dedupe([...roleSlots("Category"), ...roleSlots("Series")]), values: [...roleSlots("X"), ...roleSlots("Y"), ...roleSlots("Size")], extra: [] };
     case "waterfall":
       return { groups: dedupe([...roleSlots("Category"), ...roleSlots("Breakdown")]), values: roleSlots("Y"), extra: [] };
+    case "script":
     case "table":
     case "card": {
       // the new card keeps its fields in the Data well

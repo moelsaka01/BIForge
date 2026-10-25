@@ -83,6 +83,14 @@ export class FakeIO implements ProjectIO {
     if (!u) throw new Error(`cannot read ${path}`);
     return u;
   }
+  /** What runScriptVisual answers (a data: URI) or throws (an Error), and the requests it got. */
+  scriptResult: string | Error = "data:image/png;base64,AAAA";
+  scriptRequests: { language: string; code: string; csv: string; home?: string; width: number; height: number; timeoutMinutes?: number }[] = [];
+  async runScriptVisual(req: { language: "python" | "r"; code: string; csv: string; home?: string; width: number; height: number; timeoutMinutes?: number }): Promise<string> {
+    this.scriptRequests.push(req);
+    if (this.scriptResult instanceof Error) throw this.scriptResult;
+    return this.scriptResult;
+  }
   async openUrl(url: string): Promise<void> {
     this.opened.push(url);
   }

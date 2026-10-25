@@ -38,6 +38,15 @@ export interface ViewSnapshot {
   clipboard: unknown | null;
   /** The canvas shows the phone layout instead of the desktop page. */
   mobile: boolean;
+  /** Script visuals run in this window: the result of the last run by visual (a script never runs by itself). */
+  scripts?: Record<string, ScriptRun>;
+}
+
+export interface ScriptRun {
+  status: "running" | "done" | "error";
+  /** The plot, as a data: URI. */
+  image?: string;
+  error?: string;
 }
 
 export class ReportRuntime {
@@ -53,6 +62,13 @@ export class ReportRuntime {
   private set(patch: Partial<ViewSnapshot>): void {
     this.snap = { ...this.snap, ...patch };
     this.listeners.forEach((l) => l());
+  }
+
+  setScriptRun(visual: string, run: ScriptRun | null): void {
+    const scripts = { ...(this.snap.scripts ?? {}) };
+    if (run) scripts[visual] = run;
+    else delete scripts[visual];
+    this.set({ scripts });
   }
 
   focusFormat(visual: string, card: string): void {
