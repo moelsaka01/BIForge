@@ -177,6 +177,7 @@ const SCENARIOS: Record<string, Scenario> = {
   hundredPercentStackedAreaChart: chart("hundredPercentStackedAreaChart", { Category: [Cat], Series: [Country], Y: [Qty] }, catRows),
   ribbonChart: chart("ribbonChart", { Category: [Cat], Series: [Country], Y: [Qty] }, catRows),
   lineClusteredColumnComboChart: chart("lineClusteredColumnComboChart", { Category: [Cat], Y: [Qty], Y2: [Price] }, [[t("Accessories"), n(30), d(2.5)], [t("Bikes"), n(50), d(3.5)], [t("Shoes"), n(20), d(1.5)]]),
+  lineStackedColumnComboChart: chart("lineStackedColumnComboChart", { Category: [Cat], Y: [Qty], Y2: [Price] }, [[t("Accessories"), n(30), d(2.5)], [t("Bikes"), n(50), d(3.5)], [t("Shoes"), n(20), d(1.5)]]),
   pieChart: chart("pieChart", { Category: [Cat], Y: [Qty] }, [[t("Accessories"), n(30)], [t("Bikes"), n(50)], [t("Shoes"), n(20)]]),
   donutChart: chart("donutChart", { Category: [Cat], Y: [Qty] }, [[t("Accessories"), n(30)], [t("Bikes"), n(50)], [t("Shoes"), n(20)]]),
   funnel: chart("funnel", { Category: [Cat], Y: [Qty] }, [[t("Accessories"), n(30)], [t("Bikes"), n(50)], [t("Shoes"), n(20)]]),

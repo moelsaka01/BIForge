@@ -31,7 +31,7 @@ const y = (label = "Y-axis", max = 12): RoleDef => ({ name: "Y", label, accepts:
 
 /** Small multiples split a chart into one small chart per value of a field (the report format calls the well Rows). */
 const SMALL_MULTIPLES: RoleDef = { name: "Rows", label: "Small multiples", accepts: "column", max: 1 };
-const NO_SMALL_MULTIPLES = new Set(["ribbonChart", "lineClusteredColumnComboChart"]);
+const NO_SMALL_MULTIPLES = new Set(["ribbonChart", "lineClusteredColumnComboChart", "lineStackedColumnComboChart"]);
 
 const cartesian = (id: string, label: string, glyph: string, extra: RoleDef[] = []): VisualTypeDef => ({
   id,
@@ -55,6 +55,7 @@ export const VISUAL_TYPES: VisualTypeDef[] = [
   cartesian("hundredPercentStackedAreaChart", "100% stacked area chart", "%◢"),
   cartesian("ribbonChart", "Ribbon chart", "▮≈"),
   cartesian("lineClusteredColumnComboChart", "Line and clustered column chart", "▮╱", [{ name: "Y2", label: "Line y-axis", accepts: "value", max: 12 }]),
+  cartesian("lineStackedColumnComboChart", "Line and stacked column chart", "▯╱", [{ name: "Y2", label: "Line y-axis", accepts: "value", max: 12 }]),
   {
     id: "pieChart",
     label: "Pie chart",

@@ -29,6 +29,7 @@ const FIELDS: Record<string, { role: string; field: unknown }[]> = {
   stackedAreaChart: [{ role: "Category", field: column("Date", "Month") }, { role: "Y", field: Qty }],
   hundredPercentStackedAreaChart: [{ role: "Category", field: column("Date", "Month") }, { role: "Y", field: Qty }],
   ribbonChart: [{ role: "Category", field: Cat }, { role: "Series", field: column("Customer", "Country") }, { role: "Y", field: Qty }],
+  lineStackedColumnComboChart: [{ role: "Category", field: Cat }, { role: "Y", field: Qty }, { role: "Y2", field: agg("Sales", "UnitPrice", 1) }],
   lineClusteredColumnComboChart: [{ role: "Category", field: Cat }, { role: "Y", field: Qty }, { role: "Y2", field: agg("Sales", "UnitPrice", 1) }],
   pieChart: [{ role: "Category", field: Cat }, { role: "Y", field: Qty }],
   donutChart: [{ role: "Category", field: Cat }, { role: "Y", field: Qty }],

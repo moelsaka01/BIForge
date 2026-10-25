@@ -35,6 +35,7 @@ const HIGHLIGHT_TARGETS = new Set([
   "hundredPercentStackedAreaChart",
   "ribbonChart",
   "lineClusteredColumnComboChart",
+  "lineStackedColumnComboChart",
   "pieChart",
   "donutChart",
 ]);

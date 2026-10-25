@@ -104,6 +104,17 @@ describe("cartesian charts", () => {
     expect(o.yAxis).toHaveLength(2);
   });
 
+  it("line and stacked column chart: the columns of several series stack on the first axis, the line does not", () => {
+    const v = visualOf("lineStackedColumnComboChart", { Category: [Cat], Series: [Country], Y: [Qty], Y2: [Price] });
+    const o = build(v, grouped(v, [[c("Bikes"), c("FR"), c(120), c(850.5, "real")], [c("Bikes"), c("CA"), c(80), c(700, "real")]])).option;
+    const bars = o.series.filter((s: { type: string }) => s.type === "bar");
+    const lines = o.series.filter((s: { type: string }) => s.type === "line");
+    expect(bars.length).toBeGreaterThan(1);
+    expect(bars.every((s: { stack?: string }) => s.stack === "total")).toBe(true);
+    expect(lines.every((s: { stack?: string; yAxisIndex: number }) => s.stack === undefined && s.yAxisIndex === 1)).toBe(true);
+    expect(o.yAxis).toHaveLength(2);
+  });
+
   it("formatting: legend, labels, colors, axis range", () => {
     const v = visualOf("clusteredColumnChart", { Category: [Cat], Y: [Qty] });
     setFormat(v.json, "legend", "show", lit.bool(true));

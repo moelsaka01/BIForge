@@ -128,7 +128,7 @@ function sortsByValueByDefault(typeId: string, family: VisualFamily, model: Mode
   if (!firstGroup) return false;
   if (family === "pie" || family === "funnel" || family === "treemap") return true;
   if (family !== "cartesian") return false;
-  if (["lineChart", "areaChart", "stackedAreaChart", "hundredPercentStackedAreaChart", "lineClusteredColumnComboChart"].includes(typeId)) return false;
+  if (["lineChart", "areaChart", "stackedAreaChart", "hundredPercentStackedAreaChart", "lineClusteredColumnComboChart", "lineStackedColumnComboChart"].includes(typeId)) return false;
   return model.columnType(firstGroup.table, firstGroup.name) !== "dateTime";
 }
 

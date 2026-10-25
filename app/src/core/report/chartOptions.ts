@@ -82,11 +82,11 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
   const t = visual.visualType;
   const horizontal = t === "barChart" || /BarChart$/.test(t);
   const hundred = t.startsWith("hundredPercent");
-  const stacked = hundred || t === "barChart" || t === "columnChart" || t === "stackedAreaChart";
+  const stacked = hundred || t === "barChart" || t === "columnChart" || t === "stackedAreaChart" || t === "lineStackedColumnComboChart";
   const lineOnly = t === "lineChart";
   const areaOnly = t === "areaChart" || t === "stackedAreaChart" || t === "hundredPercentStackedAreaChart";
   const ribbon = t === "ribbonChart";
-  const combo = t === "lineClusteredColumnComboChart";
+  const combo = t === "lineClusteredColumnComboChart" || t === "lineStackedColumnComboChart";
 
   const valueCols = ["Y", "Y2"].flatMap((r) => columnsOf(q, r, "value"));
   const p = pivot(loaded.rows, q, "Category", "Series", ["Y", "Y2"]);
@@ -156,7 +156,8 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
       }),
     };
     if (f.bool("labels", "optimizeLabelDisplay", false)) s.labelLayout = { hideOverlap: true };
-    if (stacked) s.stack = isHighlight ? "highlight" : "total";
+    // in the stacked combo only the columns stack; its lines are separate
+    if (stacked && (!asLine || areaOnly)) s.stack = isHighlight ? "highlight" : "total";
     if (asLine) {
       Object.assign(s, lineSeriesStyle(f, color, hl !== null && !isHighlight));
       if (areaOnly || f.bool("lineStyles", "areaShow", false)) s.areaStyle = { opacity: isHighlight ? 0.85 : hl ? 0.2 : 0.4, color: f.bool("lineStyles", "areaMatchStrokeColor", true) ? undefined : f.color("lineStyles", "areaColor") };
