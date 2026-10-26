@@ -330,9 +330,11 @@ function measure(scenarioOf: Scenario, visualType: string, objects: string[]): R
     if (!props) continue;
     const instances: { selector?: string; extra: [string, Lit][] }[] =
       object === "y1AxisReferenceLine"
-        ? [{ selector: "id:constant", extra: [["show", lit.bool(true)], ["value", lit.num(25)], ["shadeShow", lit.bool(true)], ["shadeRegion", lit.str("before")], ["dataLabelShow", lit.bool(true)]] }]
-        : object === "referenceLine"
-          ? [{ selector: "id:average", extra: [["show", lit.bool(true)], ["type", lit.str("Average")], ["shadeShow", lit.bool(true)], ["shadeRegion", lit.str("after")], ["dataLabelShow", lit.bool(true)]] }]
+        ? [{ selector: "id:constant", extra: [["show", lit.bool(true)], ["value", lit.num(25)], ["shadeShow", lit.bool(true)], ["shadeRegion", lit.str("before")], ["dataLabelShow", lit.bool(true)], ["lineColor", lit.str("#112233")]] }]
+        : object === "xAxisReferenceLine"
+          ? [{ selector: "id:constant", extra: [["show", lit.bool(true)], ["value", lit.num(2)], ["shadeShow", lit.bool(true)], ["shadeRegion", lit.str("before")], ["dataLabelShow", lit.bool(true)], ["lineColor", lit.str("#112233")]] }]
+          : object === "referenceLine"
+          ? [{ selector: "id:average", extra: [["show", lit.bool(true)], ["type", lit.str("Average")], ["shadeShow", lit.bool(true)], ["shadeRegion", lit.str("after")], ["dataLabelShow", lit.bool(true)], ["lineColor", lit.str("#112233")]] }]
           : [{ extra: [] }];
     for (const inst of instances) {
       const prepare = (v: VisualModel, skip: string) => {

@@ -226,6 +226,7 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
     });
   }
 
+  const autoPoints: number[] = [];
   // Analytics: reference lines over the plotted values, and a trend line
   if (!hundred && !ribbon && seriesOut.length > 0) {
     const pooled: (number | null)[] = [];
@@ -242,8 +243,23 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
       const name = k.kind === "percentile" ? `${f.num(k.object, "percentile", 50, sel)}th percentile` : k.name;
       const mark = referenceLineMark(f, theme, spec, v, name, horizontal ? "xAxis" : "yAxis", fmtRef);
       if (mark) marks.push(mark);
+      // "Include in auto scale": the value axis grows to show the line
+      if (mark && v !== null && f.bool(k.object, "autoScale", false, sel)) autoPoints.push(v);
       const shade = referenceLineShade(f, theme, spec, v, horizontal ? "xAxis" : "yAxis");
       if (shade) shades.push(shade);
+    }
+    // the X-axis constant line stands on the category axis: the value is the name of a category, or its position (1 is the first)
+    const xSel = "id:constant";
+    if (p.categories.length > 0 && f.has("xAxisReferenceLine", "value", xSel)) {
+      const raw = f.num("xAxisReferenceLine", "value", 0, xSel);
+      const byName = p.categories.find((c) => c.label === String(raw));
+      const at = byName ?? p.categories[Math.min(p.categories.length, Math.max(1, Math.round(raw))) - 1];
+      const catAxis = horizontal ? "yAxis" : "xAxis";
+      const xSpec: LineSpec = { object: "xAxisReferenceLine", id: "constant" };
+      const xm = referenceLineMark(f, theme, xSpec, at.label, "X constant", catAxis, null);
+      if (xm) marks.push(xm);
+      const xs = referenceLineShade(f, theme, xSpec, at.label, catAxis, p.categories.map((c) => c.label));
+      if (xs) shades.push(xs);
     }
     if (marks.length) seriesOut[0].markLine = { silent: true, symbol: "none", animation: false, data: marks };
     if (shades.length) seriesOut[0].markArea = { silent: true, animation: false, data: shades };
@@ -280,6 +296,12 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
   };
   const fmt0 = valueCols[0]?.format ?? null;
   const valAxis = axisBlock({ f, theme, object: "valueAxis", kind: "value", fmt: fmt0, titleDefault: valueCols.map((c) => c.label).join(", "), hundred, horizontal });
+  if (autoPoints.length && !hundred) {
+    const lo = Math.min(...autoPoints);
+    const hi = Math.max(...autoPoints);
+    if (valAxis.min === undefined) valAxis.min = (e: { min: number }) => Math.min(e.min, lo);
+    if (valAxis.max === undefined) valAxis.max = (e: { max: number }) => Math.max(e.max, hi);
+  }
   const y2Cols = columnsOf(q, "Y2", "value");
   const valAxes = combo && y2Cols.length ? [valAxis, { ...axisBlock({ f, theme, object: "valueAxis", prefix: "sec", kind: "value", fmt: y2Cols[0].format, titleDefault: y2Cols.map((c) => c.label).join(", "), horizontal }), splitLine: { show: false } }] : [valAxis];
 

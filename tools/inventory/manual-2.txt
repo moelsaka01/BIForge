@@ -64,7 +64,7 @@ D | Max line
 D | Average line
 D | Median line
 D | Percentile line
-N | X-axis constant line
+D | X-axis constant line
 D | Y-axis constant line
 N | Symmetry shading
 D | Trend line

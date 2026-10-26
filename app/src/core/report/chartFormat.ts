@@ -300,7 +300,7 @@ export interface LineSpec {
 const H_POS: Record<string, string> = { left: "insideStartTop", right: "insideEndTop" };
 
 /** One reference line as an ECharts markLine entry; null when it is off or has no value. */
-export function referenceLineMark(f: FormatReader, theme: Theme, spec: LineSpec, value: number | null, nameFallback: string, axisKey: "xAxis" | "yAxis", fmt: string | null): O | null {
+export function referenceLineMark(f: FormatReader, theme: Theme, spec: LineSpec, value: number | string | null, nameFallback: string, axisKey: "xAxis" | "yAxis", fmt: string | null): O | null {
   const sel = `id:${spec.id}`;
   if (value === null || !f.bool(spec.object, "show", false, sel)) return null;
   const color = f.color(spec.object, "lineColor", sel) ?? theme.muted;
@@ -310,7 +310,11 @@ export function referenceLineMark(f: FormatReader, theme: Theme, spec: LineSpec,
   const what = f.str(spec.object, "dataLabelText", "ValueAndName", sel);
   const labelUnits = unitsOf(f, spec.object, "dataLabelDisplayUnits", sel);
   const dec = f.has(spec.object, "dataLabelDecimalPoints", sel) ? f.num(spec.object, "dataLabelDecimalPoints", 1, sel) : labelUnits === "none" ? 2 : 1;
-  const text = labelUnits === "none" ? formatNumber(value, fmt) : formatCompact(value, labelUnits, dec, fmt);
+  // a position on a category axis is a category name; a number is a value of a value axis
+  // decimal places of the label apply to the value, with or without display units
+  const places = Math.min(10, Math.max(0, Math.round(dec)));
+  const plain = f.has(spec.object, "dataLabelDecimalPoints", sel) ? formatNumber(value as number, places ? `#,0.${"0".repeat(places)}` : "#,0") : formatNumber(value as number, fmt);
+  const text = typeof value === "string" ? value : labelUnits === "none" || (labelUnits === "auto" && Math.abs(value) < 1000 && f.has(spec.object, "dataLabelDecimalPoints", sel)) ? plain : formatCompact(value, labelUnits, dec, fmt);
   const label = what === "Name" ? title : what === "ValueAndName" ? `${title}: ${text}` : text;
   const above = f.str(spec.object, "dataLabelVerticalPosition", "above", sel) === "above";
   const side = f.str(spec.object, "dataLabelHorizontalPosition", "right", sel);
@@ -333,14 +337,18 @@ export function referenceLineMark(f: FormatReader, theme: Theme, spec: LineSpec,
  * The shaded side of a reference line (shadeRegion before / after the value) as an ECharts markArea entry; null when
  * the line is off, has no shading or no value. The area runs to the far edge of the axis (it is clipped by the plot).
  */
-export function referenceLineShade(f: FormatReader, theme: Theme, spec: LineSpec, value: number | null, axisKey: "xAxis" | "yAxis"): O[] | null {
+export function referenceLineShade(f: FormatReader, theme: Theme, spec: LineSpec, value: number | string | null, axisKey: "xAxis" | "yAxis", categories?: string[]): O[] | null {
   const sel = `id:${spec.id}`;
   if (value === null || !f.bool(spec.object, "show", false, sel) || !f.bool(spec.object, "shadeShow", false, sel)) return null;
   const region = f.str(spec.object, "shadeRegion", "none", sel);
   if (region !== "before" && region !== "after") return null;
   const base = f.bool(spec.object, "shadeColorMatchStroke", false, sel) ? (f.color(spec.object, "lineColor", sel) ?? theme.muted) : (f.color(spec.object, "shadeColor", sel) ?? theme.muted);
   const far = 1e12;
-  const pair: O[] = region === "before" ? [{ [axisKey]: -far }, { [axisKey]: value }] : [{ [axisKey]: value }, { [axisKey]: far }];
+  // on a category axis the shade runs to the first or last category
+  const first = categories?.[0];
+  const last = categories?.[categories.length - 1];
+  if (typeof value === "string" && (first === undefined || last === undefined)) return null;
+  const pair: O[] = region === "before" ? [{ [axisKey]: typeof value === "string" ? first : -far }, { [axisKey]: value }] : [{ [axisKey]: value }, { [axisKey]: typeof value === "string" ? last : far }];
   pair[0] = { ...pair[0], itemStyle: { color: base, opacity: opacityOf(f.num(spec.object, "shadeTransparency", 50, sel)) } };
   return pair;
 }

@@ -96,6 +96,36 @@ describe("cartesian charts", () => {
     expect(ao.series[0].stack).toBe("total");
   });
 
+  it("reference lines: the X-axis constant line stands on a category, auto scale grows the axis, decimals shape the label", () => {
+    const v = visualOf("clusteredColumnChart", { Category: [Cat], Y: [Qty] });
+    const rows = [[c("Bikes"), c(120)], [c("Clothing"), c(80)], [c("Parts"), c(40)]];
+    const line = (o: { series: { markLine?: { data: { xAxis?: string; yAxis?: number; label: { formatter(): string }; name: string }[] } }[] }) => o.series[0].markLine?.data ?? [];
+    expect(line(build(v, grouped(v, rows)).option)).toEqual([]);
+    setFormat(v.json, "xAxisReferenceLine", "show", lit.bool(true), "id:constant");
+    setFormat(v.json, "xAxisReferenceLine", "value", lit.num(2), "id:constant");
+    setFormat(v.json, "xAxisReferenceLine", "dataLabelShow", lit.bool(true), "id:constant");
+    const x = line(build(v, grouped(v, rows)).option);
+    expect(x).toHaveLength(1);
+    expect(x[0].xAxis).toBe("Clothing"); // the second category
+    expect(x[0].label.formatter()).toBe("X constant: Clothing");
+    setFormat(v.json, "xAxisReferenceLine", "value", lit.num(99), "id:constant");
+    expect(line(build(v, grouped(v, rows)).option)[0].xAxis).toBe("Parts"); // past the end: the last one
+    // a constant line on the value axis: decimals, and auto scale makes the axis reach it
+    setFormat(v.json, "y1AxisReferenceLine", "show", lit.bool(true), "id:constant");
+    setFormat(v.json, "y1AxisReferenceLine", "value", lit.num(500), "id:constant");
+    setFormat(v.json, "y1AxisReferenceLine", "dataLabelShow", lit.bool(true), "id:constant");
+    setFormat(v.json, "y1AxisReferenceLine", "dataLabelDecimalPoints", lit.num(2), "id:constant");
+    let o = build(v, grouped(v, rows)).option;
+    const y = line(o).find((m) => m.yAxis === 500)!;
+    expect(y.label.formatter()).toBe("Constant: 500.00");
+    setFormat(v.json, "y1AxisReferenceLine", "autoScale", lit.bool(true), "id:constant");
+    o = build(v, grouped(v, rows)).option;
+    const ya = Array.isArray(o.yAxis) ? o.yAxis[0] : o.yAxis;
+    expect(typeof ya.max).toBe("function");
+    expect(ya.max({ max: 120 })).toBe(500);
+    expect(ya.min({ min: 0 })).toBe(0);
+  });
+
   it("plot area picture: a URL or data address, fit and transparency; none without one", () => {
     const v = visualOf("clusteredColumnChart", { Category: [Cat], Y: [Qty] });
     const rows = [[c("Bikes"), c(120)]];
