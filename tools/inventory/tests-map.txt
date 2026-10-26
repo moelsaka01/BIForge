@@ -56,7 +56,7 @@
 5|Image => app/src/views/report/staticVisuals.ui.test.tsx :: an image shows its picture
 5|Page navigator => app/src/views/report/staticVisuals.ui.test.tsx :: a page navigator lists
 5|Bookmark navigator => app/src/views/report/staticVisuals.ui.test.tsx :: a bookmark navigator lists
-6|Manage relationships => app/src/views/shell/shell.ui.test.tsx :: Manage relationships opens the Model view
+6|Manage relationships => app/src/views/shell/shell.ui.test.tsx :: Manage relationships opens its dialog
 6|New measure => app/src/views/shell/shell.ui.test.tsx :: New measure opens the Measures tab
 6|Quick measure => app/src/views/shell/ribbonItems.ui.test.tsx :: Quick measure opens its dialog
 6|New column => app/src/views/modeling.ui.test.tsx :: New column asks for a table
