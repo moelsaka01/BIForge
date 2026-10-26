@@ -416,7 +416,7 @@ N | Application language
 N | Model language
 N | Locale for import
 ### Updates / Usage data / Diagnostics
-N | Updates notification (local build only)
+D | Updates notification (local build only)
 D | Usage data (no telemetry in BIForge; the page states this)
 N | Diagnostic: enable tracing
 N | Diagnostic: trace folder location and open
@@ -433,7 +433,7 @@ D | Allow users to change filter types
 D | Enable slicer search
 D | Enable the filter pane search
 N | Persistent filters
-N | Report: default view setting
+D | Report: default view setting
 D | Show visual header on hover
 D | Default cross filtering / cross highlighting
 N | Hide the filters pane for new reports
@@ -446,7 +446,7 @@ D | Ribbon mode: multi-line, single line
 D | Theme: Light, Dark
 D | Theme: Use system setting
 N | Display language (UI strings)
-N | Font size and zoom of the interface
+D | Font size and zoom of the interface
 D | Show recent files count
 N | Always show start screen
 ### External tools / Scripting
@@ -455,11 +455,11 @@ P | Python scripting: home directory, IDE
 N | R/Python script timeouts
 ### Data cache
 N | Data cache management permissions
-N | Clear cache
+D | Clear cache
 ### Other global
 N | Developer options (custom visual developer mode)
 N | Certificate/CA settings for web sources
-N | Crash reporting (none)
+D | Crash reporting (none)
 N | Region-specific number and date formats
 ## 24. Options dialog: Current File
 ### Data Load

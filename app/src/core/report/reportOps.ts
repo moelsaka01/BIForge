@@ -70,7 +70,7 @@ function uniqueDisplayName(p: Project, base: string): string {
   for (let i = 2; ; i++) if (!taken.has(`${base} ${i}`.toLowerCase())) return `${base} ${i}`;
 }
 
-export function addPage(p: Project, displayName?: string, opt: { newId?: () => string; type?: "Drillthrough" | "Tooltip"; afterPage?: string } = {}): string {
+export function addPage(p: Project, displayName?: string, opt: { newId?: () => string; type?: "Drillthrough" | "Tooltip"; afterPage?: string; displayOption?: "FitToPage" | "FitToWidth" | "ActualSize" } = {}): string {
   const names = listPageNames(p);
   const name = (opt.newId ?? newName)();
   const base = displayName?.trim() || (opt.type === "Tooltip" ? "Tooltip" : opt.type === "Drillthrough" ? "Drillthrough" : `Page ${names.length + 1}`);
@@ -78,7 +78,7 @@ export function addPage(p: Project, displayName?: string, opt: { newId?: () => s
     $schema: PAGE_SCHEMA,
     name,
     displayName: uniqueDisplayName(p, base),
-    displayOption: "FitToPage",
+    displayOption: opt.displayOption ?? "FitToPage",
     height: opt.type === "Tooltip" ? 240 : 720,
     width: opt.type === "Tooltip" ? 320 : 1280,
   };

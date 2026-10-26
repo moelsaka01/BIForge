@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { FluentProvider, webDarkTheme, webLightTheme } from "@fluentui/react-components";
 import { resolveTheme } from "./core/shell/settings";
+import { applyInterfaceZoom, shouldCheckForUpdates } from "./core/shell/interfaceOptions";
 import { createAppRuntime, type AppRuntime } from "./core/appRuntime";
 import { ClassicShell } from "./shells/classic/ClassicShell";
 import { ModernShell } from "./shells/modern/ModernShell";
@@ -55,9 +56,12 @@ export function AppView({ rt, files = browserFiles, editorFactory = createMonaco
     };
   }, [registry]);
 
+  // Options > Interface > Size of the interface
+  useEffect(() => applyInterfaceZoom(document.documentElement, settings.options), [settings.options]);
+
   // a quiet check for a newer version a few seconds after start (switch it off in About)
   useEffect(() => {
-    if (settings.options["updates.checkAtStart"] === false) return;
+    if (!shouldCheckForUpdates(settings.options)) return;
     const t = setTimeout(() => void registry.execute("app.update.check", { silent: true }), 6000);
     return () => clearTimeout(t);
     // only at start: later changes of the option apply to the next start

@@ -56,7 +56,9 @@ export function registerReportCommands(r: CommandRegistry<Session>): void {
     const args = (a ?? {}) as { name?: string; type?: "Drillthrough" | "Tooltip" };
     let id = "";
     edit(s, "New page", (p) => {
-      id = ops.addPage(p, args.name, { type: args.type, afterPage: s.report.getSnapshot().page ?? undefined });
+      // Options > Report settings > Default view of a new page
+      const view = s.shell.settings.getSnapshot().options["report.defaultPageView"];
+      id = ops.addPage(p, args.name, { type: args.type, afterPage: s.report.getSnapshot().page ?? undefined, ...(view === "FitToWidth" || view === "ActualSize" ? { displayOption: view } : {}) });
     });
     s.report.goToPage(id);
   });

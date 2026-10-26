@@ -63,6 +63,13 @@ export function OptionsDialog({ page }: { page?: string }) {
       </>
     );
     if (def.type === "info") return <div style={{ fontSize: 13 }}>{def.label}</div>;
+    if (def.type === "action") {
+      return (
+        <Button disabled={!def.command || !env.registry.isEnabled(def.command)} onClick={() => void env.run(def.command!)}>
+          {def.label}
+        </Button>
+      );
+    }
     if (def.type === "bool") return <Checkbox label={label} checked={v === true} disabled={off} onChange={(_, d) => change(def, d.checked === true)} />;
     if (def.type === "enum") {
       return (

@@ -7,7 +7,7 @@ export type OptionValue = boolean | number | string;
 export interface OptionDef {
   id: string;
   label: string;
-  type: "bool" | "enum" | "number" | "text" | "info";
+  type: "bool" | "enum" | "number" | "text" | "info" | "action";
   default: OptionValue;
   /** For enums: value and label pairs. */
   choices?: { value: string; label: string }[];
@@ -17,6 +17,8 @@ export interface OptionDef {
   implemented: boolean;
   /** Extra line under the setting. */
   note?: string;
+  /** For an action: the command the button runs. */
+  command?: string;
 }
 
 export interface OptionPage {
@@ -33,6 +35,7 @@ const e = (id: string, label: string, def: string, choices: [string, string][], 
 const n = (id: string, label: string, def: number, min: number, max: number, implemented = false, note?: string): OptionDef => ({ id, label, type: "number", default: def, min, max, implemented, note });
 const t = (id: string, label: string, def: string, implemented = false, note?: string): OptionDef => ({ id, label, type: "text", default: def, implemented, note });
 const info = (id: string, label: string): OptionDef => ({ id, label, type: "info", default: "", implemented: true });
+const act = (id: string, label: string, command: string, note?: string): OptionDef => ({ id, label, type: "action", default: "", implemented: true, command, note });
 
 const CULTURES: [string, string][] = [
   ["en-US", "English (United States)"], ["en-GB", "English (United Kingdom)"], ["de-DE", "German (Germany)"], ["fr-FR", "French (France)"],
@@ -49,6 +52,7 @@ export const OPTION_PAGES: OptionPage[] = [
       e("interface.ribbonMode", "Ribbon (this interface)", "multiline", [["multiline", "Multi-line"], ["singleline", "Single line"]], true),
       b("interface.showRecommended", "Show the Recommended section on the start screen", true, true),
       n("interface.recentCount", "Number of recent projects to remember", 20, 1, 50, true),
+      n("interface.zoom", "Size of the interface (percent)", 100, 50, 200, true, "Scales the whole window, text and controls together."),
       e("interface.language", "Display language", "en", [["en", "English"]], false, "Only English is available."),
       b("interface.restoreWindow", "Remember window size and position", false),
     ],
@@ -106,11 +110,11 @@ export const OPTION_PAGES: OptionPage[] = [
   },
   {
     id: "g.updates", scope: "global", label: "Updates",
-    settings: [info("updates.note", "BIForge does not check for updates by itself. Releases are published on GitHub."), b("updates.notify", "Notify me when a new release is available", false)],
+    settings: [info("updates.note", "Releases are published on GitHub. The check asks GitHub for the newest release and sends nothing else."), b("updates.checkAtStart", "Look for a new release a few seconds after start", true, true, "The same switch as in About.")],
   },
   {
     id: "g.usage", scope: "global", label: "Usage Data",
-    settings: [info("usage.note", "BIForge collects no usage data and sends nothing over the network.")],
+    settings: [info("usage.note", "BIForge collects no usage data and sends nothing over the network."), info("usage.crash", "BIForge sends no crash reports. If it fails, nothing leaves this computer.")],
   },
   {
     id: "g.diagnostics", scope: "global", label: "Diagnostics",
@@ -141,6 +145,7 @@ export const OPTION_PAGES: OptionPage[] = [
       b("report.persistentFilters", "Persistent filters", false),
       b("report.hideFilterPane", "Hide the filter pane in new reports", false),
       b("report.visualHeader", "Show the visual header on hover", true, true, "A visual's own Visual header setting wins."),
+      e("report.defaultPageView", "Default view of a new page", "FitToPage", [["FitToPage", "Fit to page"], ["FitToWidth", "Fit to width"], ["ActualSize", "Actual size"]], true, "Each page keeps its own view once it exists."),
       b("canvas.smartGuides", "Smart guides: snap to other visuals and the page while moving and resizing (hold Alt to skip)", true, true),
       b("canvas.gridlines", "Show gridlines on the canvas", false, true),
       b("canvas.snapToGrid", "Snap visuals to the grid", false, true),
@@ -151,7 +156,7 @@ export const OPTION_PAGES: OptionPage[] = [
   },
   {
     id: "g.cache", scope: "global", label: "Data Cache Management Options",
-    settings: [info("cache.note", "The data store of a project lives in its .biforge folder and is removed when you delete the project.")],
+    settings: [info("cache.note", "The data store of a project lives in its .biforge folder and is removed when you delete the project."), act("cache.clear", "Clear the cache of query results", "report.visuals.refresh", "Every visual asks the data again.")],
   },
   // ---- Current file ----
   {

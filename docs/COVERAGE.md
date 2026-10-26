@@ -167,7 +167,7 @@ Last updated: 2026-10-25 (see PROGRESS.md; the status table below is generated b
 | Power Query editor: window and ribbon | 94 | 45 | 4 | 45 |
 | M language | 12 | 3 | 0 | 9 |
 | Get data: connectors | 47 | 25 | 16 | 6 |
-| Options dialog: Global | 61 | 17 | 2 | 42 |
+| Options dialog: Global | 61 | 22 | 2 | 37 |
 | Options dialog: Current File | 23 | 6 | 0 | 17 |
 | Dialogs | 48 | 28 | 0 | 20 |
 | Keyboard shortcuts | 37 | 24 | 1 | 12 |
@@ -176,7 +176,7 @@ Last updated: 2026-10-25 (see PROGRESS.md; the status table below is generated b
 | Format pane cards per visual | 1264 | 777 | 231 | 256 |
 | DAX functions | 317 | 297 | 0 | 20 |
 | M standard library | 652 | 421 | 0 | 231 |
-| **Total** | **3008** | **1939** | **280** | **789** |
+| **Total** | **3008** | **1944** | **280** | **784** |
 <!-- inventory-status:end -->
 
 ## Online track (Publish & Share; plan in docs/ONLINE_PLAN.md)

@@ -7,6 +7,7 @@ import { OPTION_PAGES } from "../../core/options/schema";
 import { getModelCulture } from "../../core/model/ops";
 import { SETTINGS_KEY } from "../../core/shell/settings";
 import { agg, column, lit } from "../../core/report/fields";
+import { listPageNames, parsePage } from "../../core/report/visualDoc";
 import { MemoryStorage, PBIP, ROOT, makeApp } from "./testApp";
 
 installDomStubs();
@@ -138,6 +139,32 @@ describe("Options dialog", () => {
     const panel = within(dlg).getByRole("tabpanel", { name: "Usage Data" });
     expect(panel.textContent).toContain("collects no usage data and sends nothing over the network");
     expect(within(panel).queryAllByRole("checkbox")).toHaveLength(0);
+  });
+
+  it("settings with an effect: Clear cache refreshes the visuals, the default view of a new page, the update check switch, and the crash reporting line", async () => {
+    const a = makeApp();
+    render(a.element);
+    await openProject(a);
+    await act(async () => void a.registry.execute("app.options", { page: "g.cache" }));
+    const dlg = await screen.findByRole("dialog", { name: "Options" });
+    const tick = a.session.report.getSnapshot().refreshTick;
+    fireEvent.click(within(dlg).getByRole("button", { name: "Clear the cache of query results" }));
+    await waitFor(() => expect(a.session.report.getSnapshot().refreshTick).toBe(tick + 1));
+    fireEvent.click(within(dlg).getAllByRole("tab").find((t) => t.getAttribute("data-page") === "g.usage")!);
+    expect(within(dlg).getByRole("tabpanel", { name: "Usage Data" }).textContent).toContain("sends no crash reports");
+    fireEvent.click(within(dlg).getAllByRole("tab").find((t) => t.getAttribute("data-page") === "g.updates")!);
+    const box = within(dlg).getByRole("checkbox", { name: /Look for a new release/ });
+    expect((box as HTMLInputElement).checked).toBe(true);
+    fireEvent.click(box);
+    expect(a.session.shell.settings.getSnapshot().options["updates.checkAtStart"]).toBe(false);
+    fireEvent.click(within(dlg).getAllByRole("tab").find((t) => t.getAttribute("data-page") === "g.report")!);
+    fireEvent.click(within(dlg).getByRole("radio", { name: "Fit to width" }));
+    expect(a.session.shell.settings.getSnapshot().options["report.defaultPageView"]).toBe("FitToWidth");
+    await act(async () => a.shell.closeDialog());
+    await act(async () => void (await a.registry.execute("report.page.add")));
+    const pages = listPageNames(a.session.store.project!);
+    expect(parsePage(a.session.store.project!, pages[pages.length - 1])!.json.displayOption).toBe("FitToWidth");
+    expect(parsePage(a.session.store.project!, pages[0])!.json.displayOption).not.toBe("FitToWidth");
   });
 
   it("lists every page of GLOBAL and CURRENT FILE; each page opens with its settings, and unimplemented ones say so", async () => {
