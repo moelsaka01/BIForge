@@ -22,12 +22,14 @@ export interface CanvasOptions {
   filterSearch: boolean;
   /** Viewing mode lists hidden pages too. */
   showHiddenPages: boolean;
+  /** Viewing mode offers Export data in the menu of a visual. */
+  exportData: boolean;
 }
 
 export const CANVAS_OPTION_IDS = ["canvas.smartGuides", "canvas.gridlines", "canvas.snapToGrid", "canvas.lockObjects"] as const;
 export type CanvasOptionId = (typeof CANVAS_OPTION_IDS)[number];
 
-export const DEFAULT_CANVAS: CanvasOptions = { smartGuides: true, gridlines: false, snapToGrid: false, lockObjects: false, gridSize: 10, visualHeader: true, crossDefault: "highlight", slicerSearch: false, changeFilterTypes: true, filterSearch: true, showHiddenPages: false };
+export const DEFAULT_CANVAS: CanvasOptions = { smartGuides: true, gridlines: false, snapToGrid: false, lockObjects: false, gridSize: 10, visualHeader: true, crossDefault: "highlight", slicerSearch: false, changeFilterTypes: true, filterSearch: true, showHiddenPages: false, exportData: true };
 
 export function canvasOptionsOf(options: Record<string, OptionValue>): CanvasOptions {
   const bool = (id: string, d: boolean) => (typeof options[id] === "boolean" ? (options[id] as boolean) : d);
@@ -43,6 +45,7 @@ export function canvasOptionsOf(options: Record<string, OptionValue>): CanvasOpt
     changeFilterTypes: bool("report.changeFilterTypes", true) && bool("file.report.changeFilterTypes", true),
     filterSearch: bool("report.filterSearch", true),
     showHiddenPages: bool("file.report.hiddenPages", false),
+    exportData: bool("file.report.showTablesDefault", true),
     gridSize: typeof size === "number" && size >= 2 && size <= 200 ? Math.round(size) : DEFAULT_CANVAS.gridSize,
   };
 }

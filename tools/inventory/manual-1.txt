@@ -186,7 +186,7 @@ D | Show next level
 N | Include / Exclude
 N | Sort axis
 D | Show data as table
-N | Export data
+D | Export data
 N | Spotlight
 D | Focus mode
 D | Copy visual as image
@@ -239,7 +239,7 @@ D | Sync slicers across pages
 D | Hierarchy slicer
 N | Show data point as a table / See records
 N | Spotlight
-N | Export data (summarized / underlying)
+P | Export data (summarized / underlying)
 D | Copy visual as image
 N | Personalize visuals
 N | Annotations

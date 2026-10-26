@@ -202,7 +202,30 @@ function ExportDialog() {
         Report theme (JSON)…
       </Button>
       <Button onClick={() => env.session.shell.openDialog({ kind: "saveAs", copy: true })}>Project copy (PBIP folder with its data)…</Button>
-      <div style={{ fontSize: 12, opacity: 0.75 }}>Not available yet: PDF, PNG, Power BI template (.pbit), visual data to CSV or Excel.</div>
+      <Button
+        onClick={async () => {
+          const el = document.querySelector("[data-page]") as HTMLElement | null;
+          if (!el) {
+            env.session.setMessage("Open the Report view to export a page as a picture.");
+            close();
+            return;
+          }
+          try {
+            const { toBlob } = await import("html-to-image");
+            const blob = await toBlob(el, { pixelRatio: 2, filter: (n) => !(n instanceof HTMLElement && (n.dataset.testid === "visual-bar" || n.dataset.testid === "header-popover")) });
+            if (!blob) throw new Error("nothing to draw");
+            const name = el.getAttribute("aria-label")?.replace(/^Page /, "") || "Page";
+            env.files.saveBlob?.(`${name.replace(/[\\/:*?"<>|]+/g, "_")}.png`, blob);
+            env.session.setMessage(`Exported the page as a picture.`);
+          } catch (e) {
+            env.session.setMessage(`Could not export the page: ${e instanceof Error ? e.message : String(e)}`);
+          }
+          close();
+        }}
+      >
+        Current page as a picture (PNG)…
+      </Button>
+      <div style={{ fontSize: 12, opacity: 0.75 }}>Visual data to CSV: right-click a visual, Export data. Not available yet: PDF, Power BI template (.pbit), Excel.</div>
     </Shell>
   );
 }

@@ -4,6 +4,8 @@ export interface FileUi {
   pickText(accept: string): Promise<string | null>;
   /** Hands a text file to the user (a download). */
   save(name: string, text: string, mime?: string): void;
+  /** Hands a binary file (a picture) to the user. */
+  saveBlob?(name: string, blob: Blob): void;
 }
 
 export const browserFiles: FileUi = {
@@ -18,7 +20,10 @@ export const browserFiles: FileUi = {
     });
   },
   save(name, text, mime = "application/json") {
-    const url = URL.createObjectURL(new Blob([text], { type: mime }));
+    browserFiles.saveBlob!(name, new Blob([text], { type: mime }));
+  },
+  saveBlob(name, blob) {
+    const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
     a.download = name;

@@ -82,6 +82,7 @@ export function makeApp(opts: { storage?: MemoryStorage; withProjectOnDisk?: boo
     next: null,
     pickText: async () => files.next,
     save: (name, text) => void files.saved.push({ name, text }),
+    saveBlob: (name, blob) => void files.saved.push({ name, text: `blob:${blob.type}:${blob.size}` }),
   };
   const rt: AppRuntime = { session, registry, autosave: new AutosaveController(session, 1000), dax, tmdl };
   return { rt, session, registry, shell, publish, io, dialogs, engine, dax, storage, files, win: w, element: <AppView rt={rt} files={files} editorFactory={noEditor} /> };

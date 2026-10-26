@@ -155,8 +155,8 @@ Last updated: 2026-10-25 (see PROGRESS.md; the status table below is generated b
 | Report view ribbon: Optimize tab | 4 | 2 | 0 | 2 |
 | Report view ribbon: Help tab | 5 | 5 | 0 | 0 |
 | Report view ribbon: External Tools tab | 2 | 0 | 0 | 2 |
-| Report view contextual tabs | 35 | 24 | 2 | 9 |
-| Report canvas and page features | 53 | 39 | 2 | 12 |
+| Report view contextual tabs | 35 | 25 | 2 | 8 |
+| Report canvas and page features | 53 | 39 | 3 | 11 |
 | Visuals | 76 | 51 | 4 | 21 |
 | Table view | 18 | 15 | 1 | 2 |
 | Model view | 23 | 16 | 3 | 4 |
@@ -168,15 +168,15 @@ Last updated: 2026-10-25 (see PROGRESS.md; the status table below is generated b
 | M language | 12 | 3 | 0 | 9 |
 | Get data: connectors | 47 | 25 | 16 | 6 |
 | Options dialog: Global | 61 | 17 | 2 | 42 |
-| Options dialog: Current File | 23 | 5 | 0 | 18 |
+| Options dialog: Current File | 23 | 6 | 0 | 17 |
 | Dialogs | 48 | 28 | 0 | 20 |
-| Keyboard shortcuts | 37 | 23 | 1 | 13 |
-| Export, print and file formats | 15 | 3 | 0 | 12 |
+| Keyboard shortcuts | 37 | 24 | 1 | 12 |
+| Export, print and file formats | 15 | 5 | 0 | 10 |
 | Accessibility and platform | 12 | 2 | 0 | 10 |
 | Format pane cards per visual | 1264 | 777 | 231 | 256 |
 | DAX functions | 317 | 297 | 0 | 20 |
 | M standard library | 652 | 421 | 0 | 231 |
-| **Total** | **3008** | **1931** | **276** | **801** |
+| **Total** | **3008** | **1936** | **277** | **795** |
 <!-- inventory-status:end -->
 
 ## Online track (Publish & Share; plan in docs/ONLINE_PLAN.md)

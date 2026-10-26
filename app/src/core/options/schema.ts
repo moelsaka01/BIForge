@@ -181,7 +181,7 @@ export const OPTION_PAGES: OptionPage[] = [
       b("file.report.changeFilterTypes", "Allow users to change filter types", true, true, "Off here wins over the global setting."),
       b("file.report.slicerSearch", "Show the search box in slicers that do not decide for themselves", false, true),
       b("file.report.persistentFilters", "Persistent filters", false),
-      b("file.report.showTablesDefault", "Export data allowed", true),
+      b("file.report.showTablesDefault", "Export data allowed", true, true, "When off, a reader of the report (viewing mode) does not get Export data in the menu of a visual."),
       b("file.report.hiddenPages", "Show hidden pages to users", false, true, "In viewing mode the tabs of hidden pages are listed too."),
       b("file.report.personalize", "Let report readers personalize visuals (change the type and fields of a visual)", false, true, "Stored as the personalizeVisual setting of every page; the visual header then shows the Personalize button."),
     ],

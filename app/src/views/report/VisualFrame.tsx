@@ -16,6 +16,8 @@ import { restateFilters } from "../../core/report/filterRestatement";
 import { buildContainer } from "../../core/report/containerModel";
 import { drillPlan } from "../../core/report/queryBuilder";
 import { useReport, type MenuItem } from "./reportContext";
+import { loadedToCsv, exportFileName } from "../../core/report/exportData";
+import { browserFiles } from "../shell/files";
 import { VisualContent } from "./VisualContent";
 
 export type Handle = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
@@ -120,11 +122,26 @@ export function VisualFrame(p: FrameProps) {
     cardIds.has(card) ? { card, label, on: card === "title" ? showTitle : f.bool(card, "show", def) } : null;
   const handles = [handle("title", "Title", false), handle("legend", "Legend", true), handle("labels", "Data labels", false)].filter((x): x is NonNullable<typeof x> => x !== null);
 
+  /** Export data: the rows the visual is drawn from, as a CSV file (the summarized data). */
+  const exportData = async () => {
+    try {
+      const loaded = await c.data.load(c.project, page, visual, c.view, c.model);
+      const csv = loadedToCsv(loaded);
+      if (csv === null) throw new Error("this kind of visual has no table of rows to export");
+      browserFiles.save(exportFileName(titleText || type?.label || visual.visualType, "csv"), csv, "text/csv");
+      setCopyNote("Exported the data of the visual");
+    } catch (e) {
+      setCopyNote(`Could not export the data: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    setTimeout(() => setCopyNote(null), 3000);
+  };
+
   const menu = (e: React.MouseEvent) => {
     // a right-click on a data point has its own menu (the chart prevents the default before this runs)
     if (e.defaultPrevented) return;
     e.preventDefault();
     const all: MenuItem[] = [
+        ...(type && !type.static && c.canvas.exportData ? [{ label: "Export data", viewOnly: true, onClick: () => void exportData() }] : []),
         { label: "Duplicate", onClick: () => c.dispatch("report.visual.duplicate", { page: page.name, visual: visual.name }) },
         { label: "Bring to front", onClick: () => c.dispatch("report.visual.arrange", { page: page.name, visual: visual.name, where: "front" }) },
         { label: "Send to back", onClick: () => c.dispatch("report.visual.arrange", { page: page.name, visual: visual.name, where: "back" }) },

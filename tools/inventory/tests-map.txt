@@ -437,3 +437,8 @@
 14|Table header menu (New column, rename, copy table) => app/src/views/views.test.tsx :: the table header menu copies the table ;; app/src/views/shell/columnMenu.test.ts :: hide, unhide, rename
 14|Data category and format display => app/src/views/views.test.tsx :: the header shows the format and the data category ;; app/src/views/shell/columnMenu.test.ts :: the model tells the Table view
 14|Calculated column editing in grid => app/src/views/views.test.tsx :: the header shows the format and the data category
+26|Alt+key tips for tabs and commands => app/src/views/shell/shell.ui.test.tsx :: Alt shows key tips
+11|Export data => app/src/views/report/exportData.ui.test.tsx :: right-click a visual, Export data ;; app/src/core/report/exportData.test.ts :: writes the rows of the visual as CSV
+24|Export data setting => app/src/views/report/exportData.ui.test.tsx :: in viewing mode the menu offers Export data only while the report allows it
+27|Export page to PNG => app/src/views/shell/exportPage.ui.test.tsx :: hands a PNG named after the page
+27|Export visual data to CSV => app/src/views/report/exportData.ui.test.tsx :: right-click a visual, Export data ;; app/src/core/report/exportData.test.ts :: writes the rows of the visual as CSV

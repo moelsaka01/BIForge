@@ -488,7 +488,7 @@ N | Persistent filters
 D | Slicer search
 N | Q&A
 N | Show visuals as tables default
-N | Export data setting
+D | Export data setting
 D | Hidden pages shown to users
 N | Accessibility: alt text prompt
 ## 25. Dialogs
@@ -555,7 +555,7 @@ D | Ctrl+V paste
 D | Ctrl+A select all
 D | Delete delete selection
 D | F11 full screen
-N | Alt+key tips for tabs and commands
+D | Alt+key tips for tabs and commands
 D | Alt key tips for tabs and main controls
 ### Canvas
 D | Arrow keys move selected visual
@@ -583,8 +583,8 @@ N | F2 rename in Model and Table view
 D | Print Screen / system keys never intercepted (tested)
 ## 27. Export, print and file formats
 N | Export report to PDF
-N | Export page to PNG
-N | Export visual data to CSV
+D | Export page to PNG
+D | Export visual data to CSV
 N | Export visual data to XLSX
 D | Copy visual as image
 N | Print report
