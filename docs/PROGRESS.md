@@ -498,3 +498,13 @@ Late in the session every process start on this PC took 20 to 30 s (python --ver
 3. Options with real effect still missing: type detection, null handling, native query approval, tracing; keyboard: Shift+Arrow resize (conflicts with the existing move by 10), F2 rename, Ctrl+F6.
 
 - **e2e (fresh debug build, all flows): 100 checks passed, 0 failed.**
+
+## 2026-10-26: parity sprint, fourth part: 1886 / 286 / 836 -> 1944 / 280 / 784 (stopped: weekly usage nearly used)
+Done-tested +58. Frontend suites were green when each batch was committed; the full `--pool=threads` run and `npm run e2e` were NOT re-run after the last commits (only the e2e of the earlier part: 100 checks passed).
+- Role names of the new visuals verified against Desktop's dataRoles (narrative: Values only; Shape map: Category, Y); CLAUDE.md: no filesystem-wide searches.
+- Features: Manage relationships dialog + Autodetect; DAX view query tabs, run selection, save/open .dax, result copy/CSV, cancel (Partial); Table view column and header menus, formula bar, format/category in the header; Column tools / Measure tools tabs (Format, $, %, comma, decimals, summarization, data category, sort by column, home table); Export data (CSV) and page as PNG; X-axis constant line, reference line auto scale and decimals; shadow/glow/rotation/text for shape, buttons and navigators; navigator layouts; pages take the theme default style (counted Partial until every page card is drawn); options: interface size, default view of a new page, clear cache, update check switch.
+- Learned: the "Button section" (actionButtonSection) cards are not in the inventory (it counts theme-schema cards only), so that work was dropped. Many M "functions" in the inventory are documentation section names (Number.Bytes, Table.Transformation, List.Addition ...); they can never be implemented. Suggest removing them from the inventory (about 35 items) or accepting that 75% moves.
+### Next steps
+1. Run `cd app && npx vitest run --pool=threads`, `cargo test --workspace`, then `npx tauri build --debug --no-bundle` and `npm run e2e`; fix anything red.
+2. Unfinished idea (not committed): Synonyms for Q&A stored as the annotation BIForge.Synonyms (modeling.ts PropKey "synonyms", modelInfo.synonyms, qna.ts candidates).
+3. Then: Paginated report visual (local .rdl with DAX datasets), Print/PDF via print stylesheet, Recent sources, window state, keyboard F2 rename / Ctrl+F6, remaining Partial items.
