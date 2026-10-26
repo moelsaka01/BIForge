@@ -86,17 +86,17 @@ D | Header alignment matching cell alignment (text left, numbers right)
 D | Single-column sort
 D | Multi-column sort
 D | Column width drag
-N | Column context menu (rename, copy, hide, sort, format)
-N | Right-click row/column menu
-N | Formula bar (calculated column, measure)
+P | Column context menu (rename, copy, hide, sort, format)
+D | Right-click row/column menu
+D | Formula bar (calculated column, measure)
 N | Column tools tab
 N | Filter on columns (value list)
 D | Go to / Find in table
 D | Show hidden columns
-N | Table header menu (New column, rename, copy table)
+D | Table header menu (New column, rename, copy table)
 D | Copy table / copy values to clipboard
-N | Data category and format display
-N | Calculated column editing in grid
+D | Data category and format display
+D | Calculated column editing in grid
 D | Locale-formatted dates
 ## 15. Model view
 D | Table cards in a grid

@@ -54,14 +54,25 @@ export interface DataViewProps {
   culture?: string;
   /** Names of the columns the model hides: drawn faded, and the "Show hidden columns" switch can leave them out. */
   hiddenColumns?: ReadonlySet<string>;
+  /** What the model says about a column: its format string, data category, and the DAX formula of a calculated column. */
+  columnMeta?: Record<string, { format?: string; category?: string; formula?: string }>;
+  /** A command from the column menu or the table header menu; the host runs it against the model. */
+  onColumnCommand?(command: "hide" | "unhide" | "rename" | "newColumn" | "editFormula", column?: string): void;
+  /** The formula bar of a calculated column was changed. */
+  onEditFormula?(column: string, expression: string): void;
 }
 
 /** Virtualized, read-only data grid. Rows are fetched from the engine page by page; only visible rows are rendered. */
-export function DataView({ engine, table, reloadKey, culture, hiddenColumns }: DataViewProps) {
+export function DataView({ engine, table, reloadKey, culture, hiddenColumns, columnMeta, onColumnCommand, onEditFormula }: DataViewProps) {
   const [info, setInfo] = useState<TableInfo | null | undefined>(undefined);
   const [sorts, setSorts] = useState<SortSpec[]>([]);
   const [sel, setSel] = useState<{ a: Cell; f: Cell } | null>(null);
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  /** The menu of a column header (column) or of the table (no column). */
+  const [headMenu, setHeadMenu] = useState<{ x: number; y: number; column: string | null } | null>(null);
+  /** The column the formula bar shows: the last header or cell clicked. */
+  const [focusCol, setFocusCol] = useState<string | null>(null);
+  const [draft, setDraft] = useState<string | null>(null);
   const dragging = useRef(false);
   const [scrollTop, setScrollTop] = useState(0);
   const [, setTick] = useState(0);
@@ -77,6 +88,9 @@ export function DataView({ engine, table, reloadKey, culture, hiddenColumns }: D
     setSorts([]);
     setSel(null);
     setMenu(null);
+    setHeadMenu(null);
+    setFocusCol(null);
+    setDraft(null);
     setScrollTop(0);
     setWidths({});
     setCopied(null);
@@ -224,6 +238,25 @@ export function DataView({ engine, table, reloadKey, culture, hiddenColumns }: D
     }
   };
 
+  /** Copy column: the values of one column as the grid shows them, one per line, in the current sort order. */
+  const copyColumn = async (name: string) => {
+    const j = info.columns.findIndex((c) => c.name === name);
+    if (j < 0) return;
+    try {
+      const out: (string | null)[][] = [];
+      const limit = Math.min(info.rowCount, COPY_ROW_LIMIT);
+      while (out.length < limit) {
+        const page = await engine.fetchPage(info.name, out.length, Math.min(1000, limit - out.length), sorts);
+        if (page.rows.length === 0) break;
+        for (const row of page.rows) out.push([formatCell(row[j], info.columns[j].biType, culture)]);
+      }
+      await navigator.clipboard.writeText(toTsv([name], out));
+      setCopied(`Copied the column ${name} (${out.length.toLocaleString()} values)`);
+    } catch (e) {
+      setCopied(`Copy failed: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  };
+
   /** Copy table: the header and every row (up to a limit) in the current sort order, as tab-separated text. */
   const copyTable = async () => {
     try {
@@ -271,6 +304,32 @@ export function DataView({ engine, table, reloadKey, culture, hiddenColumns }: D
         </button>
         {copied ? <span role="status" style={{ marginLeft: 8 }}>{copied}</span> : null}
       </div>
+      {onEditFormula && (
+        <div aria-label="Formula bar" style={{ display: "flex", gap: 6, padding: "2px 8px", alignItems: "center", fontSize: 12 }}>
+          <span style={{ fontWeight: 600 }}>{focusCol ?? "Column"} =</span>
+          {focusCol && columnMeta?.[focusCol]?.formula !== undefined ? (
+            <>
+              <input
+                aria-label="Formula"
+                style={{ flex: 1, font: "inherit", fontFamily: "Consolas, monospace" }}
+                value={draft ?? columnMeta[focusCol].formula}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && draft !== null) {
+                    onEditFormula(focusCol, draft);
+                    setDraft(null);
+                  } else if (e.key === "Escape") setDraft(null);
+                }}
+              />
+              <button type="button" disabled={draft === null} onClick={() => (onEditFormula(focusCol, draft!), setDraft(null))}>
+                Apply
+              </button>
+            </>
+          ) : (
+            <span style={{ opacity: 0.7 }}>{focusCol ? "an imported column: it has no formula" : "click a column to see its formula"}</span>
+          )}
+        </div>
+      )}
       <div
         ref={box}
         data-testid="grid-scroll"
@@ -291,8 +350,38 @@ export function DataView({ engine, table, reloadKey, culture, hiddenColumns }: D
           }
         }}
       >
+        {headMenu && (
+          <ContextMenu
+            x={headMenu.x}
+            y={headMenu.y}
+            onClose={() => setHeadMenu(null)}
+            items={
+              headMenu.column
+                ? [
+                    { label: "Sort ascending", onClick: () => setSorts([{ column: headMenu.column!, descending: false }]) },
+                    { label: "Sort descending", onClick: () => setSorts([{ column: headMenu.column!, descending: true }]) },
+                    { label: "Clear sort", disabled: sorts.length === 0, onClick: () => setSorts([]) },
+                    { label: "Copy column", onClick: () => void copyColumn(headMenu.column!) },
+                    { label: "Copy column name", onClick: () => void navigator.clipboard?.writeText(headMenu.column!) },
+                    ...(onColumnCommand
+                      ? [
+                          { label: isHidden(headMenu.column) ? "Unhide in report view" : "Hide in report view", onClick: () => onColumnCommand(isHidden(headMenu.column!) ? "unhide" : "hide", headMenu.column!) },
+                          { label: "Rename", onClick: () => onColumnCommand("rename", headMenu.column!) },
+                          { label: "Edit formula…", disabled: columnMeta?.[headMenu.column]?.formula === undefined, onClick: () => onColumnCommand("editFormula", headMenu.column!) },
+                          { label: "New column", onClick: () => onColumnCommand("newColumn") },
+                        ]
+                      : []),
+                  ]
+                : [
+                    { label: "Copy table", onClick: () => void copyTable() },
+                    ...(onColumnCommand ? [{ label: "New column", onClick: () => onColumnCommand("newColumn") }] : []),
+                    { label: "Clear sort", disabled: sorts.length === 0, onClick: () => setSorts([]) },
+                  ]
+            }
+          />
+        )}
         {menu && sel && <ContextMenu x={menu.x} y={menu.y} onClose={() => setMenu(null)} items={[{ label: selCount === 1 ? "Copy value" : "Copy values", onClick: () => void copyCells() }]} />}
-        <div role="row" style={{ position: "sticky", top: 0, zIndex: 1, display: "flex", width, background: "var(--colorNeutralBackground3, #f3f3f3)" }}>
+        <div role="row" onContextMenu={(e) => { if (e.target === e.currentTarget) { e.preventDefault(); setHeadMenu({ x: e.clientX, y: e.clientY, column: null }); } }} style={{ position: "sticky", top: 0, zIndex: 1, display: "flex", width, background: "var(--colorNeutralBackground3, #f3f3f3)" }}>
           {shown.map(({ c }) => {
             const k = sorts.findIndex((x) => x.column === c.name);
             const active = k >= 0;
@@ -302,7 +391,12 @@ export function DataView({ engine, table, reloadKey, culture, hiddenColumns }: D
                 role="columnheader"
                 data-hidden={isHidden(c.name)}
                 aria-sort={k === 0 ? (sorts[0].descending ? "descending" : "ascending") : "none"}
-                onClick={(e) => toggleSort(c.name, e.shiftKey)}
+                onClick={(e) => (setFocusCol(c.name), setDraft(null), toggleSort(c.name, e.shiftKey))}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  setFocusCol(c.name);
+                  setHeadMenu({ x: e.clientX, y: e.clientY, column: c.name });
+                }}
                 title={`${c.name} — ${TYPE_LABEL[c.biType]} (${c.duckdbType})${isHidden(c.name) ? ", hidden" : ""}. Click to sort; Shift+click adds the column to the sort.`}
                 style={{
                   font: "inherit",
@@ -322,7 +416,11 @@ export function DataView({ engine, table, reloadKey, culture, hiddenColumns }: D
               >
                 {c.name}
                 {active ? (sorts[k].descending ? " ▼" : " ▲") + (sorts.length > 1 ? String(k + 1) : "") : ""}
-                <div style={{ fontWeight: 400, fontSize: 10, opacity: 0.7 }}>{TYPE_LABEL[c.biType]}</div>
+                <div style={{ fontWeight: 400, fontSize: 10, opacity: 0.7 }}>
+                  {TYPE_LABEL[c.biType]}
+                  {columnMeta?.[c.name]?.format ? ` · ${columnMeta[c.name].format}` : ""}
+                  {columnMeta?.[c.name]?.category ? ` · ${columnMeta[c.name].category}` : ""}
+                </div>
               </button>
               <div
                 role="separator"
@@ -356,6 +454,8 @@ export function DataView({ engine, table, reloadKey, culture, hiddenColumns }: D
                     onMouseDown={(e) => {
                       if (e.button !== 0) return;
                       dragging.current = true;
+                      setFocusCol(c.name);
+                      setDraft(null);
                       setSel((cur) => (e.shiftKey && cur ? { a: cur.a, f: { row: i, col: cj } } : { a: { row: i, col: cj }, f: { row: i, col: cj } }));
                     }}
                     onMouseEnter={() => dragging.current && setSel((cur) => (cur ? { a: cur.a, f: { row: i, col: cj } } : cur))}

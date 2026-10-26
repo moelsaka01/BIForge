@@ -432,3 +432,8 @@
 16|Query tab rename, save, open .dax files => app/src/views/shell/shell.ui.test.tsx :: DAX query view: tabs, run selection ;; app/src/core/dax/resultExport.test.ts :: a query file is named after its tab
 16|Run selection => app/src/views/shell/shell.ui.test.tsx :: DAX query view: tabs, run selection
 16|Result export (copy/CSV) => app/src/core/dax/resultExport.test.ts :: CSV quotes commas ;; app/src/core/dax/resultExport.test.ts :: tab-separated text for the clipboard
+14|Right-click row/column menu => app/src/views/views.test.tsx :: right-clicking a header offers sort
+14|Formula bar (calculated column, measure) => app/src/views/views.test.tsx :: the header shows the format and the data category
+14|Table header menu (New column, rename, copy table) => app/src/views/views.test.tsx :: the table header menu copies the table ;; app/src/views/shell/columnMenu.test.ts :: hide, unhide, rename
+14|Data category and format display => app/src/views/views.test.tsx :: the header shows the format and the data category ;; app/src/views/shell/columnMenu.test.ts :: the model tells the Table view
+14|Calculated column editing in grid => app/src/views/views.test.tsx :: the header shows the format and the data category

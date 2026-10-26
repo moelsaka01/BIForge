@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { Tab, TabList } from "@fluentui/react-components";
 import { listRelationships } from "../../core/model/relationships";
-import { getModelCulture, listTables } from "../../core/model/ops";
+import { allTables, getModelCulture, listTables, textProp } from "../../core/model/ops";
 import { getProperty } from "../../core/model/modeling";
 import { resolveTheme, themeToJson } from "../../core/report/theme";
 import { activePageName, listPageNames, parsePage, parseVisual, visualKey } from "../../core/report/visualDoc";
@@ -135,7 +135,7 @@ function ViewBody({ spec, onScale }: { spec: ShellSpec; onScale(s: number): void
         </div>
       );
     case "data":
-      return withData(session.engine ? <DataView engine={session.engine} table={dataTable} reloadKey={sess.dataEpoch + sess.dataTables.length} hiddenColumns={doc.project ? hiddenColumnsOf(doc.project, dataTable) : undefined} culture={doc.project ? (getModelCulture(doc.project) ?? undefined) : undefined} /> : <div className="empty-note">The data engine is not available.</div>);
+      return withData(session.engine ? <DataView engine={session.engine} table={dataTable} reloadKey={sess.dataEpoch + sess.dataTables.length} hiddenColumns={doc.project ? hiddenColumnsOf(doc.project, dataTable) : undefined} culture={doc.project ? (getModelCulture(doc.project) ?? undefined) : undefined} columnMeta={doc.project ? columnMetaOf(doc.project, dataTable) : undefined} onColumnCommand={(cmd, column) => dataTable && void columnCommand(env.run, dataTable, cmd, column)} onEditFormula={(column, expression) => dataTable && void env.run("model.editCalculatedColumn", { table: dataTable, name: column, expression })} /> : <div className="empty-note">The data engine is not available.</div>);
     case "model":
       return withData(
         <ModelView
@@ -337,6 +337,40 @@ export function Frame({ spec }: { spec: ShellSpec }) {
 }
 
 /** The columns of a table that the model hides. */
+/** Format string, data category and formula of the columns of a table, for the Table view. */
+export function columnMetaOf(project: import("../../core/model/types").Project, table: string | null): Record<string, { format?: string; category?: string; formula?: string }> {
+  const t = table ? allTables(project).find((x) => x.name === table) : undefined;
+  const out: Record<string, { format?: string; category?: string; formula?: string }> = {};
+  for (const c of t?.children.filter((x) => x.kind === "column" && x.name) ?? []) {
+    const m: { format?: string; category?: string; formula?: string } = {};
+    const f = textProp(c, "formatString");
+    const cat = textProp(c, "dataCategory");
+    if (f) m.format = f;
+    if (cat) m.category = cat;
+    if (c.default) m.formula = c.default.text;
+    if (Object.keys(m).length) out[c.name!] = m;
+  }
+  return out;
+}
+
+/** The column menu and the table header menu of the Table view, as model commands. */
+export async function columnCommand(run: (id: string, args?: unknown) => Promise<unknown>, table: string, cmd: "hide" | "unhide" | "rename" | "newColumn" | "editFormula", column?: string): Promise<void> {
+  switch (cmd) {
+    case "hide":
+    case "unhide":
+      if (column) await run("model.setProperty", { target: { kind: "column", table, column }, key: "isHidden", value: cmd === "hide" });
+      return;
+    case "rename":
+      if (column) await run("model.renameDialog", { kind: "column", table, name: column });
+      return;
+    case "newColumn":
+      await run("model.newColumnDialog", { table });
+      return;
+    case "editFormula":
+      if (column) await run("model.editCalculatedDialog", { kind: "column", table, column });
+  }
+}
+
 function hiddenColumnsOf(project: import("../../core/model/types").Project, table: string | null): Set<string> {
   const t = table ? listTables(project).find((x) => x.name === table) : undefined;
   return new Set((t?.columns ?? []).filter((c) => getProperty(project, { kind: "column", table: t!.name, column: c.name }, "isHidden") === true).map((c) => c.name));

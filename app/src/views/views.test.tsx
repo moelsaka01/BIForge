@@ -303,6 +303,76 @@ describe("DataView: column width and Copy table", () => {
   });
 });
 
+describe("DataView: column menu, table header menu, formula bar", () => {
+  const engine = () => {
+    const e = new FakeEngine();
+    e.tables.set("T", { columns: [col("id", "int64"), col("note"), col("Double")], rows: [["2", "b", "4"], ["1", "a", "2"], ["3", "c", "6"]] });
+    return e;
+  };
+
+  it("right-clicking a header offers sort, copy column, hide, rename, edit formula and new column; the model commands receive the column", async () => {
+    let copied = "";
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: async (t: string) => void (copied = t) } });
+    const cmds: [string, string | undefined][] = [];
+    render(<DataView engine={engine()} table="T" reloadKey={0} hiddenColumns={new Set(["note"])} columnMeta={{ Double: { formula: "[id] * 2" } }} onColumnCommand={(c, col) => void cmds.push([c, col])} />);
+    await screen.findByText(/3 rows/);
+    const header = (n: string) => screen.getAllByRole("columnheader").find((h) => h.textContent?.startsWith(n))!;
+    fireEvent.contextMenu(header("id"));
+    expect((await screen.findAllByRole("menuitem")).map((m) => m.textContent)).toEqual(["Sort ascending", "Sort descending", "Clear sort", "Copy column", "Copy column name", "Hide in report view", "Rename", "Edit formula…", "New column"]);
+    expect((screen.getByRole("menuitem", { name: "Edit formula…" }) as HTMLButtonElement).disabled).toBe(true); // id is an imported column
+    fireEvent.click(screen.getByRole("menuitem", { name: "Sort descending" }));
+    await waitFor(() => expect(screen.getByTestId("data-status").textContent).toMatch(/id descending/));
+    fireEvent.contextMenu(header("id"));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Copy column" }));
+    await waitFor(() => expect(copied).toBe("id\r\n3\r\n2\r\n1")); // in the sort order
+    fireEvent.contextMenu(header("id"));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Hide in report view" }));
+    fireEvent.contextMenu(header("note"));
+    expect((await screen.findByRole("menuitem", { name: "Unhide in report view" })).textContent).toBe("Unhide in report view");
+    fireEvent.click(screen.getByRole("menuitem", { name: "Unhide in report view" }));
+    fireEvent.contextMenu(header("Double"));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Edit formula…" }));
+    fireEvent.contextMenu(header("Double"));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Rename" }));
+    fireEvent.contextMenu(header("id"));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "New column" }));
+    expect(cmds).toEqual([["hide", "id"], ["unhide", "note"], ["editFormula", "Double"], ["rename", "Double"], ["newColumn", undefined]]);
+  });
+
+  it("the table header menu copies the table or starts a new column", async () => {
+    let copied = "";
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: async (t: string) => void (copied = t) } });
+    const cmds: string[] = [];
+    render(<DataView engine={engine()} table="T" reloadKey={0} onColumnCommand={(c) => void cmds.push(c)} />);
+    await screen.findByText(/3 rows/);
+    fireEvent.contextMenu(screen.getAllByRole("row")[0]);
+    expect((await screen.findAllByRole("menuitem")).map((m) => m.textContent)).toEqual(["Copy table", "New column", "Clear sort"]);
+    fireEvent.click(screen.getByRole("menuitem", { name: "Copy table" }));
+    await waitFor(() => expect(copied.startsWith("id\tnote\tDouble\r\n2\tb\t4")).toBe(true));
+    fireEvent.contextMenu(screen.getAllByRole("row")[0]);
+    fireEvent.click(await screen.findByRole("menuitem", { name: "New column" }));
+    expect(cmds).toEqual(["newColumn"]);
+  });
+
+  it("the header shows the format and the data category of a column, and the formula bar edits a calculated column", async () => {
+    const edits: [string, string][] = [];
+    render(<DataView engine={engine()} table="T" reloadKey={0} columnMeta={{ id: { format: "0", category: "PostalCode" }, Double: { formula: "[id] * 2" } }} onEditFormula={(c, e) => void edits.push([c, e])} />);
+    await screen.findByText(/3 rows/);
+    expect(screen.getAllByRole("columnheader")[0].textContent).toContain("Whole number · 0 · PostalCode");
+    const bar = screen.getByLabelText("Formula bar");
+    expect(bar.textContent).toMatch(/click a column to see its formula/);
+    fireEvent.click(screen.getAllByRole("columnheader")[0]);
+    expect(bar.textContent).toMatch(/imported column/);
+    fireEvent.click(screen.getAllByRole("columnheader")[2]);
+    const input = within(bar).getByLabelText("Formula") as HTMLInputElement;
+    expect(input.value).toBe("[id] * 2");
+    expect((within(bar).getByRole("button", { name: "Apply" }) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.change(input, { target: { value: "[id] * 3" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(edits).toEqual([["Double", "[id] * 3"]]);
+  });
+});
+
 describe("ModelView", () => {
   it("shows a card per table with its columns", async () => {
     const s = await modelSetup(false);
