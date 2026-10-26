@@ -250,6 +250,12 @@ export function themeStyle(t: Theme, visualType: string, object: string, prop: s
   return null;
 }
 
+/** The theme default style for exactly this visual type (no "*" wildcard): what a page or a group takes from the theme. */
+export function themeStyleExact(t: Theme, visualType: string, object: string, prop: string): string | number | boolean | null {
+  const list = t.visualStyles[visualType]?.["*"]?.[object];
+  return list?.[0] && list[0][prop] !== undefined ? plain(list[0][prop]) : null;
+}
+
 // ---- theme of a project ----------------------------------------------------------------------
 
 const REGISTERED = "RegisteredResources";

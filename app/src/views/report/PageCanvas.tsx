@@ -380,9 +380,9 @@ export function PageCanvas(p: PageCanvasProps) {
           root.current?.setPointerCapture?.(e.pointerId);
           setBand({ x0: pt.x, y0: pt.y, x1: pt.x, y1: pt.y, additive });
         }}
-        style={{ position: "absolute", left: 0, top: 0, width: page.width, height: page.height, transform: `scale(${scale})`, transformOrigin: "0 0", backgroundColor: layerStyle(readCanvasBackground(page.json), c.theme.pageBackground).backgroundColor, boxShadow: "0 1px 6px rgba(0,0,0,.25)", outline: "none", overflow: "hidden", ...gridStyle(c.canvas.gridlines, c.canvas.gridSize, c.theme.dark) }}
+        style={{ position: "absolute", left: 0, top: 0, width: page.width, height: page.height, transform: `scale(${scale})`, transformOrigin: "0 0", backgroundColor: layerStyle(readCanvasBackground(page.json, c.theme), c.theme.pageBackground).backgroundColor, boxShadow: "0 1px 6px rgba(0,0,0,.25)", outline: "none", overflow: "hidden", ...gridStyle(c.canvas.gridlines, c.canvas.gridSize, c.theme.dark) }}
       >
-        {readCanvasBackground(page.json).image && <div data-testid="page-picture" aria-hidden style={{ position: "absolute", inset: 0, pointerEvents: "none", ...pictureOnly(layerStyle(readCanvasBackground(page.json), null)), opacity: 1 - readCanvasBackground(page.json).transparency / 100 }} />}
+        {readCanvasBackground(page.json, c.theme).image && <div data-testid="page-picture" aria-hidden style={{ position: "absolute", inset: 0, pointerEvents: "none", ...pictureOnly(layerStyle(readCanvasBackground(page.json, c.theme), null)), opacity: 1 - readCanvasBackground(page.json, c.theme).transparency / 100 }} />}
         {c.snap.focus && page.visuals.some((v) => v.name === c.snap.focus) && (
           <button
             type="button"

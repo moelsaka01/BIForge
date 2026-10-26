@@ -188,7 +188,7 @@ export function ReportView(p: ReportViewProps) {
               )}
             </div>
           )}
-          <div ref={area} className="report-canvas" data-testid="wallpaper" style={{ ...(snap.mobile ? { display: "flex" } : {}), ...layerStyle(readWallpaper(page.json), null), ...(readVerticalAlignment(page.json) === "Middle" && !snap.mobile ? { alignItems: "center" } : {}) }}>
+          <div ref={area} className="report-canvas" data-testid="wallpaper" style={{ ...(snap.mobile ? { display: "flex" } : {}), ...layerStyle(readWallpaper(page.json, theme), null), ...(readVerticalAlignment(page.json, theme) === "Middle" && !snap.mobile ? { alignItems: "center" } : {}) }}>
             {snap.mobile ? (
               <>
                 <MobileLayoutPane page={page} />

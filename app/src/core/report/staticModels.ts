@@ -245,7 +245,11 @@ export function navigatorModel(f: FormatReader, theme: Theme, width: number, hei
     showText: f.bool("text", "show", true),
     textStyle: { display: "inline-block", transform: turn(rot.text - rot.shape) },
     frameAngle: rot.frame,
-    container: { width, height, display: "flex", flexDirection: "row", gap: f.num("layout", "cellPadding", 4), alignItems: "stretch", overflow: "hidden" },
+    // Layout: 0 entries side by side, 1 one under the other, 2 a grid of columnCount columns (and rowCount rows)
+    container:
+      f.num("layout", "orientation", 0) === 2
+        ? { width, height, display: "grid", gridTemplateColumns: `repeat(${Math.max(1, Math.round(f.num("layout", "columnCount", 3)))}, minmax(0, 1fr))`, gridTemplateRows: f.has("layout", "rowCount") ? `repeat(${Math.max(1, Math.round(f.num("layout", "rowCount", 1)))}, minmax(0, 1fr))` : undefined, gap: f.num("layout", "cellPadding", 4), alignItems: "stretch", overflow: "hidden" }
+        : { width, height, display: "flex", flexDirection: f.num("layout", "orientation", 0) === 1 ? "column" : "row", gap: f.num("layout", "cellPadding", 4), alignItems: "stretch", overflow: "hidden" },
     entry: (current) => ({
       flex: "1 1 0",
       minWidth: 0,

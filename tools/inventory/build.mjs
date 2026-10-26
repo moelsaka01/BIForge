@@ -83,7 +83,9 @@ const num = areas.length;
       return { s: st.s, t: exists && st.total ? `${c} (${st.drawn} of ${st.total} properties drawn)` : `${c} (${props.length} properties)` };
     });
     // the theme's default style is read by the one FormatReader every authored visual type uses (coverage.test.ts proves it for each type)
-    if (cards["*"]) items.unshift({ s: exists ? "D" : "N", t: `Theme default style "*" (${cards["*"].length} properties)` });
+    // a page (or other non-visual object) takes the theme default only for the cards it draws: Partial until every card is Done
+    const themeDefault = !exists ? "N" : vis === "page" ? (items.every((i) => i.s === "D") ? "D" : "P") : "D";
+    if (cards["*"]) items.unshift({ s: themeDefault, t: `Theme default style "*" (${cards["*"].length} properties)` });
     a.groups.push({ name: friendly[vis] ?? vis, items });
   }
   areas.push(a);

@@ -3791,7 +3791,10 @@
    "transparency"
   ],
   "layout": [
-   "cellPadding"
+   "cellPadding",
+   "columnCount",
+   "orientation",
+   "rowCount"
   ],
   "outline": [
    "lineColor",
@@ -3845,7 +3848,10 @@
    "transparency"
   ],
   "layout": [
-   "cellPadding"
+   "cellPadding",
+   "columnCount",
+   "orientation",
+   "rowCount"
   ],
   "outline": [
    "lineColor",

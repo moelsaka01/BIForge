@@ -10,7 +10,7 @@ const DISPLAY_LABELS: Record<(typeof DISPLAY_OPTIONS)[number], string> = { FitTo
 
 function Layer({ page, object, title }: { page: PageModel; object: "background" | "outspace"; title: string }) {
   const c = useReport();
-  const layer: PageLayer = object === "background" ? readCanvasBackground(page.json) : readWallpaper(page.json);
+  const layer: PageLayer = object === "background" ? readCanvasBackground(page.json, c.theme) : readWallpaper(page.json, c.theme);
   const set = (prop: string, value: ReturnType<typeof lit.str> | null) => c.dispatch("report.page.format", { page: page.name, object, prop, value });
   const l = (s: string) => `${title}: ${s}`;
   return (
@@ -114,7 +114,7 @@ export function PageFormatPane({ page }: { page: PageModel }) {
           <AccordionPanel>
             <div style={row}>
               <label htmlFor="pf-align">Vertical alignment</label>
-              <Select id="pf-align" size="small" aria-label="Page vertical alignment" style={{ width: 130 }} value={readVerticalAlignment(page.json)} onChange={(_, d) => c.dispatch("report.page.format", { page: page.name, object: "displayArea", prop: "verticalAlignment", value: lit.str(d.value) })}>
+              <Select id="pf-align" size="small" aria-label="Page vertical alignment" style={{ width: 130 }} value={readVerticalAlignment(page.json, c.theme)} onChange={(_, d) => c.dispatch("report.page.format", { page: page.name, object: "displayArea", prop: "verticalAlignment", value: lit.str(d.value) })}>
                 <option value="Top">Top</option>
                 <option value="Middle">Middle</option>
               </Select>

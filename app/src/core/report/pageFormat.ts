@@ -2,6 +2,8 @@
 // Pure functions over page.json; the stored shape follows the report format (objects.background / objects.outspace,
 // each a list with one `properties` bag).
 import { readLitProp, type J } from "./pbir";
+import type { Lit } from "./fields";
+import { themeStyleExact, type Theme } from "./theme";
 
 export interface PageSizePreset {
   id: string;
@@ -42,10 +44,18 @@ export interface PageLayer {
 
 const props = (page: J, object: string): J => page.objects?.[object]?.[0]?.properties ?? {};
 
-function readLayer(page: J, object: string): PageLayer {
+/** A page setting: the page's own, else the theme's default style of pages (visualStyles.page). */
+function pick(page: J, theme: Theme | undefined, object: string, prop: string): Lit | null {
+  const own = readLitProp(props(page, object)[prop]);
+  if (own) return own;
+  const v = theme ? themeStyleExact(theme, "page", object, prop) : null;
+  return v === null ? null : typeof v === "string" ? { t: "string", v } : typeof v === "number" ? { t: "number", v } : { t: "bool", v };
+}
+
+function readLayer(page: J, object: string, theme?: Theme): PageLayer {
   const p = props(page, object);
-  const color = readLitProp(p.color);
-  const tr = readLitProp(p.transparency);
+  const color = pick(page, theme, object, "color");
+  const tr = pick(page, theme, object, "transparency");
   const img = p.image?.image;
   const url = readLitProp(img?.url);
   const name = readLitProp(img?.name);
@@ -58,9 +68,9 @@ function readLayer(page: J, object: string): PageLayer {
 }
 
 /** The canvas background of the page (Format page > Canvas background). */
-export const readCanvasBackground = (page: J): PageLayer => readLayer(page, "background");
+export const readCanvasBackground = (page: J, theme?: Theme): PageLayer => readLayer(page, "background", theme);
 /** The wallpaper, the area around the page (Format page > Canvas settings / Wallpaper). */
-export const readWallpaper = (page: J): PageLayer => readLayer(page, "outspace");
+export const readWallpaper = (page: J, theme?: Theme): PageLayer => readLayer(page, "outspace", theme);
 
 function rgba(hex: string, transparency: number): string {
   const m = /^#([0-9a-f]{6})$/i.exec(hex);
@@ -86,12 +96,12 @@ export function layerStyle(layer: PageLayer, fallbackColor: string | null): { ba
 export type VerticalAlignment = "Top" | "Middle";
 
 /** Where the page sits in the area when it is smaller than the area (Format page > Page alignment). */
-export function readVerticalAlignment(page: J): VerticalAlignment {
-  const l = readLitProp(props(page, "displayArea").verticalAlignment);
+export function readVerticalAlignment(page: J, theme?: Theme): VerticalAlignment {
+  const l = pick(page, theme, "displayArea", "verticalAlignment");
   return l?.t === "string" && l.v === "Middle" ? "Middle" : "Top";
 }
 
 /** Everything the page formatting changes on screen; the Format page measurement (coverage.test.ts) compares these. */
-export function pageLook(page: J): { background: PageLayer; wallpaper: PageLayer; verticalAlignment: VerticalAlignment } {
-  return { background: readCanvasBackground(page), wallpaper: readWallpaper(page), verticalAlignment: readVerticalAlignment(page) };
+export function pageLook(page: J, theme?: Theme): { background: PageLayer; wallpaper: PageLayer; verticalAlignment: VerticalAlignment } {
+  return { background: readCanvasBackground(page, theme), wallpaper: readWallpaper(page, theme), verticalAlignment: readVerticalAlignment(page, theme) };
 }

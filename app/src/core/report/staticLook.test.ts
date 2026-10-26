@@ -43,6 +43,12 @@ describe("shadow, glow and rotation of the objects that show no data", () => {
     expect(e.alignItems).toBe("flex-end");
     expect(m.showText).toBe(false);
   });
+  it("a navigator lays its entries side by side, one under the other, or in a grid", () => {
+    const at = (set: [string, string, ReturnType<typeof lit.num>][]) => navigatorModel(reader("pageNavigator", set), DEFAULT_THEME, 400, 120).container;
+    expect(at([])).toMatchObject({ display: "flex", flexDirection: "row" });
+    expect(at([["layout", "orientation", lit.num(1)]])).toMatchObject({ display: "flex", flexDirection: "column" });
+    expect(at([["layout", "orientation", lit.num(2)], ["layout", "columnCount", lit.num(4)], ["layout", "rowCount", lit.num(2)]])).toMatchObject({ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gridTemplateRows: "repeat(2, minmax(0, 1fr))" });
+  });
   it("a shape shows its text inside, with its own font and margins", () => {
     const f = reader("shape", [["text", "show", lit.bool(true)], ["text", "text", lit.str("Hello")], ["text", "bold", lit.bool(true)], ["text", "horizontalAlignment", lit.str("left")], ["text", "topMargin", lit.num(5)]]);
     const t = shapeLook(f, DEFAULT_THEME).text!;

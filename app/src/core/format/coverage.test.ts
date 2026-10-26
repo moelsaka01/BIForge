@@ -119,6 +119,8 @@ const ENABLE: Record<string, Record<string, Lit>> = {
   trend: { show: lit.bool(true) },
   card: { barShow: lit.bool(true) },
   accentBar: { show: lit.bool(true) },
+  // the navigators count columns and rows only in their grid layout
+  layout: { orientation: lit.num(2) },
   subTotals: { rowSubtotals: lit.bool(true), columnSubtotals: lit.bool(true) },
   heatMap: { show: lit.bool(true) },
   zoom: { show: lit.bool(true) },
@@ -376,10 +378,10 @@ function measurePage(): Record<string, string[]> {
     if (!["background", "outspace", "displayArea"].includes(object)) continue;
     for (const [prop, kind] of Object.entries(cardIds.cards[id])) {
       if (kind[0] === "x") continue;
-      const baseline = JSON.stringify(pageLook({ name: "p" }));
+      const baseline = JSON.stringify(pageLook({ name: "p" }, DEFAULT_THEME));
       for (const value of testValues(prop, kind)) {
         const json: Record<string, unknown> = { name: "p", objects: { [object]: [{ properties: { [prop]: litExpr(value) } }] } };
-        if (JSON.stringify(pageLook(json)) !== baseline) {
+        if (JSON.stringify(pageLook(json, DEFAULT_THEME)) !== baseline) {
           (out[object] ??= []).push(prop);
           break;
         }
@@ -389,7 +391,7 @@ function measurePage(): Record<string, string[]> {
   // a picture is stored as an image object (name, url, scaling), which the capability list marks as not editable in the generic pane
   for (const object of ["background", "outspace"]) {
     const json = { name: "p", objects: { [object]: [{ properties: { image: { image: { name: litExpr(lit.str("a")), url: litExpr(lit.str("data:image/png;base64,AA")), scaling: litExpr(lit.str("Fit")) } } } }] } };
-    if (JSON.stringify(pageLook(json)) !== JSON.stringify(pageLook({ name: "p" }))) (out[object] ??= []).push("image");
+    if (JSON.stringify(pageLook(json, DEFAULT_THEME)) !== JSON.stringify(pageLook({ name: "p" }, DEFAULT_THEME))) (out[object] ??= []).push("image");
   }
   for (const k of Object.keys(out)) out[k] = [...new Set(out[k])].sort();
   return out;
