@@ -78,6 +78,26 @@ describe("objects without data on the canvas", () => {
     expect(rotated.style.transform).toBe("rotate(30deg)");
   });
 
+  it("a shape shows its text and glow, a navigator can hide its names and a button turns its text", async () => {
+    const t = setup();
+    await t.run("report.visual.add", { type: "shape" });
+    await t.run("report.visual.add", { type: "pageNavigator" });
+    await t.run("report.visual.add", { type: "actionButton" });
+    const by = (ty: string) => t.visuals().find((v) => v.visualType === ty)!.name;
+    const fmt = (ty: string, object: string, prop: string, value: ReturnType<typeof lit.str>) => t.run("report.format.set", { page: "page1", visual: by(ty), object, prop, value });
+    await fmt("shape", "text", "show", lit.bool(true) as never);
+    await fmt("shape", "text", "text", lit.str("Inside"));
+    await fmt("shape", "glow", "show", lit.bool(true) as never);
+    await fmt("pageNavigator", "text", "show", lit.bool(false) as never);
+    await fmt("actionButton", "rotation", "textAngle", lit.num(15) as never);
+    render(<t.Host />);
+    expect((await screen.findByTestId("shape-text")).textContent).toBe("Inside");
+    expect((screen.getByTestId("shape-layer") as HTMLElement).style.filter).toContain("drop-shadow(0px 0px 8px");
+    const nav = await screen.findByRole("navigation", { name: "Page navigator" });
+    expect(within(nav).getAllByRole("button").every((b) => b.textContent === "")).toBe(true);
+    expect((screen.getByTestId("button-text") as HTMLElement).style.transform).toBe("rotate(15deg)");
+  });
+
   it("an image shows its picture with the alt text; without one it says so", async () => {
     const t = setup();
     await t.run("report.visual.add", { type: "image" });

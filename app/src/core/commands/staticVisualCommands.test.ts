@@ -82,7 +82,7 @@ describe("shape", () => {
   });
 
   it("draws every shape as SVG inside its box", () => {
-    const base = { fill: { show: true, color: "#abc", transparency: 50 }, outline: { show: true, color: "#000", weight: 2 } };
+    const base = { fill: { show: true, color: "#abc", transparency: 50 }, outline: { show: true, color: "#000", weight: 2, transparency: 0 } };
     expect(shapeSvg({ shape: "rectangle", ...base }, 100, 50)).toMatchObject({ tag: "rect", attrs: { x: 1, y: 1, width: 98, height: 48, "fill-opacity": 0.5 } });
     expect(shapeSvg({ shape: "oval", ...base }, 100, 50)).toMatchObject({ tag: "ellipse", attrs: { cx: 50, cy: 25, rx: 49, ry: 24 } });
     expect(shapeSvg({ shape: "triangleIsoc", ...base }, 100, 50).attrs.points).toBe("50,1 99,49 1,49");

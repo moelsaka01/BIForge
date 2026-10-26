@@ -2,7 +2,7 @@ import type { CSSProperties } from "react";
 import { FormatReader } from "../../core/report/formatReader";
 import { listBookmarks } from "../../core/report/bookmarks";
 import { navigatorPages, readAction, readShape, readTextbox, shapeSvg, type ShapeModel } from "../../core/report/staticVisuals";
-import { buttonModel, imageModel, navigatorModel } from "../../core/report/staticModels";
+import { buttonModel, imageModel, navigatorModel, shapeLook } from "../../core/report/staticModels";
 import type { PageModel, VisualModel } from "../../core/report/visualDoc";
 import { useReport } from "./reportContext";
 
@@ -54,7 +54,19 @@ function Shape({ model, width, height }: { model: ShapeModel; width: number; hei
 export function ShapeView({ visual, width, height }: Props) {
   const c = useReport();
   const f = new FormatReader(visual.json, c.theme, "shape");
-  return <Shape model={readShape(f)} width={width} height={height} />;
+  const look = shapeLook(f, c.theme);
+  return (
+    <div style={{ position: "relative", width, height }}>
+      <div data-testid="shape-layer" style={{ width, height, filter: look.filter, transform: look.shapeTransform }}>
+        <Shape model={readShape(f)} width={width} height={height} />
+      </div>
+      {look.text && (
+        <div data-testid="shape-text" style={look.text.box}>
+          <span style={look.text.style}>{look.text.content}</span>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function ImageView({ visual, width, height }: Props) {
@@ -94,7 +106,7 @@ export function ButtonView({ page, visual, width, height, runOnClick }: Props) {
           {m.icon.glyph}
         </span>
       )}
-      {text}
+      <span data-testid="button-text" style={m.textStyle}>{text}</span>
     </button>
   );
 }
@@ -110,7 +122,7 @@ export function BookmarkNavigatorView({ visual, width, height }: Props) {
       {bookmarks.length === 0 && <span style={{ padding: 6, opacity: 0.7, fontSize: 12 }}>No bookmarks yet. Add some in the Bookmarks pane.</span>}
       {bookmarks.map((b) => (
         <button key={b.id} type="button" onClick={() => c.dispatch("report.bookmark.apply", { id: b.id })} style={nav.entry(false)}>
-          {b.name}
+          <span style={nav.textStyle}>{nav.showText ? b.name : ""}</span>
         </button>
       ))}
     </div>
@@ -128,7 +140,7 @@ export function PageNavigatorView({ page, visual, width, height }: Props) {
         const current = p.name === page.name;
         return (
           <button key={p.name} type="button" aria-current={current ? "page" : undefined} onClick={() => c.dispatch("report.page.go", { page: p.name })} style={nav.entry(current)}>
-            {p.displayName}
+            <span style={nav.textStyle}>{nav.showText ? p.displayName : ""}</span>
           </button>
         );
       })}

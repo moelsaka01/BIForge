@@ -17,7 +17,7 @@ import { litExpr, queryRefOf } from "../report/pbir";
 import { buildMatrixQuery, buildVisualQuery } from "../report/queryBuilder";
 import { influencersStyle, treeStyle } from "../report/analysisStyle";
 import { readSlicer } from "../report/slicerSettings";
-import { buttonModel, imageModel, navigatorModel } from "../report/staticModels";
+import { buttonModel, imageModel, navigatorModel, shapeLook } from "../report/staticModels";
 import { readShape, shapeSvg } from "../report/staticVisuals";
 import { buildCard, buildKpi, buildMatrix, buildMultiRowCard, buildNewCard, buildTable } from "../report/tableModels";
 import { fixtureModel, visualOf } from "../report/testFixture";
@@ -226,7 +226,7 @@ const SCENARIOS: Record<string, Scenario> = {
     make: () => visualOf("shape", {}),
     render: (v) => {
       const f = new FormatReader(v.json, DEFAULT_THEME, "shape");
-      return shapeSvg(readShape(f), 200, 100);
+      return { svg: shapeSvg(readShape(f), 200, 100), look: shapeLook(f, DEFAULT_THEME) };
     },
   },
   actionButton: { make: () => visualOf("actionButton", {}), render: (v) => buttonModel(new FormatReader(v.json, DEFAULT_THEME, "actionButton"), DEFAULT_THEME, 160, 40, false, true) },
@@ -234,14 +234,14 @@ const SCENARIOS: Record<string, Scenario> = {
     make: () => visualOf("pageNavigator", {}),
     render: (v) => {
       const m = navigatorModel(new FormatReader(v.json, DEFAULT_THEME, "pageNavigator"), DEFAULT_THEME, 400, 40);
-      return { c: m.container, on: m.entry(true), off: m.entry(false), h: m.showHidden };
+      return { c: m.container, on: m.entry(true), off: m.entry(false), h: m.showHidden, t: m.showText, ts: m.textStyle, a: m.frameAngle };
     },
   },
   bookmarkNavigator: {
     make: () => visualOf("bookmarkNavigator", {}),
     render: (v) => {
       const m = navigatorModel(new FormatReader(v.json, DEFAULT_THEME, "bookmarkNavigator"), DEFAULT_THEME, 400, 40);
-      return { c: m.container, on: m.entry(true), off: m.entry(false) };
+      return { c: m.container, on: m.entry(true), off: m.entry(false), t: m.showText, ts: m.textStyle, a: m.frameAngle };
     },
   },
   image: { make: () => visualOf("image", {}), render: (v) => imageModel(new FormatReader(v.json, DEFAULT_THEME, "image"), 200, 100) },

@@ -3413,13 +3413,50 @@
    "show",
    "transparency"
   ],
+  "glow": [
+   "color",
+   "shadowBlur",
+   "show",
+   "transparency"
+  ],
   "outline": [
    "lineColor",
    "show",
+   "transparency",
    "weight"
+  ],
+  "rotation": [
+   "angle",
+   "shapeAngle",
+   "textAngle"
+  ],
+  "shadow": [
+   "angle",
+   "color",
+   "shadowBlur",
+   "shadowDistance",
+   "shadowPositionPreset",
+   "show",
+   "transparency"
   ],
   "shape": [
    "tileShape"
+  ],
+  "text": [
+   "bold",
+   "bottomMargin",
+   "fontColor",
+   "fontFamily",
+   "fontSize",
+   "horizontalAlignment",
+   "italic",
+   "leftMargin",
+   "rightMargin",
+   "show",
+   "text",
+   "topMargin",
+   "underline",
+   "verticalAlignment"
   ]
  },
  "actionButton": {
@@ -3447,11 +3484,17 @@
    "transparency",
    "weight"
   ],
+  "rotation": [
+   "angle",
+   "shapeAngle",
+   "textAngle"
+  ],
   "shadow": [
    "angle",
    "color",
    "shadowBlur",
    "shadowDistance",
+   "shadowPositionPreset",
    "show",
    "transparency"
   ],
@@ -3481,30 +3524,9 @@
    "show",
    "transparency"
   ],
-  "layout": [
-   "cellPadding"
-  ],
-  "outline": [
-   "lineColor",
-   "show",
-   "weight"
-  ],
-  "pages": [
-   "showHiddenPages"
-  ],
-  "text": [
-   "bold",
-   "fontColor",
-   "fontFamily",
-   "fontSize",
-   "horizontalAlignment",
-   "italic",
-   "underline"
-  ]
- },
- "bookmarkNavigator": {
-  "fill": [
-   "fillColor",
+  "glow": [
+   "color",
+   "shadowBlur",
    "show",
    "transparency"
   ],
@@ -3514,16 +3536,91 @@
   "outline": [
    "lineColor",
    "show",
+   "transparency",
    "weight"
+  ],
+  "pages": [
+   "showHiddenPages"
+  ],
+  "rotation": [
+   "angle",
+   "shapeAngle",
+   "textAngle"
+  ],
+  "shadow": [
+   "angle",
+   "color",
+   "shadowBlur",
+   "shadowDistance",
+   "shadowPositionPreset",
+   "show",
+   "transparency"
   ],
   "text": [
    "bold",
+   "bottomMargin",
    "fontColor",
    "fontFamily",
    "fontSize",
    "horizontalAlignment",
    "italic",
-   "underline"
+   "leftMargin",
+   "rightMargin",
+   "show",
+   "topMargin",
+   "underline",
+   "verticalAlignment"
+  ]
+ },
+ "bookmarkNavigator": {
+  "fill": [
+   "fillColor",
+   "show",
+   "transparency"
+  ],
+  "glow": [
+   "color",
+   "shadowBlur",
+   "show",
+   "transparency"
+  ],
+  "layout": [
+   "cellPadding"
+  ],
+  "outline": [
+   "lineColor",
+   "show",
+   "transparency",
+   "weight"
+  ],
+  "rotation": [
+   "angle",
+   "shapeAngle",
+   "textAngle"
+  ],
+  "shadow": [
+   "angle",
+   "color",
+   "shadowBlur",
+   "shadowDistance",
+   "shadowPositionPreset",
+   "show",
+   "transparency"
+  ],
+  "text": [
+   "bold",
+   "bottomMargin",
+   "fontColor",
+   "fontFamily",
+   "fontSize",
+   "horizontalAlignment",
+   "italic",
+   "leftMargin",
+   "rightMargin",
+   "show",
+   "topMargin",
+   "underline",
+   "verticalAlignment"
   ]
  },
  "image": {

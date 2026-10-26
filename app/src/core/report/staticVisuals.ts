@@ -118,7 +118,7 @@ export const POLYGONS: Partial<Record<string, [number, number][]>> = {
 export interface ShapeModel {
   shape: TileShape;
   fill: { show: boolean; color: string; transparency: number };
-  outline: { show: boolean; color: string; weight: number };
+  outline: { show: boolean; color: string; weight: number; transparency: number };
 }
 
 export function readShape(f: FormatReader, defaults: { shape: TileShape; fill: string; outline: string } = { shape: "rectangle", fill: "#c8d6e5", outline: "#555555" }): ShapeModel {
@@ -126,7 +126,7 @@ export function readShape(f: FormatReader, defaults: { shape: TileShape; fill: s
   return {
     shape: TILE_SHAPES.some((s) => s.value === shape) || shape === "rectangleRoundedByPixel" || shape === "tabRoundCorner" || shape === "tabRoundTopCorners" ? shape : "rectangle",
     fill: { show: f.bool("fill", "show", true), color: f.color("fill", "fillColor") ?? defaults.fill, transparency: f.num("fill", "transparency", 0) },
-    outline: { show: f.bool("outline", "show", true), color: f.color("outline", "lineColor") ?? defaults.outline, weight: f.num("outline", "weight", 1) },
+    outline: { show: f.bool("outline", "show", true), color: f.color("outline", "lineColor") ?? defaults.outline, weight: f.num("outline", "weight", 1), transparency: f.num("outline", "transparency", 0) },
   };
 }
 
@@ -138,6 +138,7 @@ export function shapeSvg(m: ShapeModel, w: number, h: number): { tag: "rect" | "
     fill: m.shape === "line" || !m.fill.show ? "none" : m.fill.color,
     "fill-opacity": 1 - Math.min(100, Math.max(0, m.fill.transparency)) / 100,
     stroke: sw > 0 ? m.outline.color : "none",
+    "stroke-opacity": 1 - Math.min(100, Math.max(0, m.outline.transparency)) / 100,
     "stroke-width": sw,
   };
   switch (m.shape) {
