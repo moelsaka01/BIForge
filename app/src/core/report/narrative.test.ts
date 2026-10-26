@@ -33,7 +33,7 @@ describe("describeMeasure", () => {
 
 describe("buildNarrative", () => {
   it("writes sentences from the result of the visual and styles them from the Text card", () => {
-    const v = visualOf("aiNarratives", { Category: [column("Product", "Category")], Values: [agg("Sales", "Quantity", 0)] });
+    const v = visualOf("aiNarratives", { Values: [column("Product", "Category"), agg("Sales", "Quantity", 0)] });
     const query = buildVisualQuery(v, model, { filters: [] })!;
     const loaded: Extract<Loaded, { kind: "grouped" }> = { kind: "grouped", query, rows: [[decodeCell({ t: "text", v: "Bikes" }), decodeCell({ t: "int", v: "70" })], [decodeCell({ t: "text", v: "Clothing" }), decodeCell({ t: "int", v: "30" })]], highlightRows: null, totals: null, truncated: false, ms: 0 };
     setFormat(v.json, "text", "fontSize", lit.num(20));

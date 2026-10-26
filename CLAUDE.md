@@ -39,6 +39,9 @@ BIForge's own sharing system (Publish & Share, viewing mode, `biforge://` links)
 ## Process safety
 Never kill processes you did not start. Stop only your own process, by the exact PID captured when you started it. Never stop by name (no `Stop-Process -Name node`, `taskkill /IM`), because the user may have unrelated processes running.
 
+## Searching
+Never run filesystem-wide searches (`find /`, `dir /s` on C:\, `Get-ChildItem C:\ -Recurse`, `where /r C:\`). Search only inside the repo or a known folder. A stray `find /` ran for 12 hours on 2026-10-25 and slowed every process start on this PC to 20 to 30 seconds.
+
 ## Disk (target/)
 At the start and the end of every session run `node tools/target-size.mjs`. Over 15 GB: `cargo clean` at a safe point (no build, test, e2e or harness running), then say so in PROGRESS. Causes found 2026-10-25 and the rules that follow from them: every test binary that links DuckDB is hundreds of MB, so integration tests of a crate live in ONE binary (`crates/<crate>/tests/it/main.rs` with a `mod` per file; add a test file there, never as a new top-level file in `tests/`); examples/harnesses build only with `--features tools`; dependencies are built with opt-level 1 and no debug info; test builds are not incremental. Run the benchmark only through `node tools/perf-run.mjs <rows>` which deletes the 1M/10M fixtures afterwards; never leave `target/perf-fixtures` on disk. Use one build mode per task (avoid alternating `cargo test -p x`, `cargo test --workspace`, `tauri build --debug` and `--release` without need: each feature/profile mix keeps its own copy of the dependencies).
 

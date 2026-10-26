@@ -97,6 +97,7 @@ function slotsFor(v: VisualModel, family: VisualFamily, drill?: DrillState): { g
       return { groups: dedupe([...roleSlots("Category"), ...roleSlots("Series")]), values: [...roleSlots("X"), ...roleSlots("Y"), ...roleSlots("Size")], extra: [] };
     case "waterfall":
       return { groups: dedupe([...roleSlots("Category"), ...roleSlots("Breakdown")]), values: roleSlots("Y"), extra: [] };
+    case "narrative":
     case "script":
     case "table":
     case "card": {
@@ -104,8 +105,6 @@ function slotsFor(v: VisualModel, family: VisualFamily, drill?: DrillState): { g
       const all = roleSlots(v.visualType === "cardVisual" ? "Data" : "Values");
       return { groups: dedupe(all.filter((s) => s.field.kind === "column")), values: all.filter((s) => s.field.kind !== "column"), extra: [] };
     }
-    case "narrative":
-      return { groups: roleSlots("Category"), values: roleSlots("Values"), extra: [] };
     case "kpi":
       return { groups: roleSlots("TrendLine"), values: [...roleSlots("Indicator"), ...roleSlots("Goal")], extra: [] };
     case "gauge":

@@ -114,7 +114,7 @@ describe("maps", () => {
 
   it("a shape map draws the regions of the built-in world map", async () => {
     const t = setup();
-    await t.run("report.visual.add", { type: "shapeMap", position: { width: 600, height: 400 }, fields: [{ role: "Category", field: Country }, { role: "Size", field: Qty }] });
+    await t.run("report.visual.add", { type: "shapeMap", position: { width: 600, height: 400 }, fields: [{ role: "Category", field: Country }, { role: "Y", field: Qty }] });
     render(<t.Host />);
     const chart = await screen.findByRole("img", { name: "Shape map" });
     await waitFor(() => expect(chart.querySelectorAll("path").length).toBeGreaterThan(100));

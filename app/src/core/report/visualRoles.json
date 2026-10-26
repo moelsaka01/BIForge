@@ -17,5 +17,14 @@
   "keyDriversVisual": ["Target", "ExplainBy", "Details"],
   "slicer": ["Values"],
   "map": ["Category", "Series", "X", "Y", "Size", "Tooltips", "PathID", "PointOrder"],
-  "filledMap": ["Category", "Series", "X", "Y", "Size", "Tooltips"]
+  "filledMap": ["Category", "Series", "X", "Y", "Size", "Tooltips"],
+  "shapeMap": ["Category", "Series", "Y", "Tooltips"],
+  "aiNarratives": ["Values"],
+  "scriptVisual": ["Values"],
+  "pythonVisual": ["Values"],
+  "cardVisual": ["Data", "Rows", "Tooltips", "TrendVisualCategory"],
+  "advancedSlicerVisual": ["Values"],
+  "listSlicer": ["Values"],
+  "textSlicer": ["Values"],
+  "qnaVisual": []
 }

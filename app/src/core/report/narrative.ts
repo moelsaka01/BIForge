@@ -50,7 +50,8 @@ export function describeMeasure(label: string, catLabel: string, cats: string[],
 export function buildNarrative(visual: VisualModel, loaded: Extract<Loaded, { kind: "grouped" }>, theme: Theme): NarrativeModel {
   const f = new FormatReader(visual.json, theme, visual.visualType);
   const q = loaded.query;
-  const cat = columnsOf(q, "Category", "group")[0];
+  // the first column of the Values well is the category, the measures are summarised over it
+  const cat = columnsOf(q, "Values", "group")[0];
   const values = columnsOf(q, "Values", "value");
   const sentences: Seg[][] = [];
   const catLabel = cat?.label ?? "";

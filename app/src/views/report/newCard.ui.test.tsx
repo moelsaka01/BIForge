@@ -62,7 +62,7 @@ describe("Smart narrative", () => {
       const doc = useSyncExternalStore(session.store.subscribe, session.store.getSnapshot);
       return <ReportView project={doc.project!} runtime={session.report} dax={dax} dispatch={(id, a) => void registry.execute(id, a)} dataEpoch={0} docks={plainDocks} />;
     }
-    const r = await registry.execute("report.visual.add", { type: "aiNarratives", fields: [{ role: "Category", field: { kind: "column", table: "Product", name: "Category" } }, { role: "Values", field: agg("Sales", "Quantity", 0) }] });
+    const r = await registry.execute("report.visual.add", { type: "aiNarratives", fields: [{ role: "Values", field: { kind: "column", table: "Product", name: "Category" } }, { role: "Values", field: agg("Sales", "Quantity", 0) }] });
     expect(r.ok).toBe(true);
     render(<Host />);
     const box = await screen.findByTestId("narrative");
