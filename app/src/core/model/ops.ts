@@ -184,6 +184,20 @@ export function deleteMeasure(p: Project, measure: string): void {
   found.table.children = found.table.children.filter((c) => c !== found.m);
 }
 
+/** Moves a measure to another table (its home table). DAX that refers to it by name keeps working; a reference written with the old table name must be edited. */
+export function moveMeasure(p: Project, measure: string, toTable: string): void {
+  const found = measureOwner(p, measure);
+  if (!found) throw new ModelError("not-found", `Measure "${measure}" does not exist.`);
+  const target = allTables(p).find((t) => t.name?.toLowerCase() === toTable.toLowerCase());
+  if (!target) throw new ModelError("not-found", `Table "${toTable}" does not exist.`);
+  if (target === found.table) return;
+  if (target.children.some((c) => (c.kind === "column" || c.kind === "measure") && c.name?.toLowerCase() === measure.toLowerCase())) {
+    throw new ModelError("duplicate-name", `Table "${target.name}" already has a column or measure named "${measure}".`);
+  }
+  found.table.children = found.table.children.filter((c) => c !== found.m);
+  target.children.push(found.m);
+}
+
 // ---- read-only views for the UI ----
 
 export interface TableView {

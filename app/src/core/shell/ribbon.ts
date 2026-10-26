@@ -42,6 +42,9 @@ export interface RibbonCtx {
   table: string | null;
   /** The column or measure picked in the Data pane. */
   field: { table: string; kind: "column" | "measure"; name: string } | null;
+  /** The tables of the model, and the columns of the table of the picked field (for the Home table and Sort by column menus). */
+  tables: string[];
+  fieldColumns: string[];
   daxTab: "query" | "measures";
   panes: Record<PaneId, boolean>;
   themeName: string;
@@ -75,7 +78,7 @@ export interface RibbonControl {
   icon: IconName;
   command?: string;
   args?: Args;
-  menu?: RibbonMenuItem[];
+  menu?: RibbonMenuItem[] | ((c: RibbonCtx) => RibbonMenuItem[]);
   /** Extra condition on top of the command's own enabled state. */
   when?: (c: RibbonCtx) => boolean;
   checked?: (c: RibbonCtx) => boolean;
@@ -516,6 +519,7 @@ function fieldTabs(): RibbonTab[] {
           controls: [
             { id: "summarize", label: "Summarization", icon: "calc", size: "large", command: "model.setProperty", menu: ["none", "sum", "min", "max", "count", "average", "distinctCount"].map((v) => setProp(v === "none" ? "Don't summarize" : v === "distinctCount" ? "Count (distinct)" : v[0].toUpperCase() + v.slice(1), "summarizeBy", v)), keytip: "SU" },
             { id: "category", label: "Data category", icon: "tag", size: "large", command: "model.setProperty", menu: [setProp("Uncategorized", "dataCategory", null), ...COLUMN_CATEGORIES.map((v) => setProp(v, "dataCategory", v))], keytip: "DC" },
+            { id: "sortBy", label: "Sort by column", icon: "column", size: "large", command: "model.setProperty", menu: (c) => [setProp("None", "sortByColumn", null), ...c.fieldColumns.filter((n) => n !== c.field?.name).map((n) => setProp(n, "sortByColumn", n))], keytip: "SB" },
             cmd("fieldHide", "Hide", "options", "model.setProperty", { args: (c) => ({ target: targetOf(c), key: "isHidden", value: true }) }),
           ],
         },
@@ -531,7 +535,7 @@ function fieldTabs(): RibbonTab[] {
       groups: [
         structureGroup("measure"),
         formattingGroup(),
-        { id: "properties", label: "Properties", controls: [{ id: "measureCategory", label: "Data category", icon: "tag", size: "large", command: "model.setProperty", menu: [setProp("Uncategorized", "dataCategory", null), ...COLUMN_CATEGORIES.map((v) => setProp(v, "dataCategory", v))] }] },
+        { id: "properties", label: "Properties", controls: [{ id: "homeTable", label: "Home table", icon: "table", size: "large", command: "model.moveMeasure", menu: (c) => c.tables.map((t) => ({ label: t === c.field?.table ? `✓ ${t}` : t, command: "model.moveMeasure", args: (x: RibbonCtx) => ({ name: x.field?.name, to: t }) })), keytip: "HT" }, { id: "measureCategory", label: "Data category", icon: "tag", size: "large", command: "model.setProperty", menu: [setProp("Uncategorized", "dataCategory", null), ...COLUMN_CATEGORIES.map((v) => setProp(v, "dataCategory", v))] }] },
         modelingCalculations(),
       ],
     },

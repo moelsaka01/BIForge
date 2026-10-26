@@ -183,3 +183,25 @@ describe("field parameters", () => {
     expect(mod.getProperty(p, { kind: "column", table: "Pick", column: "Pick" }, "sortByColumn")).toBe("Pick Order");
   });
 });
+
+import { moveMeasure, addMeasure as addMeasureOp, listTables as listTablesOp } from "./ops";
+import { fixtureProject as fixtureProjectForMove } from "../report/testFixture";
+
+describe("home table of a measure", () => {
+  it("moves a measure to another table, refuses a name that table already uses, and reports a missing table or measure", () => {
+    const p = fixtureProjectForMove();
+    addMeasureOp(p, "Sales", "Total", "SUM(Sales[Quantity])");
+    moveMeasure(p, "Total", "Customer");
+    expect(listTablesOp(p).find((t) => t.name === "Customer")!.measures[0]).toMatchObject({ name: "Total", expression: "SUM(Sales[Quantity])" });
+    expect(listTablesOp(p).find((t) => t.name === "Sales")!.measures).toEqual([]);
+    moveMeasure(p, "Total", "Customer"); // already there: nothing happens
+    addMeasureOp(p, "Sales", "Other", "1");
+    addMeasureOp(p, "Product", "Dup", "1");
+    addMeasureOp(p, "Sales", "Dup2", "2");
+    expect(() => moveMeasure(p, "Missing", "Customer")).toThrow(/does not exist/);
+    expect(() => moveMeasure(p, "Other", "Nowhere")).toThrow(/does not exist/);
+    // a column with the same name blocks the move
+    addMeasureOp(p, "Sales", "City", "3");
+    expect(() => moveMeasure(p, "City", "Customer")).toThrow(/already has/);
+  });
+});

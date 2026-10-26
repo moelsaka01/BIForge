@@ -223,6 +223,8 @@ export function Frame({ spec }: { spec: ShellSpec }) {
       visual: vm ? { page: vm.pageName, name: vm.name, type: vm.visualType, categories: (vm.roles.Category ?? []).length, drillLevel: report.drill[vm.name]?.level ?? 0, drillMode: report.drillMode === vm.name, editingInteractions: report.editInteractions === vm.name } : null,
       table: st.selectedTable ?? sess.dataTables[0] ?? null,
       field: st.selectedField,
+      tables: project ? listTables(project).map((t) => t.name) : [],
+      fieldColumns: project && st.selectedField ? (listTables(project).find((t) => t.name === st.selectedField!.table)?.columns.map((c) => c.name) ?? []) : [],
       daxTab: st.daxTab,
       panes: {
         filters: modern ? open("visualizations") && side === "filters" : open("filters"),

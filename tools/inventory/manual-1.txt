@@ -126,7 +126,7 @@ D | View as roles
 N | Linguistic schema import/export
 N | Q&A language
 ### Other
-N | Home table
+D | Home table
 D | Mark as date table
 D | Hide/Unhide in report view
 ## 7. Report view ribbon: View tab

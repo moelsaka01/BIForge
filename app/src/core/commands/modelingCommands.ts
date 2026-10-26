@@ -37,6 +37,13 @@ export function registerModelingCommands(r: CommandRegistry<Session>): void {
     });
   });
 
+  reg("model.moveMeasure", "Home table", (s, a) => {
+    const { name, to } = need<{ name: string; to: string }>(a, ["name", "to"]);
+    s.store.transact(`Move measure "${name}" to ${to}`, (p) => ops.moveMeasure(p, name, to));
+    const f = s.shell.getSnapshot().selectedField;
+    if (f && f.kind === "measure" && f.name === name) s.shell.selectField({ ...f, table: to });
+  });
+
   reg("model.addCalculatedColumn", "New calculated column", (s, a) => {
     const { table, name, expression } = need<{ table: string; name: string; expression: string }>(a, ["table", "name", "expression"]);
     return s.addCalculatedColumn(table, name, expression);

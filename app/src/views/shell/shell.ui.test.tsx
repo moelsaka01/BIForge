@@ -506,7 +506,7 @@ describe("ribbon", () => {
     await act(async () => void (await a.registry.execute("model.addMeasure", { table: "Sales", name: "Total", expression: "SUM(Sales[Quantity])" })));
     const pane = await screen.findByLabelText("Data pane");
     expect(ribbon().queryByRole("tab", { name: "Column tools" })).toBeNull();
-    const prop = (target: object, key: "formatString" | "summarizeBy" | "dataCategory") => getProperty(a.session.store.project!, target as never, key);
+    const prop = (target: object, key: "formatString" | "summarizeBy" | "dataCategory" | "sortByColumn") => getProperty(a.session.store.project!, target as never, key);
     const unitPrice = { kind: "column", table: "Sales", column: "UnitPrice" };
     // pick a column
     const salesNode = within(pane).getByText("Sales");
@@ -529,6 +529,9 @@ describe("ribbon", () => {
     fireEvent.click(ribbon().getByRole("button", { name: /^Data category/ }));
     fireEvent.click(await screen.findByRole("menuitem", { name: "City" }));
     await waitFor(() => expect(prop(unitPrice, "dataCategory")).toBe("City"));
+    fireEvent.click(ribbon().getByRole("button", { name: /^Sort by column/ }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Quantity" }));
+    await waitFor(() => expect(prop(unitPrice, "sortByColumn")).toBe("Quantity"));
     // pick a measure: Measure tools replace Column tools
     fireEvent.click(await within(pane).findByText("Total"));
     fireEvent.click(await ribbon().findByRole("tab", { name: "Measure tools" }));
@@ -536,6 +539,11 @@ describe("ribbon", () => {
     fireEvent.click(ribbon().getByRole("button", { name: /^Format/ }));
     fireEvent.click(await screen.findByRole("menuitem", { name: "Whole number" }));
     await waitFor(() => expect(prop({ kind: "measure", table: "Sales", name: "Total" }, "formatString")).toBe("#,0"));
+    // Home table moves the measure to another table
+    fireEvent.click(ribbon().getByRole("button", { name: /^Home table/ }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Customer" }));
+    await waitFor(() => expect(listTables(a.session.store.project!).find((t) => t.name === "Customer")!.measures.map((m) => m.name)).toEqual(["Total"]));
+    expect(listTables(a.session.store.project!).find((t) => t.name === "Sales")!.measures).toEqual([]);
   });
 
   it("Get data offers the file sources and opens the import dialog on the chosen one", async () => {

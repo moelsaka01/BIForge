@@ -123,7 +123,7 @@ function Btn({ control, ctx, layout, labels, tip, ui }: { control: RibbonControl
         </MenuTrigger>
         <MenuPopover>
           <MenuList>
-            {control.menu.map((m, i) => (
+            {(typeof control.menu === "function" ? control.menu(ctx) : control.menu).map((m, i) => (
               <Fragment key={`${m.label}${i}`}>
                 {m.separatorBefore && <MenuDivider />}
                 <MenuItem

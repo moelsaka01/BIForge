@@ -444,3 +444,4 @@
 27|Export visual data to CSV => app/src/views/report/exportData.ui.test.tsx :: right-click a visual, Export data ;; app/src/core/report/exportData.test.ts :: writes the rows of the visual as CSV
 6|Format menu => app/src/views/shell/shell.ui.test.tsx :: Column tools and Measure tools appear ;; app/src/core/model/formatPresets.test.ts :: every preset is a format
 6|Currency, Percent, Comma, Auto decimal places => app/src/views/shell/shell.ui.test.tsx :: Column tools and Measure tools appear ;; app/src/core/model/formatPresets.test.ts :: one more or one less decimal place
+6|Home table => app/src/core/model/modeling.test.ts :: moves a measure to another table ;; app/src/views/shell/shell.ui.test.tsx :: Column tools and Measure tools appear

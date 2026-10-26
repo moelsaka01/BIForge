@@ -94,6 +94,8 @@ function ctx(over: Partial<RibbonCtx> = {}): RibbonCtx {
     pageName: "page1",
     pageCount: 1,
     field: null,
+    tables: [],
+    fieldColumns: [],
     selectedCount: 0,
     selectedGroups: 0,
     selectedGroupNames: [],
@@ -129,7 +131,7 @@ describe("ribbon definitions", () => {
             expect(control.status, `${where} has neither a command nor a status`).toBeDefined();
             expect(STATUS_TEXT[control.status!]).toBeTruthy();
           }
-          for (const m of menuItems(control.menu)) {
+          for (const m of menuItems(typeof control.menu === "function" ? control.menu(ctx({ tables: ["T"], fieldColumns: ["C"], field: { table: "T", kind: "measure", name: "M" } })) : control.menu)) {
             if (m.command) expect(registry.get(m.command), `${where} menu ${m.label}`).toBeDefined();
             else expect(m.ui || m.status, `${where} menu ${m.label}`).toBeTruthy();
           }
