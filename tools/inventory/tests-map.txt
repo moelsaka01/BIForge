@@ -428,3 +428,7 @@
 15|Auto-create relationships => app/src/core/model/detectRelationships.test.ts :: finds key columns with the same name ;; app/src/views/shell/shell.ui.test.tsx :: Manage relationships lists the relationships
 15|Manage relationships dialog (grid, autodetect) => app/src/views/shell/shell.ui.test.tsx :: Manage relationships lists the relationships
 25|Manage relationships => app/src/views/shell/shell.ui.test.tsx :: Manage relationships lists the relationships
+16|Multiple query tabs => app/src/views/shell/shell.ui.test.tsx :: DAX query view: tabs, run selection
+16|Query tab rename, save, open .dax files => app/src/views/shell/shell.ui.test.tsx :: DAX query view: tabs, run selection ;; app/src/core/dax/resultExport.test.ts :: a query file is named after its tab
+16|Run selection => app/src/views/shell/shell.ui.test.tsx :: DAX query view: tabs, run selection
+16|Result export (copy/CSV) => app/src/core/dax/resultExport.test.ts :: CSV quotes commas ;; app/src/core/dax/resultExport.test.ts :: tab-separated text for the clipboard

@@ -169,6 +169,68 @@ describe("workspace", () => {
     await waitFor(() => expect(a.dax.calls.some((c) => c.includes("EVALUATE"))).toBe(true));
   });
 
+  it("DAX query view: tabs, run selection, save and open a .dax file, copy or save a result, cancel", async () => {
+    const a = makeApp();
+    a.dax.handler = (q) => (q.includes("EVALUATE") ? { results: [{ columns: ["A", "B"], rows: [[{ t: "int", v: "1" }, { t: "text", v: "x,y" }], [{ t: "blank", v: "" }, { t: "text", v: "z" }]], totalRows: 2, truncated: false }], elapsedMs: 1 } : undefined);
+    render(a.element);
+    await openProject(a);
+    fireEvent.click(screen.getByRole("button", { name: "DAX query view" }));
+    const editor = (await screen.findByLabelText("DAX query")) as HTMLTextAreaElement;
+    const q1 = 'EVALUATE ROW("A", 1)\nEVALUATE ROW("B", 2)';
+    fireEvent.change(editor, { target: { value: q1 } });
+    // run selection: only the selected text goes to the engine
+    editor.setSelectionRange(q1.indexOf('EVALUATE ROW("B"'), q1.length);
+    a.dax.calls.length = 0;
+    const qtabs = () => within(screen.getByRole("tablist", { name: "Query tabs" })).getAllByRole("tab");
+    const run = () => fireEvent.click(screen.getAllByRole("button", { name: "Run" }).find((b) => !b.closest("[data-testid=ribbon]"))!);
+    run();
+    await waitFor(() => expect(a.dax.calls.some((c) => c.includes('ROW("B"'))).toBe(true));
+    expect(a.dax.calls.some((c) => c.includes('ROW("A"'))).toBe(false);
+    // a second tab keeps its own text, can be renamed, and switching back restores the first
+    fireEvent.click(screen.getByRole("button", { name: "New query tab" }));
+    expect(qtabs()).toHaveLength(2);
+    const second = (await screen.findByLabelText("DAX query")) as HTMLTextAreaElement;
+    fireEvent.change(second, { target: { value: 'EVALUATE ROW("C", 3)' } });
+    fireEvent.doubleClick(qtabs()[1]);
+    const name = screen.getByLabelText("Query name");
+    fireEvent.change(name, { target: { value: "Totals" } });
+    fireEvent.blur(name);
+    expect(within(screen.getByRole("tablist", { name: "Query tabs" })).getByRole("tab", { name: /Totals/ })).toBeTruthy();
+    fireEvent.click(qtabs()[0]);
+    await waitFor(() => expect(((screen.getByLabelText("DAX query")) as HTMLTextAreaElement).value).toBe(q1));
+    // save the active query as a .dax file, open one into a new tab
+    fireEvent.click(screen.getByRole("button", { name: "Save query" }));
+    expect(a.files.saved.at(-1)).toMatchObject({ name: "Query 1.dax", text: q1 });
+    a.files.next = 'EVALUATE ROW("D", 4)';
+    fireEvent.click(screen.getByRole("button", { name: "Open query" }));
+    await waitFor(() => expect(qtabs()).toHaveLength(3));
+    await waitFor(() => expect(((screen.getByLabelText("DAX query")) as HTMLTextAreaElement).value).toBe('EVALUATE ROW("D", 4)'));
+    // a result is saved as CSV (commas quoted, blanks empty)
+    run();
+    fireEvent.click(await screen.findByRole("button", { name: "Save result 1 as CSV" }));
+    expect(a.files.saved.at(-1)).toEqual({ name: "Result 1.csv", text: 'A,B\r\n1,"x,y"\r\n,z\r\n' });
+    // closing a tab keeps the others
+    fireEvent.click(screen.getByRole("button", { name: /Close Query 3/ }));
+    await waitFor(() => expect(qtabs()).toHaveLength(2));
+  });
+
+  it("DAX query view: Cancel stops waiting for a running query and drops its result", async () => {
+    const a = makeApp();
+    let release: () => void = () => undefined;
+    const original = a.dax.query.bind(a.dax);
+    a.dax.handler = () => ({ results: [{ columns: ["A"], rows: [[{ t: "int", v: "1" }]], totalRows: 1, truncated: false }], elapsedMs: 1 });
+    a.dax.query = ((docs: never, q: string) => new Promise((resolve) => { release = () => resolve(original(docs, q)); })) as never;
+    render(a.element);
+    await openProject(a);
+    fireEvent.click(screen.getByRole("button", { name: "DAX query view" }));
+    fireEvent.change(await screen.findByLabelText("DAX query"), { target: { value: 'EVALUATE ROW("A", 1)' } });
+    fireEvent.click(screen.getAllByRole("button", { name: "Run" }).find((b) => !b.closest("[data-testid=ribbon]"))!);
+    fireEvent.click(await screen.findByRole("button", { name: "Cancel" }));
+    expect(await screen.findByText(/The query was cancelled/)).toBeTruthy();
+    await act(async () => release());
+    expect(screen.queryByRole("table", { name: "Result 1" })).toBeNull();
+  });
+
   it("right-clicking a table, column or measure in the Data pane offers quick queries that open in the query view", async () => {
     const a = makeApp();
     render(a.element);

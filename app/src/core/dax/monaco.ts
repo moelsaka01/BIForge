@@ -199,6 +199,10 @@ export const createMonacoEditor: EditorFactory = async (container: HTMLElement, 
       );
     },
     focus: () => editor.focus(),
+    getSelection: () => {
+      const s = editor.getSelection();
+      return s && !s.isEmpty() ? model.getValueInRange(s) : "";
+    },
     dispose() {
       sub.dispose();
       contexts.delete(key);

@@ -47,8 +47,11 @@ export interface ShellState {
   newMeasureTick: number;
   /** Bumped by "Run" so the DAX query view runs its query. */
   runQueryTick: number;
-  /** Text of the DAX query view (kept while the user looks at other views). */
+  /** Text of the DAX query view (kept while the user looks at other views): the text of the active query tab. */
   daxQuery: string;
+  /** The query tabs of the DAX query view; the active one is daxActive. */
+  daxTabs: { id: string; name: string; text: string }[];
+  daxActive: string;
   /** Modern shell: which pane the right-hand sidebar shows. */
   sideTab: "visualizations" | "filters" | "bookmarks" | "selection" | "sync";
   systemDark: boolean;
@@ -70,6 +73,8 @@ const INITIAL: ShellState = {
   newMeasureTick: 0,
   runQueryTick: 0,
   daxQuery: "",
+  daxTabs: [{ id: "q1", name: "Query 1", text: "" }],
+  daxActive: "q1",
   sideTab: "visualizations",
   systemDark: false,
   applyTmdlTick: 0,
@@ -173,7 +178,41 @@ export class ShellStore {
   }
 
   setDaxQuery(text: string): void {
-    this.set({ daxQuery: text });
+    this.set({ daxQuery: text, daxTabs: this.snap.daxTabs.map((t) => (t.id === this.snap.daxActive ? { ...t, text } : t)) });
+  }
+
+  /** A new query tab (named "Query n" unless a name is given) that becomes the active one. */
+  addDaxTab(text = "", name?: string): string {
+    const n = this.snap.daxTabs.reduce((m, t) => Math.max(m, Number(/^q(\d+)$/.exec(t.id)?.[1] ?? 0)), 0) + 1;
+    const id = `q${n}`;
+    this.set({ daxTabs: [...this.snap.daxTabs, { id, name: name?.trim() || `Query ${n}`, text }], daxActive: id, daxQuery: text });
+    return id;
+  }
+
+  selectDaxTab(id: string): void {
+    const t = this.snap.daxTabs.find((x) => x.id === id);
+    if (t) this.set({ daxActive: id, daxQuery: t.text });
+  }
+
+  renameDaxTab(id: string, name: string): void {
+    if (name.trim()) this.set({ daxTabs: this.snap.daxTabs.map((t) => (t.id === id ? { ...t, name: name.trim() } : t)) });
+  }
+
+  /** Closes a query tab; the last one stays (emptied). */
+  closeDaxTab(id: string): void {
+    const tabs = this.snap.daxTabs;
+    if (tabs.length <= 1) {
+      this.set({ daxTabs: [{ ...tabs[0], text: "" }], daxQuery: "" });
+      return;
+    }
+    const i = tabs.findIndex((t) => t.id === id);
+    const rest = tabs.filter((t) => t.id !== id);
+    if (id !== this.snap.daxActive) {
+      this.set({ daxTabs: rest });
+      return;
+    }
+    const next = rest[Math.min(i, rest.length - 1)];
+    this.set({ daxTabs: rest, daxActive: next.id, daxQuery: next.text });
   }
 
   setSideTab(tab: ShellState["sideTab"]): void {

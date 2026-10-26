@@ -160,7 +160,7 @@ Last updated: 2026-10-25 (see PROGRESS.md; the status table below is generated b
 | Visuals | 76 | 51 | 4 | 21 |
 | Table view | 18 | 10 | 0 | 8 |
 | Model view | 23 | 16 | 3 | 4 |
-| DAX query view | 15 | 6 | 0 | 9 |
+| DAX query view | 15 | 10 | 1 | 4 |
 | TMDL view | 8 | 4 | 0 | 4 |
 | Modeling features | 48 | 25 | 2 | 21 |
 | DAX language | 15 | 10 | 0 | 5 |
@@ -176,7 +176,7 @@ Last updated: 2026-10-25 (see PROGRESS.md; the status table below is generated b
 | Format pane cards per visual | 1264 | 776 | 232 | 256 |
 | DAX functions | 317 | 297 | 0 | 20 |
 | M standard library | 652 | 421 | 0 | 231 |
-| **Total** | **3008** | **1921** | **275** | **812** |
+| **Total** | **3008** | **1925** | **276** | **807** |
 <!-- inventory-status:end -->
 
 ## Online track (Publish & Share; plan in docs/ONLINE_PLAN.md)

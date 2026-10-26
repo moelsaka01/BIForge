@@ -125,17 +125,17 @@ D | Many-to-many with both cross-filter
 ## 16. DAX query view
 D | Query editor (Monaco) with Run
 D | Result tables
-N | Multiple query tabs
-N | Query tab rename, save, open .dax files
-N | Run selection
+D | Multiple query tabs
+D | Query tab rename, save, open .dax files
+D | Run selection
 D | Quick queries from a table, column or measure (EVALUATE sample, summarize, TOPN...)
 D | Update model with measure/column/table changes from a query (DEFINE blocks to model)
 D | Format query
 N | Find and replace
 N | Comment/uncomment toggles
 N | Query error squiggles
-N | Cancel running query
-N | Result export (copy/CSV)
+P | Cancel running query
+D | Result export (copy/CSV)
 D | Query tab: DEFINE COLUMN and FUNCTION
 N | Model-wide Info functions (INFO.VIEW.*)
 ## 17. TMDL view

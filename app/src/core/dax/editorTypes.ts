@@ -8,6 +8,8 @@ export interface EditorHandle {
   setValue(value: string): void;
   setMarkers(markers: MarkerSpec[]): void;
   focus(): void;
+  /** The selected text ("" when nothing is selected). */
+  getSelection?(): string;
   dispose(): void;
 }
 

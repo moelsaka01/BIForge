@@ -11,6 +11,8 @@ export interface DaxEditorProps {
   /** Creates the code editor (Monaco in the app). When it cannot be created a plain text box takes over. */
   factory: EditorFactory;
   height?: number;
+  /** Filled with a function that reads the selected text (of the editor or of the plain text box). */
+  selectionRef?: { current: (() => string) | null };
 }
 
 /**
@@ -48,6 +50,7 @@ export function DaxEditor(p: DaxEditorProps) {
           return;
         }
         handle.current = h;
+        if (latest.current.selectionRef) latest.current.selectionRef.current = () => h.getSelection?.() ?? "";
         h.setValue(latest.current.value);
         h.setMarkers(latest.current.markers);
         setState("ready");
@@ -89,7 +92,7 @@ export function DaxEditor(p: DaxEditorProps) {
         <div role="alert" style={{ fontSize: 12, color: "#a4262c" }}>
           The code editor could not be loaded ({failure}); using a plain text box.
         </div>
-        <textarea aria-label={p.ariaLabel} value={p.value} onChange={(e) => p.onChange(e.target.value)} style={{ width: "100%", height, fontFamily: "Consolas, monospace", fontSize: 14, boxSizing: "border-box" }} />
+        <textarea ref={(el) => { if (p.selectionRef) p.selectionRef.current = el ? () => el.value.slice(el.selectionStart, el.selectionEnd) : null; }} aria-label={p.ariaLabel} value={p.value} onChange={(e) => p.onChange(e.target.value)} style={{ width: "100%", height, fontFamily: "Consolas, monospace", fontSize: 14, boxSizing: "border-box" }} />
       </div>
     );
   }
