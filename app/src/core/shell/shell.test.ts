@@ -93,6 +93,7 @@ function ctx(over: Partial<RibbonCtx> = {}): RibbonCtx {
     hasProject: true,
     pageName: "page1",
     pageCount: 1,
+    field: null,
     selectedCount: 0,
     selectedGroups: 0,
     selectedGroupNames: [],

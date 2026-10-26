@@ -4,6 +4,7 @@ import type { CommandRegistry } from "./registry";
 import type { Session } from "../session/session";
 import * as mod from "../model/modeling";
 import * as ops from "../model/ops";
+import { FORMAT_PRESETS, applyFormatOp, type FormatOp } from "../model/formatPresets";
 
 const hasProject = (s: Session) => s.store.project !== null;
 
@@ -21,6 +22,19 @@ export function registerModelingCommands(r: CommandRegistry<Session>): void {
     const { target, key } = need<{ target: mod.Target; key: mod.PropKey }>(a, ["target", "key"]);
     const value = (a as { value?: string | boolean | null }).value ?? null;
     s.store.transact(`Set ${key}`, (p) => mod.setProperty(p, target, key, value));
+  });
+
+  // Column tools and Measure tools > Formatting: a format from the list, or one step of change, for the picked field
+  reg("model.formatField", "Format the field", (s, a) => {
+    const f = s.shell.getSnapshot().selectedField;
+    if (!f) throw new Error("Pick a column or measure in the Data pane first.");
+    const { preset, op } = a as { preset?: string; op?: FormatOp };
+    const target: mod.Target = f.kind === "measure" ? { kind: "measure", table: f.table, name: f.name } : { kind: "column", table: f.table, column: f.name };
+    s.store.transact("Format", (p) => {
+      const cur = mod.getProperty(p, target, "formatString");
+      const next = preset ? (FORMAT_PRESETS.find((x) => x.id === preset)?.format ?? null) : op ? applyFormatOp(typeof cur === "string" && cur !== "" ? cur : null, op) : null;
+      mod.setProperty(p, target, "formatString", next);
+    });
   });
 
   reg("model.addCalculatedColumn", "New calculated column", (s, a) => {

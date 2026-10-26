@@ -4,6 +4,8 @@
 import type { PaneId, ShellKind } from "./settings";
 import type { ViewId, Zoom } from "./shellStore";
 import { BUILTIN_THEMES } from "../report/theme";
+import { FORMAT_PRESETS } from "../model/formatPresets";
+import { COLUMN_CATEGORIES } from "../model/modeling";
 
 export type IconName =
   | "save" | "undo" | "redo" | "paste" | "cut" | "copy" | "formatPainter" | "database" | "excel" | "sql" | "table" | "enterData"
@@ -38,6 +40,8 @@ export interface RibbonCtx {
     editingInteractions: boolean;
   } | null;
   table: string | null;
+  /** The column or measure picked in the Data pane. */
+  field: { table: string; kind: "column" | "measure"; name: string } | null;
   daxTab: "query" | "measures";
   panes: Record<PaneId, boolean>;
   themeName: string;
@@ -468,7 +472,70 @@ function reportTabs(shell: ShellKind): RibbonTab[] {
   };
   const design: RibbonTab = { id: "design", label: "Design", keytip: "G", groups: [themesGroup(), { id: "page", label: "Page", controls: pageViewGroup().controls }] };
   const base = shell === "classic" ? [fileTab(), home, insert, modeling, viewTab, optimize, helpTab()] : [fileTab(), home, insert, modeling, design, viewTab, optimize, helpTab()];
-  return [...base, formatTab(), drillTab()];
+  return [...base, formatTab(), drillTab(), ...fieldTabs()];
+}
+
+// ---- Column tools and Measure tools: act on the column or measure picked in the Data pane ----
+const targetOf = (c: RibbonCtx) => (c.field?.kind === "measure" ? { kind: "measure", table: c.field.table, name: c.field.name } : { kind: "column", table: c.field?.table, column: c.field?.name });
+const setProp = (label: string, key: string, value: string | boolean | null): RibbonMenuItem => ({ label, command: "model.setProperty", args: (c) => ({ target: targetOf(c), key, value }) });
+const formatMenu = (): RibbonMenuItem[] => FORMAT_PRESETS.map((p) => ({ label: p.label, command: "model.formatField", args: { preset: p.id } }));
+const formattingGroup = (): RibbonGroup => ({
+  id: "formatting",
+  label: "Formatting",
+  controls: [
+    { id: "fieldFormat", label: "Format", icon: "format", size: "large", command: "model.formatField", menu: formatMenu(), keytip: "FM" },
+    cmd("fieldCurrency", "$", "format", "model.formatField", { args: { op: "currency" } }),
+    cmd("fieldPercent", "%", "format", "model.formatField", { args: { op: "percent" } }),
+    cmd("fieldThousands", ",", "format", "model.formatField", { args: { op: "thousands" } }),
+    cmd("fieldMoreDecimals", ".00 +", "format", "model.formatField", { args: { op: "moreDecimals" } }),
+    cmd("fieldFewerDecimals", ".00 −", "format", "model.formatField", { args: { op: "fewerDecimals" } }),
+  ],
+});
+const structureGroup = (kind: "column" | "measure"): RibbonGroup => ({
+  id: "structure",
+  label: "Structure",
+  controls: [
+    { id: "fieldName", label: "Name", icon: "tag", readout: (c) => c.field?.name ?? "", status: "todo" },
+    cmd("fieldRename", "Rename", "tag", "model.renameDialog", { size: "large", args: (c) => ({ kind, table: c.field?.table, name: c.field?.name }), keytip: "RN" }),
+  ],
+});
+function fieldTabs(): RibbonTab[] {
+  return [
+    {
+      id: "columnTools",
+      label: "Column tools",
+      keytip: "JC",
+      contextual: true,
+      when: (c) => c.field?.kind === "column",
+      groups: [
+        structureGroup("column"),
+        formattingGroup(),
+        {
+          id: "properties",
+          label: "Properties",
+          controls: [
+            { id: "summarize", label: "Summarization", icon: "calc", size: "large", command: "model.setProperty", menu: ["none", "sum", "min", "max", "count", "average", "distinctCount"].map((v) => setProp(v === "none" ? "Don't summarize" : v === "distinctCount" ? "Count (distinct)" : v[0].toUpperCase() + v.slice(1), "summarizeBy", v)), keytip: "SU" },
+            { id: "category", label: "Data category", icon: "tag", size: "large", command: "model.setProperty", menu: [setProp("Uncategorized", "dataCategory", null), ...COLUMN_CATEGORIES.map((v) => setProp(v, "dataCategory", v))], keytip: "DC" },
+            cmd("fieldHide", "Hide", "options", "model.setProperty", { args: (c) => ({ target: targetOf(c), key: "isHidden", value: true }) }),
+          ],
+        },
+        relationshipsGroup(),
+      ],
+    },
+    {
+      id: "measureTools",
+      label: "Measure tools",
+      keytip: "JM",
+      contextual: true,
+      when: (c) => c.field?.kind === "measure",
+      groups: [
+        structureGroup("measure"),
+        formattingGroup(),
+        { id: "properties", label: "Properties", controls: [{ id: "measureCategory", label: "Data category", icon: "tag", size: "large", command: "model.setProperty", menu: [setProp("Uncategorized", "dataCategory", null), ...COLUMN_CATEGORIES.map((v) => setProp(v, "dataCategory", v))] }] },
+        modelingCalculations(),
+      ],
+    },
+  ];
 }
 
 // ---- the other views ----
@@ -477,6 +544,7 @@ function tableTabs(): RibbonTab[] {
     fileTab(),
     { id: "home", label: "Home", keytip: "H", groups: [...homeCommon(), relationshipsGroup(), modelingCalculations()] },
     helpTab(),
+    ...fieldTabs(),
     {
       id: "tableTools",
       label: "Table tools",

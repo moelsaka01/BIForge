@@ -10,6 +10,7 @@ import { calculatedTables } from "../../core/model/modeling";
 import { col } from "../../core/testing/fakeEngine";
 import { listTables } from "../../core/model/ops";
 import { listRelationships } from "../../core/model/relationships";
+import { getProperty } from "../../core/model/modeling";
 import { fixtureProject } from "../../core/report/testFixture";
 import { MemoryStorage, PBIP, ROOT, makeApp } from "./testApp";
 import { SETTINGS_KEY } from "../../core/shell/settings";
@@ -495,6 +496,46 @@ describe("ribbon", () => {
     await waitFor(() => expect(listRelationships(a.session.store.project!)).toHaveLength(1));
     fireEvent.click(within(dlg).getByRole("button", { name: "Autodetect" }));
     await waitFor(() => expect(listRelationships(a.session.store.project!)).toHaveLength(2)); // the deleted one is found again
+  });
+
+  it("Column tools and Measure tools appear for the field picked in the Data pane; Format, $, %, decimals, Summarization and Data category change it", async () => {
+    const a = makeApp();
+    render(a.element);
+    await openProject(a);
+    await act(async () => a.session.store.load(fixtureProject()));
+    await act(async () => void (await a.registry.execute("model.addMeasure", { table: "Sales", name: "Total", expression: "SUM(Sales[Quantity])" })));
+    const pane = await screen.findByLabelText("Data pane");
+    expect(ribbon().queryByRole("tab", { name: "Column tools" })).toBeNull();
+    const prop = (target: object, key: "formatString" | "summarizeBy" | "dataCategory") => getProperty(a.session.store.project!, target as never, key);
+    const unitPrice = { kind: "column", table: "Sales", column: "UnitPrice" };
+    // pick a column
+    const salesNode = within(pane).getByText("Sales");
+    fireEvent.click(salesNode.closest("[role=treeitem]") ?? salesNode);
+    fireEvent.click(await within(pane).findByText("UnitPrice"));
+    fireEvent.click(await ribbon().findByRole("tab", { name: "Column tools" }));
+    fireEvent.click(ribbon().getByRole("button", { name: /^Format/ }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Currency" }));
+    await waitFor(() => expect(prop(unitPrice, "formatString")).toBe("$#,0.00"));
+    fireEvent.click(ribbon().getByRole("button", { name: /\.00 \+/ }));
+    await waitFor(() => expect(prop(unitPrice, "formatString")).toBe("$#,0.000"));
+    fireEvent.click(ribbon().getByRole("button", { name: /\.00 −/ }));
+    fireEvent.click(ribbon().getByRole("button", { name: /\.00 −/ }));
+    await waitFor(() => expect(prop(unitPrice, "formatString")).toBe("$#,0.0"));
+    fireEvent.click(ribbon().getByRole("button", { name: "%" }));
+    await waitFor(() => expect(prop(unitPrice, "formatString")).toBe("#,0.0%"));
+    fireEvent.click(ribbon().getByRole("button", { name: /^Summarization/ }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Average" }));
+    await waitFor(() => expect(prop(unitPrice, "summarizeBy")).toBe("average"));
+    fireEvent.click(ribbon().getByRole("button", { name: /^Data category/ }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "City" }));
+    await waitFor(() => expect(prop(unitPrice, "dataCategory")).toBe("City"));
+    // pick a measure: Measure tools replace Column tools
+    fireEvent.click(await within(pane).findByText("Total"));
+    fireEvent.click(await ribbon().findByRole("tab", { name: "Measure tools" }));
+    expect(ribbon().queryByRole("tab", { name: "Column tools" })).toBeNull();
+    fireEvent.click(ribbon().getByRole("button", { name: /^Format/ }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Whole number" }));
+    await waitFor(() => expect(prop({ kind: "measure", table: "Sales", name: "Total" }, "formatString")).toBe("#,0"));
   });
 
   it("Get data offers the file sources and opens the import dialog on the chosen one", async () => {

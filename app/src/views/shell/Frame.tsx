@@ -222,6 +222,7 @@ export function Frame({ spec }: { spec: ShellSpec }) {
       selectedGroupNames: project ? (parsePage(project, report.page ?? activePageName(project) ?? "")?.groups.filter((g) => report.canvas.includes(g.name)).map((g) => g.name) ?? []) : [],
       visual: vm ? { page: vm.pageName, name: vm.name, type: vm.visualType, categories: (vm.roles.Category ?? []).length, drillLevel: report.drill[vm.name]?.level ?? 0, drillMode: report.drillMode === vm.name, editingInteractions: report.editInteractions === vm.name } : null,
       table: st.selectedTable ?? sess.dataTables[0] ?? null,
+      field: st.selectedField,
       daxTab: st.daxTab,
       panes: {
         filters: modern ? open("visualizations") && side === "filters" : open("filters"),

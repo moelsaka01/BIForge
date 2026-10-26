@@ -32,6 +32,9 @@ export interface DataPaneProps {
   onQuickQuery?(text: string): void;
   /** Right-click > Rename: the object to rename. */
   onRename?(target: QuickTarget): void;
+  /** A click on a column or measure picks it (the Column tools and Measure tools tabs then act on it). */
+  onSelectField?(field: { table: string; kind: "column" | "measure"; name: string }): void;
+  selectedField?: { table: string; kind: "column" | "measure"; name: string } | null;
 }
 
 const typeGlyph = (t: string | null) =>
@@ -229,7 +232,9 @@ function FieldLabel({ p, field, glyph }: { p: DataPaneProps; field: FieldRef; gl
         e.dataTransfer.setData(FIELD_MIME, JSON.stringify(field));
         e.dataTransfer.effectAllowed = "copy";
       }}
-      style={{ display: "inline-flex", alignItems: "center" }}
+      onClick={() => (field.kind === "column" || field.kind === "measure") && p.onSelectField?.({ table: field.table, kind: field.kind, name: field.name })}
+      data-selected-field={p.selectedField && p.selectedField.table === field.table && p.selectedField.name === field.name && p.selectedField.kind === field.kind ? "true" : undefined}
+      style={{ display: "inline-flex", alignItems: "center", fontWeight: p.selectedField && p.selectedField.table === field.table && p.selectedField.name === field.name && p.selectedField.kind === field.kind ? 700 : undefined }}
     >
       {use && (
         <input

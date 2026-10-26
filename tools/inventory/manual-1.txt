@@ -114,8 +114,8 @@ D | New parameter
 D | Sort by column
 ### Formatting
 N | Data type
-N | Format menu
-N | Currency, Percent, Comma, Auto decimal places
+D | Format menu
+D | Currency, Percent, Comma, Auto decimal places
 D | Summarization
 D | Data category
 N | Data groups (group, bin)
@@ -201,12 +201,12 @@ D | New table
 D | New measure
 D | Sort by column
 D | Data category
-N | Properties group (name, home table, data type, format)
+P | Properties group (name, home table, data type, format)
 ### Column tools
-N | Name, data type, format, summarization, data category, sort by column
+P | Name, data type, format, summarization, data category, sort by column
 D | Hide / Unhide
 ### Measure tools
-N | Name, home table, format, data category
+P | Name, home table, format, data category
 D | Format DAX expression (local formatter)
 ### Visual calculations tab
 N | New / Edit / Hide fields / Templates / Add function

@@ -150,12 +150,12 @@ Last updated: 2026-10-25 (see PROGRESS.md; the status table below is generated b
 | File menu and backstage | 20 | 12 | 1 | 7 |
 | Report view ribbon: Home tab | 19 | 14 | 1 | 4 |
 | Report view ribbon: Insert tab | 19 | 9 | 4 | 6 |
-| Report view ribbon: Modeling tab | 22 | 14 | 0 | 8 |
+| Report view ribbon: Modeling tab | 22 | 16 | 0 | 6 |
 | Report view ribbon: View tab | 19 | 15 | 0 | 4 |
 | Report view ribbon: Optimize tab | 4 | 2 | 0 | 2 |
 | Report view ribbon: Help tab | 5 | 5 | 0 | 0 |
 | Report view ribbon: External Tools tab | 2 | 0 | 0 | 2 |
-| Report view contextual tabs | 35 | 25 | 2 | 8 |
+| Report view contextual tabs | 35 | 25 | 5 | 5 |
 | Report canvas and page features | 53 | 39 | 3 | 11 |
 | Visuals | 76 | 51 | 4 | 21 |
 | Table view | 18 | 15 | 1 | 2 |
@@ -176,7 +176,7 @@ Last updated: 2026-10-25 (see PROGRESS.md; the status table below is generated b
 | Format pane cards per visual | 1264 | 777 | 231 | 256 |
 | DAX functions | 317 | 297 | 0 | 20 |
 | M standard library | 652 | 421 | 0 | 231 |
-| **Total** | **3008** | **1936** | **277** | **795** |
+| **Total** | **3008** | **1938** | **280** | **790** |
 <!-- inventory-status:end -->
 
 ## Online track (Publish & Share; plan in docs/ONLINE_PLAN.md)

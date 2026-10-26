@@ -41,6 +41,8 @@ export interface ShellState {
   daxTab: "query" | "measures";
   selectedVisual: { page: string; visual: string } | null;
   selectedTable: string | null;
+  /** The column or measure picked in the Data pane: the Column tools and Measure tools tabs act on it. */
+  selectedField: { table: string; kind: "column" | "measure"; name: string } | null;
   zoom: Zoom;
   dialog: DialogRequest | null;
   /** Bumped by "New measure" so the measure editor starts a fresh one. */
@@ -68,6 +70,7 @@ const INITIAL: ShellState = {
   daxTab: "query",
   selectedVisual: null,
   selectedTable: null,
+  selectedField: null,
   zoom: "fit",
   dialog: null,
   newMeasureTick: 0,
@@ -159,6 +162,10 @@ export class ShellStore {
     const cur = this.snap.selectedVisual;
     if (cur?.page === v?.page && cur?.visual === v?.visual) return;
     this.set({ selectedVisual: v });
+  }
+
+  selectField(f: ShellState["selectedField"]): void {
+    this.set({ selectedField: f, ...(f ? { selectedTable: f.table } : {}) });
   }
 
   selectTable(name: string | null): void {

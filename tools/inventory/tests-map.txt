@@ -442,3 +442,5 @@
 24|Export data setting => app/src/views/report/exportData.ui.test.tsx :: in viewing mode the menu offers Export data only while the report allows it
 27|Export page to PNG => app/src/views/shell/exportPage.ui.test.tsx :: hands a PNG named after the page
 27|Export visual data to CSV => app/src/views/report/exportData.ui.test.tsx :: right-click a visual, Export data ;; app/src/core/report/exportData.test.ts :: writes the rows of the visual as CSV
+6|Format menu => app/src/views/shell/shell.ui.test.tsx :: Column tools and Measure tools appear ;; app/src/core/model/formatPresets.test.ts :: every preset is a format
+6|Currency, Percent, Comma, Auto decimal places => app/src/views/shell/shell.ui.test.tsx :: Column tools and Measure tools appear ;; app/src/core/model/formatPresets.test.ts :: one more or one less decimal place
