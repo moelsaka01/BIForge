@@ -117,8 +117,8 @@ D | Display folders in cards
 P | Calculation group cards
 P | Field parameter cards
 N | Context menus (Delete, Hide, Rename, Add to layout)
-N | Auto-create relationships
-N | Manage relationships dialog (grid, autodetect)
+D | Auto-create relationships
+D | Manage relationships dialog (grid, autodetect)
 D | Create relationship dialog
 P | Edit relationship dialog with Cross-filter direction, Make this relationship active, Apply security filter in both directions, Assume referential integrity
 D | Many-to-many with both cross-filter
@@ -502,7 +502,7 @@ D | Relationship edit panel
 D | Power Query dialogs for every transform in the editor
 D | Conditional formatting dialog
 D | Format pane
-N | Manage relationships
+D | Manage relationships
 N | Edit relationships
 D | Manage roles
 D | View as roles

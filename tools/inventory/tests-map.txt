@@ -425,3 +425,6 @@
 26|F1 help => app/src/core/commands/helpCommands.test.ts :: Documentation \(F1\)
 13|Python script visual (needs local Python) => app/src/views/report/scriptVisual.ui.test.tsx :: never run by themselves ;; crates/engine/tests/it/scripts_live.rs :: python_visual_gets_the_data_as_dataset
 13|X-axis constant line => app/src/core/report/chartOptions.test.ts :: reference lines: the X-axis constant line
+15|Auto-create relationships => app/src/core/model/detectRelationships.test.ts :: finds key columns with the same name ;; app/src/views/shell/shell.ui.test.tsx :: Manage relationships lists the relationships
+15|Manage relationships dialog (grid, autodetect) => app/src/views/shell/shell.ui.test.tsx :: Manage relationships lists the relationships
+25|Manage relationships => app/src/views/shell/shell.ui.test.tsx :: Manage relationships lists the relationships

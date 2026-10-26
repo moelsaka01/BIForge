@@ -159,7 +159,7 @@ Last updated: 2026-10-25 (see PROGRESS.md; the status table below is generated b
 | Report canvas and page features | 53 | 39 | 2 | 12 |
 | Visuals | 76 | 51 | 4 | 21 |
 | Table view | 18 | 10 | 0 | 8 |
-| Model view | 23 | 14 | 3 | 6 |
+| Model view | 23 | 16 | 3 | 4 |
 | DAX query view | 15 | 6 | 0 | 9 |
 | TMDL view | 8 | 4 | 0 | 4 |
 | Modeling features | 48 | 25 | 2 | 21 |
@@ -169,14 +169,14 @@ Last updated: 2026-10-25 (see PROGRESS.md; the status table below is generated b
 | Get data: connectors | 47 | 25 | 16 | 6 |
 | Options dialog: Global | 61 | 17 | 2 | 42 |
 | Options dialog: Current File | 23 | 5 | 0 | 18 |
-| Dialogs | 48 | 27 | 0 | 21 |
+| Dialogs | 48 | 28 | 0 | 20 |
 | Keyboard shortcuts | 37 | 23 | 1 | 13 |
 | Export, print and file formats | 15 | 3 | 0 | 12 |
 | Accessibility and platform | 12 | 2 | 0 | 10 |
-| Format pane cards per visual | 1264 | 771 | 237 | 256 |
+| Format pane cards per visual | 1264 | 776 | 232 | 256 |
 | DAX functions | 317 | 297 | 0 | 20 |
 | M standard library | 652 | 421 | 0 | 231 |
-| **Total** | **3008** | **1913** | **280** | **815** |
+| **Total** | **3008** | **1921** | **275** | **812** |
 <!-- inventory-status:end -->
 
 ## Online track (Publish & Share; plan in docs/ONLINE_PLAN.md)

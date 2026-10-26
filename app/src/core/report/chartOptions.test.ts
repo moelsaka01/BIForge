@@ -99,7 +99,7 @@ describe("cartesian charts", () => {
   it("reference lines: the X-axis constant line stands on a category, auto scale grows the axis, decimals shape the label", () => {
     const v = visualOf("clusteredColumnChart", { Category: [Cat], Y: [Qty] });
     const rows = [[c("Bikes"), c(120)], [c("Clothing"), c(80)], [c("Parts"), c(40)]];
-    const line = (o: { series: { markLine?: { data: { xAxis?: string; yAxis?: number; label: { formatter(): string }; name: string }[] } }[] }) => o.series[0].markLine?.data ?? [];
+    const line = (o: any): { xAxis?: string; yAxis?: number; label: { formatter(): string }; name: string }[] => o.series[0].markLine?.data ?? [];
     expect(line(build(v, grouped(v, rows)).option)).toEqual([]);
     setFormat(v.json, "xAxisReferenceLine", "show", lit.bool(true), "id:constant");
     setFormat(v.json, "xAxisReferenceLine", "value", lit.num(2), "id:constant");

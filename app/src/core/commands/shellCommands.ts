@@ -226,7 +226,7 @@ export function registerShellCommands(r: CommandRegistry<Session>): void {
   });
   r.register({ id: "model.newMeasure", label: "New measure", category: "Modeling", isEnabled: hasProject, run: (s) => s.shell.requestNewMeasure() });
   r.register({ id: "model.newTableDialog", label: "New table", category: "Modeling", isEnabled: hasProject, run: (s) => s.shell.openDialog({ kind: "newTable" }) });
-  r.register({ id: "model.manageRelationships", label: "Manage relationships", category: "Modeling", isEnabled: hasProject, run: (s) => s.shell.setView("model") });
+  r.register({ id: "model.manageRelationships", label: "Manage relationships", category: "Modeling", isEnabled: hasProject, run: (s) => s.shell.openDialog({ kind: "manageRelationships" }) });
   r.register({ id: "tmdl.apply", label: "Apply TMDL changes", category: "Modeling", isEnabled: hasProject, run: (s) => s.shell.requestApplyTmdl() });
   r.register({
     id: "model.setTmdlDocument",

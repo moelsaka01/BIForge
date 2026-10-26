@@ -2862,6 +2862,9 @@
   ]
  },
  "scatterChart": {
+  "general": [
+   "formatString"
+  ],
   "bubbles": [
    "bubbleSize",
    "markerShape"
@@ -3020,12 +3023,18 @@
   ]
  },
  "shapeMap": {
+  "general": [
+   "formatString"
+  ],
   "dataPoint": [
    "defaultColor",
    "fill"
   ]
  },
  "filledMap": {
+  "general": [
+   "formatString"
+  ],
   "categoryLabels": [
    "show"
   ],
@@ -3150,6 +3159,9 @@
   ]
  },
  "gauge": {
+  "general": [
+   "formatString"
+  ],
   "axis": [
    "max",
    "min"
@@ -3345,6 +3357,9 @@
   ]
  },
  "card": {
+  "general": [
+   "formatString"
+  ],
   "categoryLabels": [
    "bold",
    "color",
@@ -3366,6 +3381,9 @@
   ]
  },
  "cardVisual": {
+  "general": [
+   "formatString"
+  ],
   "accentBar": [
    "color",
    "position",
@@ -3500,6 +3518,9 @@
   ]
  },
  "kpi": {
+  "general": [
+   "formatString"
+  ],
   "goals": [
    "bold",
    "direction",

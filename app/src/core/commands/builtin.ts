@@ -4,6 +4,7 @@ import type { Session } from "../session/session";
 import * as ops from "../model/ops";
 import type { PrivacyLevel } from "../model/tables";
 import * as rel from "../model/relationships";
+import { candidatePairs } from "../model/detectRelationships";
 import type { SourceSpec } from "../data/types";
 import { registerReportCommands } from "./reportCommands";
 import { registerQueryCommands } from "./queryCommands";
@@ -279,6 +280,55 @@ export function createRegistry(session: Session): CommandRegistry<Session> {
       s.setMessage(
         createdInactive ? "Relationship created but inactive: another active path already connects these tables." : "Relationship created.",
       );
+    },
+  });
+  // Autodetect: columns with the same key name and type in two tables become relationships; the loaded data decides which side is "one"
+  r.register({
+    id: "model.autodetectRelationships",
+    label: "Autodetect relationships",
+    category: "Modeling",
+    isEnabled: hasProject,
+    run: async (s) => {
+      const project = s.store.project;
+      if (!project) throw new Error("There is no project.");
+      const found = candidatePairs(project);
+      if (found.length === 0) {
+        s.setMessage("No new relationships were found: no two tables have a key column with the same name and type that is not related yet.");
+        return;
+      }
+      const loaded = new Set(s.getSnapshot().dataTables.map((t) => t.toLowerCase()));
+      const specs: rel.NewRelationship[] = [];
+      for (const c of found) {
+        let manySide: "a" | "b" = c.oneSide === "a" ? "b" : "a";
+        let spec: Partial<rel.NewRelationship> = {};
+        if (s.engine && loaded.has(c.a.table.toLowerCase()) && loaded.has(c.b.table.toLowerCase())) {
+          try {
+            const hint = await s.engine.suggestRelationship([c.a.table, c.a.column], [c.b.table, c.b.column]);
+            if (hint.cardinality === "oneToMany") manySide = "b";
+            else if (hint.cardinality === "manyToOne") manySide = "a";
+            else if (hint.cardinality === "oneToOne") spec = { fromCardinality: "one", toCardinality: "one" };
+            else spec = { fromCardinality: "many", toCardinality: "many" };
+          } catch {
+            // the names decide
+          }
+        }
+        const from = manySide === "a" ? c.a : c.b;
+        const to = manySide === "a" ? c.b : c.a;
+        specs.push({ fromTable: from.table, fromColumn: from.column, toTable: to.table, toColumn: to.column, ...spec });
+      }
+      let made = 0;
+      let inactive = 0;
+      s.store.transact("Autodetect relationships", (p) => {
+        for (const sp of specs) {
+          try {
+            if (rel.addRelationship(p, sp).createdInactive) inactive++;
+            made++;
+          } catch {
+            // a pair that cannot be related is skipped
+          }
+        }
+      });
+      s.setMessage(made === 0 ? "No relationship could be created." : `Created ${made} relationship${made === 1 ? "" : "s"}${inactive ? ` (${inactive} inactive: another active path already connects those tables)` : ""}.`);
     },
   });
   r.register({

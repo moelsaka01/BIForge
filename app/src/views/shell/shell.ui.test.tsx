@@ -9,6 +9,8 @@ import { column, agg } from "../../core/report/fields";
 import { calculatedTables } from "../../core/model/modeling";
 import { col } from "../../core/testing/fakeEngine";
 import { listTables } from "../../core/model/ops";
+import { listRelationships } from "../../core/model/relationships";
+import { fixtureProject } from "../../core/report/testFixture";
 import { MemoryStorage, PBIP, ROOT, makeApp } from "./testApp";
 import { SETTINGS_KEY } from "../../core/shell/settings";
 
@@ -397,16 +399,40 @@ describe("ribbon", () => {
     for (const cloud of [/OneLake/, /Publish to Power BI/, /Sensitivity/, /Shared with me/, /Sign in/]) expect(r.queryByRole("button", { name: cloud })).toBeNull();
   });
 
-  it("New measure opens the Measures tab of the DAX view; Manage relationships opens the Model view", async () => {
+  it("New measure opens the Measures tab of the DAX view; Manage relationships opens its dialog", async () => {
     const a = makeApp();
     render(a.element);
     await openProject(a);
     fireEvent.click(tab("Modeling"));
     fireEvent.click(ribbon().getByRole("button", { name: /Manage relationships/ }));
-    await waitFor(() => expect(a.shell.getSnapshot().view).toBe("model"));
+    await waitFor(() => expect(a.shell.getSnapshot().dialog).toMatchObject({ kind: "manageRelationships" }));
+    await act(async () => a.shell.closeDialog());
     fireEvent.click(ribbon().getByRole("button", { name: /New measure/ }));
     await waitFor(() => expect(a.shell.getSnapshot()).toMatchObject({ view: "dax", daxTab: "measures" }));
     expect(await screen.findByLabelText("Measure editor")).toBeTruthy();
+  });
+
+  it("Manage relationships lists the relationships, autodetects the missing ones and edits or deletes them", async () => {
+    const a = makeApp();
+    render(a.element);
+    await openProject(a);
+    await act(async () => a.session.store.load(fixtureProject()));
+    await act(async () => void (await a.registry.execute("model.manageRelationships")));
+    const dlg = await screen.findByRole("dialog", { name: "Manage relationships" });
+    expect(within(dlg).getByText(/no relationships yet/)).toBeTruthy();
+    fireEvent.click(within(dlg).getByRole("button", { name: "Autodetect" }));
+    await waitFor(() => expect(within(dlg).getAllByRole("row").length).toBe(3)); // header and two relationships
+    expect(within(dlg).getByText("Sales[CustomerKey]")).toBeTruthy();
+    expect(within(dlg).getAllByText("*:1").length).toBe(2);
+    const cross = within(dlg).getByLabelText("Cross-filter: Sales[CustomerKey] to Customer[CustomerKey]") as HTMLSelectElement;
+    fireEvent.change(cross, { target: { value: "both" } });
+    await waitFor(() => expect(listRelationships(a.session.store.project!).find((r) => r.toTable === "Customer")!.crossFilter).toBe("both"));
+    fireEvent.click(within(dlg).getByLabelText("Active: Sales[ProductKey] to Product[ProductKey]"));
+    await waitFor(() => expect(listRelationships(a.session.store.project!).find((r) => r.toTable === "Product")!.isActive).toBe(false));
+    fireEvent.click(within(dlg).getByRole("button", { name: "Delete: Sales[ProductKey] to Product[ProductKey]" }));
+    await waitFor(() => expect(listRelationships(a.session.store.project!)).toHaveLength(1));
+    fireEvent.click(within(dlg).getByRole("button", { name: "Autodetect" }));
+    await waitFor(() => expect(listRelationships(a.session.store.project!)).toHaveLength(2)); // the deleted one is found again
   });
 
   it("Get data offers the file sources and opens the import dialog on the chosen one", async () => {
@@ -551,7 +577,7 @@ describe("title bar", () => {
     fireEvent.change(box, { target: { value: "relationships" } });
     const list = await screen.findByRole("listbox", { name: "Matching commands" });
     fireEvent.click(within(list).getByRole("option", { name: /Manage relationships/ }));
-    await waitFor(() => expect(a.shell.getSnapshot().view).toBe("model"));
+    await waitFor(() => expect(a.shell.getSnapshot().dialog).toMatchObject({ kind: "manageRelationships" }));
   });
 
   it("the theme toggle switches between light and dark and the choice is stored", async () => {

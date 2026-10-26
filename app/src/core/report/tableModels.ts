@@ -483,7 +483,7 @@ export function buildKpi(visual: VisualModel, loaded: Extract<Loaded, { kind: "g
   const units = unitsOf(f, "indicator", "indicatorDisplayUnits");
   const prec = f.has("indicator", "indicatorPrecision") ? f.num("indicator", "indicatorPrecision", 1) : 1;
   return {
-    value: v === null ? "" : formatCompact(v, units, prec, ind?.format ?? null),
+    value: v === null ? "" : f.str("general", "formatString", "") && !f.has("indicator", "indicatorDisplayUnits") ? formatNumber(v, f.str("general", "formatString", "")) : formatCompact(v, units, prec, ind?.format ?? null),
     goal: g === null ? null : formatCompact(g, "auto", 1, goal?.format ?? null),
     variance,
     varianceText: variance === null ? null : `${variance >= 0 ? "+" : ""}${(variance * 100).toFixed(pct)}%`,

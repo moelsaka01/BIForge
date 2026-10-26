@@ -12,6 +12,7 @@ import { modelDialogFor } from "../../core/model/modelDialogs";
 import { calculatedColumns, calculatedTables } from "../../core/model/modeling";
 import { listTables } from "../../core/model/ops";
 import { DataSourcesDialog } from "./DataSourcesDialog";
+import { ManageRelationshipsDialog } from "./ManageRelationshipsDialog";
 import { GuideDialog, OpenPackageDialog, PublishDialog } from "./PublishDialog";
 import { HostDialog, JoinServerDialog } from "./HostDialog";
 import { CommentsDialog } from "./CommentsDialog";
@@ -531,5 +532,7 @@ export function Dialogs() {
       return <GuideDialog guideId={dialog.guideId} />;
     case "dataSources":
       return <DataSourcesDialog />;
+    case "manageRelationships":
+      return <ManageRelationshipsDialog />;
   }
 }
