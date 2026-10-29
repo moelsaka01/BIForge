@@ -86,3 +86,12 @@ fn a_security_filter_on_the_many_side_reaches_the_one_side_only_when_the_relatio
     let e = Engine::new_secured(m.clone(), &src, &[&small], "u").unwrap();
     assert_eq!(e.eval_measure("Total").unwrap(), Value::Int(30));
 }
+
+#[test]
+fn username_and_userprincipalname_return_the_identity_of_the_viewer() {
+    let (mut m, src) = model();
+    m.add_measure("Sales", "Who", "USERNAME()").unwrap();
+    let e = Engine::new_secured(m, &src, &[], "ann@x.com").unwrap();
+    assert_eq!(e.eval_measure("Who").unwrap(), Value::str("ann@x.com"));
+    assert_eq!(e.eval_measure("Me").unwrap(), Value::str("ann@x.com"));
+}

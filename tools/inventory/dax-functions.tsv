@@ -59,8 +59,8 @@ Information	CONTAINSSTRINGEXACT	true
 Information	LOOKUPVALUE	true
 Information	SELECTEDMEASURE	true
 Information	SELECTEDMEASURENAME	true
-Information	USERNAME	false
-Information	USERPRINCIPALNAME	false
+Information	USERNAME	true
+Information	USERPRINCIPALNAME	true
 Information	USEROBJECTID	false
 Information	USERCULTURE	true
 Information	NAMEOF	true
@@ -190,7 +190,7 @@ Table	NATURALLEFTOUTERJOIN	true
 Table	ROW	true
 Table	DATATABLE	true
 Table	TOPN	true
-Table	TOPNSKIP	false
+Table	TOPNSKIP	true
 Table	SAMPLE	false
 Table	DETAILROWS	false
 Table	EXTERNALMEASURE	false

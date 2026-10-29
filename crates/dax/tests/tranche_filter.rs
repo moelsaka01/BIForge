@@ -179,3 +179,14 @@ fn a_hierarchy_slicer_selection_filters_on_several_columns_with_branches_and_lea
     let blank = "FILTER(ALL(Product[Category], Product[Color]), (Product[Category] = \"Clothing\" && ISBLANK(Product[Color])))";
     assert_eq!(ev(&e, &format!("COUNTROWS({blank})")), i(1));
 }
+
+#[test]
+fn topnskip_pages_through_the_ordered_rows() {
+    let e = engine();
+    assert_eq!(ev(&e, "COUNTROWS(TOPNSKIP(2, 1, Product, Product[ListPrice]))"), i(2));
+    assert_eq!(ev(&e, "SUMX(TOPNSKIP(2, 0, Product, Product[ListPrice]), Product[ListPrice])"), f(160.0));
+    // skipping the two highest leaves the rest
+    assert_eq!(ev(&e, "SUM(Product[ListPrice]) - 160 = SUMX(TOPNSKIP(10, 2, Product, Product[ListPrice]), Product[ListPrice])"), Value::Bool(true));
+    assert_eq!(ev(&e, "COUNTROWS(TOPNSKIP(10, 2, Product, Product[ListPrice]))"), i(3));
+    assert_eq!(ev(&e, "COUNTROWS(TOPNSKIP(10, 9, Product, Product[ListPrice]))"), B);
+}

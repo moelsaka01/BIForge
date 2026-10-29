@@ -14,7 +14,7 @@ use std::collections::HashSet;
 use std::rc::Rc;
 
 pub const NAMES: &[&str] = &[
-    "FILTERS", "NONVISUAL", "EVALUATEANDLOG", "GENERATESERIES", "UNION", "INTERSECT", "EXCEPT", "GENERATE", "GENERATEALL", "NATURALINNERJOIN", "NATURALLEFTOUTERJOIN", "TOPN", "GROUPBY",
+    "FILTERS", "NONVISUAL", "EVALUATEANDLOG", "GENERATESERIES", "UNION", "INTERSECT", "EXCEPT", "GENERATE", "GENERATEALL", "NATURALINNERJOIN", "NATURALLEFTOUTERJOIN", "TOPN", "TOPNSKIP", "GROUPBY",
     "CURRENTGROUP", "DATATABLE",
 ];
 
@@ -184,16 +184,20 @@ fn run<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], env: &Env<'a>) 
             }
             t(TableVal::mat(cols, rows))
         }
-        "TOPN" => {
+        "TOPN" | "TOPNSKIP" => {
+            // TOPNSKIP(rows, skip, table, order...) is TOPN with a skipped prefix and no ties
+            let skip_form = name == "TOPNSKIP";
+            let off = usize::from(skip_form);
             let n = ev.scalar(&args[0], env)?.to_f64()?;
-            let src = ev.table(&args[1], env)?;
+            let skip = if skip_form { ev.scalar(&args[1], env)?.to_f64()?.max(0.0).floor() as usize } else { 0 };
+            let src = ev.table(&args[1 + off], env)?;
             if n < 1.0 {
                 return t(TableVal::mat(src.cols(ev.data), vec![]));
             }
             let n = n.floor() as usize;
             // (expression, ascending) pairs; the order argument is 0/FALSE/DESC (default) or 1/TRUE/ASC
             let mut keys_spec: Vec<(&'a BExpr, bool)> = Vec::new();
-            let mut i = 2;
+            let mut i = 2 + off;
             while i < args.len() {
                 if args[i].is_missing() {
                     i += 1;
@@ -223,7 +227,7 @@ fn run<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], env: &Env<'a>) 
             }
             if keys_spec.is_empty() {
                 // without an order-by Desktop returns the first n rows in the table's own order (recorded cases filter.topn.noorder.*)
-                let rows: Vec<usize> = (0..src.nrows().min(n)).collect();
+                let rows: Vec<usize> = (skip.min(src.nrows())..src.nrows().min(skip + n)).collect();
                 return t(match &src {
                     TableVal::Base { table, rows: base } => TableVal::Base { table: *table, rows: Rc::new(rows.iter().map(|&i| base[i]).collect()) },
                     other => TableVal::mat(other.cols(ev.data), rows.iter().map(|&i| other.row(ev.data, i)).collect()),
@@ -246,7 +250,10 @@ fn run<'a>(ev: &'a Evaluator<'a>, name: &str, args: &'a [BExpr], env: &Env<'a>) 
             };
             scored.sort_by(|a, b| cmp(&a.0, &b.0));
             // keep n rows plus every row tied with the nth
-            let keep = if scored.len() <= n {
+            if skip_form {
+                scored = scored.into_iter().skip(skip).take(n).collect();
+            }
+            let keep = if skip_form || scored.len() <= n {
                 scored.len()
             } else {
                 let last = &scored[n - 1].0;
