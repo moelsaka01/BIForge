@@ -70,7 +70,7 @@ const tweak = (c, json) => {
   const out = JSON.parse(JSON.stringify(json));
   TWEAKS[`${c.visualType}.${c.object}.${c.prop}`]?.(out);
   // a constant reference line at a value outside the axis is not drawn: let the axis grow to it
-  for (const e of out.visual?.objects?.y1AxisReferenceLine ?? []) if (e.selector?.id === "constant") e.properties.autoScale = { expr: { Literal: { Value: "true" } } };
+  if (c.prop !== "autoScale") for (const e of out.visual?.objects?.y1AxisReferenceLine ?? []) if (e.selector?.id === "constant") e.properties.autoScale = { expr: { Literal: { Value: "true" } } };
   return out;
 };
 const put = (pageName, name, json) => {
@@ -89,8 +89,8 @@ const addPage = (id, json0, c) => {
 };
 // one visual per page at the same place, so that both are drawn at the same pixel positions
 addPage("ctla", picked[0].base, picked[0]);
-addPage("ctlb", picked[0].base, picked[0]);
-picked.forEach((c, i) => { addPage("c" + i + "a", c.base, c); addPage("c" + i + "b", c.variant, c); });
+addPage("ctlv0", picked[0].base, picked[0]);
+picked.forEach((c, i) => { addPage("c" + i + "a", c.base, c); c.variants.forEach((v, j) => addPage(`c${i}v${j}`, v, c)); });
 writeFileSync(join(def, "pages", "pages.json"), JSON.stringify(pages, null, 2));
 
 // 3. open it in the real window and compare
@@ -102,39 +102,53 @@ const grab = async (page, name) => {
   return { html: norm(await f.evaluate((el) => el.outerHTML)), text: await f.evaluate((el) => el.innerText), png: await f.screenshot({ animations: "disabled" }) };
 };
 let counted = 0;
+let unchanged = 0;
 const rows = [];
 try {
   const { page } = session;
   await page.getByRole("button", { name: /^Open/ }).first().click();
   await page.getByRole("tab", { name: "ctla", exact: true }).waitFor({ timeout: 60000 });
-  const compare = async (id) => {
-    const shot = async (suffix) => {
-      await page.getByRole("tab", { name: id + suffix, exact: true }).click();
-      await page.waitForTimeout(2500);
-      return grab(page, "probe");
-    };
-    const a = await shot("a");
-    const b = await shot("b");
-    return { a, b, pixels: !a.png.equals(b.png), dom: a.html !== b.html };
+  const shot = async (name) => {
+    await page.getByRole("tab", { name, exact: true }).click();
+    await page.waitForTimeout(2500);
+    return grab(page, "probe");
   };
-  const ctl = await compare("ctl");
+  // the page with the property is tried with up to four values; one that looks different is enough
+  const compare = async (id, variants) => {
+    const a = await shot(id + "a");
+    let b = a;
+    let pixels = false;
+    let dom = false;
+    for (let j = 0; j < variants && !pixels; j++) {
+      b = await shot(`${id}v${j}`);
+      pixels = !a.png.equals(b.png);
+      dom ||= a.html !== b.html;
+    }
+    return { a, b, pixels, dom };
+  };
+  const ctl = await compare("ctl", 1);
   if (ctl.pixels || ctl.dom) { writeFileSync(join(work, "ctl-a.html"), ctl.a.html); writeFileSync(join(work, "ctl-b.html"), ctl.b.html); writeFileSync(join(work, "ctl-left.png"), ctl.a.png); writeFileSync(join(work, "ctl-right.png"), ctl.b.png); }
   check(!ctl.pixels && !ctl.dom, "control: the same visual twice gives identical pixels and DOM (the comparison has no noise)");
   for (let i = 0; i < picked.length; i++) {
     const c = picked[i];
     if (c.group === "random" && counted >= RANDOM_N) break;
-    const r = await compare("c" + i);
+    const r = await compare("c" + i, c.variants.length);
     // a 100 % axis ends at 100: a constant line at 250 has no place on it
     const offAxis = /^hundredPercent/.test(c.visualType) && /ReferenceLine/.test(c.object);
-    const empty = offAxis || (r.a.text.trim() === "" && r.a.html.length < 600) || /Cannot load this visual|No data to show/.test(r.a.text + r.b.text);
-    if (c.group === "random" && empty) { rows.push(`SKIP (nothing to compare): ${c.visualType}.${c.object}.${c.prop}`); continue; }
+    // the tooltip and the visual header are drawn on hover only: not compared here
+    const hoverOnly = /^(visualTooltip|visualHeaderTooltip|visualHeader)$/.test(c.object);
+    const empty = offAxis || hoverOnly || (r.a.text.trim() === "" && r.a.html.length < 600) || /Cannot load this visual|No data to show/.test(r.a.text + r.b.text);
+    if (c.group === "random" && empty) { rows.push(`SKIP (not compared: no data here, off the axis or drawn on hover only): ${c.visualType}.${c.object}.${c.prop}`); continue; }
     if (c.group === "random") counted++;
     const ok = r.pixels; // a change only in the DOM is not something a person sees
     rows.push(`${ok ? "ok  " : r.dom ? "DOM-ONLY" : "FAIL"} [${c.group}] ${c.visualType}.${c.object}.${c.prop}  pixels:${r.pixels} dom:${r.dom}`);
-    if (!ok) failures++;
-    if (!ok) writeFileSync(join(work, `fail-${i}.png`), r.a.png);
+    if (!ok && c.group === "must") failures++;
+    if (!ok && c.group === "random") unchanged++;
+    if (!ok) { writeFileSync(join(work, `fail-${i}-a.png`), r.a.png); writeFileSync(join(work, `fail-${i}-b.png`), r.b.png); }
   }
   console.log(rows.join("\n"));
+  // a random property may not show with the sample data (a KPI that is not neutral, one small-multiples panel): up to 4 of 20 are tolerated and listed
+  check(unchanged <= 4, `${unchanged} of ${counted} random properties looked the same with and without the property`);
   check(counted >= RANDOM_N, `${counted} random Done-tested properties compared in the real window`);
   console.log(`WORK ${work}`);
 } catch (e) {

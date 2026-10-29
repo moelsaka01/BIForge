@@ -11,6 +11,16 @@ export interface DonutCentre {
   graphic: O[];
   /** Series drawn under the slices' hole: the background disc. */
   discs: O[];
+  /** The picture: a layer over the chart (an ECharts image element is not drawn by its SVG renderer here), `dy` pixels from the centre. */
+  images: CentreImage[];
+}
+
+export interface CentreImage {
+  src: string;
+  size: number;
+  dy: number;
+  opacity: number;
+  alt: string;
 }
 
 const srcOf = (f: FormatReader, object: string): string => {
@@ -23,6 +33,7 @@ export function donutCentre(f: FormatReader, theme: Theme, total: number | null,
   const d = labelDefaults(theme);
   const graphic: O[] = [];
   const discs: O[] = [];
+  const images: CentreImage[] = [];
   if (f.bool("centerBackground", "show", false)) {
     const src = srcOf(f, "centerBackground");
     const alpha = opacityOf(f.num("centerBackground", "transparency", 0));
@@ -62,10 +73,11 @@ export function donutCentre(f: FormatReader, theme: Theme, total: number | null,
   const wrapValue = f.bool("value", "textWrap", false);
   for (const b of blocks) {
     const mid = y + b.h / 2;
-    if (b.kind === "image") graphic.push({ type: "image", left: "center", top: "middle", y: mid - imageSize / 2, z: 5, silent: true, info: f.str("image", "altText", ""), style: { image: srcOf(f, "image"), width: imageSize, height: imageSize, opacity: opacityOf(f.num("image", "transparency", 0)) } });
-    else if (b.kind === "label") graphic.push({ type: "text", left: "center", top: "middle", y: mid, z: 5, silent: true, style: { text: f.str("label", "text", "Total"), fill: labelFont.color, fontFamily: labelFont.fontFamily, fontSize: labelFont.fontSize, fontWeight: labelFont.fontWeight, fontStyle: labelFont.fontStyle, textAlign: "center", textVerticalAlign: "middle", ...(wrap ? { width: 90, overflow: "break" } : {}) } });
-    else graphic.push({ type: "text", left: "center", top: "middle", y: mid, z: 5, silent: true, style: { text: valueText(total, format, f, "value"), fill: valueFont.color, fontFamily: valueFont.fontFamily, fontSize: valueFont.fontSize, fontWeight: valueFont.fontWeight, fontStyle: valueFont.fontStyle, textAlign: "center", textVerticalAlign: "middle", ...(wrapValue ? { width: 90, overflow: "break" } : {}) } });
+    if (b.kind === "image") images.push({ src: srcOf(f, "image"), size: imageSize, dy: mid, opacity: opacityOf(f.num("image", "transparency", 0)), alt: f.str("image", "altText", "") });
+    else if (b.kind === "label") graphic.push({ type: "text", x: 0, y: mid, z: 5, silent: true, style: { text: f.str("label", "text", "Total"), fill: labelFont.color, fontFamily: labelFont.fontFamily, fontSize: labelFont.fontSize, fontWeight: labelFont.fontWeight, fontStyle: labelFont.fontStyle, textAlign: "center", textVerticalAlign: "middle", ...(wrap ? { width: 90, overflow: "break" } : {}) } });
+    else graphic.push({ type: "text", x: 0, y: mid, z: 5, silent: true, style: { text: valueText(total, format, f, "value"), fill: valueFont.color, fontFamily: valueFont.fontFamily, fontSize: valueFont.fontSize, fontWeight: valueFont.fontWeight, fontStyle: valueFont.fontStyle, textAlign: "center", textVerticalAlign: "middle", ...(wrapValue ? { width: 90, overflow: "break" } : {}) } });
     y += b.h + b.gapAfter;
   }
-  return { graphic, discs };
+  // one group, centred as a whole by its bounding box (an element with left/top ignores its own x and y)
+  return { graphic: graphic.length ? [{ type: "group", left: "center", top: "middle", children: graphic }] : [], discs, images };
 }

@@ -68,7 +68,7 @@ function testValues(prop: string, kind: Kind): Lit[] {
     case "s":
       // a dash pattern must be one to be read
       if (prop === "name") return [lit.str("Zz")]; // the Style preset card: a preset of the theme used by the container scenario
-      return [lit.str(/fontFamily/i.test(prop) ? "Courier New" : /dashArray/i.test(prop) ? "4 2" : /FormatString/i.test(prop) ? "0.000" : "Zz")];
+      return [lit.str(/fontFamily/i.test(prop) ? "Courier New" : /dashArray/i.test(prop) ? "9 3" : /FormatString/i.test(prop) ? "0.000" : "Zz")];
     case "f":
       return [lit.num(Math.min(kind[2], Math.max(kind[1], 20)))];
     case "n": {
@@ -86,7 +86,8 @@ function testValues(prop: string, kind: Kind): Lit[] {
 
 /** Switches that make the other properties of an object matter (a card whose `show` is off draws nothing). */
 // a real picture (1 pixel), so that a real window can draw it
-const PNG_1PX = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+const PNG_1PX = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC";
+const PNG_1PX_GREEN = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGNgWMAAAAFEAKH5ZOq+AAAAAElFTkSuQmCC";
 const ENABLE: Record<string, Record<string, Lit>> = {
   // labelStyle matters for pies (a label with the value and the percentage), and is ignored elsewhere
   labels: { show: lit.bool(true), enableBackground: lit.bool(true), labelStyle: lit.str("Data value, percent of total"), funnelLabelStyle: lit.str("Data, percent of first") },
@@ -111,7 +112,7 @@ const ENABLE: Record<string, Record<string, Lit>> = {
   icon: { show: lit.bool(true), shapeType: lit.str("leftArrow") },
   shadow: { show: lit.bool(true) },
   glow: { show: lit.bool(true) },
-  image: { show: lit.bool(true), imageUrl: lit.str(PNG_1PX), strokeShow: lit.bool(true), backgroundEnabled: lit.bool(true), effects: lit.bool(true), cornerRadiusAdvanced: lit.bool(true), sourceUrl: lit.str("data:image/png;base64,AA") },
+  image: { show: lit.bool(true), imageUrl: lit.str(PNG_1PX), strokeShow: lit.bool(true), backgroundEnabled: lit.bool(true), effects: lit.bool(true), cornerRadiusAdvanced: lit.bool(true), sourceUrl: lit.str(PNG_1PX) },
   grid: { gridHorizontal: lit.bool(true), gridVertical: lit.bool(true) },
   values: { backColorSecondary: lit.str("#654321") },
   header: { show: lit.bool(true) },
@@ -128,10 +129,10 @@ const ENABLE: Record<string, Record<string, Lit>> = {
   subTotals: { rowSubtotals: lit.bool(true), columnSubtotals: lit.bool(true) },
   heatMap: { show: lit.bool(true) },
   zoom: { show: lit.bool(true), showOnValueAxis: lit.bool(true), showOnValueSecAxis: lit.bool(true) },
-  plotArea: { url: lit.str("data:image/png;base64,AA"), color: lit.str("#abcdef") },
+  plotArea: { url: lit.str(PNG_1PX), color: lit.str("#abcdef") },
   smallMultiplesLayout: { backgroundColor: lit.str("#eeeeee"), gridLineShow: lit.bool(true), advancedPaddingOptions: lit.bool(true) },
   // the tile visuals: a fill with a picture (its own transparency and effects), shadow and glow
-  fillCustom: { show: lit.bool(true), transparency: lit.num(30), imageShow: lit.bool(true), imageEffects: lit.bool(true), imageUrl: lit.str("data:image/png;base64,AA"), imageData: lit.str("data:image/png;base64,BB"), effects: lit.bool(true), url: lit.str("data:image/png;base64,AA"), field: lit.str("data:image/png;base64,BB") },
+  fillCustom: { show: lit.bool(true), transparency: lit.num(30), imageShow: lit.bool(true), imageEffects: lit.bool(true), imageUrl: lit.str(PNG_1PX), imageData: lit.str(PNG_1PX_GREEN), effects: lit.bool(true), url: lit.str(PNG_1PX), field: lit.str(PNG_1PX_GREEN) },
   shadowCustom: { show: lit.bool(true) },
   glowCustom: { show: lit.bool(true) },
   totals: { show: lit.bool(true), enableBackground: lit.bool(true) },
@@ -157,7 +158,7 @@ const WITH: Record<string, Record<string, Record<string, Lit>>> = {
   labels: { labelDisplayUnits: { labelPrecision: lit.num(2) } },
   value: { labelDisplayUnits: { labelPrecision: lit.num(2) }, labelPrecision: { labelDisplayUnits: lit.num(1000) } },
   image: { imageData: { imageType: lit.str("imageData") } },
-  centerBackground: { imageData: { imageType: lit.str("imageData") }, imageType: { imageData: lit.str("data:image/png;base64,BB") }, imageTransparency: { imageUrl: lit.str("data:image/png;base64,AA") } },
+  centerBackground: { imageData: { imageType: lit.str("imageData") }, imageType: { imageData: lit.str(PNG_1PX_GREEN) }, imageTransparency: { imageUrl: lit.str(PNG_1PX) } },
   mapControls: { zoomLevel: { autoZoom: lit.bool(false) } },
   layout: { clusteredGapOverlapReverse: { clusteredGapOverlaps: lit.bool(true) }, stackedGapExplodes: { stackedGapSize: lit.num(4) } },
   // the corners of the tile need the shape that uses them
@@ -380,7 +381,7 @@ function setProp(v: VisualModel, object: string, prop: string, value: Lit, selec
 }
 
 /** Each drawn property with the visual JSON before and after it was set; written for the real-window render check (e2e/render.mjs). */
-interface RenderCase { visualType: string; object: string; prop: string; base: unknown; variant: unknown }
+interface RenderCase { visualType: string; object: string; prop: string; base: unknown; variants: unknown[] }
 const CASES: RenderCase[] = [];
 const WRITE_CASES = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.WRITE_RENDER_CASES === "1";
 
@@ -410,24 +411,29 @@ function measure(scenarioOf: Scenario, visualType: string, objects: string[]): R
         prepare(base, prop);
         const baseline = scenarioOf.render(base);
         let drawn = false;
+        const variants: unknown[] = [];
+        let reference = base;
         for (const value of testValues(prop, kind)) {
           const v = scenarioOf.make();
           prepare(v, prop);
           for (const [k, val] of Object.entries(WITH[object]?.[prop] ?? {})) setProp(v, object, k, val, inst.selector);
           setProp(v, object, prop, value, inst.selector);
-          let reference = base;
+          let here = false;
           if (WITH[object]?.[prop]) {
             const b2 = scenarioOf.make();
             prepare(b2, prop);
             for (const [k, val] of Object.entries(WITH[object][prop])) setProp(b2, object, k, val, inst.selector);
-            if (!same(scenarioOf.render(v), scenarioOf.render(b2))) drawn = true;
+            here = !same(scenarioOf.render(v), scenarioOf.render(b2));
             reference = b2;
-          } else if (!same(scenarioOf.render(v), baseline)) drawn = true;
-          if (drawn) {
-            if (WRITE_CASES) CASES.push({ visualType, object, prop, base: JSON.parse(JSON.stringify(reference.json)), variant: JSON.parse(JSON.stringify(v.json)) });
-            break;
-          }
+          } else here = !same(scenarioOf.render(v), baseline);
+          if (!here) continue;
+          drawn = true;
+          // the real-window check tries up to four values: a value can change the option and still look like the default (a dash cap "none" is the default cap)
+          if (!WRITE_CASES) break;
+          variants.push(JSON.parse(JSON.stringify(v.json)));
+          if (variants.length >= 4) break;
         }
+        if (drawn && WRITE_CASES) CASES.push({ visualType, object, prop, base: JSON.parse(JSON.stringify(reference.json)), variants });
         if (drawn) (out[object] ??= []).push(prop);
       }
     }
@@ -456,7 +462,7 @@ function measurePage(): Record<string, string[]> {
   }
   // a picture is stored as an image object (name, url, scaling), which the capability list marks as not editable in the generic pane
   for (const object of ["background", "outspace"]) {
-    const json = { name: "p", objects: { [object]: [{ properties: { image: { image: { name: litExpr(lit.str("a")), url: litExpr(lit.str("data:image/png;base64,AA")), scaling: litExpr(lit.str("Fit")) } } } }] } };
+    const json = { name: "p", objects: { [object]: [{ properties: { image: { image: { name: litExpr(lit.str("a")), url: litExpr(lit.str(PNG_1PX)), scaling: litExpr(lit.str("Fit")) } } } }] } };
     if (JSON.stringify(pageLook(json, DEFAULT_THEME)) !== JSON.stringify(pageLook({ name: "p" }, DEFAULT_THEME))) (out[object] ??= []).push("image");
   }
   for (const k of Object.keys(out)) out[k] = [...new Set(out[k])].sort();
@@ -495,7 +501,7 @@ describe("rendered coverage", () => {
   // Picks the properties checked in the real window: the MUST list (properties added in the latest batches) and a seeded random
   // sample of the others. Run with WRITE_RENDER_CASES=1 UPDATE_RENDERED=1.
   it.skipIf(!WRITE_CASES)("writes the cases of the real-window render check", async () => {
-    const MUST: [string, string, string][] = [["cardVisual", "outline", "show"], ["barChart", "labels", "labelOverflow"], ["donutChart", "centerValue", "show"], ["donutChart", "label", "text"], ["donutChart", "image", "size"], ["funnel", "percentBarLabel", "show"]];
+    const MUST: [string, string, string][] = [["cardVisual", "outline", "show"], ["barChart", "labels", "labelOverflow"], ["donutChart", "centerValue", "show"], ["donutChart", "label", "text"], ["donutChart", "image", "size"], ["funnel", "percentBarLabel", "show"], ["clusteredColumnChart", "valueAxis", "showAxisTitle"], ["clusteredColumnChart", "referenceLine", "show"], ["pivotTable", "subTotals", "fontColor"]];
     const SKIP = /^(scriptVisual|pythonVisual|qnaVisual|aiNarratives|keyDriversVisual|decompositionTreeVisual|map|filledMap|shapeMap|page)$/;
     let seed = 20261029;
     const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 2 ** 32);

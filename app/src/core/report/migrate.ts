@@ -147,8 +147,10 @@ export function migrateVisual(json: J): boolean {
   mo("target", "target", "axis", "target");
   mo("selection", "selectAllCheckbox", "selection", "selectAllCheckboxEnabled");
   mo("header", "search", "general", "selfFilterEnabled");
-  mo("image", "imageUrl", "image", "sourceUrl", (n) => n);
-  if (objects.image?.some((e) => "sourceUrl" in e.properties && !("sourceType" in e.properties))) {
+  // only the Image visual used imageUrl for its picture; a donut chart's image object has an imageUrl of its own
+  const isImageVisual = v.visualType === "image";
+  if (isImageVisual) mo("image", "imageUrl", "image", "sourceUrl", (n) => n);
+  if (isImageVisual && objects.image?.some((e) => "sourceUrl" in e.properties && !("sourceType" in e.properties))) {
     for (const e of objects.image) if ("sourceUrl" in e.properties && !("sourceType" in e.properties)) e.properties.sourceType = litExpr(lit.str("imageUrl"));
     changed = true;
   }

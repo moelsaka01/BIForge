@@ -19,7 +19,7 @@ const Qty = agg("Sales", "Quantity", 0);
 type Cell = [string, string];
 const rows: Cell[][] = [[["text", "Accessories"], ["int", "30"]], [["text", "Bikes"], ["int", "50"]], [["text", "Shoes"], ["int", "20"]]];
 
-function build(type: string, set: (v: VisualModel) => void) {
+function buildFull(type: string, set: (v: VisualModel) => void) {
   const v = visualOf(type, { Category: [Cat], Y: [Qty] });
   set(v);
   const loaded: Extract<Loaded, { kind: "grouped" }> = {
@@ -31,8 +31,9 @@ function build(type: string, set: (v: VisualModel) => void) {
     truncated: false,
     ms: 0,
   };
-  return buildChart({ visual: v, loaded, theme: DEFAULT_THEME, selected: [] })!.option;
+  return buildChart({ visual: v, loaded, theme: DEFAULT_THEME, selected: [] })!;
 }
+const build = (type: string, set: (v: VisualModel) => void) => buildFull(type, set).option;
 
 describe("helpers", () => {
   it("withOpacity writes an rgba color, dashOf reads a dash pattern", () => {
@@ -248,25 +249,20 @@ describe("legend title and label value formats", () => {
 });
 
 describe("labels inside a bar that is too short", () => {
-  const rect = (w: number, h: number) => ({ rect: { width: 200, height: 20 }, labelRect: { width: w, height: h } });
-  it("are hidden when they do not fit along the bar, unless Overflow text is on", () => {
+  it("are marked to be hidden when they are wider than the bar, unless Overflow text is on", () => {
     const show = (v: { json: never }) => setFormat(v.json, "labels", "show", lit.bool(true));
-    const bar = build("barChart", (v) => show(v as never));
-    const layout = bar.series[0].labelLayout;
-    expect(layout(rect(60, 12)).hide).toBe(false);
-    expect(layout(rect(260, 12)).hide).toBe(true);
-    const col = build("columnChart", (v) => show(v as never));
-    expect(col.series[0].labelLayout({ rect: { width: 40, height: 10 }, labelRect: { width: 60, height: 14 } }).hide).toBe(true);
+    expect(build("barChart", (v) => show(v as never)).series[0].fitLabel).toBe("x");
+    expect(build("columnChart", (v) => show(v as never)).series[0].fitLabel).toBe("y");
     const over = build("barChart", (v) => { show(v as never); setFormat(v.json, "labels", "labelOverflow", lit.bool(true)); });
-    expect(over.series[0].labelLayout).toBeUndefined();
+    expect(over.series[0].fitLabel).toBeUndefined();
     // outside the bar nothing is hidden
-    const out = build("clusteredBarChart", (v) => show(v as never));
-    expect(out.series[0].labelLayout).toBeUndefined();
+    expect(build("clusteredBarChart", (v) => show(v as never)).series[0].fitLabel).toBeUndefined();
   });
 });
 
 describe("donut centre", () => {
-  const texts = (o: { graphic?: { type: string; style: { text?: string } }[] }) => (o.graphic ?? []).filter((g) => g.type === "text").map((g) => g.style.text);
+  const kids = (o: { graphic?: { children: { type: string; y: number; style: { text?: string } }[] }[] }) => o.graphic?.[0]?.children ?? [];
+  const texts = (o: Parameters<typeof kids>[0]) => kids(o).filter((g) => g.type === "text").map((g) => g.style.text);
   it("is drawn only when Center value is on: the label above the total of the slices, a disc behind and a picture", () => {
     expect(build("donutChart", () => undefined).graphic).toBeUndefined();
     const o = build("donutChart", (v) => {
@@ -278,7 +274,17 @@ describe("donut centre", () => {
       setFormat(v.json, "image", "imageUrl", lit.str("data:image/png;base64,AA"));
     });
     expect(texts(o)).toEqual(["All", "100"]);
-    expect(o.graphic.some((g: { type: string }) => g.type === "image")).toBe(true);
+    expect(kids(o).some((g) => g.type === "image")).toBe(false);
+    // the picture is a layer over the chart, above the label; the texts are stacked, not on top of each other
+    const full = buildFull("donutChart", (v) => {
+      setFormat(v.json, "centerValue", "show", lit.bool(true));
+      setFormat(v.json, "image", "show", lit.bool(true));
+      setFormat(v.json, "image", "imageUrl", lit.str("data:image/png;base64,AA"));
+    });
+    expect(full.centreImages?.[0]).toMatchObject({ src: "data:image/png;base64,AA", size: 24 });
+    expect(full.centreImages![0].dy).toBeLessThan(kids(full.option).map((g) => g.y)[0]);
+    const ys = kids(o).map((g) => g.y);
+    expect(new Set(ys).size).toBe(ys.length);
     expect(o.series[0]).toMatchObject({ type: "pie", silent: true });
     expect(o.series[0].data[0].itemStyle.color).toBe("#102030");
     // the label moves below the value
@@ -295,5 +301,19 @@ describe("funnel percent bar label", () => {
     expect(text(base, 1)).not.toContain("{p|");
     expect(text(on, 1)).toMatch(/{p|d+%}/);
     expect(on.series[0].label.rich.p.color).toBe("#ff0000");
+  });
+});
+
+describe("axis titles", () => {
+  it("get room outside the axis labels, on the side they stand", () => {
+    const none = build("clusteredColumnChart", () => undefined).grid;
+    const val = build("clusteredColumnChart", (v) => setFormat(v.json, "valueAxis", "showAxisTitle", lit.bool(true))).grid;
+    const cat = build("clusteredColumnChart", (v) => setFormat(v.json, "categoryAxis", "showAxisTitle", lit.bool(true))).grid;
+    expect(val.left).toBeGreaterThan(none.left);
+    expect(val.bottom).toBe(none.bottom);
+    expect(cat.bottom).toBeGreaterThan(none.bottom);
+    // a horizontal bar chart has the value axis at the bottom
+    const bars = build("clusteredBarChart", (v) => setFormat(v.json, "valueAxis", "showAxisTitle", lit.bool(true))).grid;
+    expect(bars.bottom).toBeGreaterThan(build("clusteredBarChart", () => undefined).grid.bottom);
   });
 });

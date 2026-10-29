@@ -184,7 +184,7 @@ export function MatrixView(p: MatrixViewProps) {
             return (
               <tr key={r.key} data-row={r.key} style={{ background: isSel ? (theme.dark ? "#334b66" : "#d6e8fa") : undefined, fontWeight: r.isGrand || r.expandable ? 600 : 400, opacity: selKeys.size && !isSel && pt ? 0.55 : 1 }}>
                 <td
-                  style={{ ...cellBase(theme), ...st.rowHeaderCell, ...(r.isGrand ? st.columnTotal : {}), paddingLeft: 8 + r.depth * 16, cursor: pt ? "pointer" : "default", textAlign: "left" }}
+                  style={{ ...cellBase(theme), ...st.rowHeaderCell, ...(r.isGrand ? st.columnTotal : r.expandable ? st.subtotal : {}), paddingLeft: 8 + r.depth * 16, cursor: pt ? "pointer" : "default", textAlign: "left" }}
                   onClick={(e) => pt && p.onRow(pt, e.ctrlKey || e.metaKey || e.shiftKey)}
                 >
                   {r.expandable ? (
@@ -205,7 +205,7 @@ export function MatrixView(p: MatrixViewProps) {
                   {r.label}
                 </td>
                 {r.cells.map((c, ci) => (
-                  <td key={ci} style={styled({ ...cellBase(theme), ...st.cell(ri), ...(r.isGrand ? st.columnTotal : {}), textAlign: "right" }, c.style)}>
+                  <td key={ci} style={styled({ ...cellBase(theme), ...st.cell(ri), ...(r.isGrand ? st.columnTotal : r.expandable ? st.subtotal : {}), textAlign: "right" }, c.style)}>
                     {c.text}
                   </td>
                 ))}

@@ -99,6 +99,11 @@ describe("migrating report files written by earlier versions", () => {
     expect(get(im, "image", "sourceUrl")).toEqual(lit.str("data:image/png;base64,AA"));
     expect(get(im, "image", "sourceType")).toEqual(lit.str("imageUrl"));
     expect(get(im, "image", "fit")).toEqual(lit.str("Fill"));
+    // a donut's image object has an imageUrl of its own: it is not the old name of the Image visual's address
+    const donut = visual("donutChart", { image: [{ properties: { imageUrl: L(lit.str("data:image/png;base64,AA")) } }] });
+    migrateVisual(donut);
+    expect(get(donut, "image", "imageUrl")).toEqual(lit.str("data:image/png;base64,AA"));
+    expect(get(donut, "image", "sourceUrl")).toBeNull();
     const pie = visual("pieChart", { labels: [{ properties: { labelStyle: L(lit.str("All detail labels")) } }] });
     migrateVisual(pie);
     expect(get(pie, "labels", "labelStyle")).toEqual(lit.str("Category, data value, percent of total"));

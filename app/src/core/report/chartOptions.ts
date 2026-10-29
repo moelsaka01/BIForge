@@ -9,7 +9,7 @@ import { FormatReader } from "./formatReader";
 import type { Loaded } from "./dataLoader";
 import type { SelectedPoint } from "./interactions";
 import { formatCompact, formatNumber } from "./numberFormat";
-import { donutCentre } from "./donutCentre";
+import { donutCentre, type CentreImage } from "./donutCentre";
 import { axisBlock, plotImage, type PlotImage, CAP, dashOf, gridFor, labelBlock, labelDefaults, legendBlock, lineSeriesStyle, referenceLineMark, referenceLineShade, sliceItemStyle, valueText, zoomBlock, type LineSpec } from "./chartFormat";
 import { echartsText, opacityOf, readFont } from "../format/styles";
 import { seriesColor, type Theme } from "./theme";
@@ -36,6 +36,8 @@ export interface ChartInput {
 
 export interface ChartBuild {
   option: O;
+  /** Pictures in the hole of a donut chart, drawn over the chart by ChartView. */
+  centreImages?: CentreImage[];
   /** The data point behind a chart element, for selection, drilling and tooltips. */
   pointAt(seriesIndex: number, dataIndex: number): SelectedPoint | null;
   /** Number of data points drawn (0: nothing to show). */
@@ -164,11 +166,11 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
         },
       }),
     };
-    // Desktop tries the label positions that are allowed and draws none when the label does not fit in the bar (Overflow text keeps it)
+    // Desktop tries the label positions that are allowed and draws none when the label does not fit in the bar (Overflow text keeps it).
+    // ECharts cannot hide a label by its size, so the series is marked and ChartView hides the labels that are wider than their bar.
     const insideLabel = !asLine && String(s.label.position).startsWith("inside") && !f.bool("labels", "labelOverflow", false);
-    const hideOverlap = f.bool("labels", "optimizeLabelDisplay", false);
-    if (insideLabel) s.labelLayout = (pa: O) => ({ hideOverlap, hide: !!pa.labelRect && (horizontal ? pa.labelRect.width > pa.rect.width : pa.labelRect.height > pa.rect.height) });
-    else if (hideOverlap) s.labelLayout = { hideOverlap: true };
+    if (insideLabel) s.fitLabel = horizontal ? "x" : "y";
+    if (f.bool("labels", "optimizeLabelDisplay", false)) s.labelLayout = { hideOverlap: true };
     // in the stacked combo only the columns stack; its lines are separate
     if (stacked && (!asLine || areaOnly)) s.stack = isHighlight ? "highlight" : "total";
     if (asLine) {
@@ -427,7 +429,7 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
   const option: O = {
     animation: false,
     textStyle: { fontFamily: theme.textClasses.label.fontFace },
-    grid: gridFor(f, f.bool("legend", "show", legendShown)),
+    grid: roomForTitles(gridFor(f, f.bool("legend", "show", legendShown)), horizontal ? valAxes[0] : catAxis, horizontal ? catAxis : valAxes[0]),
     legend: legendBlock(f, theme, legendShown),
     tooltip: {
       trigger: "axis",
@@ -707,6 +709,14 @@ const SLICE_STYLES: Record<string, { cat: boolean; val: boolean; pct: boolean }>
 };
 const PIE_POS: Record<string, string> = { outside: "outside", inside: "inside", preferOutside: "outside", preferInside: "inside" };
 
+/** An axis title stands outside the labels, which the grid does not count: the side the title is on gets room for it. */
+function roomForTitles(grid: O, xAxis: O, yAxis: O): O {
+  const room = 22;
+  if (xAxis?.name) grid.bottom = (grid.bottom as number) + room;
+  if (yAxis?.name) grid.left = (grid.left as number) + room;
+  return grid;
+}
+
 function pie(inp: ChartInput): ChartBuild {
   const { visual, theme } = inp;
   const f = new FormatReader(visual.json, theme, visual.visualType);
@@ -770,7 +780,7 @@ function pie(inp: ChartInput): ChartBuild {
       },
     ],
   };
-  return { option, count: data.length, pointAt: (_s, di) => (p.categories[di] ? pointOfCategory(p, di, null) : null) };
+  return { option, count: data.length, ...(centre?.images.length ? { centreImages: centre.images } : {}), pointAt: (_s, di) => (p.categories[di] ? pointOfCategory(p, di, null) : null) };
 }
 
 function funnel(inp: ChartInput): ChartBuild {

@@ -21,6 +21,35 @@ const UNDERLINE_CSS = `[data-testid="chart"] text[style*="${UNDERLINE_FAMILY}"] 
 
 const toolButton = { width: 26, height: 26, border: "1px solid #888", background: "rgba(255,255,255,0.92)", color: "#222", cursor: "pointer", fontSize: 15, lineHeight: "20px", padding: 0, borderRadius: 3 } as const;
 
+/**
+ * Hides the data labels of the series marked `fitLabel` ("x": bars grow sideways, "y": upwards) that are larger than their bar:
+ * Desktop draws no label that does not fit in the bar. Runs after every drawing, so a label comes back when the bar grows.
+ */
+export function hideLabelsThatDoNotFit(c: EChartsInstance, option: { series?: { fitLabel?: string }[] }): void {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const model = (c as any).getModel?.();
+  if (!model) return;
+  let changed = false;
+  (option.series ?? []).forEach((s, si) => {
+    if (!s.fitLabel) return;
+    const data = model.getSeriesByIndex(si)?.getData();
+    if (!data) return;
+    for (let di = 0; di < data.count(); di++) {
+      const bar = data.getItemGraphicEl(di);
+      const text = bar?.getTextContent?.();
+      if (!bar || !text) continue;
+      const box = text.getBoundingRect();
+      const fits = s.fitLabel === "x" ? box.width <= (bar.shape?.width ?? Infinity) : box.height <= (bar.shape?.height ?? Infinity);
+      if (text.ignore === fits) {
+        text.ignore = !fits;
+        text.dirty();
+        changed = true;
+      }
+    }
+  });
+  if (changed) c.getZr().refresh();
+}
+
 /** One ECharts instance for one visual. The chart is drawn from `build.option`; events map back to data points. */
 export function ChartView(p: ChartViewProps) {
   const host = useRef<HTMLDivElement>(null);
@@ -49,6 +78,7 @@ export function ChartView(p: ChartViewProps) {
       if (ev) latest.current.onHover?.(pt, ev.clientX, ev.clientY);
     });
     c.on("globalout", () => latest.current.onHover?.(null, 0, 0));
+    c.on("finished", () => hideLabelsThatDoNotFit(c, latest.current.build.option));
     return () => {
       c.dispose();
       chart.current = null;
@@ -59,6 +89,7 @@ export function ChartView(p: ChartViewProps) {
 
   useEffect(() => {
     chart.current?.setOption(p.build.option, true);
+    if (chart.current) hideLabelsThatDoNotFit(chart.current, p.build.option);
   }, [p.build]);
 
   useEffect(() => {
@@ -94,6 +125,9 @@ export function ChartView(p: ChartViewProps) {
           style={{ position: "absolute", left: p.build.plotImage.margins.left, right: p.build.plotImage.margins.right, top: p.build.plotImage.margins.top, bottom: p.build.plotImage.margins.bottom, pointerEvents: "none", backgroundImage: `url("${p.build.plotImage.url.replace(/"/g, "%22")}")`, backgroundRepeat: "no-repeat", backgroundPosition: "center", backgroundSize: p.build.plotImage.size, opacity: p.build.plotImage.opacity }}
         />
       )}
+      {p.build.centreImages?.map((im, i) => (
+        <img key={i} data-testid="centre-image" src={im.src} alt={im.alt} style={{ position: "absolute", left: "50%", top: `calc(50% + ${im.dy - im.size / 2}px)`, width: im.size, height: im.size, marginLeft: -im.size / 2, objectFit: "contain", opacity: im.opacity, pointerEvents: "none" }} />
+      ))}
       <style>{UNDERLINE_CSS}</style>
       <div ref={host} role="img" aria-label={p.label} style={{ width: p.width, height: p.height }} data-testid="chart" />
       {tools && (
