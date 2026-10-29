@@ -433,8 +433,8 @@ describe("ReportView: chart data points", () => {
     render(<view.Host />);
     const card = await screen.findByTestId("card-value");
     fireEvent.contextMenu(card);
-    expect(screen.queryByRole("menu")).toBeNull();
     expect(screen.queryByRole("menuitem", { name: "Delete" })).toBeNull();
+    expect(screen.getAllByRole("menuitem").map((m) => m.textContent)).toEqual(["Export data"]);
     cleanup();
     render(<edit.Host />);
     fireEvent.contextMenu(await screen.findByTestId("card-value"));

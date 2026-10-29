@@ -101,7 +101,8 @@ const num = areas.length;
   const a = { name: `${areas.length + 1}. M standard library (names found in Desktop 2.158's engine; Done-tested = folded or evaluated by BIForge and listed in mFunctions.json)`, groups: [] };
   const supported = new Set(JSON.parse(fs.readFileSync(path.join(root, "app/src/core/queries/mFunctions.json"), "utf8")).supported.map((x) => (typeof x === "string" ? x : x.name)));
   const by = {};
-  for (const n of rd("m-names.txt").split("\n").filter(Boolean)) (by[n.split(".")[0]] ||= []).push({ s: supported.has(n) ? "D" : "N", t: n });
+  const mRemoved = new Set(rd("m-removed.txt").split(/\r?\n/).filter(Boolean)); // documentation section names, not functions
+  for (const n of rd("m-names.txt").split(/\r?\n/).filter(Boolean).filter((x) => !mRemoved.has(x))) (by[n.split(".")[0]] ||= []).push({ s: supported.has(n) ? "D" : "N", t: n });
   for (const [c, items] of Object.entries(by)) a.groups.push({ name: c, items });
   areas.push(a);
 }

@@ -175,8 +175,8 @@ Last updated: 2026-10-25 (see PROGRESS.md; the status table below is generated b
 | Accessibility and platform | 12 | 2 | 0 | 10 |
 | Format pane cards per visual | 1264 | 777 | 231 | 256 |
 | DAX functions | 317 | 297 | 0 | 20 |
-| M standard library | 652 | 421 | 0 | 231 |
-| **Total** | **3008** | **1944** | **280** | **784** |
+| M standard library | 621 | 421 | 0 | 200 |
+| **Total** | **2977** | **1944** | **280** | **753** |
 <!-- inventory-status:end -->
 
 ## Online track (Publish & Share; plan in docs/ONLINE_PLAN.md)
@@ -216,6 +216,10 @@ Done = a passing automated test. Everything not listed as Done-tested is Not sta
 | O6 | Comments with mentions, change log | Done-tested (crates/collab comments.rs; server REST, direct session calls, local file; the author is stamped by the server or host; mentions found among members; threads, resolve, delete by author or admin; the dialog lists "You are mentioned" and the changes made together). Comments of an unshared report stay on this PC |
 | O7 | Scheduled refresh in three places with one history format: GitHub Actions (earlier), **this PC** (Windows Task Scheduler starts the app without a window; its own store; publishes the next version when the data changed; fails with a message when a source's columns changed), **a server** (own scheduler thread; the bundle's files replaced by same-named files in the report's source folder; refreshed data kept as an overlay next to the signed package; file sources only). Every attempt records where it ran, retries after a failure (default 2), one run at a time per report (`running.lock`, stale after 3 hours), a missed slot runs once | Done-tested (crates/publish schedule.rs; server.rs scheduler test with retries, lock and overlay; app scheduled.rs including a real Task Scheduler task created and removed; real window app/e2e/o7.mjs: this PC with a real task and a run started the way Task Scheduler starts it, a server run with the history naming it). Not built: refresh by an authorized peer; refresh of web or database sources on a server |
 | O8 | Installer (Tauri/NSIS, current user, no administrator rights), release workflow `release-app.yml` (installer, server, command line, `SHA256SUMS` signed with the Ed25519 release key whose public half is docs/release-public-key.txt, GitHub build attestation), `biforge-cli verify-release`, security review, user guide | Done-tested for the pieces that can be tested here (release::tests; installer built in release mode, installed, registry checked, uninstalled on this PC). The installer is not Authenticode-signed (a certificate costs money): SmartScreen may warn. docs/SECURITY_REVIEW.md lists three High findings fixed and the residual risks; docs/ONLINE_GUIDE.md is the user guide. The result of the first `app-v0.1.0` release run is in docs/PROGRESS.md |
+
+## Removed from inventory (not features)
+Removed on 2026-10-29 (tools/inventory/m-removed.txt): 31 names that the inventory took from Desktop's engine as M functions but that are section names of the M documentation, not functions that can be called or implemented. The inventory total went from 3008 to 2977.
+- List.Addition, List.Averages, List.Information, List.Membership, List.Set, List.Generators, List.Numerics, List.TransformAndCombine, Number.Bytes, Number.Constants, Number.Conversion, Number.Information, Number.Operations, Number.Rounding, Number.Trigonometry, Record.Information, Record.Serialization, Record.Transformations, Table.Conversions, Table.Information, Table.Ordering, Table.Other, Table.Transformation, Table.Parameter, Text.Extraction, Text.Membership, Text.Modification, Text.Transformations, Text.Parameter, Date.Parameter, Splitter.Parameter
 
 ## Excluded (cloud)
 Removed from scope on 2026-10-16: no UI, no disabled buttons, no menu entries, no further work. They are not in INVENTORY.md.
