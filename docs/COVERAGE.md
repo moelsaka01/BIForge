@@ -225,6 +225,17 @@ Removed on 2026-10-29 (tools/inventory/m-removed.txt): 31 names that the invento
 Merged on 2026-10-29 (one item each, kept the first/more specific; removed from tools/inventory/manual-2.txt). Total 2977 -> 2973; 75 % is now 2230.
 - Background data preview: old 23.2 = 23.13 (kept 23.2). Column tools: old 14.10 "Column tools tab" = the Column tools group of area 11 (kept area 11). Performance analyzer: old 8.4 = 25.22 (kept 8.4). Edit relationships: old 25.12 = 15.22 (kept 15.22, Partial).
 
+## Blocked format properties (chart cards)
+Recorded 2026-10-29 in the focused sprint. A card stays Partial while one of its properties is listed here; each has a reason, so it is not worked on again without a new idea.
+- **Underline** was blocked until this session (ECharts has no text decoration). It is now drawn as a combining low line (U+0332) after each character of the text a formatter returns (`underlined()` in format/styles.ts; seen working in Chromium). Used for the legend, data labels, axis labels and titles, treemap, pie, funnel and small multiples headers. Not yet used for: seriesLabels, y2Axis text, percentBarLabel, donut center texts.
+- **Category axis**: autoExpand, axisType, concatenateLabels, gridlineAutoScale, initialScrollPosition, labelDisplayUnits, labelPrecision, logAxisScale, maxMarginFactor, roundRange. They need a numeric or date category axis, several category levels, or have no ECharts equivalent.
+- **Value axis**: gridlineAutoScale, roundRange, scaleToFit, sharedAxis, alignZeros, secRoundRange (no ECharts equivalent or no second chart to share with).
+- **X-axis constant line**: autoScale, label decimal places and display units only act on a numeric x axis (drawn for the scatter chart, not for text categories). **Reference line** property `value`: its meaning for a statistic line is not known.
+- **No visible effect**: filters.filteredToUniqueValue, general.responsive / responsiveLegacy, general.visualType1/2, dataPoint.showAllDataPoints (it only lists every point in the Format pane).
+- **Error bars** (error card, 10 charts x 30 properties): need Lower and Upper bound field wells that BIForge does not have.
+- **Line styles**: segmentAlignment, segmentGradient, showSeries, strokeAutoScale (no equivalent). **Legend > showGradientLegend**: needs a gradient color rule in the measuring scenario. **Zoom** secondary value axis on line and area charts (they have no second axis). **Layout > sort series** on the combo charts (one measure per role, no series). **Trend > combine series** on the combo charts.
+- **Data labels (new model)**: the title / detail / value label properties (labelContentLayout, labelDensity, showAll, ...) of 13 charts need the new data label model.
+
 ## Excluded (cloud)
 Removed from scope on 2026-10-16: no UI, no disabled buttons, no menu entries, no further work. They are not in INVENTORY.md.
 - Sign in / accounts; Publish; Share; OneLake catalog; Dataverse; Fabric and SQL databases in Fabric; datahub; Shared with me; Copilot and "Prep data for AI"; sensitivity labels; Power BI service features (dashboards, apps, subscriptions, comments, scorecards/metrics, usage metrics, Analyze in Excel, paginated report service, dataflows, deployment pipelines); cloud-only connectors; external semantic models from the service (live connection, byConnection).
