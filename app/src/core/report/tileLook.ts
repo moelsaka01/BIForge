@@ -64,7 +64,7 @@ function corners(f: FormatReader): { radius: string | undefined; clip: string | 
 export function tileLook(f: FormatReader, slicer = false): TileLook {
   const fillAlpha = opacityOf(f.num("fillCustom", "transparency", 0));
   const fillOn = f.bool("fillCustom", "show", false);
-  const shadows = [f.bool("outline", "show", false) ? `inset 0 0 0 ${Math.max(0, f.num("outline", "weight", 1))}px ${mix(f.color("outline", "lineColor") ?? "#808080", opacityOf(f.num("outline", "transparency", 0)))}` : null, glow(f, "shadowCustom"), glow(f, "glowCustom")].filter((x): x is string => x !== null);
+  const shadows = [f.bool("outline", "show", true) ? `inset 0 0 0 ${Math.max(0, f.num("outline", "weight", 1))}px ${mix(f.color("outline", "lineColor") ?? "#808080", opacityOf(f.num("outline", "transparency", 0)))}` : null, glow(f, "shadowCustom"), glow(f, "glowCustom")].filter((x): x is string => x !== null);
   const shape = corners(f);
   const rot = { frame: f.num("rotation", "angle", 0), shape: f.num("rotation", "shapeAngle", 0), text: f.num("rotation", "textAngle", 0) };
   // the Card's Fill card names the picture settings imageUrl, imageFit, ...; the slicers' url, fit, ...

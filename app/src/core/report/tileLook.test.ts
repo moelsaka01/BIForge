@@ -16,8 +16,12 @@ describe("tile look of Card (new), Slicer (new) and List slicer", () => {
   it("is empty until a card turns something on", () => {
     const t = tileLook(reader("cardVisual", []));
     expect(t.style.background).toBeUndefined();
-    expect(t.style.boxShadow).toBeUndefined();
     expect(t.image).toBeNull();
+  });
+
+  it("draws the outline by default, as the pane shows it on, and not when it is stored off", () => {
+    expect(String(tileLook(reader("cardVisual", [])).style.boxShadow)).toContain("inset 0 0 0 1px");
+    expect(tileLook(reader("cardVisual", [["outline", "show", lit.bool(false)]])).style.boxShadow).toBeUndefined();
   });
 
   it("draws fill, outline, shadow and glow as one box shadow list and the fill as background", () => {
