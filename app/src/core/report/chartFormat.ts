@@ -378,23 +378,27 @@ export function plotImage(f: FormatReader): PlotImage | null {
 // ---- zoom slider -----------------------------------------------------------------------------------------
 
 /** The zoom card: sliders on the category axis and/or the value axis. Returns the dataZoom entries and the room they need. */
-export function zoomBlock(f: FormatReader, horizontal: boolean): { dataZoom: O[]; room: number } | null {
+export function zoomBlock(f: FormatReader, horizontal: boolean, secondary = false): { dataZoom: O[]; room: number } | null {
   if (!f.bool("zoom", "show", false)) return null;
-  const labels = f.bool("zoom", "showLabels", true);
-  const slider = (axis: "category" | "value"): O => {
+  // the end labels and the readout while hovering are the same ECharts detail box: it shows when both switches are on
+  const labels = f.bool("zoom", "showLabels", true) && f.bool("zoom", "showTooltip", true);
+  const slider = (axis: "category" | "value" | "valueSec"): O => {
     // category axis: x for columns, y for bars; the value axis is the other one
     const onX = (axis === "category") !== horizontal;
-    const lo = axis === "category" ? "categoryMin" : "valueMin";
-    const hi = axis === "category" ? "categoryMax" : "valueMax";
-    const out: O = { type: "slider", [onX ? "xAxisIndex" : "yAxisIndex"]: 0, showDetail: labels, brushSelect: false, filterMode: axis === "category" ? "filter" : "empty" };
+    const key = axis === "category" ? "category" : axis === "value" ? "value" : "valueSec";
+    const lo = `${key}Min`;
+    const hi = `${key}Max`;
+    const out: O = { type: "slider", [onX ? "xAxisIndex" : "yAxisIndex"]: axis === "valueSec" ? 1 : 0, showDetail: labels, brushSelect: false, filterMode: axis === "category" ? "filter" : "empty" };
     if (f.has("zoom", lo)) out.startValue = f.num("zoom", lo, 0);
     if (f.has("zoom", hi)) out.endValue = f.num("zoom", hi, 0);
-    if (axis === "category" && f.has("zoom", "categorySize") && !f.has("zoom", hi)) out.end = Math.min(100, Math.max(1, f.num("zoom", "categorySize", 100)));
+    // a size is the share of the axis shown at the start, when no end is given
+    if (f.has("zoom", `${key}Size`) && !f.has("zoom", hi)) out.end = Math.min(100, Math.max(1, f.num("zoom", `${key}Size`, 100)));
     return out;
   };
   const dz: O[] = [];
   if (f.bool("zoom", "showOnCategoryAxis", true)) dz.push(slider("category"));
   if (f.bool("zoom", "showOnValueAxis", false)) dz.push(slider("value"));
+  if (secondary && f.bool("zoom", "showOnValueSecAxis", false)) dz.push(slider("valueSec"));
   return dz.length ? { dataZoom: dz, room: 28 * dz.length } : null;
 }
 

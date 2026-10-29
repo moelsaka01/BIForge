@@ -356,7 +356,7 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
     yAxis: horizontal ? catAxis : valAxes,
     series: seriesOut,
   };
-  const zoom = zoomBlock(f, horizontal);
+  const zoom = zoomBlock(f, horizontal, combo && y2Cols.length > 0);
   if (zoom) {
     option.dataZoom = zoom.dataZoom;
     // the sliders sit below columns (or beside bars): the plot area leaves room for them

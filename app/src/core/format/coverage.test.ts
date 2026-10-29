@@ -125,7 +125,7 @@ const ENABLE: Record<string, Record<string, Lit>> = {
   layout: { orientation: lit.num(2) },
   subTotals: { rowSubtotals: lit.bool(true), columnSubtotals: lit.bool(true) },
   heatMap: { show: lit.bool(true) },
-  zoom: { show: lit.bool(true) },
+  zoom: { show: lit.bool(true), showOnValueAxis: lit.bool(true), showOnValueSecAxis: lit.bool(true) },
   plotArea: { url: lit.str("data:image/png;base64,AA"), color: lit.str("#abcdef") },
   smallMultiplesLayout: { backgroundColor: lit.str("#eeeeee") },
 };

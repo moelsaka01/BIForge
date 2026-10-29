@@ -367,7 +367,11 @@
    "show",
    "showLabels",
    "showOnCategoryAxis",
-   "showOnValueAxis"
+   "showOnValueAxis",
+   "showTooltip",
+   "valueMax",
+   "valueMin",
+   "valueSize"
   ],
   "smallMultiplesLayout": [
    "backgroundColor",
@@ -598,7 +602,11 @@
    "show",
    "showLabels",
    "showOnCategoryAxis",
-   "showOnValueAxis"
+   "showOnValueAxis",
+   "showTooltip",
+   "valueMax",
+   "valueMin",
+   "valueSize"
   ],
   "smallMultiplesLayout": [
    "backgroundColor",
@@ -805,7 +813,11 @@
    "show",
    "showLabels",
    "showOnCategoryAxis",
-   "showOnValueAxis"
+   "showOnValueAxis",
+   "showTooltip",
+   "valueMax",
+   "valueMin",
+   "valueSize"
   ],
   "smallMultiplesLayout": [
    "backgroundColor",
@@ -1012,7 +1024,11 @@
    "show",
    "showLabels",
    "showOnCategoryAxis",
-   "showOnValueAxis"
+   "showOnValueAxis",
+   "showTooltip",
+   "valueMax",
+   "valueMin",
+   "valueSize"
   ],
   "smallMultiplesLayout": [
    "backgroundColor",
@@ -1211,7 +1227,11 @@
    "show",
    "showLabels",
    "showOnCategoryAxis",
-   "showOnValueAxis"
+   "showOnValueAxis",
+   "showTooltip",
+   "valueMax",
+   "valueMin",
+   "valueSize"
   ],
   "smallMultiplesLayout": [
    "backgroundColor",
@@ -1410,7 +1430,11 @@
    "show",
    "showLabels",
    "showOnCategoryAxis",
-   "showOnValueAxis"
+   "showOnValueAxis",
+   "showTooltip",
+   "valueMax",
+   "valueMin",
+   "valueSize"
   ],
   "smallMultiplesLayout": [
    "backgroundColor",
@@ -1657,7 +1681,11 @@
    "show",
    "showLabels",
    "showOnCategoryAxis",
-   "showOnValueAxis"
+   "showOnValueAxis",
+   "showTooltip",
+   "valueMax",
+   "valueMin",
+   "valueSize"
   ],
   "smallMultiplesLayout": [
    "backgroundColor",
@@ -1903,7 +1931,11 @@
    "show",
    "showLabels",
    "showOnCategoryAxis",
-   "showOnValueAxis"
+   "showOnValueAxis",
+   "showTooltip",
+   "valueMax",
+   "valueMin",
+   "valueSize"
   ],
   "smallMultiplesLayout": [
    "backgroundColor",
@@ -2127,7 +2159,11 @@
    "show",
    "showLabels",
    "showOnCategoryAxis",
-   "showOnValueAxis"
+   "showOnValueAxis",
+   "showTooltip",
+   "valueMax",
+   "valueMin",
+   "valueSize"
   ],
   "smallMultiplesLayout": [
    "backgroundColor",
@@ -2343,7 +2379,11 @@
    "show",
    "showLabels",
    "showOnCategoryAxis",
-   "showOnValueAxis"
+   "showOnValueAxis",
+   "showTooltip",
+   "valueMax",
+   "valueMin",
+   "valueSize"
   ],
   "smallMultiplesLayout": [
    "backgroundColor",
@@ -2514,7 +2554,11 @@
    "show",
    "showLabels",
    "showOnCategoryAxis",
-   "showOnValueAxis"
+   "showOnValueAxis",
+   "showTooltip",
+   "valueMax",
+   "valueMin",
+   "valueSize"
   ]
  },
  "lineClusteredColumnComboChart": {
@@ -2772,7 +2816,15 @@
    "show",
    "showLabels",
    "showOnCategoryAxis",
-   "showOnValueAxis"
+   "showOnValueAxis",
+   "showOnValueSecAxis",
+   "showTooltip",
+   "valueMax",
+   "valueMin",
+   "valueSecMax",
+   "valueSecMin",
+   "valueSecSize",
+   "valueSize"
   ]
  },
  "lineStackedColumnComboChart": {
@@ -2994,7 +3046,15 @@
    "show",
    "showLabels",
    "showOnCategoryAxis",
-   "showOnValueAxis"
+   "showOnValueAxis",
+   "showOnValueSecAxis",
+   "showTooltip",
+   "valueMax",
+   "valueMin",
+   "valueSecMax",
+   "valueSecMin",
+   "valueSecSize",
+   "valueSize"
   ]
  },
  "pieChart": {
