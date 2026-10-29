@@ -19,6 +19,7 @@ import { useReport, type MenuItem } from "./reportContext";
 import { loadedToCsv, exportFileName } from "../../core/report/exportData";
 import { browserFiles } from "../shell/files";
 import { VisualContent } from "./VisualContent";
+import { TILE_VISUALS, tileLook } from "../../core/report/tileLook";
 
 export type Handle = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
 const HANDLES: Handle[] = ["nw", "n", "ne", "e", "se", "s", "sw", "w"];
@@ -348,7 +349,18 @@ export function VisualFrame(p: FrameProps) {
       <div style={{ position: "absolute", left: model.body.left, right: model.body.right, top: model.body.top, bottom: model.body.bottom, overflow: "hidden" }}>
         {pos.width > 20 && (
           <div style={{ width: "100%", height: "100%", transform: rotationOf(visual) ? `rotate(${rotationOf(visual)}deg)` : undefined }}>
-            <VisualContent page={page} visual={visual} onInfo={setInfo} width={Math.max(20, pos.width - model.body.left - model.body.right)} height={Math.max(20, pos.height - model.body.top - model.body.bottom)} runOnClick={(e) => !p.editing || c.readOnly || e.ctrlKey || e.metaKey} />
+            {(() => {
+              const content = <VisualContent page={page} visual={visual} onInfo={setInfo} width={Math.max(20, pos.width - model.body.left - model.body.right)} height={Math.max(20, pos.height - model.body.top - model.body.bottom)} runOnClick={(e) => !p.editing || c.readOnly || e.ctrlKey || e.metaKey} />;
+              if (!TILE_VISUALS.has(visual.visualType)) return content;
+              // the fill, outline, shadow, glow and shape cards of the tile visuals
+              const tile = tileLook(f, visual.visualType !== "cardVisual");
+              return (
+                <div data-testid="tile-frame" style={{ width: "100%", height: "100%", ...tile.style }}>
+                  {tile.image && <div data-testid="tile-image" style={tile.image} />}
+                  <div style={{ position: "relative", width: "100%", height: "100%", transform: tile.contentTransform, overflow: tile.overflow.scroll ? (tile.overflow.direction === "horizontal" ? "auto hidden" : "hidden auto") : "hidden" }}>{content}</div>
+                </div>
+              );
+            })()}
           </div>
         )}
       </div>

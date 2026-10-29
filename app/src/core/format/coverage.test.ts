@@ -128,6 +128,10 @@ const ENABLE: Record<string, Record<string, Lit>> = {
   zoom: { show: lit.bool(true), showOnValueAxis: lit.bool(true), showOnValueSecAxis: lit.bool(true) },
   plotArea: { url: lit.str("data:image/png;base64,AA"), color: lit.str("#abcdef") },
   smallMultiplesLayout: { backgroundColor: lit.str("#eeeeee"), gridLineShow: lit.bool(true), advancedPaddingOptions: lit.bool(true) },
+  // the tile visuals: a fill with a picture (its own transparency and effects), shadow and glow
+  fillCustom: { show: lit.bool(true), transparency: lit.num(30), imageShow: lit.bool(true), imageEffects: lit.bool(true), imageUrl: lit.str("data:image/png;base64,AA"), imageData: lit.str("data:image/png;base64,BB"), effects: lit.bool(true), url: lit.str("data:image/png;base64,AA"), field: lit.str("data:image/png;base64,BB") },
+  shadowCustom: { show: lit.bool(true) },
+  glowCustom: { show: lit.bool(true) },
   ribbonBands: { show: lit.bool(true), borderShow: lit.bool(true), fillColor: lit.str("#abcdef"), borderColor: lit.str("#fedcba") },
 };
 
@@ -144,6 +148,29 @@ const WITH: Record<string, Record<string, Record<string, Lit>>> = {
   labels: { labelDisplayUnits: { labelPrecision: lit.num(2) } },
   mapControls: { zoomLevel: { autoZoom: lit.bool(false) } },
   layout: { clusteredGapOverlapReverse: { clusteredGapOverlaps: lit.bool(true) }, stackedGapExplodes: { stackedGapSize: lit.num(4) } },
+  // the corners of the tile need the shape that uses them
+  shapeCustomRectangle: {
+    rectangleRoundedCurve: { tileShape: lit.str("rectangleRounded") },
+    rectangleRoundedCurveCustomStyle: { tileShape: lit.str("rectangleRounded"), rectangleRoundedCurve: lit.num(10), rectangleRoundedCurveLeftTop: lit.num(40) },
+    rectangleRoundedCurveLeftTop: { tileShape: lit.str("rectangleRounded"), rectangleRoundedCurveCustomStyle: lit.bool(true) },
+    rectangleRoundedCurveLeftBottom: { tileShape: lit.str("rectangleRounded"), rectangleRoundedCurveCustomStyle: lit.bool(true) },
+    rectangleRoundedCurveRightTop: { tileShape: lit.str("rectangleRounded"), rectangleRoundedCurveCustomStyle: lit.bool(true) },
+    rectangleRoundedCurveRightBottom: { tileShape: lit.str("rectangleRounded"), rectangleRoundedCurveCustomStyle: lit.bool(true) },
+    tabCutCornerSnipSizeCustomStyle: { tileShape: lit.str("tabCutCorner"), tabCutCornerSnipSizeTop: lit.num(20), tabCutCornerSnipSizeLeftTop: lit.num(5) },
+    tabCutCornerSnipSizeTop: { tileShape: lit.str("tabCutCorner") },
+    tabCutCornerSnipSizeBottom: { tileShape: lit.str("tabCutCorner") },
+    tabCutCornerSnipSizeLeftTop: { tileShape: lit.str("tabCutCorner"), tabCutCornerSnipSizeCustomStyle: lit.bool(true) },
+    tabCutCornerSnipSizeRightTop: { tileShape: lit.str("tabCutCorner"), tabCutCornerSnipSizeCustomStyle: lit.bool(true) },
+    tabCutCornerSnipSizeLeftBottom: { tileShape: lit.str("tabCutCorner"), tabCutCornerSnipSizeCustomStyle: lit.bool(true) },
+    tabCutCornerSnipSizeRightBottom: { tileShape: lit.str("tabCutCorner"), tabCutCornerSnipSizeCustomStyle: lit.bool(true) },
+  },
+  // the picture of a tile: its own source and transparency
+  fillCustom: {
+    imageData: { imageType: lit.str("imageData") },
+    field: { sourceType: lit.str("imageData") },
+    imageTransparency: { imageSplitTransparency: lit.bool(true) },
+  },
+  glowCustom: { angle: { glowDistance: lit.num(5) } },
   ribbonBands: { fillColor: { fillMatchColor: lit.bool(false) }, borderColor: { borderColorMatchFill: lit.bool(false) } },
   smallMultiplesLayout: { columnCount: { layoutType: lit.str("custom") }, rowCount: { layoutType: lit.str("custom") } },
   visualLink: {

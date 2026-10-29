@@ -14,6 +14,7 @@ import type { CSSProperties } from "react";
 import { queryRefOf, readLitProp, type J } from "./pbir";
 import type { BuiltMatrixQuery, PlannedColumn } from "./queryBuilder";
 import type { Theme } from "./theme";
+import { tileLook, type TileLook } from "./tileLook";
 import type { VisualModel } from "./visualDoc";
 
 export function displayValue(v: Value, col: { format: string | null; field: FieldRef }, f?: FormatReader): string {
@@ -349,6 +350,8 @@ function formatCompact2(x: number, f: FormatReader, fmt: string | null): string 
 }
 
 export interface NewCardModel {
+  /** Fill, outline, shadow, glow, shape and rotation of the whole card. */
+  tile: TileLook;
   /** One tile per field: the value, the caption, and where the caption sits. */
   tiles: { value: string; label: string }[];
   showValue: boolean;
@@ -385,6 +388,7 @@ export function buildNewCard(visual: VisualModel, loaded: Extract<Loaded, { kind
   const lf = readFont(f, "label", { color: "fontColor" });
   const accentOn = f.bool("accentBar", "show", false);
   return {
+    tile: tileLook(f),
     tiles,
     showValue: f.bool("value", "show", true),
     showLabel: f.bool("label", "show", true),

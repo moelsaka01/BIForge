@@ -1,6 +1,7 @@
 // What a slicer is set to, read from its formatting objects (data, selection, general). Pure.
 import { readFont, type Font } from "../format/styles";
 import type { FormatReader } from "./formatReader";
+import { tileLook, type TileLook } from "./tileLook";
 
 export type SlicerMode = "Basic" | "Dropdown" | "Tile" | "Between" | "Before" | "After" | "Relative";
 
@@ -29,6 +30,8 @@ export function slicerMode(mode: string, horizontal: boolean): SlicerMode {
 }
 
 export interface SlicerSettings {
+  /** Fill, outline, shadow, glow, shape and rotation of the slicer (Slicer (new) and List slicer). */
+  tile: TileLook;
   mode: SlicerMode;
   singleSelect: boolean;
   selectAll: boolean;
@@ -47,6 +50,7 @@ export function defaultSlicerStyle(visualType: string, isDateOrNumeric: boolean)
 
 export function readSlicer(f: FormatReader, isDateOrNumeric: boolean, searchDefault = false, visualType = "slicer"): SlicerSettings {
   return {
+    tile: tileLook(f, true),
     mode: slicerMode(f.str("data", "mode", defaultSlicerStyle(visualType, isDateOrNumeric)), f.num("general", "orientation", 0) === 1),
     singleSelect: f.bool("selection", "singleSelect", false) || f.str("data", "mode", "") === "Single",
     selectAll: f.bool("selection", "selectAllCheckboxEnabled", false),

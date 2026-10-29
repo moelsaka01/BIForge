@@ -294,7 +294,7 @@ describe("small multiples layout", () => {
   it("a custom layout without counts has three columns, and counts replace that", () => {
     const v = mkSm();
     fmt(v, "smallMultiplesLayout", "layoutType", lit.str("custom"));
-    const left = (o: { grid: { left: string }[] }) => new Set(o.grid.map((g) => g.left)).size;
+    const left = (o: Record<string, unknown>) => new Set((o.grid as { left: string }[]).map((g) => g.left)).size;
     expect(left(build(v, grouped(v, rows4)).option)).toBe(3);
     fmt(v, "smallMultiplesLayout", "columnCount", lit.num(4));
     expect(left(build(v, grouped(v, rows4)).option)).toBe(4);

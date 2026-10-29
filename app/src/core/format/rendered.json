@@ -3953,6 +3953,35 @@
    "transparency",
    "width"
   ],
+  "fillCustom": [
+   "fillColor",
+   "imageBlur",
+   "imageContrast",
+   "imageData",
+   "imageEffects",
+   "imageExposure",
+   "imageFit",
+   "imageHeight",
+   "imageSaturation",
+   "imageShow",
+   "imageSplitTransparency",
+   "imageTransparency",
+   "imageType",
+   "imageUrl",
+   "show",
+   "transparency"
+  ],
+  "glowCustom": [
+   "angle",
+   "color",
+   "glowDistance",
+   "glowPositionPreset",
+   "glowSpread",
+   "position",
+   "shadowBlur",
+   "show",
+   "transparency"
+  ],
   "label": [
    "bold",
    "fontColor",
@@ -3968,6 +3997,48 @@
   ],
   "layout": [
    "orientation"
+  ],
+  "outline": [
+   "lineColor",
+   "show",
+   "transparency",
+   "weight"
+  ],
+  "overFlow": [
+   "overFlowDirection",
+   "overFlowStyle"
+  ],
+  "rotation": [
+   "angle",
+   "shapeAngle",
+   "textAngle"
+  ],
+  "shadowCustom": [
+   "angle",
+   "color",
+   "position",
+   "shadowBlur",
+   "shadowDistance",
+   "shadowPositionPreset",
+   "shadowSpread",
+   "show",
+   "transparency"
+  ],
+  "shapeCustomRectangle": [
+   "rectangleRoundedCurve",
+   "rectangleRoundedCurveCustomStyle",
+   "rectangleRoundedCurveLeftBottom",
+   "rectangleRoundedCurveLeftTop",
+   "rectangleRoundedCurveRightBottom",
+   "rectangleRoundedCurveRightTop",
+   "tabCutCornerSnipSizeBottom",
+   "tabCutCornerSnipSizeCustomStyle",
+   "tabCutCornerSnipSizeLeftBottom",
+   "tabCutCornerSnipSizeLeftTop",
+   "tabCutCornerSnipSizeRightBottom",
+   "tabCutCornerSnipSizeRightTop",
+   "tabCutCornerSnipSizeTop",
+   "tileShape"
   ],
   "value": [
    "bold",
@@ -4215,18 +4286,160 @@
   "general": [
    "selfFilterEnabled"
   ],
+  "fillCustom": [
+   "blur",
+   "contrast",
+   "effects",
+   "exposure",
+   "field",
+   "fillColor",
+   "fit",
+   "height",
+   "imageShow",
+   "imageSplitTransparency",
+   "imageTransparency",
+   "saturation",
+   "show",
+   "sourceType",
+   "transparency",
+   "url"
+  ],
+  "glowCustom": [
+   "angle",
+   "color",
+   "glowDistance",
+   "glowPositionPreset",
+   "glowSpread",
+   "position",
+   "shadowBlur",
+   "show",
+   "transparency"
+  ],
+  "outline": [
+   "lineColor",
+   "show",
+   "transparency",
+   "weight"
+  ],
+  "overFlow": [
+   "overFlowDirection",
+   "overFlowStyle"
+  ],
+  "rotation": [
+   "angle",
+   "shapeAngle",
+   "textAngle"
+  ],
   "selection": [
    "selectAllCheckboxEnabled",
    "singleSelect"
+  ],
+  "shadowCustom": [
+   "angle",
+   "color",
+   "position",
+   "shadowBlur",
+   "shadowDistance",
+   "shadowPositionPreset",
+   "shadowSpread",
+   "show",
+   "transparency"
+  ],
+  "shapeCustomRectangle": [
+   "rectangleRoundedCurve",
+   "rectangleRoundedCurveCustomStyle",
+   "rectangleRoundedCurveLeftBottom",
+   "rectangleRoundedCurveLeftTop",
+   "rectangleRoundedCurveRightBottom",
+   "rectangleRoundedCurveRightTop",
+   "tabCutCornerSnipSizeBottom",
+   "tabCutCornerSnipSizeCustomStyle",
+   "tabCutCornerSnipSizeLeftBottom",
+   "tabCutCornerSnipSizeLeftTop",
+   "tabCutCornerSnipSizeRightBottom",
+   "tabCutCornerSnipSizeRightTop",
+   "tabCutCornerSnipSizeTop",
+   "tileShape"
   ]
  },
  "listSlicer": {
   "general": [
    "selfFilterEnabled"
   ],
+  "fillCustom": [
+   "blur",
+   "contrast",
+   "effects",
+   "exposure",
+   "field",
+   "fillColor",
+   "fit",
+   "height",
+   "imageShow",
+   "imageSplitTransparency",
+   "imageTransparency",
+   "saturation",
+   "show",
+   "sourceType",
+   "transparency",
+   "url"
+  ],
+  "glowCustom": [
+   "angle",
+   "color",
+   "glowDistance",
+   "glowPositionPreset",
+   "glowSpread",
+   "position",
+   "shadowBlur",
+   "show",
+   "transparency"
+  ],
+  "outline": [
+   "lineColor",
+   "show",
+   "transparency",
+   "weight"
+  ],
+  "overFlow": [
+   "overFlowDirection",
+   "overFlowStyle"
+  ],
+  "rotation": [
+   "angle",
+   "shapeAngle",
+   "textAngle"
+  ],
   "selection": [
    "selectAllCheckboxEnabled",
    "singleSelect"
+  ],
+  "shadowCustom": [
+   "angle",
+   "color",
+   "position",
+   "shadowBlur",
+   "shadowDistance",
+   "shadowPositionPreset",
+   "shadowSpread",
+   "show",
+   "transparency"
+  ],
+  "shapeCustomRectangle": [
+   "rectangleRoundedCurve",
+   "rectangleRoundedCurveCustomStyle",
+   "rectangleRoundedCurveLeftBottom",
+   "rectangleRoundedCurveLeftTop",
+   "rectangleRoundedCurveRightBottom",
+   "rectangleRoundedCurveRightTop",
+   "tabCutCornerSnipSizeBottom",
+   "tabCutCornerSnipSizeCustomStyle",
+   "tabCutCornerSnipSizeLeftBottom",
+   "tabCutCornerSnipSizeLeftTop",
+   "tabCutCornerSnipSizeRightBottom",
+   "tabCutCornerSnipSizeRightTop",
+   "tabCutCornerSnipSizeTop",
+   "tileShape"
   ]
  },
  "shape": {

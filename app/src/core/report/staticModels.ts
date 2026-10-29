@@ -42,7 +42,7 @@ export function imageModel(f: FormatReader, width: number, height: number): Imag
 // ---- shadow, glow and rotation of the objects that show no data -----------------------------------------------------
 
 /** Where the shadow falls for each preset of the Shadow card: the angle (degrees, counter-clockwise from the right) and the distance. */
-const SHADOW_PRESETS: Record<string, { angle: number; distance: number }> = {
+export const SHADOW_PRESETS: Record<string, { angle: number; distance: number }> = {
   bottomRight: { angle: 315, distance: 3 },
   bottom: { angle: 270, distance: 3 },
   bottomLeft: { angle: 225, distance: 3 },
@@ -83,11 +83,11 @@ export function shapeEffects(f: FormatReader): string | undefined {
 export function rotationParts(f: FormatReader): { frame: number; shape: number; text: number } {
   return { frame: f.num("rotation", "angle", 0), shape: f.num("rotation", "shapeAngle", 0), text: f.num("rotation", "textAngle", 0) };
 }
-const turn = (deg: number): string | undefined => (deg ? `rotate(${deg}deg)` : undefined);
+export const turn = (deg: number): string | undefined => (deg ? `rotate(${deg}deg)` : undefined);
 
 // ---- shapes drawn with CSS: buttons and navigator entries ------------------------------------------------
 
-const clipOf = (shape: string): string | undefined => {
+export const clipOf = (shape: string): string | undefined => {
   const p = POLYGONS[shape];
   return p ? `polygon(${p.map(([x, y]) => `${x}% ${y}%`).join(", ")})` : undefined;
 };
