@@ -918,6 +918,51 @@ function scatter(inp: ChartInput): ChartBuild {
       data: s.pts.map((pt) => [valueNum(pt.row[xc?.index ?? 0]), valueNum(pt.row[yc?.index ?? 0]), sc ? (valueNum(pt.row[sc.index]) ?? 0) : 0, cat ? labelOf(pt.row[cat.index], cat.format) : ""]),
     };
   });
+  // Analytics: the constant lines on both value axes, and a trend line through the points (one per series, or one through all)
+  const marks: O[] = [];
+  const shades: O[][] = [];
+  const grow: { x: number[]; y: number[] } = { x: [], y: [] };
+  for (const [object, axisKey, c, auto] of [["y1AxisReferenceLine", "yAxis", yc, grow.y], ["xAxisReferenceLine", "xAxis", xc, grow.x]] as const) {
+    const sel = "id:constant";
+    const at = f.has(object, "value", sel) ? f.num(object, "value", 0, sel) : null;
+    const spec: LineSpec = { object, id: "constant" };
+    const mark = referenceLineMark(f, theme, spec, at, "Constant", axisKey, c?.format ?? null);
+    if (mark) marks.push(mark);
+    const shade = referenceLineShade(f, theme, spec, at, axisKey);
+    if (shade) shades.push(shade);
+    if (mark && at !== null && f.bool(object, "autoScale", false, sel)) auto.push(at);
+  }
+  if (f.bool("trend", "show", false)) {
+    const style = f.str("trend", "style", "dashed");
+    const trendDash = dashOf(f.str("trend", "dashArray", ""));
+    const groups = f.bool("trend", "combineSeries", false) ? [{ name: "", pts: list.flatMap((s) => s.pts) }] : list;
+    for (const g of groups) {
+      const xs = g.pts.map((pt) => valueNum(pt.row[xc?.index ?? 0]));
+      const ys = g.pts.map((pt) => valueNum(pt.row[yc?.index ?? 0]));
+      const tr = linearTrend(ys, xs);
+      const known = xs.filter((x): x is number => x !== null);
+      if (!tr || known.length < 2) continue;
+      const lo = Math.min(...known);
+      const hi = Math.max(...known);
+      if (f.bool("trend", "autoScale", false)) grow.y.push(tr.at(lo), tr.at(hi));
+      series.push({
+        name: groups.length > 1 && g.name ? `${f.str("trend", "displayName", "") || "Trend line"} · ${g.name}` : f.str("trend", "displayName", "") || "Trend line",
+        type: "line",
+        data: [[lo, tr.at(lo)], [hi, tr.at(hi)]],
+        symbol: "none",
+        silent: true,
+        z: 6,
+        lineStyle: {
+          color: f.color("trend", "lineColor") ?? theme.muted,
+          width: f.num("trend", "width", 2),
+          type: trendDash && (style === "custom" || !f.has("trend", "style")) ? trendDash : style === "custom" ? "dashed" : style,
+          opacity: opacityOf(f.num("trend", "transparency", 0)),
+          ...(f.has("trend", "dashCap") ? { cap: CAP[f.str("trend", "dashCap", "none")] ?? "butt" } : {}),
+        },
+        tooltip: { show: false },
+      } as never);
+    }
+  }
   const axis = (object: "categoryAxis" | "valueAxis", c: typeof xc): O => ({ ...axisBlock({ f, theme, object, kind: "value", fmt: c?.format ?? null, titleDefault: c?.label ?? "", gridDefault: true }), scale: true });
   const option: O = {
     animation: false,
@@ -928,6 +973,17 @@ function scatter(inp: ChartInput): ChartBuild {
     yAxis: axis("valueAxis", yc),
     series,
   };
+  const first = (option.series as O[])[0];
+  if (first && marks.length) first.markLine = { silent: true, symbol: "none", animation: false, data: marks };
+  if (first && shades.length) first.markArea = { silent: true, animation: false, data: shades };
+  // "Include in auto scale": an axis grows to show a line
+  for (const [axisOpt, pts] of [[option.yAxis, grow.y], [option.xAxis, grow.x]] as const) {
+    if (!pts.length) continue;
+    const lo = Math.min(...pts);
+    const hi = Math.max(...pts);
+    if (axisOpt.min === undefined) axisOpt.min = (e: { min: number }) => Math.min(e.min, lo);
+    if (axisOpt.max === undefined) axisOpt.max = (e: { max: number }) => Math.max(e.max, hi);
+  }
   return {
     option,
     count: loaded.rows.length,
@@ -988,6 +1044,19 @@ function waterfall(inp: ChartInput): ChartBuild {
       { ...common, name: "Total", data: total, itemStyle: { color: colors.total }, label: label(1) },
     ],
   };
+  // the constant line of the Analytics pane
+  const sel = "id:constant";
+  const at = f.has("y1AxisReferenceLine", "value", sel) ? f.num("y1AxisReferenceLine", "value", 0, sel) : null;
+  const spec: LineSpec = { object: "y1AxisReferenceLine", id: "constant" };
+  const mark = referenceLineMark(f, theme, spec, at, "Constant", "yAxis", vcol?.format ?? null);
+  const shade = referenceLineShade(f, theme, spec, at, "yAxis");
+  if (mark) option.series[0].markLine = { silent: true, symbol: "none", animation: false, data: [mark] };
+  if (shade) option.series[0].markArea = { silent: true, animation: false, data: [shade] };
+  // "Include in auto scale": the value axis grows to show the line
+  if (mark && at !== null && f.bool("y1AxisReferenceLine", "autoScale", false, sel)) {
+    if (option.yAxis.min === undefined) option.yAxis.min = (e: { min: number }) => Math.min(e.min, at);
+    if (option.yAxis.max === undefined) option.yAxis.max = (e: { max: number }) => Math.max(e.max, at);
+  }
   return { option, count: p.categories.length, pointAt: (_s, di) => (p.categories[di] ? pointOfCategory(p, di, null) : null) };
 }
 

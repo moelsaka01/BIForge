@@ -48,8 +48,9 @@ export function percentile(sorted: number[], pct: number): number {
 }
 
 /** Least-squares line through (index, value) of the non-blank points; null with fewer than two points or no slope information. */
-export function linearTrend(values: (number | null)[]): { slope: number; intercept: number; at(i: number): number } | null {
-  const pts = values.map((v, i) => [i, v] as const).filter((p): p is readonly [number, number] => p[1] !== null && Number.isFinite(p[1]));
+export function linearTrend(values: (number | null)[], xs?: (number | null)[]): { slope: number; intercept: number; at(i: number): number } | null {
+  // xs are the positions of the values (a scatter chart's x); without them a value's position is its index
+  const pts = values.map((v, i) => [xs ? xs[i] : i, v] as const).filter((p): p is readonly [number, number] => p[0] !== null && Number.isFinite(p[0]) && p[1] !== null && Number.isFinite(p[1]));
   if (pts.length < 2) return null;
   const n = pts.length;
   const sx = pts.reduce((a, p) => a + p[0], 0);

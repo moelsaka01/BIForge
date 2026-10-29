@@ -333,3 +333,29 @@ describe("total labels of stacked charts", () => {
     expect(two[two.length - 1].data.map((d: { raw: number }) => d.raw)).toEqual([0, -5]);
   });
 });
+
+describe("scatter chart analytics", () => {
+  const X = agg("Product", "ListPrice", 1);
+  const Y = agg("Sales", "UnitPrice", 1);
+  const mkScatter = () => visualOf("scatterChart", { Category: [column("Product", "Product")], X: [X], Y: [Y] });
+  const pts = [[c("A"), ["real", "1"], ["real", "2"]], [c("B"), ["real", "2"], ["real", "4"]], [c("C"), ["real", "3"], ["real", "6"]]] as Cell[][];
+
+  it("fits a straight line through the points by their x", () => {
+    expect(linearTrend([2, 4, 6], [1, 2, 3])?.slope).toBeCloseTo(2, 10);
+    const v = mkScatter();
+    fmt(v, "trend", "show", lit.bool(true));
+    const s = build(v, grouped(v, pts)).option.series;
+    const line = s.find((x: { type: string }) => x.type === "line");
+    expect(line.data).toEqual([[1, 2], [3, 6]]);
+  });
+
+  it("draws the constant lines on both value axes", () => {
+    const v = mkScatter();
+    setFormat(v.json, "y1AxisReferenceLine", "show", lit.bool(true), "id:constant");
+    setFormat(v.json, "y1AxisReferenceLine", "value", lit.num(5), "id:constant");
+    setFormat(v.json, "xAxisReferenceLine", "show", lit.bool(true), "id:constant");
+    setFormat(v.json, "xAxisReferenceLine", "value", lit.num(2), "id:constant");
+    const marks = build(v, grouped(v, pts)).option.series[0].markLine.data;
+    expect(marks.map((m: { yAxis?: number; xAxis?: number }) => m.yAxis ?? m.xAxis).sort()).toEqual([2, 5]);
+  });
+});
