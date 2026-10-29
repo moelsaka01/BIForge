@@ -1,7 +1,7 @@
 // The formatting objects that most charts share, turned into ECharts options: legend, axes, data labels, lines and
 // markers, reference lines. One reading per object, so a property supported here works on every chart that has the
 // object, and the Format pane's controls for it do something everywhere.
-import { echartsText, readFont, opacityOf, underlined, type Font } from "../format/styles";
+import { echartsText, readFont, opacityOf, type Font } from "../format/styles";
 import type { FormatReader } from "./formatReader";
 import { formatCompact, formatNumber, type DisplayUnits } from "./numberFormat";
 import type { Theme } from "./theme";
@@ -88,7 +88,6 @@ export function legendBlock(f: FormatReader, theme: Theme, show: boolean): O {
     type: "scroll",
     ...(LEGEND_POS[pos] ?? LEGEND_POS.Top),
     textStyle: echartsText(font, labelDefaults(theme)),
-    ...(font.underline ? { formatter: (name: string) => underlined(String(name)) } : {}),
     icon: f.str("legend", "legendMarkerRendering", "markerCircleDefault") === "lineOnly" ? "path://M0,4 L10,4 L10,6 L0,6 Z" : "roundRect",
     itemWidth: 10,
     itemHeight: 10,
@@ -169,14 +168,14 @@ export function axisBlock(a: AxisInput): O {
     axisLabel: {
       ...echartsText(font, d),
     },
-    name: showTitle ? (titleFont.underline ? underlined(title) : title) : undefined,
+    name: showTitle ? (title) : undefined,
     nameLocation: "middle",
     nameGap: kind === "value" ? 44 : 28,
     nameTextStyle: echartsText(titleFont, { family: d.family, size: d.size, color: d.color }),
     splitLine: { show: gridOn, lineStyle: { color: gridBase, opacity: baseAlpha * gridAlpha, width: f.num(object, "gridlineThickness", 1), type: gridStyle === "custom" && dash ? dash : (DASH[gridStyle] ?? "solid"), ...(f.has(object, "gridlineDashCap") ? { cap: CAP[f.str(object, "gridlineDashCap", "none")] ?? "butt" } : {}) } },
   };
   if (kind === "category") {
-    base.axisLabel = { ...base.axisLabel, ...(font.underline ? { formatter: (v: string) => underlined(String(v)) } : {}), hideOverlap: true, width: f.has(object, "preferredCategoryWidth") ? f.num(object, "preferredCategoryWidth", 90) : a.horizontal ? 110 : 90, overflow: "truncate" };
+    base.axisLabel = { ...base.axisLabel, hideOverlap: true, width: f.has(object, "preferredCategoryWidth") ? f.num(object, "preferredCategoryWidth", 90) : a.horizontal ? 110 : 90, overflow: "truncate" };
     base.axisLine = { lineStyle: { color: theme.muted } };
     base.axisTick = { show: false };
     base.inverse = a.inverseDefault ? !invert : invert;
@@ -189,8 +188,7 @@ export function axisBlock(a: AxisInput): O {
     base.max = hi ?? (a.hundred ? 100 : undefined);
     if (opposite) base.position = a.horizontal ? "top" : "right";
     base.axisLabel.formatter = (v: number) => {
-      const text = a.hundred ? `${v}%` : valueText(v, a.fmt ?? null, f, object, a.prefix ?? "");
-      return font.underline ? underlined(text) : text;
+      return a.hundred ? `${v}%` : valueText(v, a.fmt ?? null, f, object, a.prefix ?? "");
     };
   }
   return base;
@@ -228,7 +226,7 @@ export function labelBlock(a: LabelInput): O {
     show: a.show,
     position,
     ...echartsText(font, labelDefaults(theme)),
-    formatter: font.underline ? (pa: O) => underlined(a.text(pa)) : a.text,
+    formatter: a.text,
     opacity: opacityOf(f.num("labels", "transparency", 0)),
   };
   if (f.has("labels", "horizontalAlignment")) out.align = f.str("labels", "horizontalAlignment", "center");

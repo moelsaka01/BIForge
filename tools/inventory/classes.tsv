@@ -1,0 +1,13 @@
+# class<TAB>exact item text<TAB>reason. Classes: ext = Needs external software, desktop = Needs Desktop verification, blocked = Blocked (library/platform limitation).
+# An item listed here that is not Done-tested is counted under its class and no longer under Partial / Not started. Done-tested items ignore this file.
+ext	Oracle database	needs the vendor ODBC driver and an Oracle server; the ODBC path is tested only with the SQLite driver
+ext	IBM Db2	needs the IBM Db2 ODBC driver and a Db2 server
+ext	Teradata	needs the Teradata ODBC driver and a Teradata server
+ext	SAP HANA	needs the SAP HANA ODBC driver and a HANA server
+ext	Sybase	needs the Sybase ODBC driver and a server
+ext	Amazon Redshift (ODBC)	needs the Amazon Redshift ODBC driver and a cluster
+ext	Snowflake (ODBC)	needs the Snowflake ODBC driver and an account
+ext	Google BigQuery (ODBC)	needs the BigQuery ODBC driver and a project
+ext	Databricks (ODBC)	needs the Databricks ODBC driver and a workspace
+ext	R script visual (needs local R)	R is not installed here, so the visual cannot be run or tested end to end (Python equivalent is Done-tested)
+ext	R scripting: home directory, IDE	needs a local R installation to test the R half

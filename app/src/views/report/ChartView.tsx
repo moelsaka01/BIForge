@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { ChartBuild } from "../../core/report/chartOptions";
 import type { SelectedPoint } from "../../core/report/interactions";
+import { UNDERLINE_FAMILY } from "../../core/format/styles";
 import { echarts, type EChartsInstance } from "./echartsSetup";
 
 export interface ChartViewProps {
@@ -14,6 +15,9 @@ export interface ChartViewProps {
   onLasso?(points: SelectedPoint[], additive: boolean): void;
   label: string;
 }
+
+/** ECharts has no text decoration: text whose font family carries the marker is underlined here, the text itself stays as it is. */
+const UNDERLINE_CSS = `[data-testid="chart"] text[style*="${UNDERLINE_FAMILY}"] { text-decoration: underline; }`;
 
 const toolButton = { width: 26, height: 26, border: "1px solid #888", background: "rgba(255,255,255,0.92)", color: "#222", cursor: "pointer", fontSize: 15, lineHeight: "20px", padding: 0, borderRadius: 3 } as const;
 
@@ -90,6 +94,7 @@ export function ChartView(p: ChartViewProps) {
           style={{ position: "absolute", left: p.build.plotImage.margins.left, right: p.build.plotImage.margins.right, top: p.build.plotImage.margins.top, bottom: p.build.plotImage.margins.bottom, pointerEvents: "none", backgroundImage: `url("${p.build.plotImage.url.replace(/"/g, "%22")}")`, backgroundRepeat: "no-repeat", backgroundPosition: "center", backgroundSize: p.build.plotImage.size, opacity: p.build.plotImage.opacity }}
         />
       )}
+      <style>{UNDERLINE_CSS}</style>
       <div ref={host} role="img" aria-label={p.label} style={{ width: p.width, height: p.height }} data-testid="chart" />
       {tools && (
         <div role="toolbar" aria-label="Map tools" style={{ position: "absolute", top: 6, right: 6, display: "flex", flexDirection: "column", gap: 4 }} onPointerDown={(e) => e.stopPropagation()}>

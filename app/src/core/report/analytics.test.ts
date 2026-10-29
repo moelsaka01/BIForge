@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { REFERENCE_KINDS, linearTrend, percentile, referenceValue, ribbonLayout } from "./analytics";
 import { decodeCell } from "./cells";
 import { buildChart } from "./chartOptions";
+import { UNDERLINE_FAMILY } from "../format/styles";
 import type { Loaded } from "./dataLoader";
 import { agg, column, lit } from "./fields";
 import { buildVisualQuery } from "./queryBuilder";
@@ -302,16 +303,19 @@ describe("small multiples layout", () => {
 });
 
 describe("underlined chart text", () => {
-  it("puts a combining low line after each character of the legend, labels and axis text when the card asks for it", () => {
+  it("marks the font family of underlined legend, label and axis text and leaves the text itself unchanged", () => {
     const v = visualOf("clusteredColumnChart", { Category: [Cat], Series: [Country], Y: [Qty] });
     const rows = [[c("A"), c("France"), c(10)], [c("A"), c("Canada"), c(30)]];
     const plain = build(v, grouped(v, rows)).option;
     expect(plain.legend.formatter).toBeUndefined();
+    expect(plain.legend.textStyle.fontFamily).not.toContain(UNDERLINE_FAMILY);
     fmt(v, "legend", "underline", lit.bool(true));
     fmt(v, "categoryAxis", "underline", lit.bool(true));
     const o = build(v, grouped(v, rows)).option;
-    expect(o.legend.formatter("Ab")).toBe("A̲b̲");
-    expect(o.xAxis.axisLabel.formatter("A")).toBe("A̲");
+    expect(o.legend.formatter).toBeUndefined();
+    expect(o.legend.textStyle.fontFamily).toContain(UNDERLINE_FAMILY);
+    expect(o.xAxis.axisLabel.fontFamily).toContain(UNDERLINE_FAMILY);
+    expect(o.xAxis.axisLabel.formatter).toBeUndefined();
   });
 });
 
@@ -326,6 +330,9 @@ describe("total labels of stacked charts", () => {
     const carrier = one[one.length - 1];
     expect(carrier.name).toBe("");
     expect(carrier.lineStyle.opacity).toBe(0);
+    // ECharts draws no label for symbol "none"; the label hangs on an invisible symbol
+    expect(carrier.symbol).toBe("circle");
+    expect(carrier.symbolSize).toBe(0);
     expect(carrier.data.map((d: { raw: number }) => d.raw)).toEqual([40, 20]);
     fmt(v, "totals", "showPositiveAndNegative", lit.bool(true));
     const two = build(v, grouped(v, rows)).option.series;

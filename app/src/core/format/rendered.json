@@ -3725,7 +3725,8 @@
    "fontFamily",
    "fontSize",
    "italic",
-   "show"
+   "show",
+   "underline"
   ],
   "dataPoint": [
    "defaultColor",
@@ -3866,7 +3867,8 @@
    "fontFamily",
    "fontSize",
    "italic",
-   "show"
+   "show",
+   "underline"
   ],
   "dataPoint": [
    "defaultColor",
@@ -4091,7 +4093,8 @@
    "italic",
    "labelDisplayUnits",
    "labelPrecision",
-   "show"
+   "show",
+   "underline"
   ],
   "dataPoint": [
    "fill",
@@ -4104,7 +4107,8 @@
    "fontSize",
    "italic",
    "labelDisplayUnits",
-   "show"
+   "show",
+   "underline"
   ],
   "target": [
    "bold",
@@ -4113,7 +4117,8 @@
    "fontSize",
    "italic",
    "labelDisplayUnits",
-   "show"
+   "show",
+   "underline"
   ]
  },
  "tableEx": {
