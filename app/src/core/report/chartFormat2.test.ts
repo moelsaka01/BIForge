@@ -246,3 +246,21 @@ describe("legend title and label value formats", () => {
     expect(([] as { splitLine: { lineStyle: { type: unknown } } }[]).concat(o.yAxis)[0].splitLine.lineStyle.type).toEqual([4, 2]);
   });
 });
+
+describe("labels inside a bar that is too short", () => {
+  const rect = (w: number, h: number) => ({ rect: { width: 200, height: 20 }, labelRect: { width: w, height: h } });
+  it("are hidden when they do not fit along the bar, unless Overflow text is on", () => {
+    const show = (v: { json: never }) => setFormat(v.json, "labels", "show", lit.bool(true));
+    const bar = build("barChart", (v) => show(v as never));
+    const layout = bar.series[0].labelLayout;
+    expect(layout(rect(60, 12)).hide).toBe(false);
+    expect(layout(rect(260, 12)).hide).toBe(true);
+    const col = build("columnChart", (v) => show(v as never));
+    expect(col.series[0].labelLayout({ rect: { width: 40, height: 10 }, labelRect: { width: 60, height: 14 } }).hide).toBe(true);
+    const over = build("barChart", (v) => { show(v as never); setFormat(v.json, "labels", "labelOverflow", lit.bool(true)); });
+    expect(over.series[0].labelLayout).toBeUndefined();
+    // outside the bar nothing is hidden
+    const out = build("clusteredBarChart", (v) => show(v as never));
+    expect(out.series[0].labelLayout).toBeUndefined();
+  });
+});

@@ -163,7 +163,11 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
         },
       }),
     };
-    if (f.bool("labels", "optimizeLabelDisplay", false)) s.labelLayout = { hideOverlap: true };
+    // Desktop tries the label positions that are allowed and draws none when the label does not fit in the bar (Overflow text keeps it)
+    const insideLabel = !asLine && String(s.label.position).startsWith("inside") && !f.bool("labels", "labelOverflow", false);
+    const hideOverlap = f.bool("labels", "optimizeLabelDisplay", false);
+    if (insideLabel) s.labelLayout = (pa: O) => ({ hideOverlap, hide: !!pa.labelRect && (horizontal ? pa.labelRect.width > pa.rect.width : pa.labelRect.height > pa.rect.height) });
+    else if (hideOverlap) s.labelLayout = { hideOverlap: true };
     // in the stacked combo only the columns stack; its lines are separate
     if (stacked && (!asLine || areaOnly)) s.stack = isHighlight ? "highlight" : "total";
     if (asLine) {
