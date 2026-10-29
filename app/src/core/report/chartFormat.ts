@@ -170,7 +170,8 @@ export function axisBlock(a: AxisInput): O {
     },
     name: showTitle ? (title) : undefined,
     nameLocation: "middle",
-    nameGap: kind === "value" ? 44 : 28,
+    // an axis along the bottom has its title close under the labels; one along the side stands clear of the wider labels (the categories of a bar chart widest)
+    nameGap: (a.horizontal ? object === "valueAxis" : object === "categoryAxis") ? 28 : a.horizontal ? 72 : 44,
     nameTextStyle: echartsText(titleFont, { family: d.family, size: d.size, color: d.color }),
     splitLine: { show: gridOn, lineStyle: { color: gridBase, opacity: baseAlpha * gridAlpha, width: f.num(object, "gridlineThickness", 1), type: gridStyle === "custom" && dash ? dash : (DASH[gridStyle] ?? "solid"), ...(f.has(object, "gridlineDashCap") ? { cap: CAP[f.str(object, "gridlineDashCap", "none")] ?? "butt" } : {}) } },
   };

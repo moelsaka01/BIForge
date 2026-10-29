@@ -163,6 +163,20 @@ describe("objects without data on the canvas", () => {
     await waitFor(() => expect(t.session.report.getSnapshot().page).not.toBe("page1"));
   });
 
+  it("the entry of the bookmark applied last is the selected one, and the Fill card fills only that one", async () => {
+    const t2 = setup();
+    await t2.run("report.bookmark.add", { name: "One" });
+    await t2.run("report.bookmark.add", { name: "Two" });
+    await t2.run("report.visual.add", { type: "bookmarkNavigator" });
+    render(<t2.Host />);
+    const nav = await screen.findByRole("navigation", { name: "Bookmark navigator" });
+    const buttons = within(nav).getAllByRole("button");
+    expect(buttons.every((b) => b.getAttribute("aria-current") === null)).toBe(true);
+    fireEvent.click(buttons[1]);
+    await waitFor(() => expect(within(nav).getByRole("button", { name: "Two" }).getAttribute("aria-current")).toBe("true"));
+    expect(within(nav).getByRole("button", { name: "One" }).getAttribute("aria-current")).toBeNull();
+  });
+
   it("a bookmark navigator lists the bookmarks in order and a click applies one (here: goes to its page)", async () => {
     const t = setup();
     await t.run("report.page.add", { name: "Second" });

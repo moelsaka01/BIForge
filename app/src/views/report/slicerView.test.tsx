@@ -162,3 +162,14 @@ describe("SlicerView look", () => {
     expect((screen.getByTestId("slicer-header") as HTMLElement).style.fontWeight).toBe("700");
   });
 });
+
+describe("SlicerView tile mode", () => {
+  it("Select all is a chip of its own, and not offered for a single-select slicer", () => {
+    const p = props({ mode: "Tile", selectAll: true });
+    const { rerender } = render(<SlicerView {...p} />);
+    fireEvent.click(screen.getByRole("option", { name: "Select all" }));
+    expect(p.onChange).toHaveBeenCalledWith({ kind: "notIn", values: [] });
+    rerender(<SlicerView {...p} singleSelect />);
+    expect(screen.queryByRole("option", { name: "Select all" })).toBeNull();
+  });
+});

@@ -42,8 +42,9 @@ export function tableStyle(f: FormatReader, theme: Theme): TableStyle {
   const label = theme.textClasses.label;
   const base = { family: label.fontFace, size: f.has("grid", "textSize") ? f.num("grid", "textSize", label.fontSize + 2) : label.fontSize + 2, color: theme.foreground };
   const pad = Math.max(0, f.num("grid", "rowPadding", 0));
-  const rowHeight = 24 + pad * 2;
-  const headHeight = 28 + pad * 2;
+  // Word wrap: the rows of the table are of one height, so a wrapping row (or header) has room for two lines
+  const rowHeight = (24 + pad * 2) * (f.bool("values", "wordWrap", false) ? 2 : 1);
+  const headHeight = (28 + pad * 2) * (f.bool("columnHeaders", "wordWrap", false) ? 2 : 1);
 
   const gridH = f.bool("grid", "gridHorizontal", true) ? `${f.num("grid", "gridHorizontalWeight", 1)}px solid ${f.color("grid", "gridHorizontalColor") ?? (theme.dark ? "#333333" : "#eeeeee")}` : undefined;
   const gridV = f.bool("grid", "gridVertical", false) ? `${f.num("grid", "gridVerticalWeight", 1)}px solid ${f.color("grid", "gridVerticalColor") ?? (theme.dark ? "#333333" : "#eeeeee")}` : undefined;
@@ -57,7 +58,7 @@ export function tableStyle(f: FormatReader, theme: Theme): TableStyle {
   const colTotalFont = mergeFonts(totalFont, readFont(f, "columnTotal"));
   const subFont = readFont(f, "subTotals");
 
-  const wrap = (object: string, dflt = false): CSSProperties => (f.bool(object, "wordWrap", dflt) ? { whiteSpace: "normal", height: "auto", minHeight: rowHeight, lineHeight: 1.3 } : {});
+  const wrap = (object: string, dflt = false): CSSProperties => (f.bool(object, "wordWrap", dflt) ? { whiteSpace: "normal", height: "auto", minHeight: rowHeight, lineHeight: 1.2, overflow: "hidden" } : {});
 
   const cellBase = (fontObj: typeof valuesFont, object: string): CSSProperties => ({
     ...cssFont(fontObj, base),

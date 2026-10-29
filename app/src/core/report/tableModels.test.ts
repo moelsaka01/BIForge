@@ -228,3 +228,17 @@ describe("cards and KPI", () => {
     expect([k2.goal, k2.variance, k2.status]).toEqual([null, null, "neutral"]);
   });
 });
+
+describe("table word wrap", () => {
+  it("a table whose values or headers wrap has rows of two lines", () => {
+    const style = (object: string, on: boolean) => {
+      const v = visualOf("tableEx", { Values: [Cat, Qty] });
+      if (on) setFormat(v.json, object, "wordWrap", lit.bool(true));
+      return buildTable(v, grouped(v, [[t("Bikes"), n(10)]]), DEFAULT_THEME, null).style;
+    };
+    expect(style("values", false).rowHeight).toBe(24);
+    expect(style("values", true).rowHeight).toBe(48);
+    expect(style("columnHeaders", true).headHeight).toBe(56);
+    expect(style("columnHeaders", true).header.whiteSpace).toBe("normal");
+  });
+});

@@ -29,8 +29,11 @@ export function millions(json, c) {
 }
 
 const colorLit = (hex) => ({ solid: { color: { expr: { Literal: { Value: `'${hex}'` } } } } });
+// the cards that every visual has (title, background, border, ...) are kept in visualContainerObjects, the others in objects
+const CONTAINER = new Set(["title", "subTitle", "divider", "spacing", "background", "padding", "border", "dropShadow", "visualHeader", "visualHeaderTooltip", "visualTooltip", "visualLink", "lockAspect", "stylePreset"]);
 function setProps(json, object, props) {
-  const list = ((json.visual.objects ??= {})[object] ??= [{ properties: {} }]);
+  const bag = json.visual.visualContainerObjects && object in json.visual.visualContainerObjects ? json.visual.visualContainerObjects : CONTAINER.has(object) ? (json.visual.visualContainerObjects ??= {}) : (json.visual.objects ??= {});
+  const list = (bag[object] ??= [{ properties: {} }]);
   Object.assign(list[0].properties, props);
 }
 
@@ -69,7 +72,7 @@ export function kpiState(json, state) {
   const goal = qs?.Goal?.projections?.[0];
   const ind = qs?.Indicator?.projections?.[0];
   if (!goal || !ind) return;
-  if (state === "neutral") { goal.field = JSON.parse(JSON.stringify(ind.field)); goal.queryRef = ind.queryRef; goal.nativeQueryRef = ind.nativeQueryRef; }
+  if (state === "neutral") delete qs.Goal; // without a goal there is nothing to be good or bad against
   else { goal.field = { Aggregation: { Expression: { Column: { Expression: { SourceRef: { Entity: "Product" } }, Property: "ListPrice" } }, Function: 0 } }; goal.queryRef = "Sum(Product.ListPrice)"; goal.nativeQueryRef = "Sum of ListPrice"; }
 }
 
@@ -80,6 +83,23 @@ export function secondColumn(json) {
 }
 
 export function dataFor(json, c) {
+  // panel headers that are wider than the header: the subcategory names (long words), in a large font
+  if (c.object === "subheader" && c.prop === "titleWrap") {
+    const rows = json.visual?.query?.queryState?.Rows?.projections?.[0];
+    if (rows?.field?.Column) { rows.field.Column.Expression.SourceRef.Entity = "Product"; rows.field.Column.Property = "Subcategory"; rows.queryRef = "Product.Subcategory"; rows.nativeQueryRef = "Subcategory"; }
+  }
+  // an outside label is cut only where it does not fit: long names in a large font
+  if (/^(pie|donut)Chart$/.test(c.visualType) && c.object === "labels" && c.prop === "overflow") {
+    const cat = json.visual?.query?.queryState?.Category?.projections?.[0];
+    if (cat?.field?.Column) { cat.field.Column.Expression.SourceRef.Entity = "Product"; cat.field.Column.Property = "Product"; cat.queryRef = "Product.Product"; cat.nativeQueryRef = "Product"; }
+    setProps(json, "labels", { show: TRUE, fontSize: numLit(20) });
+  }
+  // the text of a shape is turned only where there is a text
+  if (c.visualType === "shape" && c.object === "rotation") setProps(json, "text", { show: TRUE, text: { expr: { Literal: { Value: "'Rotated text'" } } } });
+  // Q&A shows its states only for a saved question: understood, not understood (error), understood with an assumption (warning)
+  if (c.visualType === "qnaVisual") setProps(json, "hiddenProperties", { savedUtterance: { expr: { Literal: { Value: "'" + (c.prop === "errorColor" ? "zz qq xx" : c.prop === "warningColor" ? "quantity by category" : "total quantity by category") + "'" } } } });
+  // the outcome of the key influencers analysis is one of the values of the target
+  if (c.visualType === "keyDriversVisual" && c.prop === "targetValue") setProps(json, "keyDrivers", { targetValue: { expr: { Literal: { Value: "'Store'" } } } });
   if (/ComboChart$/.test(c.visualType) && c.object === "layout" && /^clusteredGap/.test(c.prop)) secondColumn(json);
   // a disc shows its padding only in a color that differs from the page
   if (c.object === "centerBackground" && c.prop === "padding") setProps(json, "centerBackground", { fillColor: colorLit("#ffcc00") });
@@ -105,7 +125,7 @@ export function dataFor(json, c) {
   // overlapping labels: large ones, so that neighbouring labels collide
   if (c.prop === "optimizeLabelDisplay") setProps(json, "labels", { show: { expr: { Literal: { Value: "true" } } }, fontSize: numLit(28) });
   // the format string of the visual is used by the labels
-  if (c.object === "general" && c.prop === "formatString") setProps(json, "labels", { show: { expr: { Literal: { Value: "true" } } } });
+  if (c.object === "general" && c.prop === "formatString") setProps(json, "labels", { show: TRUE, labelStyle: { expr: { Literal: { Value: "'Data'" } } } });
   // text wraps where it is wider than its box
   if (/^(label|value)$/.test(c.object) && c.prop === "textWrap" && c.visualType === "donutChart") setProps(json, c.object, { fontSize: numLit(40) });
   // a label that wraps needs a narrow box
@@ -115,7 +135,7 @@ export function dataFor(json, c) {
   // the legend marker takes the line's color only where that differs from the series color
   if (c.prop === "matchLineColor") setProps(json, "lineStyles", { strokeColor: colorLit("#112233") });
   if (/recision$/.test(c.prop)) { decimals(json); millions(json, c); }
-  if (STACKED.test(c.visualType) && /^(labels|totals)$/.test(c.object) && c.prop !== "showSeries" && c.prop !== "showBlankAs") singleSeries(json);
+  if (STACKED.test(c.visualType) && /^(labels|totals)$/.test(c.object) && c.prop !== "showSeries" && c.prop !== "showBlankAs" && c.prop !== "optimizeLabelDisplay") singleSeries(json);
   if (STACKED.test(c.visualType) && c.object === "labels") shortLabels(json, c);
 }
 

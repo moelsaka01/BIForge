@@ -21,6 +21,12 @@ const isLit = (p) => p?.expr?.Literal !== undefined;
 
 /** Every picture property holding a placeholder gets a real picture (URL: red, image data: blue); when the property under test chooses the source, both are filled in. */
 export function pictures(json, c) {
+  // the Image visual's picture is image.sourceUrl (imageUrl is the old name): the picture of the other properties is that one, the property under test starts without
+  if (json.visual?.visualType === "image") {
+    for (const e of json.visual?.objects?.image ?? []) {
+      if ("imageUrl" in (e.properties ?? {})) { delete e.properties.imageUrl; if (c.prop !== "sourceUrl") e.properties.sourceUrl = lit("data:placeholder"); }
+    }
+  }
   for (const list of Object.values(json.visual?.objects ?? {})) {
     for (const e of list) {
       for (const [k, p] of Object.entries(e.properties ?? {})) {

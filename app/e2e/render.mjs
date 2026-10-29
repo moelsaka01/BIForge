@@ -10,6 +10,7 @@ import { join, resolve } from "node:path";
 import { chromium } from "playwright-core";
 import { dataFor } from "./render-data.mjs";
 import { pictures } from "./render-pictures.mjs";
+import { PREP } from "./render-prep.mjs";
 import { skipReason } from "./render-skips.mjs";
 
 const exe = resolve(process.env.BIFORGE_EXE ?? "../target/debug/biforge-app.exe");
@@ -90,7 +91,7 @@ const def = join(parent, "Rn", "Rn.Report", "definition");
   const first = JSON.parse(readFileSync(join(def, "pages", "pages.json"), "utf8")).pageOrder[0];
   const names = ["b1", "b2", "b3"];
   writeFileSync(join(dir, "bookmarks.json"), JSON.stringify({ $schema: "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/bookmarksMetadata/1.0.0/schema.json", items: names.map((name) => ({ name })) }, null, 2));
-  names.forEach((name, i) => writeFileSync(join(dir, name + ".bookmark.json"), JSON.stringify({ $schema: "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/bookmark/2.1.0/schema.json", displayName: ["First view", "Second view", "Third view"][i], name, options: {}, explorationState: { version: "1.3", activeSection: first } }, null, 2)));
+  names.forEach((name, i) => writeFileSync(join(dir, name + ".bookmark.json"), JSON.stringify({ $schema: "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/bookmark/2.1.0/schema.json", displayName: ["First view", "Second view", "Third view"][i], name, options: { suppressActiveSection: true, suppressData: true, suppressDisplay: true }, explorationState: { version: "1.3", activeSection: first } }, null, 2)));
 }
 const pages = JSON.parse(readFileSync(join(def, "pages", "pages.json"), "utf8"));
 // the unit-test fixtures have a few columns the sample project does not (Customer.Country is Customer.Region here)
@@ -160,10 +161,14 @@ try {
   if (process.env.RENDER_CONSOLE) page.on("console", (m) => { if (/error|warn/.test(m.type())) console.log("CONSOLE", m.type(), m.text().slice(0, 300)); });
   await page.getByRole("button", { name: /^Open/ }).first().click();
   await page.getByRole("tab", { name: "ctla", exact: true }).waitFor({ timeout: 60000 });
+  let current = null;
   const shot = async (name) => {
+    // an open drop-down list (a popover) keeps the tabs from being clicked
+    await page.keyboard.press("Escape");
     await page.getByRole("tab", { name, exact: true }).click();
     // wait until two shots of the visual are identical (animations done, data loaded)
     await page.waitForTimeout(AUDIT ? 700 : 2500);
+    if (current && PREP[current.visualType]) await PREP[current.visualType](page);
     let g = await grab(page, "probe");
     for (let t = 0; AUDIT && t < 5; t++) { await page.waitForTimeout(400); const h = await grab(page, "probe"); if (h.png.equals(g.png)) break; g = h; }
     return g;
@@ -188,6 +193,7 @@ try {
     const c = picked[i];
     if (c.group === "random" && counted >= RANDOM_N) break;
     const key = `${c.visualType}.${c.object}.${c.prop}`;
+    current = c;
     const r = await compare("c" + i, c.variants.length);
     if (process.env.RENDER_EVAL) console.log("EVAL", c.idx, JSON.stringify(await page.evaluate(process.env.RENDER_EVAL)));
     // a 100 % axis ends at 100: a constant line at 250 has no place on it

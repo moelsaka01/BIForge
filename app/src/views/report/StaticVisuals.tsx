@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import { FormatReader } from "../../core/report/formatReader";
 import { listBookmarks } from "../../core/report/bookmarks";
 import { navigatorPages, readAction, readShape, readTextbox, shapeSvg, type ShapeModel } from "../../core/report/staticVisuals";
@@ -117,11 +117,13 @@ export function BookmarkNavigatorView({ visual, width, height }: Props) {
   const f = new FormatReader(visual.json, c.theme, "bookmarkNavigator");
   const nav = navigatorModel(f, c.theme, width, height);
   const bookmarks = listBookmarks(c.project);
+  // the bookmark applied last is the selected entry (the fill of the Fill card is that of the selected one)
+  const [applied, setApplied] = useState<string | null>(null);
   return (
     <div role="navigation" aria-label="Bookmark navigator" style={nav.container}>
       {bookmarks.length === 0 && <span style={{ padding: 6, opacity: 0.7, fontSize: 12 }}>No bookmarks yet. Add some in the Bookmarks pane.</span>}
       {bookmarks.map((b) => (
-        <button key={b.id} type="button" onClick={() => c.dispatch("report.bookmark.apply", { id: b.id })} style={nav.entry(false)}>
+        <button key={b.id} type="button" aria-current={applied === b.id ? "true" : undefined} onClick={() => { setApplied(b.id); c.dispatch("report.bookmark.apply", { id: b.id }); }} style={nav.entry(applied === b.id)}>
           <span style={nav.textStyle}>{nav.showText ? b.name : ""}</span>
         </button>
       ))}

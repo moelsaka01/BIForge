@@ -126,6 +126,12 @@ export function SlicerView(p: SlicerViewProps) {
     return (
       <div style={{ ...box, flexDirection: "row", flexWrap: "wrap", alignContent: "flex-start", overflow: "auto" }} role="listbox" aria-label="Values">
         {header}
+        {searchBox}
+        {p.selectAll && !p.singleSelect && !q && (
+          <Button size="small" appearance={p.cond?.kind === "notIn" && p.cond.values.length === 0 ? "primary" : "outline"} role="option" aria-selected={p.cond?.kind === "notIn" && p.cond.values.length === 0} onClick={() => p.onChange(p.cond?.kind === "notIn" && p.cond.values.length === 0 ? null : { kind: "notIn", values: [] })}>
+            Select all
+          </Button>
+        )}
         {shown.map((it) => {
           const on = isSelected(p.cond, it.lit);
           return (
