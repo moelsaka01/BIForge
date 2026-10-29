@@ -85,6 +85,8 @@ function testValues(prop: string, kind: Kind): Lit[] {
 }
 
 /** Switches that make the other properties of an object matter (a card whose `show` is off draws nothing). */
+// a real picture (1 pixel), so that a real window can draw it
+const PNG_1PX = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
 const ENABLE: Record<string, Record<string, Lit>> = {
   // labelStyle matters for pies (a label with the value and the percentage), and is ignored elsewhere
   labels: { show: lit.bool(true), enableBackground: lit.bool(true), labelStyle: lit.str("Data value, percent of total"), funnelLabelStyle: lit.str("Data, percent of first") },
@@ -109,7 +111,7 @@ const ENABLE: Record<string, Record<string, Lit>> = {
   icon: { show: lit.bool(true), shapeType: lit.str("leftArrow") },
   shadow: { show: lit.bool(true) },
   glow: { show: lit.bool(true) },
-  image: { strokeShow: lit.bool(true), backgroundEnabled: lit.bool(true), effects: lit.bool(true), cornerRadiusAdvanced: lit.bool(true), sourceUrl: lit.str("data:image/png;base64,AA") },
+  image: { show: lit.bool(true), imageUrl: lit.str(PNG_1PX), strokeShow: lit.bool(true), backgroundEnabled: lit.bool(true), effects: lit.bool(true), cornerRadiusAdvanced: lit.bool(true), sourceUrl: lit.str("data:image/png;base64,AA") },
   grid: { gridHorizontal: lit.bool(true), gridVertical: lit.bool(true) },
   values: { backColorSecondary: lit.str("#654321") },
   header: { show: lit.bool(true) },
@@ -133,11 +135,17 @@ const ENABLE: Record<string, Record<string, Lit>> = {
   shadowCustom: { show: lit.bool(true) },
   glowCustom: { show: lit.bool(true) },
   totals: { show: lit.bool(true), enableBackground: lit.bool(true) },
+  // the donut centre: its background, label and value (the picture is under image)
+  centerBackground: { show: lit.bool(true) },
+  percentBarLabel: { show: lit.bool(true) },
+  label: { show: lit.bool(true) },
+  value: { show: lit.bool(true) },
   ribbonBands: { show: lit.bool(true), borderShow: lit.bool(true), fillColor: lit.str("#abcdef"), borderColor: lit.str("#fedcba") },
 };
 
 /** Properties of another object that make a property matter (the gap of a stacked chart's bands is only seen with bands). */
-const CROSS: Record<string, [string, string, Lit][]> = { layout: [["ribbonBands", "show", lit.bool(true)]] };
+const CENTRE: [string, string, Lit][] = [["centerValue", "show", lit.bool(true)]];
+const CROSS: Record<string, [string, string, Lit][]> = { layout: [["ribbonBands", "show", lit.bool(true)]], centerBackground: CENTRE, image: CENTRE, label: CENTRE, value: CENTRE };
 
 /** Properties that only matter together with another one. */
 const WITH: Record<string, Record<string, Record<string, Lit>>> = {
@@ -147,6 +155,9 @@ const WITH: Record<string, Record<string, Record<string, Lit>>> = {
   // the picture of the plot area comes from the data address when the source says so
   plotArea: { imageData: { sourceType: lit.str("imageData") } },
   labels: { labelDisplayUnits: { labelPrecision: lit.num(2) } },
+  value: { labelDisplayUnits: { labelPrecision: lit.num(2) }, labelPrecision: { labelDisplayUnits: lit.num(1000) } },
+  image: { imageData: { imageType: lit.str("imageData") } },
+  centerBackground: { imageData: { imageType: lit.str("imageData") }, imageType: { imageData: lit.str("data:image/png;base64,BB") }, imageTransparency: { imageUrl: lit.str("data:image/png;base64,AA") } },
   mapControls: { zoomLevel: { autoZoom: lit.bool(false) } },
   layout: { clusteredGapOverlapReverse: { clusteredGapOverlaps: lit.bool(true) }, stackedGapExplodes: { stackedGapSize: lit.num(4) } },
   // the corners of the tile need the shape that uses them
@@ -227,7 +238,7 @@ const SCENARIOS: Record<string, Scenario> = {
   lineClusteredColumnComboChart: chart("lineClusteredColumnComboChart", { Category: [Cat], Y: [Qty], Y2: [Price] }, [[t("Accessories"), n(30), d(2.5)], [t("Bikes"), n(50), d(3.5)], [t("Shoes"), n(20), d(1.5)]]),
   lineStackedColumnComboChart: chart("lineStackedColumnComboChart", { Category: [Cat], Y: [Qty], Y2: [Price] }, [[t("Accessories"), n(30), d(2.5)], [t("Bikes"), n(50), d(3.5)], [t("Shoes"), n(20), d(1.5)]]),
   pieChart: chart("pieChart", { Category: [Cat], Y: [Qty] }, [[t("Accessories"), n(30)], [t("Bikes"), n(50)], [t("Shoes"), n(20)]]),
-  donutChart: chart("donutChart", { Category: [Cat], Y: [Qty] }, [[t("Accessories"), n(30)], [t("Bikes"), n(50)], [t("Shoes"), n(20)]]),
+  donutChart: chart("donutChart", { Category: [Cat], Y: [Qty] }, [[t("Accessories"), n(33)], [t("Bikes"), n(50)], [t("Shoes"), n(21)]]),
   funnel: chart("funnel", { Category: [Cat], Y: [Qty] }, [[t("Accessories"), n(30)], [t("Bikes"), n(50)], [t("Shoes"), n(20)]]),
   treemap: chart("treemap", { Group: [Cat, Sub], Values: [Qty] }, [[t("Bikes"), t("Road"), n(30)], [t("Bikes"), t("Mountain"), n(50)], [t("Shoes"), t("Run"), n(20)]]),
   scatterChart: chart("scatterChart", { Category: [Prod], Series: [Country], X: [Cost], Y: [Price], Size: [Qty] }, [[t("A"), t("France"), d(3), d(4), n(5)], [t("B"), t("Canada"), d(6), d(1), n(9)], [t("C"), t("France"), d(8), d(7), n(2)]]),
@@ -368,6 +379,11 @@ function setProp(v: VisualModel, object: string, prop: string, value: Lit, selec
   setFormat(v.json, object, prop, value, selector);
 }
 
+/** Each drawn property with the visual JSON before and after it was set; written for the real-window render check (e2e/render.mjs). */
+interface RenderCase { visualType: string; object: string; prop: string; base: unknown; variant: unknown }
+const CASES: RenderCase[] = [];
+const WRITE_CASES = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.WRITE_RENDER_CASES === "1";
+
 function measure(scenarioOf: Scenario, visualType: string, objects: string[]): Record<string, string[]> {
   const caps = visualObjects(visualType)!;
   const out: Record<string, string[]> = {};
@@ -399,13 +415,18 @@ function measure(scenarioOf: Scenario, visualType: string, objects: string[]): R
           prepare(v, prop);
           for (const [k, val] of Object.entries(WITH[object]?.[prop] ?? {})) setProp(v, object, k, val, inst.selector);
           setProp(v, object, prop, value, inst.selector);
+          let reference = base;
           if (WITH[object]?.[prop]) {
             const b2 = scenarioOf.make();
             prepare(b2, prop);
             for (const [k, val] of Object.entries(WITH[object][prop])) setProp(b2, object, k, val, inst.selector);
             if (!same(scenarioOf.render(v), scenarioOf.render(b2))) drawn = true;
+            reference = b2;
           } else if (!same(scenarioOf.render(v), baseline)) drawn = true;
-          if (drawn) break;
+          if (drawn) {
+            if (WRITE_CASES) CASES.push({ visualType, object, prop, base: JSON.parse(JSON.stringify(reference.json)), variant: JSON.parse(JSON.stringify(v.json)) });
+            break;
+          }
         }
         if (drawn) (out[object] ??= []).push(prop);
       }
@@ -470,6 +491,25 @@ const UPDATE = (globalThis as { process?: { env: Record<string, string | undefin
 
 describe("rendered coverage", () => {
   const computed = computeAll();
+
+  // Picks the properties checked in the real window: the MUST list (properties added in the latest batches) and a seeded random
+  // sample of the others. Run with WRITE_RENDER_CASES=1 UPDATE_RENDERED=1.
+  it.skipIf(!WRITE_CASES)("writes the cases of the real-window render check", async () => {
+    const MUST: [string, string, string][] = [["cardVisual", "outline", "show"], ["barChart", "labels", "labelOverflow"], ["donutChart", "centerValue", "show"], ["donutChart", "label", "text"], ["donutChart", "image", "size"], ["funnel", "percentBarLabel", "show"]];
+    const SKIP = /^(scriptVisual|pythonVisual|qnaVisual|aiNarratives|keyDriversVisual|decompositionTreeVisual|map|filledMap|shapeMap|page)$/;
+    let seed = 20261029;
+    const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 2 ** 32);
+    const pool = CASES.filter((c) => !SKIP.test(c.visualType) && !MUST.some(([a, b, d]) => a === c.visualType && b === c.object && d === c.prop));
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(rnd() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+    const must = MUST.map(([a, b, d]) => CASES.find((c) => c.visualType === a && c.object === b && c.prop === d)).filter((c): c is RenderCase => !!c);
+    expect(must.length).toBe(MUST.length);
+    const fsName = "node:fs";
+    const fs = (await import(/* @vite-ignore */ fsName)) as { writeFileSync(path: string, data: string): void };
+    fs.writeFileSync("e2e/render-cases.json", JSON.stringify({ must, random: pool.slice(0, 70) }, null, 1) + "\n");
+  });
 
   it("every authored visual type is measured", () => {
     const measured = new Set(Object.keys(SCENARIOS));

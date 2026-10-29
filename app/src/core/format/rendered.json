@@ -3560,6 +3560,19 @@
   "general": [
    "formatString"
   ],
+  "centerBackground": [
+   "fillColor",
+   "imageData",
+   "imageTransparency",
+   "imageType",
+   "imageUrl",
+   "padding",
+   "show",
+   "transparency"
+  ],
+  "centerValue": [
+   "show"
+  ],
   "dataPoint": [
    "borderColor",
    "borderColorMatchFill",
@@ -3570,6 +3583,30 @@
    "defaultColor",
    "fill",
    "fillTransparency"
+  ],
+  "image": [
+   "altText",
+   "gap",
+   "imageData",
+   "imageType",
+   "imageUrl",
+   "position",
+   "show",
+   "size",
+   "transparency"
+  ],
+  "label": [
+   "bold",
+   "fontColor",
+   "fontFamily",
+   "fontSize",
+   "gap",
+   "italic",
+   "position",
+   "show",
+   "text",
+   "textWrap",
+   "underline"
   ],
   "labels": [
    "background",
@@ -3602,6 +3639,18 @@
   "slices": [
    "innerRadiusRatio",
    "startAngle"
+  ],
+  "value": [
+   "bold",
+   "fontColor",
+   "fontFamily",
+   "fontSize",
+   "italic",
+   "labelDisplayUnits",
+   "labelPrecision",
+   "show",
+   "textWrap",
+   "underline"
   ]
  },
  "funnel": {
@@ -3635,6 +3684,15 @@
    "labelPosition",
    "labelPrecision",
    "percentageLabelPrecision",
+   "show",
+   "underline"
+  ],
+  "percentBarLabel": [
+   "bold",
+   "color",
+   "fontFamily",
+   "fontSize",
+   "italic",
    "show",
    "underline"
   ]

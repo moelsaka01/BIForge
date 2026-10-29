@@ -9,6 +9,7 @@ import { FormatReader } from "./formatReader";
 import type { Loaded } from "./dataLoader";
 import type { SelectedPoint } from "./interactions";
 import { formatCompact, formatNumber } from "./numberFormat";
+import { donutCentre } from "./donutCentre";
 import { axisBlock, plotImage, type PlotImage, CAP, dashOf, gridFor, labelBlock, labelDefaults, legendBlock, lineSeriesStyle, referenceLineMark, referenceLineShade, sliceItemStyle, valueText, zoomBlock, type LineSpec } from "./chartFormat";
 import { echartsText, opacityOf, readFont } from "../format/styles";
 import { seriesColor, type Theme } from "./theme";
@@ -742,15 +743,19 @@ function pie(inp: ChartInput): ChartBuild {
   };
   const font = readFont(f, "labels", { color: "color" });
   const bg = f.str("labels", "background", "auto");
+  const hole = (donut ? f.num("slices", "innerRadiusRatio", 50) : 0) * 0.72;
+  const centre = donut ? donutCentre(f, theme, values.length ? total : null, vcol?.format ?? null, hole) : null;
   const option: O = {
     animation: false,
+    ...(centre ? { graphic: centre.graphic } : {}),
     legend: legendBlock(f, theme, true),
     tooltip: { trigger: "item", confine: true, formatter: (pa: O) => `${pa.marker}${pa.name}: <b>${formatNumber(pa.value, vcol?.format ?? null)}</b><span data-extra> (${total ? ((pa.value / total) * 100).toFixed(1) : 0}%)</span>` },
     series: [
+      ...(centre?.discs ?? []),
       {
         type: "pie",
         radius: donut ? [`${f.num("slices", "innerRadiusRatio", 50)}%`, "72%"] : ["0%", "72%"],
-        center: ["50%", "55%"],
+        center: ["50%", centre ? "50%" : "55%"],
         startAngle: 90 - f.num("slices", "startAngle", 0),
         data,
         label: {
@@ -782,6 +787,9 @@ function funnel(inp: ChartInput): ChartBuild {
   const font = readFont(f, "labels", { color: "color" });
   const catFont = readFont(f, "categoryAxis", { color: "color" });
   const showCat = f.bool("categoryAxis", "show", true);
+  // the percent bar label: the share of the previous stage, after the figures, in its own font
+  const percentBar = f.bool("percentBarLabel", "show", false);
+  const percentFont = readFont(f, "percentBarLabel", { color: "color" });
   const labelText = (pa: O) => {
     const v = pa.value as number;
     const prev = values[pa.dataIndex - 1] ?? v;
@@ -790,7 +798,8 @@ function funnel(inp: ChartInput): ChartBuild {
     const pctPrev = prev ? `${((v / prev) * 100).toFixed(pctDigits)}%` : "";
     const body = fmtStyle === "Percent of first" ? pctFirst : fmtStyle === "Percent of previous" ? pctPrev : fmtStyle === "Data, percent of first" ? `${val} (${pctFirst})` : fmtStyle === "Data, percent of previous" ? `${val} (${pctPrev})` : val;
     // the category and the figures are two spans, each in its own font (Category labels and Labels cards)
-    return showCat ? `{c|${String(pa.name)}}  {v|${body}}` : `{v|${body}}`;
+    const pct = percentBar ? `  {p|${pctPrev}}` : "";
+    return (showCat ? `{c|${String(pa.name)}}  {v|${body}}` : `{v|${body}}`) + pct;
   };
   const option: O = {
     animation: false,
@@ -810,7 +819,7 @@ function funnel(inp: ChartInput): ChartBuild {
           position: f.str("labels", "labelPosition", "Auto") === "OutsideEnd" ? "outside" : "inside",
           ...echartsText({ ...font, color: font.color ?? (showCat ? catFont.color : undefined) ?? "#ffffff" }, labelDefaults(theme)),
           formatter: labelText,
-          rich: { c: echartsText({ ...catFont, color: catFont.color ?? font.color ?? "#ffffff" }, labelDefaults(theme)), v: echartsText({ ...font, color: font.color ?? (showCat ? catFont.color : undefined) ?? "#ffffff" }, labelDefaults(theme)) },
+          rich: { c: echartsText({ ...catFont, color: catFont.color ?? font.color ?? "#ffffff" }, labelDefaults(theme)), v: echartsText({ ...font, color: font.color ?? (showCat ? catFont.color : undefined) ?? "#ffffff" }, labelDefaults(theme)), p: echartsText({ ...percentFont, color: percentFont.color ?? font.color ?? "#ffffff" }, labelDefaults(theme)) },
           ...(f.bool("labels", "enableBackground", false) ? { backgroundColor: withOpacity(f.color("labels", "backgroundColor") ?? theme.background, opacityOf(f.num("labels", "backgroundTransparency", 0))), padding: [2, 4] } : {}),
         },
         itemStyle: { borderColor: theme.background, borderWidth: 1 },

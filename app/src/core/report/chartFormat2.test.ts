@@ -264,3 +264,36 @@ describe("labels inside a bar that is too short", () => {
     expect(out.series[0].labelLayout).toBeUndefined();
   });
 });
+
+describe("donut centre", () => {
+  const texts = (o: { graphic?: { type: string; style: { text?: string } }[] }) => (o.graphic ?? []).filter((g) => g.type === "text").map((g) => g.style.text);
+  it("is drawn only when Center value is on: the label above the total of the slices, a disc behind and a picture", () => {
+    expect(build("donutChart", () => undefined).graphic).toBeUndefined();
+    const o = build("donutChart", (v) => {
+      setFormat(v.json, "centerValue", "show", lit.bool(true));
+      setFormat(v.json, "label", "text", lit.str("All"));
+      setFormat(v.json, "centerBackground", "show", lit.bool(true));
+      setFormat(v.json, "centerBackground", "fillColor", lit.str("#102030"));
+      setFormat(v.json, "image", "show", lit.bool(true));
+      setFormat(v.json, "image", "imageUrl", lit.str("data:image/png;base64,AA"));
+    });
+    expect(texts(o)).toEqual(["All", "100"]);
+    expect(o.graphic.some((g: { type: string }) => g.type === "image")).toBe(true);
+    expect(o.series[0]).toMatchObject({ type: "pie", silent: true });
+    expect(o.series[0].data[0].itemStyle.color).toBe("#102030");
+    // the label moves below the value
+    const below = build("donutChart", (v) => { setFormat(v.json, "centerValue", "show", lit.bool(true)); setFormat(v.json, "label", "position", lit.str("Bottom")); });
+    expect(texts(below)).toEqual(["100", "Total"]);
+  });
+});
+
+describe("funnel percent bar label", () => {
+  it("adds the share of the previous stage in its own font when on", () => {
+    const base = build("funnel", () => undefined);
+    const on = build("funnel", (v) => { setFormat(v.json, "percentBarLabel", "show", lit.bool(true)); setFormat(v.json, "percentBarLabel", "color", lit.str("#ff0000")); });
+    const text = (o: any, i: number): string => o.series[0].label.formatter({ name: "Bikes", value: 50, dataIndex: i });
+    expect(text(base, 1)).not.toContain("{p|");
+    expect(text(on, 1)).toMatch(/{p|d+%}/);
+    expect(on.series[0].label.rich.p.color).toBe("#ff0000");
+  });
+});
