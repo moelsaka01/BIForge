@@ -1,0 +1,134 @@
+[
+ {
+  "fn": "Text.Type",
+  "m": "Type.Is(Text.Type, type text)",
+  "expect": "true",
+  "mode": "value"
+ },
+ {
+  "fn": "Number.Type",
+  "m": "Type.Is(Number.Type, type number)",
+  "expect": "true",
+  "mode": "value"
+ },
+ {
+  "fn": "Any.Type",
+  "m": "Type.Is(Any.Type, type any)",
+  "expect": "true",
+  "mode": "value"
+ },
+ {
+  "fn": "Binary.Type",
+  "m": "Type.Is(Binary.Type, type binary)",
+  "expect": "true",
+  "mode": "value"
+ },
+ {
+  "fn": "Duration.Type",
+  "m": "Type.Is(Duration.Type, type any)",
+  "expect": "true",
+  "mode": "value"
+ },
+ {
+  "fn": "Guid.Type",
+  "m": "Type.Is(Guid.Type, type any)",
+  "expect": "true",
+  "mode": "value"
+ },
+ {
+  "fn": "Record.Type",
+  "m": "Type.Is(Record.Type, type any)",
+  "expect": "true",
+  "mode": "value"
+ },
+ {
+  "fn": "List.Type",
+  "m": "Type.Is(List.Type, type any)",
+  "expect": "true",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.Type",
+  "m": "Type.Is(Table.Type, type any)",
+  "expect": "true",
+  "mode": "value"
+ },
+ {
+  "fn": "Function.Type",
+  "m": "Type.Is(Function.Type, type any)",
+  "expect": "true",
+  "mode": "value"
+ },
+ {
+  "fn": "DateTimeZone.Type",
+  "m": "Type.Is(DateTimeZone.Type, type any)",
+  "expect": "true",
+  "mode": "value"
+ },
+ {
+  "fn": "Record.Type",
+  "m": "Type.Is(Record.Type, type text)",
+  "expect": "false",
+  "mode": "value"
+ },
+ {
+  "fn": "Culture.Current",
+  "m": "Culture.Current",
+  "expect": "en-US",
+  "mode": "value"
+ },
+ {
+  "fn": "List.Percentile",
+  "m": "List.Percentile({1,2,3,4,5}, 0.5)",
+  "expect": "3",
+  "mode": "value"
+ },
+ {
+  "fn": "List.Percentile",
+  "m": "List.Percentile({1,2,3,4}, {0.25, 0.75})",
+  "expect": "{1.75,3.25}",
+  "mode": "value"
+ },
+ {
+  "fn": "List.Percentile",
+  "m": "List.Percentile({10,20}, 1)",
+  "expect": "20",
+  "mode": "value"
+ },
+ {
+  "fn": "Value.RemoveMetadata",
+  "m": "Value.RemoveMetadata(5)",
+  "expect": "5",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.Keys",
+  "m": "List.Count(Table.Keys(#table({\"a\"},{{1}})))",
+  "expect": "0",
+  "mode": "value"
+ },
+ {
+  "fn": "Type.TableKeys",
+  "m": "List.Count(Type.TableKeys(type table [a = number]))",
+  "expect": "0",
+  "mode": "value"
+ },
+ {
+  "fn": "Diagnostics.ActivityId",
+  "m": "Diagnostics.ActivityId() = null",
+  "expect": "true",
+  "mode": "value"
+ },
+ {
+  "fn": "Diagnostics.CorrelationId",
+  "m": "Diagnostics.CorrelationId() = null",
+  "expect": "true",
+  "mode": "value"
+ },
+ {
+  "fn": "Diagnostics.LogValue",
+  "m": "Diagnostics.LogValue(\"x\", 7)",
+  "expect": "7",
+  "mode": "value"
+ }
+]

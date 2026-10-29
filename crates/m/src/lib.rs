@@ -7,6 +7,7 @@ pub mod lexer;
 pub mod parser;
 pub mod run;
 pub mod stdlib;
+pub mod stdlib_batch;
 pub mod stdlib_date;
 pub mod stdlib_ext;
 pub mod stdlib_list;

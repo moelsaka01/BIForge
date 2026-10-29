@@ -175,8 +175,8 @@ Last updated: 2026-10-25 (see PROGRESS.md; the status table below is generated b
 | Accessibility and platform | 12 | 2 | 0 | 10 |
 | Format pane cards per visual | 1264 | 777 | 231 | 256 |
 | DAX functions | 317 | 297 | 0 | 20 |
-| M standard library | 621 | 421 | 0 | 200 |
-| **Total** | **2977** | **1944** | **280** | **753** |
+| M standard library | 621 | 439 | 0 | 182 |
+| **Total** | **2977** | **1962** | **280** | **735** |
 <!-- inventory-status:end -->
 
 ## Online track (Publish & Share; plan in docs/ONLINE_PLAN.md)

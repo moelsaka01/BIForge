@@ -77,6 +77,13 @@ pub fn constant(name: &str) -> Option<Value> {
         "DateTimeZone.Type" => ty("datetimezone"),
         "Any.Type" => ty("any"),
         "Binary.Type" => ty("binary"),
+        "Duration.Type" => ty("duration"),
+        "Guid.Type" => ty("guid"),
+        "Record.Type" => ty("record"),
+        "List.Type" => ty("list"),
+        "Table.Type" => ty("table"),
+        "Function.Type" => ty("function"),
+        "Culture.Current" => Some(Value::Text("en-US".into())),
         _ => None,
     }
 }
@@ -529,7 +536,8 @@ pub const NOT_SUPPORTED: &[&str] = &[
 /// Type values the library names (`Int64.Type`): they work in type ascriptions and Table.TransformColumnTypes.
 pub const TYPE_CONSTS: &[&str] = &[
     "Int8.Type", "Int16.Type", "Int32.Type", "Int64.Type", "Single.Type", "Double.Type", "Decimal.Type", "Currency.Type", "Percentage.Type",
-    "Logical.Type", "Date.Type", "DateTime.Type", "Time.Type",
+    "Logical.Type", "Date.Type", "DateTime.Type", "Time.Type", "Text.Type", "Number.Type", "Any.Type", "Binary.Type", "DateTimeZone.Type",
+    "Duration.Type", "Guid.Type", "Record.Type", "List.Type", "Table.Type", "Function.Type", "Culture.Current",
 ];
 
 pub fn supported_functions() -> Vec<&'static str> {
