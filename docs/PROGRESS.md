@@ -520,3 +520,27 @@ Done-tested +58. Frontend suites were green when each batch was committed; the f
 2. M: Binary.* (needs a byte-value type), DateTimeZone.*, Type.* introspection, Table.AddKey/Schema; DAX: SAMPLE, ADDMISSINGITEMS, ROLLUP family, INFO.VIEW.*.
 3. Remaining Format cards and Options items with a real effect (type detection, null handling, tracing), keyboard Ctrl+Right / Esc / Enter in visuals, Ctrl+F6.
 4. Auto-update and crash handler have no automated test yet (flip needs one).
+
+## 2026-10-29 (later): parity sprint, sixth part: 1970 / 281 / 726 -> 1992 / 283 / 702
+Analysis first, then the top of it. Remaining work by group (N+P of 2977; effort S = a test or a few lines, M = a day-sized feature, L = a large feature, X = needs Desktop or outside software):
+| Group | N / P | Needed | Effort | Shared mechanism? |
+| --- | --- | --- | --- | --- |
+| Format cards of the 17 chart types (same cards repeat) | ~330 | one drawn property finishes a card in every type that has it; many blocked by Underline (ECharts cannot) and by properties with no visible effect (`responsive`, `filteredToUniqueValue`, `annotationTemplate.callout`) | S per card, 5 to 13 items each | Yes: `ENABLE` / `WITH` in coverage.test.ts plus one renderer branch |
+| Format cards of new visuals (Card new, Slicer new, List slicer, Paginated report) | ~110 | container-like cards (glow, shadow, rotation, outline) shared by 3 visuals; Paginated report needs the visual itself | M | Yes: one container model for the 3 visuals |
+| M standard library (Table, Binary, BinaryFormat, Type, Value, DateTimeZone, Web, List dates) | ~185 | Binary and DateTimeZone need new value types; Web/Sql/Odbc need connectors; Type.* need function types | S for pass-throughs, L for Binary and DateTimeZone | Partly: stdlib_batch.rs + batch.json |
+| Power Query window, Transform and Home ribbon | ~45 | UI dialogs and menus | M each | No |
+| Dialogs, Options (global and file) | ~80 | each option needs a real effect (type detection, null handling, tracing, persistent filters, apply buttons) | S to M each | Yes: `OPTION_PAGES` with the effect flag; each effect is separate |
+| Keyboard (canvas) | 7 | Shift+Arrow conflicts with move by 10, Ctrl+F6 needs section landmarks, tooltips and annotations do not exist | S | No |
+| DAX (Table, Information, ROLLUP family, INFO.VIEW.*, SAMPLE, ISSUBTOTAL, TOJSON) | 16 | exact result shapes of Desktop unverified (SAMPLE, INFO.VIEW.* column sets) | M | No |
+| Model view, DAX query view, TMDL view | ~30 | UI | M | No |
+| Export and file formats (PDF, XLSX, .pbit, PBIX, TMSL) | ~12 | PBIX / .pbit need Desktop for verification; PDF is a print-to-PDF check in the real window | M to X | No |
+Not real features / duplicates (flagged, NOT removed): M names Table.Table, Table.Pagination, Table.ViewError, Table.ViewFunction, Value.Alternates, Type.Type, Text.ToText, Value.ViewError, Value.ViewFunction, List.Index, List.Histogram look like documentation headings or internals; duplicates by meaning: 23.2 = 23.13 (background data), 14.10 = 11 "Column tools", 8.4 = 25.22 (Performance analyzer), 25.12 = 15.22 (Edit relationships), 23.37 / 24.17 and 23.33 / 24.14 are the global and file form of one option (kept: two scopes). Removing them needs Desktop's documentation to be sure.
+### Done this part (+22 Done-tested)
+- M (+17): List.Alternate, List.FindText, List.Normalize, List.Random, List.ParallelInvoke, Value.Metadata / ReplaceMetadata / ReplaceType / Optimize / VersionIdentity (metadata is not kept, so they are pass-throughs), Diagnostics.LogFailure, Table.AddKey / ReplaceKeys (BIForge tables have no keys), Table.FindText, Table.Split (cases in tests/m/stdlib/batch.json and table.json).
+- Charts (+2): the trend line card is complete for clustered column / bar, line and area: Combine series (a trend through the sum of the series; otherwise one trend per series, not only the first), Include in auto scale, Use highlight values (measured with a cross-highlighted scenario in coverage.test.ts). Combo charts have one measure per role and no series, so Combine series changes nothing there: still Partial.
+- Keyboard (+3): Ctrl+Right Arrow enters the selected visual, Esc leaves it (focus back on the page, selection kept), Alt+Shift+F10 focuses the visual's More options button (reportView.test.tsx). Enter on a slicer is coded but has no test: still Not started.
+### Not done / next steps
+1. Test Enter on a slicer (26.32), then Ctrl+F6 with section landmarks.
+2. Options with a real effect: hide filter pane for new reports, apply theme to new reports, show visuals as tables by default, script timeouts.
+3. Container cards shared by Card (new), Slicer (new), List slicer (glow, shadow, rotation, outline, overflow: ~30 items).
+- **e2e (fresh debug build): 100 checks passed, 0 failed.** Frontend suite 1151 passed before the keyboard test (reportView.test.tsx 24 passed after it); `cargo test -p biforge-m` and the m_stdlib guard green; the full `cargo test --workspace` was not re-run. target/ 11.4 GB.
