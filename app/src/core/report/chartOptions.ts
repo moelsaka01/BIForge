@@ -436,8 +436,9 @@ function rgba(hex: string, alpha: number): string {
 /** Columns and rows of a grid of n panels: the chosen counts, else the grid closest to the shape of the visual. */
 export function panelGrid(n: number, layout: { type: string; columns: number | null; rows: number | null }, aspect: number): { columns: number; rows: number } {
   const count = Math.min(n, FIXED_LAYOUT_LIMIT);
-  if (layout.type === "custom" && (layout.columns || layout.rows)) {
-    const columns = layout.columns ? Math.max(1, Math.min(count, Math.round(layout.columns))) : Math.max(1, Math.ceil(count / Math.max(1, Math.round(layout.rows!))));
+  if (layout.type === "custom") {
+    // without a count the custom layout starts with three columns
+    const columns = layout.columns ? Math.max(1, Math.min(count, Math.round(layout.columns))) : layout.rows ? Math.max(1, Math.ceil(count / Math.max(1, Math.round(layout.rows)))) : Math.max(1, Math.min(count, 3));
     return { columns, rows: Math.ceil(count / columns) };
   }
   const columns = Math.max(1, Math.min(count, Math.round(Math.sqrt(count * aspect))));
@@ -472,6 +473,13 @@ function smallMultiples(inp: ChartInput, sm: { index: number; format: string | n
   const layoutType = f.str("smallMultiplesLayout", "layoutType", "auto");
   const { columns, rows } = panelGrid(n, { type: layoutType, columns: f.has("smallMultiplesLayout", "columnCount") ? f.num("smallMultiplesLayout", "columnCount", 0) : null, rows: f.has("smallMultiplesLayout", "rowCount") ? f.num("smallMultiplesLayout", "rowCount", 0) : null }, 1.4);
   const pad = Math.max(0, f.num("smallMultiplesLayout", "gridPadding", 4));
+  // advanced padding: the gap between neighbouring panels (inner) and the margin at the edge of the visual (outer), per direction
+  const advanced = f.bool("smallMultiplesLayout", "advancedPaddingOptions", false);
+  const px = (prop: string, dflt: number) => Math.max(0, f.num("smallMultiplesLayout", prop, dflt));
+  const gapX = advanced ? px("columnPaddingInner", 12) : 2 * (pad + 4);
+  const edgeX = advanced ? px("columnPaddingOuter", 8) : pad + 4;
+  const gapY = advanced ? px("rowPaddingInner", 12) : 2 * pad;
+  const edgeY = advanced ? px("rowPaddingOuter", 8) : pad;
   const headerShow = f.bool("subheader", "show", true);
   const headerAtBottom = f.str("subheader", "position", "top") === "bottom";
   const headerH = headerShow ? 22 : 0;
@@ -515,7 +523,11 @@ function smallMultiples(inp: ChartInput, sm: { index: number; format: string | n
     const cellW = `${100 / columns}%`;
     const cellH = `${100 / rows}%`;
     const top = `calc(${area(r, rows)} + ${topMargin + headerH * (headerAtBottom ? 0 : 1)}px)`;
-    grids.push({ ...(bg ? { show: true, backgroundColor: rgba(bg, panelAlpha) } : {}), left: `calc(${area(c, columns)} + ${pad + 4}px)`, top, width: `calc(${cellW} - ${pad * 2 + 8}px)`, height: `calc(${cellH} - ${topMargin / rows + headerH + pad * 2}px)`, containLabel: true });
+    const left = c === 0 ? edgeX : gapX / 2;
+    const right = c === columns - 1 ? edgeX : gapX / 2;
+    const above = r === 0 ? edgeY : gapY / 2;
+    const below = r === rows - 1 ? edgeY : gapY / 2;
+    grids.push({ ...(bg ? { show: true, backgroundColor: rgba(bg, panelAlpha) } : {}), left: `calc(${area(c, columns)} + ${left}px)`, top: `calc(${top} + ${above - pad}px)`, width: `calc(${cellW} - ${left + right}px)`, height: `calc(${cellH} - ${topMargin / rows + headerH + above + below}px)`, containLabel: true });
     const first = (x: unknown): O => (Array.isArray(x) ? x[0] : x) as O;
     const xa: O = { ...first(sub.option.xAxis), gridIndex: i };
     const ya: O = { ...first(sub.option.yAxis), gridIndex: i };
@@ -548,6 +560,37 @@ function smallMultiples(inp: ChartInput, sm: { index: number; format: string | n
       });
     }
   });
+  // grid lines between the panels: value axes of a helper grid over the whole visual whose split lines fall on the cell edges
+  if (f.bool("smallMultiplesLayout", "gridLineShow", false) && n > 0) {
+    const kind = f.str("smallMultiplesLayout", "gridLineType", "inner");
+    const edge = kind === "all" ? 0 : 1e-6;
+    const line = (show: boolean): O => ({
+      show,
+      lineStyle: {
+        color: f.color("smallMultiplesLayout", "gridLineColor") ?? theme.muted,
+        width: Math.max(0, f.num("smallMultiplesLayout", "gridLineWidth", 1)),
+        type: f.str("smallMultiplesLayout", "gridLineStyle", "solid"),
+        opacity: opacityOf(f.num("smallMultiplesLayout", "gridLineTransparency", 0)),
+      },
+    });
+    const helper = (cells: number, lines: boolean, inverse: boolean): O => ({
+      type: "value",
+      gridIndex: grids.length,
+      min: edge,
+      max: cells - edge,
+      interval: 1,
+      inverse,
+      silent: true,
+      axisLine: { show: false },
+      axisTick: { show: false },
+      axisLabel: { show: false },
+      axisPointer: { show: false },
+      splitLine: line(lines),
+    });
+    xAxes.push(helper(columns, kind !== "innerHorizontal", false));
+    yAxes.push(helper(rows, kind !== "innerVertical", true));
+    grids.push({ left: 0, right: 0, top: 0, bottom: 0, show: false });
+  }
   // the legend of the first panel, for the series of all panels
   const legend = { ...(subs[0]?.option.legend ?? {}), show: legendShown, data: all.series.map((s) => s.label || BLANK_LABEL) };
   const option: O = {

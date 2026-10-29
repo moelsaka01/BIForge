@@ -378,11 +378,23 @@
    "valueSize"
   ],
   "smallMultiplesLayout": [
+   "advancedPaddingOptions",
    "backgroundColor",
    "backgroundTransparency",
    "columnCount",
+   "columnPaddingInner",
+   "columnPaddingOuter",
+   "gridLineColor",
+   "gridLineShow",
+   "gridLineStyle",
+   "gridLineTransparency",
+   "gridLineType",
+   "gridLineWidth",
    "gridPadding",
-   "rowCount"
+   "layoutType",
+   "rowCount",
+   "rowPaddingInner",
+   "rowPaddingOuter"
   ],
   "subheader": [
    "alignment",
@@ -617,11 +629,23 @@
    "valueSize"
   ],
   "smallMultiplesLayout": [
+   "advancedPaddingOptions",
    "backgroundColor",
    "backgroundTransparency",
    "columnCount",
+   "columnPaddingInner",
+   "columnPaddingOuter",
+   "gridLineColor",
+   "gridLineShow",
+   "gridLineStyle",
+   "gridLineTransparency",
+   "gridLineType",
+   "gridLineWidth",
    "gridPadding",
-   "rowCount"
+   "layoutType",
+   "rowCount",
+   "rowPaddingInner",
+   "rowPaddingOuter"
   ],
   "subheader": [
    "alignment",
@@ -843,11 +867,23 @@
    "valueSize"
   ],
   "smallMultiplesLayout": [
+   "advancedPaddingOptions",
    "backgroundColor",
    "backgroundTransparency",
    "columnCount",
+   "columnPaddingInner",
+   "columnPaddingOuter",
+   "gridLineColor",
+   "gridLineShow",
+   "gridLineStyle",
+   "gridLineTransparency",
+   "gridLineType",
+   "gridLineWidth",
    "gridPadding",
-   "rowCount"
+   "layoutType",
+   "rowCount",
+   "rowPaddingInner",
+   "rowPaddingOuter"
   ],
   "subheader": [
    "alignment",
@@ -1069,11 +1105,23 @@
    "valueSize"
   ],
   "smallMultiplesLayout": [
+   "advancedPaddingOptions",
    "backgroundColor",
    "backgroundTransparency",
    "columnCount",
+   "columnPaddingInner",
+   "columnPaddingOuter",
+   "gridLineColor",
+   "gridLineShow",
+   "gridLineStyle",
+   "gridLineTransparency",
+   "gridLineType",
+   "gridLineWidth",
    "gridPadding",
-   "rowCount"
+   "layoutType",
+   "rowCount",
+   "rowPaddingInner",
+   "rowPaddingOuter"
   ],
   "subheader": [
    "alignment",
@@ -1287,11 +1335,23 @@
    "valueSize"
   ],
   "smallMultiplesLayout": [
+   "advancedPaddingOptions",
    "backgroundColor",
    "backgroundTransparency",
    "columnCount",
+   "columnPaddingInner",
+   "columnPaddingOuter",
+   "gridLineColor",
+   "gridLineShow",
+   "gridLineStyle",
+   "gridLineTransparency",
+   "gridLineType",
+   "gridLineWidth",
    "gridPadding",
-   "rowCount"
+   "layoutType",
+   "rowCount",
+   "rowPaddingInner",
+   "rowPaddingOuter"
   ],
   "subheader": [
    "alignment",
@@ -1505,11 +1565,23 @@
    "valueSize"
   ],
   "smallMultiplesLayout": [
+   "advancedPaddingOptions",
    "backgroundColor",
    "backgroundTransparency",
    "columnCount",
+   "columnPaddingInner",
+   "columnPaddingOuter",
+   "gridLineColor",
+   "gridLineShow",
+   "gridLineStyle",
+   "gridLineTransparency",
+   "gridLineType",
+   "gridLineWidth",
    "gridPadding",
-   "rowCount"
+   "layoutType",
+   "rowCount",
+   "rowPaddingInner",
+   "rowPaddingOuter"
   ],
   "subheader": [
    "alignment",
@@ -1756,11 +1828,23 @@
    "valueSize"
   ],
   "smallMultiplesLayout": [
+   "advancedPaddingOptions",
    "backgroundColor",
    "backgroundTransparency",
    "columnCount",
+   "columnPaddingInner",
+   "columnPaddingOuter",
+   "gridLineColor",
+   "gridLineShow",
+   "gridLineStyle",
+   "gridLineTransparency",
+   "gridLineType",
+   "gridLineWidth",
    "gridPadding",
-   "rowCount"
+   "layoutType",
+   "rowCount",
+   "rowPaddingInner",
+   "rowPaddingOuter"
   ],
   "subheader": [
    "alignment",
@@ -2006,11 +2090,23 @@
    "valueSize"
   ],
   "smallMultiplesLayout": [
+   "advancedPaddingOptions",
    "backgroundColor",
    "backgroundTransparency",
    "columnCount",
+   "columnPaddingInner",
+   "columnPaddingOuter",
+   "gridLineColor",
+   "gridLineShow",
+   "gridLineStyle",
+   "gridLineTransparency",
+   "gridLineType",
+   "gridLineWidth",
    "gridPadding",
-   "rowCount"
+   "layoutType",
+   "rowCount",
+   "rowPaddingInner",
+   "rowPaddingOuter"
   ],
   "subheader": [
    "alignment",
@@ -2234,11 +2330,23 @@
    "valueSize"
   ],
   "smallMultiplesLayout": [
+   "advancedPaddingOptions",
    "backgroundColor",
    "backgroundTransparency",
    "columnCount",
+   "columnPaddingInner",
+   "columnPaddingOuter",
+   "gridLineColor",
+   "gridLineShow",
+   "gridLineStyle",
+   "gridLineTransparency",
+   "gridLineType",
+   "gridLineWidth",
    "gridPadding",
-   "rowCount"
+   "layoutType",
+   "rowCount",
+   "rowPaddingInner",
+   "rowPaddingOuter"
   ],
   "subheader": [
    "alignment",
@@ -2454,11 +2562,23 @@
    "valueSize"
   ],
   "smallMultiplesLayout": [
+   "advancedPaddingOptions",
    "backgroundColor",
    "backgroundTransparency",
    "columnCount",
+   "columnPaddingInner",
+   "columnPaddingOuter",
+   "gridLineColor",
+   "gridLineShow",
+   "gridLineStyle",
+   "gridLineTransparency",
+   "gridLineType",
+   "gridLineWidth",
    "gridPadding",
-   "rowCount"
+   "layoutType",
+   "rowCount",
+   "rowPaddingInner",
+   "rowPaddingOuter"
   ],
   "subheader": [
    "alignment",

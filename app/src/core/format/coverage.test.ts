@@ -127,7 +127,7 @@ const ENABLE: Record<string, Record<string, Lit>> = {
   heatMap: { show: lit.bool(true) },
   zoom: { show: lit.bool(true), showOnValueAxis: lit.bool(true), showOnValueSecAxis: lit.bool(true) },
   plotArea: { url: lit.str("data:image/png;base64,AA"), color: lit.str("#abcdef") },
-  smallMultiplesLayout: { backgroundColor: lit.str("#eeeeee") },
+  smallMultiplesLayout: { backgroundColor: lit.str("#eeeeee"), gridLineShow: lit.bool(true), advancedPaddingOptions: lit.bool(true) },
   ribbonBands: { show: lit.bool(true), borderShow: lit.bool(true), fillColor: lit.str("#abcdef"), borderColor: lit.str("#fedcba") },
 };
 
@@ -264,7 +264,7 @@ const smScenario = (type: string): Scenario => ({
   render: (v) =>
     buildChart({
       visual: v,
-      loaded: grouped(v, [[t("A"), t("France"), t("Online"), n(30)], [t("B"), t("France"), t("Online"), n(10)], [t("A"), t("Canada"), t("Store"), n(50)], [t("B"), t("Canada"), t("Store"), n(70)], [t("A"), t("France"), t("Phone"), n(5)]]),
+      loaded: grouped(v, [[t("A"), t("France"), t("Online"), n(30)], [t("B"), t("France"), t("Online"), n(10)], [t("A"), t("Canada"), t("Store"), n(50)], [t("B"), t("Canada"), t("Store"), n(70)], [t("A"), t("France"), t("Phone"), n(5)], [t("B"), t("Canada"), t("Web"), n(9)]]),
       theme: DEFAULT_THEME,
       selected: [],
     }),

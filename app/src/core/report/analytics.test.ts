@@ -270,3 +270,33 @@ describe("layout and ribbon bands of stacked charts", () => {
     expect(o.series[0].itemStyle.borderWidth).toBe(3);
   });
 });
+
+describe("small multiples layout", () => {
+  const Ch = column("Sales", "Channel");
+  const rows4 = [[c("A"), c("France"), c("Online"), c(30)], [c("A"), c("France"), c("Store"), c(10)], [c("A"), c("Canada"), c("Phone"), c(50)], [c("B"), c("Canada"), c("Web"), c(70)]];
+  const mkSm = () => visualOf("clusteredColumnChart", { Category: [Cat], Series: [Country], Rows: [Ch], Y: [Qty] });
+
+  it("draws grid lines on the cell edges with the card's color and style, and leaves them out otherwise", () => {
+    const v = mkSm();
+    const plain = build(v, grouped(v, rows4)).option;
+    fmt(v, "smallMultiplesLayout", "gridLineShow", lit.bool(true));
+    fmt(v, "smallMultiplesLayout", "gridLineType", lit.str("innerVertical"));
+    fmt(v, "smallMultiplesLayout", "gridLineStyle", lit.str("dashed"));
+    fmt(v, "smallMultiplesLayout", "gridLineColor", lit.str("#102030"));
+    const o = build(v, grouped(v, rows4)).option;
+    expect(o.grid).toHaveLength(plain.grid.length + 1);
+    const x = o.xAxis[o.xAxis.length - 1];
+    const y = o.yAxis[o.yAxis.length - 1];
+    expect(x.splitLine).toMatchObject({ show: true, lineStyle: { color: "#102030", type: "dashed" } });
+    expect(y.splitLine.show).toBe(false);
+  });
+
+  it("a custom layout without counts has three columns, and counts replace that", () => {
+    const v = mkSm();
+    fmt(v, "smallMultiplesLayout", "layoutType", lit.str("custom"));
+    const left = (o: { grid: { left: string }[] }) => new Set(o.grid.map((g) => g.left)).size;
+    expect(left(build(v, grouped(v, rows4)).option)).toBe(3);
+    fmt(v, "smallMultiplesLayout", "columnCount", lit.num(4));
+    expect(left(build(v, grouped(v, rows4)).option)).toBe(4);
+  });
+});
