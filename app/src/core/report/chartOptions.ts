@@ -228,7 +228,7 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
 
   const autoPoints: number[] = [];
   // Analytics: reference lines over the plotted values, and a trend line
-  if (!hundred && !ribbon && seriesOut.length > 0) {
+  if (seriesOut.length > 0) {
     const pooled: (number | null)[] = [];
     valueCols.forEach((c, vi) => c.role === "Y" && p.series.forEach((_s, si) => p.categories.forEach((_c, ci) => pooled.push(shown(vi, si, ci)))));
     const fmtRef = valueCols[0]?.format ?? null;
@@ -239,6 +239,8 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
       const spec: LineSpec = { object: k.object, id: k.kind };
       // a statistic line is told apart by its type; a stored line of another type is not this one
       if (k.object === "referenceLine" && f.str("referenceLine", "type", "", sel) !== k.name) continue;
+      // on a 100% chart only the constant line makes sense (the statistics of percentages say nothing)
+      if (hundred && k.kind !== "constant") continue;
       const v = referenceValue(k.kind, pooled, { constant: f.has(k.object, "value", sel) ? f.num(k.object, "value", 0, sel) : undefined, percentile: f.num(k.object, "percentile", 50, sel) });
       const name = k.kind === "percentile" ? `${f.num(k.object, "percentile", 50, sel)}th percentile` : k.name;
       const mark = referenceLineMark(f, theme, spec, v, name, horizontal ? "xAxis" : "yAxis", fmtRef);
@@ -261,9 +263,15 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
       const xs = referenceLineShade(f, theme, xSpec, at.label, catAxis, p.categories.map((c) => c.label));
       if (xs) shades.push(xs);
     }
-    if (marks.length) seriesOut[0].markLine = { silent: true, symbol: "none", animation: false, data: marks };
-    if (shades.length) seriesOut[0].markArea = { silent: true, animation: false, data: shades };
-    if (f.bool("trend", "show", false) && !stacked && valueCols.length > 0 && p.series.length > 0) {
+    // a ribbon chart is drawn by a custom series, which cannot carry marks: an invisible line series on the same axes does
+    let host = seriesOut[0];
+    if (ribbon && (marks.length || shades.length)) {
+      host = { name: "", type: "line", data: p.categories.map(() => null), silent: true, symbol: "none", tooltip: { show: false } };
+      seriesOut.push(host);
+    }
+    if (marks.length) host.markLine = { silent: true, symbol: "none", animation: false, data: marks };
+    if (shades.length) host.markArea = { silent: true, animation: false, data: shades };
+    if (f.bool("trend", "show", false) && valueCols.length > 0 && p.series.length > 0) {
       const style = f.str("trend", "style", "dashed");
       const trendDash = dashOf(f.str("trend", "dashArray", ""));
       // "Use highlight values" fits the highlighted part of a cross-highlighted chart
@@ -308,11 +316,17 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
   };
   const fmt0 = valueCols[0]?.format ?? null;
   const valAxis = axisBlock({ f, theme, object: "valueAxis", kind: "value", fmt: fmt0, titleDefault: valueCols.map((c) => c.label).join(", "), hundred, horizontal });
-  if (autoPoints.length && !hundred) {
+  if (autoPoints.length) {
     const lo = Math.min(...autoPoints);
     const hi = Math.max(...autoPoints);
-    if (valAxis.min === undefined) valAxis.min = (e: { min: number }) => Math.min(e.min, lo);
-    if (valAxis.max === undefined) valAxis.max = (e: { max: number }) => Math.max(e.max, hi);
+    // the fixed 0 to 100 range of a 100% chart grows to show a line outside it
+    if (hundred) {
+      valAxis.min = Math.min(valAxis.min ?? 0, lo);
+      valAxis.max = Math.max(valAxis.max ?? 100, hi);
+    } else {
+      if (valAxis.min === undefined) valAxis.min = (e: { min: number }) => Math.min(e.min, lo);
+      if (valAxis.max === undefined) valAxis.max = (e: { max: number }) => Math.max(e.max, hi);
+    }
   }
   const y2Cols = columnsOf(q, "Y2", "value");
   const valAxes = combo && y2Cols.length ? [valAxis, { ...axisBlock({ f, theme, object: "valueAxis", prefix: "sec", kind: "value", fmt: y2Cols[0].format, titleDefault: y2Cols.map((c) => c.label).join(", "), horizontal }), splitLine: { show: false } }] : [valAxis];

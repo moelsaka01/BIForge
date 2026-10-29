@@ -334,7 +334,7 @@ function measure(scenarioOf: Scenario, visualType: string, objects: string[]): R
     if (!props) continue;
     const instances: { selector?: string; extra: [string, Lit][] }[] =
       object === "y1AxisReferenceLine"
-        ? [{ selector: "id:constant", extra: [["show", lit.bool(true)], ["value", lit.num(25)], ["shadeShow", lit.bool(true)], ["shadeRegion", lit.str("before")], ["dataLabelShow", lit.bool(true)], ["lineColor", lit.str("#112233")]] }]
+        ? [{ selector: "id:constant", extra: [["show", lit.bool(true)], ["value", lit.num(250)], ["shadeShow", lit.bool(true)], ["shadeRegion", lit.str("before")], ["dataLabelShow", lit.bool(true)], ["lineColor", lit.str("#112233")]] }]
         : object === "xAxisReferenceLine"
           ? [{ selector: "id:constant", extra: [["show", lit.bool(true)], ["value", lit.num(2)], ["shadeShow", lit.bool(true)], ["shadeRegion", lit.str("before")], ["dataLabelShow", lit.bool(true)], ["lineColor", lit.str("#112233")]] }]
           : object === "referenceLine"

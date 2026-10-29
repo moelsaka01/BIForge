@@ -709,7 +709,17 @@
    "url"
   ],
   "trend": [
-   "show"
+   "autoScale",
+   "combineSeries",
+   "dashArray",
+   "dashCap",
+   "displayName",
+   "lineColor",
+   "show",
+   "style",
+   "transparency",
+   "useHighlightValues",
+   "width"
   ],
   "valueAxis": [
    "axisStyle",
@@ -906,7 +916,17 @@
    "url"
   ],
   "trend": [
-   "show"
+   "autoScale",
+   "combineSeries",
+   "dashArray",
+   "dashCap",
+   "displayName",
+   "lineColor",
+   "show",
+   "style",
+   "transparency",
+   "useHighlightValues",
+   "width"
   ],
   "valueAxis": [
    "axisStyle",
@@ -1098,7 +1118,16 @@
    "url"
   ],
   "trend": [
-   "show"
+   "combineSeries",
+   "dashArray",
+   "dashCap",
+   "displayName",
+   "lineColor",
+   "show",
+   "style",
+   "transparency",
+   "useHighlightValues",
+   "width"
   ],
   "valueAxis": [
    "axisStyle",
@@ -1127,6 +1156,53 @@
    "titleFontSize",
    "titleItalic",
    "titleText"
+  ],
+  "xAxisReferenceLine": [
+   "dashArray",
+   "dashCap",
+   "dataLabelColor",
+   "dataLabelHorizontalPosition",
+   "dataLabelShow",
+   "dataLabelText",
+   "dataLabelVerticalPosition",
+   "displayName",
+   "lineColor",
+   "position",
+   "shadeColor",
+   "shadeColorMatchStroke",
+   "shadeRegion",
+   "shadeShow",
+   "shadeTransparency",
+   "show",
+   "style",
+   "transparency",
+   "value",
+   "width"
+  ],
+  "y1AxisReferenceLine": [
+   "autoScale",
+   "dashArray",
+   "dashCap",
+   "dataLabelColor",
+   "dataLabelDecimalPoints",
+   "dataLabelDisplayUnits",
+   "dataLabelHorizontalPosition",
+   "dataLabelShow",
+   "dataLabelText",
+   "dataLabelVerticalPosition",
+   "displayName",
+   "lineColor",
+   "position",
+   "shadeColor",
+   "shadeColorMatchStroke",
+   "shadeRegion",
+   "shadeShow",
+   "shadeTransparency",
+   "show",
+   "style",
+   "transparency",
+   "value",
+   "width"
   ],
   "zoom": [
    "categoryMax",
@@ -1241,7 +1317,16 @@
    "url"
   ],
   "trend": [
-   "show"
+   "combineSeries",
+   "dashArray",
+   "dashCap",
+   "displayName",
+   "lineColor",
+   "show",
+   "style",
+   "transparency",
+   "useHighlightValues",
+   "width"
   ],
   "valueAxis": [
    "axisStyle",
@@ -1270,6 +1355,53 @@
    "titleFontSize",
    "titleItalic",
    "titleText"
+  ],
+  "xAxisReferenceLine": [
+   "dashArray",
+   "dashCap",
+   "dataLabelColor",
+   "dataLabelHorizontalPosition",
+   "dataLabelShow",
+   "dataLabelText",
+   "dataLabelVerticalPosition",
+   "displayName",
+   "lineColor",
+   "position",
+   "shadeColor",
+   "shadeColorMatchStroke",
+   "shadeRegion",
+   "shadeShow",
+   "shadeTransparency",
+   "show",
+   "style",
+   "transparency",
+   "value",
+   "width"
+  ],
+  "y1AxisReferenceLine": [
+   "autoScale",
+   "dashArray",
+   "dashCap",
+   "dataLabelColor",
+   "dataLabelDecimalPoints",
+   "dataLabelDisplayUnits",
+   "dataLabelHorizontalPosition",
+   "dataLabelShow",
+   "dataLabelText",
+   "dataLabelVerticalPosition",
+   "displayName",
+   "lineColor",
+   "position",
+   "shadeColor",
+   "shadeColorMatchStroke",
+   "shadeRegion",
+   "shadeShow",
+   "shadeTransparency",
+   "show",
+   "style",
+   "transparency",
+   "value",
+   "width"
   ],
   "zoom": [
    "categoryMax",
@@ -1899,7 +2031,17 @@
    "url"
   ],
   "trend": [
-   "show"
+   "autoScale",
+   "combineSeries",
+   "dashArray",
+   "dashCap",
+   "displayName",
+   "lineColor",
+   "show",
+   "style",
+   "transparency",
+   "useHighlightValues",
+   "width"
   ],
   "valueAxis": [
    "axisStyle",
@@ -2108,7 +2250,16 @@
    "url"
   ],
   "trend": [
-   "show"
+   "combineSeries",
+   "dashArray",
+   "dashCap",
+   "displayName",
+   "lineColor",
+   "show",
+   "style",
+   "transparency",
+   "useHighlightValues",
+   "width"
   ],
   "valueAxis": [
    "axisStyle",
@@ -2137,6 +2288,53 @@
    "titleFontSize",
    "titleItalic",
    "titleText"
+  ],
+  "xAxisReferenceLine": [
+   "dashArray",
+   "dashCap",
+   "dataLabelColor",
+   "dataLabelHorizontalPosition",
+   "dataLabelShow",
+   "dataLabelText",
+   "dataLabelVerticalPosition",
+   "displayName",
+   "lineColor",
+   "position",
+   "shadeColor",
+   "shadeColorMatchStroke",
+   "shadeRegion",
+   "shadeShow",
+   "shadeTransparency",
+   "show",
+   "style",
+   "transparency",
+   "value",
+   "width"
+  ],
+  "y1AxisReferenceLine": [
+   "autoScale",
+   "dashArray",
+   "dashCap",
+   "dataLabelColor",
+   "dataLabelDecimalPoints",
+   "dataLabelDisplayUnits",
+   "dataLabelHorizontalPosition",
+   "dataLabelShow",
+   "dataLabelText",
+   "dataLabelVerticalPosition",
+   "displayName",
+   "lineColor",
+   "position",
+   "shadeColor",
+   "shadeColorMatchStroke",
+   "shadeRegion",
+   "shadeShow",
+   "shadeTransparency",
+   "show",
+   "style",
+   "transparency",
+   "value",
+   "width"
   ],
   "zoom": [
    "categoryMax",
@@ -2219,6 +2417,19 @@
    "transparency",
    "url"
   ],
+  "trend": [
+   "autoScale",
+   "combineSeries",
+   "dashArray",
+   "dashCap",
+   "displayName",
+   "lineColor",
+   "show",
+   "style",
+   "transparency",
+   "useHighlightValues",
+   "width"
+  ],
   "valueAxis": [
    "axisStyle",
    "bold",
@@ -2248,6 +2459,53 @@
    "titleFontSize",
    "titleItalic",
    "titleText"
+  ],
+  "xAxisReferenceLine": [
+   "dashArray",
+   "dashCap",
+   "dataLabelColor",
+   "dataLabelHorizontalPosition",
+   "dataLabelShow",
+   "dataLabelText",
+   "dataLabelVerticalPosition",
+   "displayName",
+   "lineColor",
+   "position",
+   "shadeColor",
+   "shadeColorMatchStroke",
+   "shadeRegion",
+   "shadeShow",
+   "shadeTransparency",
+   "show",
+   "style",
+   "transparency",
+   "value",
+   "width"
+  ],
+  "y1AxisReferenceLine": [
+   "autoScale",
+   "dashArray",
+   "dashCap",
+   "dataLabelColor",
+   "dataLabelDecimalPoints",
+   "dataLabelDisplayUnits",
+   "dataLabelHorizontalPosition",
+   "dataLabelShow",
+   "dataLabelText",
+   "dataLabelVerticalPosition",
+   "displayName",
+   "lineColor",
+   "position",
+   "shadeColor",
+   "shadeColorMatchStroke",
+   "shadeRegion",
+   "shadeShow",
+   "shadeTransparency",
+   "show",
+   "style",
+   "transparency",
+   "value",
+   "width"
   ],
   "zoom": [
    "categoryMax",

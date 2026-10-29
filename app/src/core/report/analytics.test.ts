@@ -163,10 +163,17 @@ describe("Analytics on a chart", () => {
     expect(build(c, grouped(c, rows)).option.series[0].barCategoryGap).toBe("80%");
   });
 
-  it("is not offered or drawn on 100% stacked charts", () => {
+  it("draws only the constant line on 100% stacked charts, and the axis grows to it when asked", () => {
     const v = mk("hundredPercentStackedColumnChart");
     ref(v, "average", "show", lit.bool(true));
     expect(build(v, grouped(v, rows)).option.series[0].markLine).toBeUndefined();
+    ref(v, "constant", "show", lit.bool(true));
+    ref(v, "constant", "value", lit.num(120));
+    ref(v, "constant", "autoScale", lit.bool(true));
+    const o = build(v, grouped(v, rows)).option;
+    expect(o.series[0].markLine.data).toHaveLength(1);
+    expect(o.series[0].markLine.data[0].yAxis).toBe(120);
+    expect(o.yAxis[0].max).toBe(120);
   });
 });
 
