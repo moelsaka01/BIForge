@@ -173,10 +173,10 @@ Last updated: 2026-10-25 (see PROGRESS.md; the status table below is generated b
 | Keyboard shortcuts | 37 | 29 | 1 | 7 |
 | Export, print and file formats | 15 | 5 | 1 | 9 |
 | Accessibility and platform | 12 | 3 | 0 | 9 |
-| Format pane cards per visual | 1264 | 875 | 177 | 212 |
+| Format pane cards per visual | 1264 | 883 | 177 | 204 |
 | DAX functions | 317 | 300 | 0 | 17 |
 | M standard library | 621 | 454 | 0 | 167 |
-| **Total** | **2973** | **2086** | **227** | **660** |
+| **Total** | **2973** | **2094** | **227** | **652** |
 <!-- inventory-status:end -->
 
 ## Online track (Publish & Share; plan in docs/ONLINE_PLAN.md)

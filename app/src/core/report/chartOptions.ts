@@ -21,6 +21,7 @@ import { bubbleMap, filledMap } from "./mapOptions";
 import { bandStyle, stackBands, type Stacked } from "./ribbonBands";
 
 import type { O } from "./chartFormat";
+import { withOpacity } from "./chartFormat";
 
 export interface ChartInput {
   visual: VisualModel;
@@ -271,6 +272,45 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
       stacks.push({ name: s.name, color: s.itemStyle.color, spans });
     }
     seriesOut.push(...stackBands(f, theme, stacks, horizontal, f.has("categoryAxis", "outerPadding") ? f.num("categoryAxis", "outerPadding", 20) : 20));
+  }
+
+  // Total labels of a stacked chart: an invisible line through the top of each stack carries the sum (and, when asked, the negative sum)
+  if ((stacked || ribbon) && f.bool("totals", "show", false)) {
+    const font = readFont(f, "totals", { color: "color" });
+    const ys = valueCols.map((c, vi) => ({ c, vi })).filter((x) => x.c.role === "Y");
+    const sums = p.categories.map((_c, ci) => {
+      let pos = 0;
+      let neg = 0;
+      for (const { vi } of ys) for (let si = 0; si < p.series.length; si++) {
+        const v = p.cells[vi][si][ci] ?? 0;
+        if (v >= 0) pos += v;
+        else neg += v;
+      }
+      return { pos, neg };
+    });
+    const label = (value: (s: { pos: number; neg: number }) => number, side: string): O => ({
+      show: true,
+      position: side,
+      ...echartsText(font, labelDefaults(theme)),
+      formatter: (pa: O) => {
+        const t = valueText(Number(pa.data?.raw ?? 0), valueCols[0]?.format ?? null, f, "totals");
+        return font.underline ? underlined(t) : t;
+      },
+      ...(f.bool("totals", "enableBackground", false) ? { backgroundColor: withOpacity(f.color("totals", "backgroundColor") ?? theme.background, opacityOf(f.num("totals", "backgroundTransparency", 0))), padding: [2, 4], borderRadius: 2 } : {}),
+    });
+    const carrier = (value: (s: { pos: number; neg: number }) => number, side: string): O => ({
+      name: "",
+      type: "line",
+      silent: true,
+      symbol: "none",
+      lineStyle: { opacity: 0 },
+      tooltip: { show: false },
+      z: 7,
+      data: sums.map((s) => ({ value: hundred ? (value(s) === 0 ? null : value(s) > 0 ? 100 : -100) : value(s), raw: value(s) })),
+      label: label(value, side),
+    });
+    seriesOut.push(carrier((s) => s.pos, horizontal ? "right" : "top"));
+    if (f.bool("totals", "showPositiveAndNegative", false) && sums.some((s) => s.neg < 0)) seriesOut.push(carrier((s) => s.neg, horizontal ? "left" : "bottom"));
   }
 
   const autoPoints: number[] = [];

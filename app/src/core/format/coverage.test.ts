@@ -132,6 +132,7 @@ const ENABLE: Record<string, Record<string, Lit>> = {
   fillCustom: { show: lit.bool(true), transparency: lit.num(30), imageShow: lit.bool(true), imageEffects: lit.bool(true), imageUrl: lit.str("data:image/png;base64,AA"), imageData: lit.str("data:image/png;base64,BB"), effects: lit.bool(true), url: lit.str("data:image/png;base64,AA"), field: lit.str("data:image/png;base64,BB") },
   shadowCustom: { show: lit.bool(true) },
   glowCustom: { show: lit.bool(true) },
+  totals: { show: lit.bool(true), enableBackground: lit.bool(true) },
   ribbonBands: { show: lit.bool(true), borderShow: lit.bool(true), fillColor: lit.str("#abcdef"), borderColor: lit.str("#fedcba") },
 };
 
@@ -288,6 +289,12 @@ const SCENARIOS: Record<string, Scenario> = {
 
 /** The chart types that can be split into small multiples, measured with a small multiples field bound. */
 const SM_TYPES = ["clusteredColumnChart", "clusteredBarChart", "columnChart", "barChart", "hundredPercentStackedColumnChart", "hundredPercentStackedBarChart", "lineChart", "areaChart", "stackedAreaChart", "hundredPercentStackedAreaChart"];
+/** The stacked chart types, measured with a negative value so that the totals card can show both sums. */
+const TOTALS_TYPES = ["barChart", "columnChart", "hundredPercentStackedBarChart", "hundredPercentStackedColumnChart", "stackedAreaChart", "hundredPercentStackedAreaChart", "lineStackedColumnComboChart", "ribbonChart"];
+const totalsScenario = (type: string): Scenario =>
+  type === "lineStackedColumnComboChart"
+    ? chart(type, { Category: [Cat], Y: [Qty], Y2: [Price] }, [[t("Accessories"), n(30), d(2.5)], [t("Bikes"), n(-50), d(3.5)], [t("Shoes"), n(20), d(1.5)]])
+    : chart(type, { Category: [Cat], Series: [Country], Y: [Qty] }, [[t("Accessories"), t("France"), n(30)], [t("Bikes"), t("France"), n(50)], [t("Bikes"), t("Canada"), n(-70)], [t("Accessories"), t("Canada"), n(15)]]);
 const smScenario = (type: string): Scenario => ({
   make: () => visualOf(type, { Category: [Cat], Series: [Country], Rows: [Ch], Y: [Qty] }),
   render: (v) =>
@@ -451,6 +458,7 @@ function computeAll(): Coverage {
   for (const [id, sc] of Object.entries(SCENARIOS)) {
     const objs = Object.keys(visualObjects(id) ?? {}).filter((o) => !CONTAINER_OBJECTS.has(o) && o !== "actionButtonSection");
     const own = measure(sc, id, objs);
+    if (TOTALS_TYPES.includes(id)) Object.assign(own, measure(totalsScenario(id), id, ["totals"]));
     if (SM_TYPES.includes(id)) Object.assign(own, measure(smScenario(id), id, ["smallMultiplesLayout", "subheader"]));
     if (Object.keys(own).length) result[id] = own;
   }

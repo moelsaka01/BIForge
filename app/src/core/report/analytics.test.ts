@@ -314,3 +314,22 @@ describe("underlined chart text", () => {
     expect(o.xAxis.axisLabel.formatter("A")).toBe("A̲");
   });
 });
+
+describe("total labels of stacked charts", () => {
+  const rows = [[c("A"), c("France"), c(10)], [c("A"), c("Canada"), c(30)], [c("B"), c("France"), c(20)], [c("B"), c("Canada"), c(-5)]];
+  it("adds an invisible line through the top of each stack, labelled with the sum, and a second one for the negative sums", () => {
+    const v = visualOf("columnChart", { Category: [Cat], Series: [Country], Y: [Qty] });
+    const none = build(v, grouped(v, rows)).option.series.length;
+    fmt(v, "totals", "show", lit.bool(true));
+    const one = build(v, grouped(v, rows)).option.series;
+    expect(one).toHaveLength(none + 1);
+    const carrier = one[one.length - 1];
+    expect(carrier.name).toBe("");
+    expect(carrier.lineStyle.opacity).toBe(0);
+    expect(carrier.data.map((d: { raw: number }) => d.raw)).toEqual([40, 20]);
+    fmt(v, "totals", "showPositiveAndNegative", lit.bool(true));
+    const two = build(v, grouped(v, rows)).option.series;
+    expect(two).toHaveLength(none + 2);
+    expect(two[two.length - 1].data.map((d: { raw: number }) => d.raw)).toEqual([0, -5]);
+  });
+});

@@ -783,6 +783,21 @@
    "fillTransparency",
    "show"
   ],
+  "totals": [
+   "backgroundColor",
+   "backgroundTransparency",
+   "bold",
+   "color",
+   "enableBackground",
+   "fontFamily",
+   "fontSize",
+   "italic",
+   "labelDisplayUnits",
+   "labelPrecision",
+   "show",
+   "showPositiveAndNegative",
+   "underline"
+  ],
   "trend": [
    "autoScale",
    "combineSeries",
@@ -1029,6 +1044,21 @@
    "fillTransparency",
    "show"
   ],
+  "totals": [
+   "backgroundColor",
+   "backgroundTransparency",
+   "bold",
+   "color",
+   "enableBackground",
+   "fontFamily",
+   "fontSize",
+   "italic",
+   "labelDisplayUnits",
+   "labelPrecision",
+   "show",
+   "showPositiveAndNegative",
+   "underline"
+  ],
   "trend": [
    "autoScale",
    "combineSeries",
@@ -1270,6 +1300,21 @@
    "fillTransparency",
    "show"
   ],
+  "totals": [
+   "backgroundColor",
+   "backgroundTransparency",
+   "bold",
+   "color",
+   "enableBackground",
+   "fontFamily",
+   "fontSize",
+   "italic",
+   "labelDisplayUnits",
+   "labelPrecision",
+   "show",
+   "showPositiveAndNegative",
+   "underline"
+  ],
   "trend": [
    "combineSeries",
    "dashArray",
@@ -1507,6 +1552,21 @@
    "fillMatchColor",
    "fillTransparency",
    "show"
+  ],
+  "totals": [
+   "backgroundColor",
+   "backgroundTransparency",
+   "bold",
+   "color",
+   "enableBackground",
+   "fontFamily",
+   "fontSize",
+   "italic",
+   "labelDisplayUnits",
+   "labelPrecision",
+   "show",
+   "showPositiveAndNegative",
+   "underline"
   ],
   "trend": [
    "combineSeries",
@@ -2300,6 +2360,20 @@
    "transparency",
    "url"
   ],
+  "totals": [
+   "backgroundColor",
+   "backgroundTransparency",
+   "bold",
+   "color",
+   "enableBackground",
+   "fontFamily",
+   "fontSize",
+   "italic",
+   "labelDisplayUnits",
+   "labelPrecision",
+   "show",
+   "underline"
+  ],
   "trend": [
    "autoScale",
    "combineSeries",
@@ -2545,6 +2619,20 @@
    "transparency",
    "url"
   ],
+  "totals": [
+   "backgroundColor",
+   "backgroundTransparency",
+   "bold",
+   "color",
+   "enableBackground",
+   "fontFamily",
+   "fontSize",
+   "italic",
+   "labelDisplayUnits",
+   "labelPrecision",
+   "show",
+   "underline"
+  ],
   "trend": [
    "combineSeries",
    "dashArray",
@@ -2760,6 +2848,21 @@
    "fillMatchColor",
    "fillTransparency",
    "show"
+  ],
+  "totals": [
+   "backgroundColor",
+   "backgroundTransparency",
+   "bold",
+   "color",
+   "enableBackground",
+   "fontFamily",
+   "fontSize",
+   "italic",
+   "labelDisplayUnits",
+   "labelPrecision",
+   "show",
+   "showPositiveAndNegative",
+   "underline"
   ],
   "trend": [
    "autoScale",
@@ -3268,6 +3371,21 @@
    "sourceType",
    "transparency",
    "url"
+  ],
+  "totals": [
+   "backgroundColor",
+   "backgroundTransparency",
+   "bold",
+   "color",
+   "enableBackground",
+   "fontFamily",
+   "fontSize",
+   "italic",
+   "labelDisplayUnits",
+   "labelPrecision",
+   "show",
+   "showPositiveAndNegative",
+   "underline"
   ],
   "valueAxis": [
    "axisStyle",
