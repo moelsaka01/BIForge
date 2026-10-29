@@ -271,6 +271,8 @@
    "width"
   ],
   "trend": [
+   "autoScale",
+   "combineSeries",
    "dashArray",
    "dashCap",
    "displayName",
@@ -278,6 +280,7 @@
    "show",
    "style",
    "transparency",
+   "useHighlightValues",
    "width"
   ],
   "valueAxis": [
@@ -499,6 +502,8 @@
    "width"
   ],
   "trend": [
+   "autoScale",
+   "combineSeries",
    "dashArray",
    "dashCap",
    "displayName",
@@ -506,6 +511,7 @@
    "show",
    "style",
    "transparency",
+   "useHighlightValues",
    "width"
   ],
   "valueAxis": [
@@ -702,6 +708,9 @@
    "transparency",
    "url"
   ],
+  "trend": [
+   "show"
+  ],
   "valueAxis": [
    "axisStyle",
    "bold",
@@ -896,6 +905,9 @@
    "transparency",
    "url"
   ],
+  "trend": [
+   "show"
+  ],
   "valueAxis": [
    "axisStyle",
    "bold",
@@ -1085,6 +1097,9 @@
    "transparency",
    "url"
   ],
+  "trend": [
+   "show"
+  ],
   "valueAxis": [
    "axisStyle",
    "bold",
@@ -1224,6 +1239,9 @@
    "sourceType",
    "transparency",
    "url"
+  ],
+  "trend": [
+   "show"
   ],
   "valueAxis": [
    "axisStyle",
@@ -1411,6 +1429,8 @@
    "width"
   ],
   "trend": [
+   "autoScale",
+   "combineSeries",
    "dashArray",
    "dashCap",
    "displayName",
@@ -1418,6 +1438,7 @@
    "show",
    "style",
    "transparency",
+   "useHighlightValues",
    "width"
   ],
   "valueAxis": [
@@ -1654,6 +1675,8 @@
    "width"
   ],
   "trend": [
+   "autoScale",
+   "combineSeries",
    "dashArray",
    "dashCap",
    "displayName",
@@ -1661,6 +1684,7 @@
    "show",
    "style",
    "transparency",
+   "useHighlightValues",
    "width"
   ],
   "valueAxis": [
@@ -1874,6 +1898,9 @@
    "transparency",
    "url"
   ],
+  "trend": [
+   "show"
+  ],
   "valueAxis": [
    "axisStyle",
    "bold",
@@ -2079,6 +2106,9 @@
    "sourceType",
    "transparency",
    "url"
+  ],
+  "trend": [
+   "show"
   ],
   "valueAxis": [
    "axisStyle",
@@ -2370,6 +2400,7 @@
    "width"
   ],
   "trend": [
+   "autoScale",
    "dashArray",
    "dashCap",
    "displayName",
@@ -2377,6 +2408,7 @@
    "show",
    "style",
    "transparency",
+   "useHighlightValues",
    "width"
   ],
   "valueAxis": [

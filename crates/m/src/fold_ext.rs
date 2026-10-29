@@ -11,6 +11,7 @@ pub const TABLE_EXT_FNS: &[&str] = &[
     "Table.InsertRows", "Table.SplitAt", "Table.MatchesAllRows", "Table.MatchesAnyRows", "Table.TransformRows", "Table.RemoveMatchingRows",
     "Table.MaxN", "Table.MinN", "Table.PositionOfAny", "Table.ReplaceRows", "Table.ColumnsOfType",
     "Table.AddRankColumn", "Record.ToTable", "Record.FromTable", "Table.ToList", "Table.ReplaceMatchingRows",
+    "Table.AddKey", "Table.ReplaceKeys", "Table.FindText", "Table.Split",
 ];
 
 fn cmp(x: &Value, y: &Value) -> std::cmp::Ordering {
@@ -478,6 +479,35 @@ impl<'a> Ev<'a> {
                 let t = table_arg(a, 0, name)?;
                 let n = arg(a, 1, name)?.clone();
                 Value::List(vec![self.row_window("Table.FirstN", &[Value::Table(t.clone()), n.clone()])?, self.row_window("Table.Skip", &[Value::Table(t), n])?])
+            }
+            // BIForge tables carry no keys, so adding or replacing them leaves the table as it is (Table.Keys is always empty)
+            "Table.AddKey" | "Table.ReplaceKeys" => Value::Table(table_arg(a, 0, name)?),
+            "Table.FindText" => {
+                let t = table_arg(a, 0, name)?;
+                self.no_nested(&t)?;
+                let Value::Text(needle) = arg(a, 1, name)? else {
+                    return Err(MError::expr("The search text must be text."));
+                };
+                let tests: Vec<String> = t.plain_cols().map(|c| format!("contains(lower(CAST({} AS VARCHAR)), lower({}))", qi(&c.name), ql(needle))).collect();
+                let cond = if tests.is_empty() { "false".to_string() } else { tests.join(" OR ") };
+                let body = format!("SELECT {}, {} FROM {} WHERE {}", qi(ORD), Self::col_list_keep(&t), qi(&t.name), cond);
+                Value::Table(self.derive(&[&t], body)?)
+            }
+            "Table.Split" => {
+                let t = table_arg(a, 0, name)?;
+                let size = num_arg(arg(a, 1, name)?, "The page size")? as usize;
+                if size == 0 {
+                    return Err(MError::expr("The page size must be greater than zero."));
+                }
+                let total = self.all_records(&t)?.len();
+                let mut pages = Vec::new();
+                let mut from = 1;
+                while from <= total {
+                    let rows: Vec<usize> = (from..(from + size).min(total + 1)).collect();
+                    pages.push(self.keep_row_numbers(&t, &rows)?);
+                    from += size;
+                }
+                Value::List(pages)
             }
             _ => return Ok(None),
         };

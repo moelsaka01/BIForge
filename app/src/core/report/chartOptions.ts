@@ -264,14 +264,26 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
     if (marks.length) seriesOut[0].markLine = { silent: true, symbol: "none", animation: false, data: marks };
     if (shades.length) seriesOut[0].markArea = { silent: true, animation: false, data: shades };
     if (f.bool("trend", "show", false) && !stacked && valueCols.length > 0 && p.series.length > 0) {
-      const tr = linearTrend(p.categories.map((_c, ci) => shown(0, 0, ci)));
-      if (tr) {
-        const style = f.str("trend", "style", "dashed");
-        const trendDash = dashOf(f.str("trend", "dashArray", ""));
+      const style = f.str("trend", "style", "dashed");
+      const trendDash = dashOf(f.str("trend", "dashArray", ""));
+      // "Use highlight values" fits the highlighted part of a cross-highlighted chart
+      const trendCells = f.bool("trend", "useHighlightValues", false) && hl ? hl : p.cells;
+      // one line through the sum of the series ("Combine series"), or one line for each series
+      const sources: { label: string; values: (number | null)[] }[] = f.bool("trend", "combineSeries", false)
+        ? [{ label: "", values: p.categories.map((_c, ci) => { const xs = p.series.map((_s, si) => shown(0, si, ci, trendCells)).filter((x): x is number => x !== null); return xs.length ? xs.reduce((u, w) => u + w, 0) : null; }) }]
+        : p.series.map((s, si) => ({ label: s.label || BLANK_LABEL, values: p.categories.map((_c, ci) => shown(0, si, ci, trendCells)) }));
+      const several = sources.length > 1;
+      for (const src of sources) {
+        const tr = linearTrend(src.values);
+        if (!tr) continue;
+        const base = f.str("trend", "displayName", "") || "Trend line";
+        const pts = p.categories.map((_c, ci) => tr.at(ci));
+        // "Include in auto scale": the value axis grows to show the trend
+        if (f.bool("trend", "autoScale", false)) autoPoints.push(...pts);
         seriesOut.push({
-          name: f.str("trend", "displayName", "") || "Trend line",
+          name: several && src.label ? `${base} · ${src.label}` : base,
           type: "line",
-          data: p.categories.map((_c, ci) => ({ value: tr.at(ci), raw: tr.at(ci) })),
+          data: pts.map((v) => ({ value: v, raw: v })),
           symbol: "none",
           silent: true,
           z: 6,

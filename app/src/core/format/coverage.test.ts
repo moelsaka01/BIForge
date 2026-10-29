@@ -52,7 +52,9 @@ const n = (x: number): Cell => ["int", String(x)];
 const d = (x: number): Cell => ["real", String(x)];
 
 function grouped(v: VisualModel, rows: Cell[][]): Extract<Loaded, { kind: "grouped" }> {
-  return { kind: "grouped", query: buildVisualQuery(v, model, { filters: [] })!, rows: rows.map(dec), highlightRows: null, totals: null, truncated: false, ms: 0 };
+  // a chart whose trend card is on also gets a cross-highlight (half of every value), so that "use highlight values" can be measured
+  const hl = JSON.stringify(v.json).includes('"trend"') ? rows.map((r) => r.map((c) => (c[0] === "int" ? n(Number(c[1]) / 2) : c))) : null;
+  return { kind: "grouped", query: buildVisualQuery(v, model, { filters: [] })!, rows: rows.map(dec), highlightRows: hl ? hl.map(dec) : null, totals: null, truncated: false, ms: 0 };
 }
 
 // ---- how a test value is chosen for a property --------------------------------------------------------------

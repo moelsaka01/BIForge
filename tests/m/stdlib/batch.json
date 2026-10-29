@@ -130,5 +130,113 @@
   "m": "Diagnostics.LogValue(\"x\", 7)",
   "expect": "7",
   "mode": "value"
+ },
+ {
+  "fn": "List.Alternate",
+  "m": "List.Alternate({1,2,3,4,5,6,7,8,9,10}, 1)",
+  "expect": "{2,4,6,8,10}",
+  "mode": "value"
+ },
+ {
+  "fn": "List.Alternate",
+  "m": "List.Alternate({1,2,3,4,5,6,7,8,9,10}, 1, 1)",
+  "expect": "{2,4,6,8,10}",
+  "mode": "value"
+ },
+ {
+  "fn": "List.Alternate",
+  "m": "List.Alternate({1,2,3,4,5,6,7,8,9,10}, 1, 2, 1)",
+  "expect": "{1,3,4,6,7,9,10}",
+  "mode": "value"
+ },
+ {
+  "fn": "List.Alternate",
+  "m": "List.Alternate({1,2,3,4,5}, 2, 1, 0)",
+  "expect": "{3}",
+  "mode": "value"
+ },
+ {
+  "fn": "List.FindText",
+  "m": "List.FindText({\"Apple\",\"banana\",\"Pineapple\"}, \"APPLE\")",
+  "expect": "{Apple,Pineapple}",
+  "mode": "value"
+ },
+ {
+  "fn": "List.FindText",
+  "m": "List.Count(List.FindText({[a=\"x\",b=\"Hello\"],[a=\"y\",b=\"no\"]}, \"hel\"))",
+  "expect": "1",
+  "mode": "value"
+ },
+ {
+  "fn": "List.Normalize",
+  "m": "List.Normalize({1,3})",
+  "expect": "{0.25,0.75}",
+  "mode": "value"
+ },
+ {
+  "fn": "List.Normalize",
+  "m": "List.Normalize({1,3,null}, 10)",
+  "expect": "{0.1,0.3,null}",
+  "mode": "value"
+ },
+ {
+  "fn": "List.Random",
+  "m": "List.Count(List.Random(5))",
+  "expect": "5",
+  "mode": "value"
+ },
+ {
+  "fn": "List.Random",
+  "m": "List.Random(4, 7) = List.Random(4, 7)",
+  "expect": "true",
+  "mode": "value"
+ },
+ {
+  "fn": "List.Random",
+  "m": "List.AllTrue(List.Transform(List.Random(20, 3), each _ >= 0 and _ < 1))",
+  "expect": "true",
+  "mode": "value"
+ },
+ {
+  "fn": "List.ParallelInvoke",
+  "m": "List.ParallelInvoke({() => 1, () => 2})",
+  "expect": "{1,2}",
+  "mode": "value"
+ },
+ {
+  "fn": "Value.Metadata",
+  "m": "Record.FieldCount(Value.Metadata(5))",
+  "expect": "0",
+  "mode": "value"
+ },
+ {
+  "fn": "Value.ReplaceMetadata",
+  "m": "Value.ReplaceMetadata(5, [a=1])",
+  "expect": "5",
+  "mode": "value"
+ },
+ {
+  "fn": "Value.ReplaceType",
+  "m": "Value.ReplaceType({1,2}, type list)",
+  "expect": "{1,2}",
+  "mode": "value"
+ },
+ {
+  "fn": "Value.Optimize",
+  "m": "Value.Optimize(3)",
+  "expect": "3",
+  "mode": "value"
+ },
+ {
+  "fn": "Value.VersionIdentity",
+  "m": "Value.VersionIdentity(3) = null",
+  "expect": "true",
+  "mode": "value"
+ },
+ {
+  "fn": "Diagnostics.LogFailure",
+  "m": "Diagnostics.LogFailure(\"x\", () => 9)",
+  "expect": "9",
+  "mode": "value"
  }
 ]

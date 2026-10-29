@@ -304,5 +304,41 @@
   "m": "Table.ColumnsOfType(#table({\"a\", \"b\"}, {{1, \"x\"}, {2, \"y\"}, {3, \"z\"}}), {type text})",
   "expect": "{b}",
   "mode": "value"
+ },
+ {
+  "fn": "Table.AddKey",
+  "m": "Table.RowCount(Table.AddKey(#table({\"a\",\"b\"},{{1,\"Red\"},{2,\"green\"},{3,\"BLUE\"},{4,\"x\"},{5,\"y\"}}), {\"a\"}, true))",
+  "expect": "5",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.ReplaceKeys",
+  "m": "Table.RowCount(Table.ReplaceKeys(#table({\"a\",\"b\"},{{1,\"Red\"},{2,\"green\"},{3,\"BLUE\"},{4,\"x\"},{5,\"y\"}}), {}))",
+  "expect": "5",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.FindText",
+  "m": "Table.Column(Table.FindText(#table({\"a\",\"b\"},{{1,\"Red\"},{2,\"green\"},{3,\"BLUE\"},{4,\"x\"},{5,\"y\"}}), \"RE\"), \"a\")",
+  "expect": "{1,2}",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.FindText",
+  "m": "Table.RowCount(Table.FindText(#table({\"a\",\"b\"},{{1,\"Red\"},{2,\"green\"},{3,\"BLUE\"},{4,\"x\"},{5,\"y\"}}), \"zzz\"))",
+  "expect": "0",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.Split",
+  "m": "List.Count(Table.Split(#table({\"a\",\"b\"},{{1,\"Red\"},{2,\"green\"},{3,\"BLUE\"},{4,\"x\"},{5,\"y\"}}), 2))",
+  "expect": "3",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.Split",
+  "m": "List.Transform(Table.Split(#table({\"a\",\"b\"},{{1,\"Red\"},{2,\"green\"},{3,\"BLUE\"},{4,\"x\"},{5,\"y\"}}), 2), each Table.RowCount(_))",
+  "expect": "{2,2,1}",
+  "mode": "value"
  }
 ]
