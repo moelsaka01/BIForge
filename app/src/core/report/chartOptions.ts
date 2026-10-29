@@ -146,7 +146,7 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
       name: isHighlight ? `${name} (highlighted)` : name,
       type: asLine ? "line" : "bar",
       data,
-      itemStyle: { color, ...(asLine ? {} : { opacity: fillAlpha, ...barBorder }) },
+      itemStyle: { color, ...(asLine ? (f.has("dataPoint", "transparency") ? { opacity: opacityOf(f.num("dataPoint", "transparency", 0)) } : {}) : { opacity: fillAlpha, ...barBorder }) },
       // the gap widens when the pointer is on a segment ("explodes")
       emphasis: { focus: "none", ...(stackGap > 0 && !asLine && f.bool("layout", "stackedGapExplodes", false) ? { itemStyle: { borderWidth: stackGap * 2 + 2, borderColor: theme.background } } : {}) },
       label: labelBlock({
@@ -227,6 +227,8 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
         bandLook: bandStyle(f, theme, color, 1),
         bandGap: gap,
         bandsShown: bands,
+        // fill transparency and border of the columns (dataPoint card)
+        columnLook: { fillAlpha, ...(borderOn ? sliceItemStyle(f, theme, color) : {}) },
         columnGap: colGap,
         columnGapExplodes: explodes,
         data: p.categories.map((_c, ci) => {
@@ -241,7 +243,7 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
           const hi = api.coord([ci, api.value(2)]);
           const half = api.size([1, 0])[0] * 0.28;
           const op = dimmed[ci] ? DIM : 1;
-          const children: O[] = [{ type: "rect", shape: { x: lo[0] - half, y: Math.min(lo[1], hi[1]), width: half * 2, height: Math.abs(lo[1] - hi[1]) }, style: { fill: color, opacity: op, ...(colGap > 0 ? { stroke: theme.background, lineWidth: colGap } : {}) }, ...(explodes ? { emphasis: { style: { stroke: theme.background, lineWidth: colGap * 2 + 2 } } } : {}) }];
+          const children: O[] = [{ type: "rect", shape: { x: lo[0] - half, y: Math.min(lo[1], hi[1]), width: half * 2, height: Math.abs(lo[1] - hi[1]) }, style: { fill: (borderOn ? sliceItemStyle(f, theme, color).color : undefined) ?? color, opacity: op * fillAlpha, ...(borderOn ? { stroke: sliceItemStyle(f, theme, color).borderColor, lineWidth: sliceItemStyle(f, theme, color).borderWidth } : colGap > 0 ? { stroke: theme.background, lineWidth: colGap } : {}) }, ...(explodes ? { emphasis: { style: { stroke: theme.background, lineWidth: colGap * 2 + 2 } } } : {}) }];
           if (bands && api.value(3) !== null && api.value(3) !== undefined && !Number.isNaN(api.value(3))) {
             const nlo = api.coord([ci + 1, api.value(3)]);
             const nhi = api.coord([ci + 1, api.value(4)]);

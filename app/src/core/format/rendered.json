@@ -1625,7 +1625,8 @@
   ],
   "dataPoint": [
    "defaultColor",
-   "fill"
+   "fill",
+   "transparency"
   ],
   "labels": [
    "backgroundColor",
@@ -1888,7 +1889,8 @@
   ],
   "dataPoint": [
    "defaultColor",
-   "fill"
+   "fill",
+   "transparency"
   ],
   "labels": [
    "backgroundColor",
@@ -2150,7 +2152,8 @@
   ],
   "dataPoint": [
    "defaultColor",
-   "fill"
+   "fill",
+   "transparency"
   ],
   "labels": [
    "backgroundColor",
@@ -2390,7 +2393,8 @@
   ],
   "dataPoint": [
    "defaultColor",
-   "fill"
+   "fill",
+   "transparency"
   ],
   "labels": [
    "backgroundColor",
@@ -2622,8 +2626,15 @@
    "titleText"
   ],
   "dataPoint": [
+   "borderColor",
+   "borderColorMatchFill",
+   "borderOutlineOnly",
+   "borderShow",
+   "borderSize",
+   "borderTransparency",
    "defaultColor",
-   "fill"
+   "fill",
+   "fillTransparency"
   ],
   "layout": [
    "ribbonGapSize",
@@ -2806,7 +2817,8 @@
    "borderTransparency",
    "defaultColor",
    "fill",
-   "fillTransparency"
+   "fillTransparency",
+   "transparency"
   ],
   "labels": [
    "backgroundColor",
@@ -3076,7 +3088,8 @@
    "borderTransparency",
    "defaultColor",
    "fill",
-   "fillTransparency"
+   "fillTransparency",
+   "transparency"
   ],
   "labels": [
    "backgroundColor",
