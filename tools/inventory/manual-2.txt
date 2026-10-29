@@ -89,7 +89,6 @@ D | Column width drag
 P | Column context menu (rename, copy, hide, sort, format)
 D | Right-click row/column menu
 D | Formula bar (calculated column, measure)
-N | Column tools tab
 N | Filter on columns (value list)
 D | Go to / Find in table
 D | Show hidden columns
@@ -401,7 +400,6 @@ D | Display whitespace
 N | Show native queries
 N | Always allow parameterized data source
 D | Show Query dependencies on open
-N | Allow data preview to download in the background
 ### DirectQuery
 N | Use the latest schema
 N | Allow unrestricted measures in DirectQuery mode
@@ -503,7 +501,6 @@ D | Power Query dialogs for every transform in the editor
 D | Conditional formatting dialog
 D | Format pane
 D | Manage relationships
-N | Edit relationships
 D | Manage roles
 D | View as roles
 D | Quick measures
@@ -513,7 +510,6 @@ D | Data source settings
 N | Data groups
 D | Edit data (enter data)
 N | Export data
-N | Performance analyzer
 N | Report settings dialog
 N | Feature switches (preview features)
 D | Keyboard shortcuts dialog

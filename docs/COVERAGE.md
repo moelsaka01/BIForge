@@ -158,7 +158,7 @@ Last updated: 2026-10-25 (see PROGRESS.md; the status table below is generated b
 | Report view contextual tabs | 35 | 25 | 5 | 5 |
 | Report canvas and page features | 53 | 39 | 3 | 11 |
 | Visuals | 76 | 51 | 4 | 21 |
-| Table view | 18 | 15 | 1 | 2 |
+| Table view | 17 | 15 | 1 | 1 |
 | Model view | 23 | 16 | 3 | 4 |
 | DAX query view | 15 | 10 | 1 | 4 |
 | TMDL view | 8 | 4 | 0 | 4 |
@@ -167,16 +167,16 @@ Last updated: 2026-10-25 (see PROGRESS.md; the status table below is generated b
 | Power Query editor: window and ribbon | 94 | 45 | 4 | 45 |
 | M language | 12 | 5 | 0 | 7 |
 | Get data: connectors | 47 | 25 | 16 | 6 |
-| Options dialog: Global | 61 | 22 | 2 | 37 |
+| Options dialog: Global | 60 | 22 | 2 | 36 |
 | Options dialog: Current File | 23 | 6 | 0 | 17 |
-| Dialogs | 48 | 28 | 0 | 20 |
+| Dialogs | 46 | 28 | 0 | 18 |
 | Keyboard shortcuts | 37 | 29 | 1 | 7 |
 | Export, print and file formats | 15 | 5 | 1 | 9 |
 | Accessibility and platform | 12 | 3 | 0 | 9 |
 | Format pane cards per visual | 1264 | 781 | 233 | 250 |
 | DAX functions | 317 | 300 | 0 | 17 |
 | M standard library | 621 | 454 | 0 | 167 |
-| **Total** | **2977** | **1992** | **283** | **702** |
+| **Total** | **2973** | **1992** | **283** | **698** |
 <!-- inventory-status:end -->
 
 ## Online track (Publish & Share; plan in docs/ONLINE_PLAN.md)
@@ -220,6 +220,10 @@ Done = a passing automated test. Everything not listed as Done-tested is Not sta
 ## Removed from inventory (not features)
 Removed on 2026-10-29 (tools/inventory/m-removed.txt): 31 names that the inventory took from Desktop's engine as M functions but that are section names of the M documentation, not functions that can be called or implemented. The inventory total went from 3008 to 2977.
 - List.Addition, List.Averages, List.Information, List.Membership, List.Set, List.Generators, List.Numerics, List.TransformAndCombine, Number.Bytes, Number.Constants, Number.Conversion, Number.Information, Number.Operations, Number.Rounding, Number.Trigonometry, Record.Information, Record.Serialization, Record.Transformations, Table.Conversions, Table.Information, Table.Ordering, Table.Other, Table.Transformation, Table.Parameter, Text.Extraction, Text.Membership, Text.Modification, Text.Transformations, Text.Parameter, Date.Parameter, Splitter.Parameter
+
+## Merged duplicates
+Merged on 2026-10-29 (one item each, kept the first/more specific; removed from tools/inventory/manual-2.txt). Total 2977 -> 2973; 75 % is now 2230.
+- Background data preview: old 23.2 = 23.13 (kept 23.2). Column tools: old 14.10 "Column tools tab" = the Column tools group of area 11 (kept area 11). Performance analyzer: old 8.4 = 25.22 (kept 8.4). Edit relationships: old 25.12 = 15.22 (kept 15.22, Partial).
 
 ## Excluded (cloud)
 Removed from scope on 2026-10-16: no UI, no disabled buttons, no menu entries, no further work. They are not in INVENTORY.md.
