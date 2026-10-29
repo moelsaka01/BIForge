@@ -139,6 +139,16 @@ export function registerModelingCommands(r: CommandRegistry<Session>): void {
     const { kind, table } = need<{ kind: "table" | "column" | "measure"; table: string }>(a, ["kind", "table"]);
     s.shell.openDialog({ kind: "modelDialog", id: "rename", table, column: (a as { name?: string }).name, renames: kind });
   });
+  // F2: rename what is selected in the Data pane, the Model view or the Table view (a field, else the table)
+  r.register({
+    id: "model.renameSelected", label: "Rename selected", category: "Modeling", shortcut: "F2",
+    isEnabled: (s) => hasProject(s) && (s.shell.getSnapshot().selectedField !== null || s.shell.getSnapshot().selectedTable !== null),
+    run: (s) => {
+      const { selectedField: f, selectedTable: t } = s.shell.getSnapshot();
+      if (f) s.shell.openDialog({ kind: "modelDialog", id: "rename", table: f.table, column: f.name, renames: f.kind });
+      else if (t) s.shell.openDialog({ kind: "modelDialog", id: "rename", table: t, column: undefined, renames: "table" });
+    },
+  });
   reg("model.editCalculatedDialog", "Edit calculated column or table", (s, a) => {
     const { kind, table, column } = need<{ kind: "column" | "table"; table: string; column?: string }>(a, ["kind", "table"]);
     s.shell.openDialog({ kind: "modelDialog", id: kind === "column" ? "editColumn" : "editCalculatedTable", table, column });

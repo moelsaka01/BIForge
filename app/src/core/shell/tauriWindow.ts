@@ -11,6 +11,7 @@ export const tauriWindow: WindowApi = {
     const w = getCurrentWindow();
     await w.setFullscreen(!(await w.isFullscreen()));
   },
+  print: async () => window.print(),
   destroy: () => getCurrentWindow().destroy(),
   onCloseRequested: (handler) =>
     getCurrentWindow().onCloseRequested(async (event) => {

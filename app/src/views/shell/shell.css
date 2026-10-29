@@ -168,3 +168,10 @@ body { background: var(--colorNeutralBackground1, #fff); }
 .opt-page { text-align: left; background: transparent; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; color: inherit; font: inherit; }
 .opt-page:hover { background: var(--colorSubtleBackgroundHover); }
 .opt-page[aria-selected="true"] { background: var(--colorSubtleBackgroundSelected); font-weight: 600; }
+
+/* Print (Ctrl+P): only the report page is printed, without the ribbon, panes and status bar. */
+@media print {
+  body * { visibility: hidden !important; }
+  .report-canvas, .report-canvas * { visibility: visible !important; }
+  .report-canvas { position: absolute !important; left: 0; top: 0; width: 100% !important; overflow: visible !important; }
+}

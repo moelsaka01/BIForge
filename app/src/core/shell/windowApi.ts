@@ -8,6 +8,8 @@ export interface WindowApi {
   isMaximized(): Promise<boolean>;
   /** Full screen on or off (F11). */
   toggleFullscreen(): Promise<void>;
+  /** Opens the system print dialog for the page on screen (Ctrl+P); the dialog also offers "Save as PDF". */
+  print(): Promise<void>;
   /** Closes the window for good (no further close request). */
   destroy(): Promise<void>;
   /** Calls `handler` instead of closing when the user closes the window; the handler decides what happens next. */
@@ -20,6 +22,7 @@ export const noWindow: WindowApi = {
   toggleMaximize: async () => undefined,
   isMaximized: async () => false,
   toggleFullscreen: async () => undefined,
+  print: async () => undefined,
   destroy: async () => undefined,
   onCloseRequested: async () => () => undefined,
 };

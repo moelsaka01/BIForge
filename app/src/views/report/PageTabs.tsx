@@ -105,7 +105,7 @@ export function PageTabs({ pages: all, active }: { pages: PageModel[]; active: s
           onClick={() => c.dispatch("report.page.go", { page: p.name })}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") c.dispatch("report.page.go", { page: p.name });
-            if (e.key === "F2" && !c.readOnly) setRenaming(p.name);
+            if (e.key === "F2" && !c.readOnly) { e.stopPropagation(); setRenaming(p.name); }
           }}
           onDoubleClick={c.readOnly ? undefined : () => setRenaming(p.name)}
           onContextMenu={c.readOnly ? undefined : (e) => menu(e, p, i)}

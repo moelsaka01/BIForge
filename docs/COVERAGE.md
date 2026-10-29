@@ -170,13 +170,13 @@ Last updated: 2026-10-25 (see PROGRESS.md; the status table below is generated b
 | Options dialog: Global | 61 | 22 | 2 | 37 |
 | Options dialog: Current File | 23 | 6 | 0 | 17 |
 | Dialogs | 48 | 28 | 0 | 20 |
-| Keyboard shortcuts | 37 | 24 | 1 | 12 |
-| Export, print and file formats | 15 | 5 | 0 | 10 |
-| Accessibility and platform | 12 | 2 | 0 | 10 |
+| Keyboard shortcuts | 37 | 26 | 1 | 10 |
+| Export, print and file formats | 15 | 5 | 1 | 9 |
+| Accessibility and platform | 12 | 3 | 0 | 9 |
 | Format pane cards per visual | 1264 | 777 | 231 | 256 |
 | DAX functions | 317 | 300 | 0 | 17 |
 | M standard library | 621 | 439 | 0 | 182 |
-| **Total** | **2977** | **1965** | **280** | **732** |
+| **Total** | **2977** | **1968** | **281** | **728** |
 <!-- inventory-status:end -->
 
 ## Online track (Publish & Share; plan in docs/ONLINE_PLAN.md)

@@ -450,3 +450,6 @@
 23|Font size and zoom of the interface => app/src/core/shell/interfaceOptions.test.ts :: the size of the interface is a percent
 23|Clear cache => app/src/views/shell/scope.ui.test.tsx :: settings with an effect
 23|Crash reporting (none) => app/src/views/shell/scope.ui.test.tsx :: settings with an effect
+26|Ctrl+P print => app/src/views/shell/shortcuts.ui.test.tsx :: Ctrl\+P opens the print dialog
+28|Real-window UI tests (WebDriver) => app/e2e/o1.mjs :: connectOverCDP
+26|F2 rename in Model and Table view => app/src/views/shell/shortcuts.ui.test.tsx :: F2 opens Rename

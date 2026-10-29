@@ -70,6 +70,26 @@ describe("window shortcuts", () => {
     expect(a.win.calls).toContain("toggleFullscreen");
   });
 
+  it("Ctrl+P opens the print dialog of the window", async () => {
+    const a = await open();
+    press("p", { ctrlKey: true });
+    await act(async () => {});
+    expect(a.win.calls).toContain("print");
+  });
+
+  it("F2 opens Rename for the selected field, else the selected table", async () => {
+    const a = await open();
+    await act(async () => void a.shell.selectTable("Sales"));
+    press("F2");
+    await act(async () => {});
+    expect(a.shell.getSnapshot().dialog).toMatchObject({ kind: "modelDialog", id: "rename", table: "Sales", renames: "table" });
+    await act(async () => void a.shell.closeDialog());
+    await act(async () => void a.shell.selectField({ table: "Sales", kind: "measure", name: "Total" }));
+    press("F2");
+    await act(async () => {});
+    expect(a.shell.getSnapshot().dialog).toMatchObject({ kind: "modelDialog", id: "rename", table: "Sales", column: "Total", renames: "measure" });
+  });
+
   it("the space bar is not a shortcut and does not throw", async () => {
     const a = await open();
     const before = a.shell.getSnapshot().dialog;

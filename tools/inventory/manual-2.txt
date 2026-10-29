@@ -546,7 +546,7 @@ D | Ctrl+N new
 D | Ctrl+O open
 D | Ctrl+S save
 D | Ctrl+Shift+S save as
-N | Ctrl+P print
+D | Ctrl+P print
 D | Ctrl+Z undo
 D | Ctrl+Y redo
 D | Ctrl+C copy
@@ -579,7 +579,7 @@ D | F1 help
 ### Text editors
 P | Monaco shortcuts in DAX, M and TMDL editors (Ctrl+Space, Ctrl+F, Ctrl+/ ...)
 D | Ctrl+Enter / F5 run query in DAX query view
-N | F2 rename in Model and Table view
+D | F2 rename in Model and Table view
 D | Print Screen / system keys never intercepted (tested)
 ## 27. Export, print and file formats
 N | Export report to PDF
@@ -587,7 +587,7 @@ D | Export page to PNG
 D | Export visual data to CSV
 N | Export visual data to XLSX
 D | Copy visual as image
-N | Print report
+P | Print report
 D | PBIP project (TMDL model + PBIR report) open/save
 N | PBIP verified in Power BI Desktop for report pages and every source
 N | .pbit template export/import
@@ -609,4 +609,4 @@ D | Windows window smoke test
 N | Installer (NSIS)
 N | Auto-update (local) or manual update notice
 N | Crash handler (local report)
-N | Real-window UI tests (WebDriver)
+D | Real-window UI tests (WebDriver)

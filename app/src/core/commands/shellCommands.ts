@@ -192,6 +192,7 @@ export function registerShellCommands(r: CommandRegistry<Session>): void {
     },
   });
   r.register({ id: "app.about", label: "About", category: "Help", run: (s) => s.shell.openDialog({ kind: "about" }) });
+  r.register({ id: "file.print", label: "Print", category: "File", shortcut: "Ctrl+P", isEnabled: hasProject, run: (s) => s.shell.window.print() });
   r.register({ id: "view.fullScreen", label: "Full screen", category: "View", shortcut: "F11", run: (s) => s.shell.window.toggleFullscreen() });
   r.register({ id: "app.shortcuts", label: "Keyboard shortcuts", category: "Help", run: (s) => s.shell.openDialog({ kind: "shortcuts" }) });
   // Help links open in the default browser; nothing is sent from the computer but the request for the page

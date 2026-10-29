@@ -89,7 +89,7 @@ export function DaxQueryView({ project, dax, factory }: { project: Project; dax:
     <div className="panel-pad" aria-label="DAX query area">
       <div role="tablist" aria-label="Query tabs" style={{ display: "flex", gap: 2, alignItems: "center", flexWrap: "wrap" }}>
         {st.daxTabs.map((t) => (
-          <div key={t.id} role="tab" aria-selected={t.id === st.daxActive} tabIndex={0} onClick={() => env.session.shell.selectDaxTab(t.id)} onDoubleClick={() => setRenaming(t.id)} onKeyDown={(e) => e.key === "F2" && setRenaming(t.id)} style={{ padding: "2px 8px", cursor: "pointer", borderBottom: t.id === st.daxActive ? "2px solid var(--colorBrandForeground1, #0f6cbd)" : "2px solid transparent", display: "flex", gap: 4, alignItems: "center", fontSize: 13 }}>
+          <div key={t.id} role="tab" aria-selected={t.id === st.daxActive} tabIndex={0} onClick={() => env.session.shell.selectDaxTab(t.id)} onDoubleClick={() => setRenaming(t.id)} onKeyDown={(e) => { if (e.key === "F2") { e.stopPropagation(); setRenaming(t.id); } }} style={{ padding: "2px 8px", cursor: "pointer", borderBottom: t.id === st.daxActive ? "2px solid var(--colorBrandForeground1, #0f6cbd)" : "2px solid transparent", display: "flex", gap: 4, alignItems: "center", fontSize: 13 }}>
             {renaming === t.id ? (
               <input
                 autoFocus
