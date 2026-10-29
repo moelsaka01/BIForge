@@ -239,3 +239,34 @@ describe("ribbon layout", () => {
     expect(last.children.map((x: { type: string }) => x.type)).toEqual(["rect"]);
   });
 });
+
+describe("layout and ribbon bands of stacked charts", () => {
+  const stackedRows = [[c("A"), c("France"), c(10)], [c("A"), c("Canada"), c(30)], [c("B"), c("France"), c(20)], [c("B"), c("Canada"), c(25)]];
+  const mkStack = () => visualOf("columnChart", { Category: [Cat], Series: [Country], Y: [Qty] });
+
+  it("joins the stacked segments with bands when asked, with the gap, color and transparency of the card", () => {
+    const v = mkStack();
+    expect(build(v, grouped(v, stackedRows)).option.series.some((s: { type: string }) => s.type === "custom")).toBe(false);
+    fmt(v, "ribbonBands", "show", lit.bool(true));
+    fmt(v, "ribbonBands", "fillMatchColor", lit.bool(false));
+    fmt(v, "ribbonBands", "fillColor", lit.str("#123456"));
+    fmt(v, "ribbonBands", "fillTransparency", lit.num(30));
+    fmt(v, "layout", "ribbonGapSize", lit.num(5));
+    const bands = build(v, grouped(v, stackedRows)).option.series.filter((s: { type: string }) => s.type === "custom");
+    expect(bands).toHaveLength(2);
+    expect(bands[0].bandLook).toMatchObject({ fill: "#123456", opacity: 0.7 });
+    expect(bands[0].bandGap).toBe(5);
+    // the second series stacks on the first: its span in category A starts at the first series' top
+    const byName = (n: string) => bands.find((b: { name: string }) => b.name === n).data;
+    expect(byName("Canada")[0][1]).toBe(byName("France")[0][2]);
+  });
+
+  it("sorts the series by total and draws the gap between segments", () => {
+    const v = mkStack();
+    fmt(v, "layout", "seriesOrderSorted", lit.bool(true));
+    fmt(v, "layout", "stackedGapSize", lit.num(3));
+    const o = build(v, grouped(v, stackedRows)).option;
+    expect(o.series.map((s: { name: string }) => s.name)).toEqual(["Canada", "France"]);
+    expect(o.series[0].itemStyle.borderWidth).toBe(3);
+  });
+});

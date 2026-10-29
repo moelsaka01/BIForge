@@ -223,7 +223,11 @@
    "wordWrap"
   ],
   "layout": [
-   "clusteredGapSize"
+   "clusteredGapOverlapReverse",
+   "clusteredGapOverlaps",
+   "clusteredGapSize",
+   "seriesOrderReversed",
+   "seriesOrderSorted"
   ],
   "legend": [
    "bold",
@@ -458,7 +462,11 @@
    "wordWrap"
   ],
   "layout": [
-   "clusteredGapSize"
+   "clusteredGapOverlapReverse",
+   "clusteredGapOverlaps",
+   "clusteredGapSize",
+   "seriesOrderReversed",
+   "seriesOrderSorted"
   ],
   "legend": [
    "bold",
@@ -694,7 +702,11 @@
    "wordWrap"
   ],
   "layout": [
-   "seriesOrderReversed"
+   "ribbonGapSize",
+   "seriesOrderReversed",
+   "seriesOrderSorted",
+   "stackedGapExplodes",
+   "stackedGapSize"
   ],
   "legend": [
    "bold",
@@ -715,6 +727,17 @@
    "sourceType",
    "transparency",
    "url"
+  ],
+  "ribbonBands": [
+   "borderColor",
+   "borderColorMatchFill",
+   "borderShow",
+   "borderSize",
+   "borderTransparency",
+   "fillColor",
+   "fillMatchColor",
+   "fillTransparency",
+   "show"
   ],
   "trend": [
    "autoScale",
@@ -905,7 +928,11 @@
    "wordWrap"
   ],
   "layout": [
-   "seriesOrderReversed"
+   "ribbonGapSize",
+   "seriesOrderReversed",
+   "seriesOrderSorted",
+   "stackedGapExplodes",
+   "stackedGapSize"
   ],
   "legend": [
    "bold",
@@ -926,6 +953,17 @@
    "sourceType",
    "transparency",
    "url"
+  ],
+  "ribbonBands": [
+   "borderColor",
+   "borderColorMatchFill",
+   "borderShow",
+   "borderSize",
+   "borderTransparency",
+   "fillColor",
+   "fillMatchColor",
+   "fillTransparency",
+   "show"
   ],
   "trend": [
    "autoScale",
@@ -1111,7 +1149,11 @@
    "wordWrap"
   ],
   "layout": [
-   "seriesOrderReversed"
+   "ribbonGapSize",
+   "seriesOrderReversed",
+   "seriesOrderSorted",
+   "stackedGapExplodes",
+   "stackedGapSize"
   ],
   "legend": [
    "bold",
@@ -1132,6 +1174,17 @@
    "sourceType",
    "transparency",
    "url"
+  ],
+  "ribbonBands": [
+   "borderColor",
+   "borderColorMatchFill",
+   "borderShow",
+   "borderSize",
+   "borderTransparency",
+   "fillColor",
+   "fillMatchColor",
+   "fillTransparency",
+   "show"
   ],
   "trend": [
    "combineSeries",
@@ -1314,7 +1367,11 @@
    "wordWrap"
   ],
   "layout": [
-   "seriesOrderReversed"
+   "ribbonGapSize",
+   "seriesOrderReversed",
+   "seriesOrderSorted",
+   "stackedGapExplodes",
+   "stackedGapSize"
   ],
   "legend": [
    "bold",
@@ -1335,6 +1392,17 @@
    "sourceType",
    "transparency",
    "url"
+  ],
+  "ribbonBands": [
+   "borderColor",
+   "borderColorMatchFill",
+   "borderShow",
+   "borderSize",
+   "borderTransparency",
+   "fillColor",
+   "fillMatchColor",
+   "fillTransparency",
+   "show"
   ],
   "trend": [
    "combineSeries",
@@ -2437,6 +2505,13 @@
    "defaultColor",
    "fill"
   ],
+  "layout": [
+   "ribbonGapSize",
+   "seriesOrderReversed",
+   "seriesOrderSorted",
+   "stackedGapExplodes",
+   "stackedGapSize"
+  ],
   "legend": [
    "bold",
    "fontFamily",
@@ -2456,6 +2531,17 @@
    "sourceType",
    "transparency",
    "url"
+  ],
+  "ribbonBands": [
+   "borderColor",
+   "borderColorMatchFill",
+   "borderShow",
+   "borderSize",
+   "borderTransparency",
+   "fillColor",
+   "fillMatchColor",
+   "fillTransparency",
+   "show"
   ],
   "trend": [
    "autoScale",
@@ -2625,7 +2711,10 @@
    "valueFormatString"
   ],
   "layout": [
-   "clusteredGapSize"
+   "clusteredGapOverlapReverse",
+   "clusteredGapOverlaps",
+   "clusteredGapSize",
+   "seriesOrderReversed"
   ],
   "legend": [
    "bold",
@@ -2892,7 +2981,8 @@
    "valueFormatString"
   ],
   "layout": [
-   "seriesOrderReversed"
+   "seriesOrderReversed",
+   "stackedGapSize"
   ],
   "legend": [
    "bold",
@@ -3197,7 +3287,9 @@
    "show"
   ],
   "layout": [
-   "innerPadding"
+   "innerPadding",
+   "outerPadding",
+   "tilingMethod"
   ],
   "legend": [
    "bold",

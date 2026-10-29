@@ -128,7 +128,11 @@ const ENABLE: Record<string, Record<string, Lit>> = {
   zoom: { show: lit.bool(true), showOnValueAxis: lit.bool(true), showOnValueSecAxis: lit.bool(true) },
   plotArea: { url: lit.str("data:image/png;base64,AA"), color: lit.str("#abcdef") },
   smallMultiplesLayout: { backgroundColor: lit.str("#eeeeee") },
+  ribbonBands: { show: lit.bool(true), borderShow: lit.bool(true), fillColor: lit.str("#abcdef"), borderColor: lit.str("#fedcba") },
 };
+
+/** Properties of another object that make a property matter (the gap of a stacked chart's bands is only seen with bands). */
+const CROSS: Record<string, [string, string, Lit][]> = { layout: [["ribbonBands", "show", lit.bool(true)]] };
 
 /** Properties that only matter together with another one. */
 const WITH: Record<string, Record<string, Record<string, Lit>>> = {
@@ -139,6 +143,8 @@ const WITH: Record<string, Record<string, Record<string, Lit>>> = {
   plotArea: { imageData: { sourceType: lit.str("imageData") } },
   labels: { labelDisplayUnits: { labelPrecision: lit.num(2) } },
   mapControls: { zoomLevel: { autoZoom: lit.bool(false) } },
+  layout: { clusteredGapOverlapReverse: { clusteredGapOverlaps: lit.bool(true) }, stackedGapExplodes: { stackedGapSize: lit.num(4) } },
+  ribbonBands: { fillColor: { fillMatchColor: lit.bool(false) }, borderColor: { borderColorMatchFill: lit.bool(false) } },
   smallMultiplesLayout: { columnCount: { layoutType: lit.str("custom") }, rowCount: { layoutType: lit.str("custom") } },
   visualLink: {
     webUrl: { type: lit.str("WebUrl") },
@@ -154,7 +160,7 @@ const catRows: Cell[][] = [
   [t("Accessories"), t("France"), n(30)],
   [t("Bikes"), t("France"), n(50)],
   [t("Bikes"), t("Canada"), n(70)],
-  [t("Accessories"), t("Canada"), n(10)],
+  [t("Accessories"), t("Canada"), n(15)],
 ];
 
 interface Scenario {
@@ -344,6 +350,7 @@ function measure(scenarioOf: Scenario, visualType: string, objects: string[]): R
       const prepare = (v: VisualModel, skip: string) => {
         for (const [k, val] of Object.entries(ENABLE[object] ?? {})) if (k !== skip) setProp(v, object, k, val, inst.selector);
         for (const [k, val] of inst.extra) if (k !== skip) setProp(v, object, k, val, inst.selector);
+        for (const [o, k, val] of CROSS[object] ?? []) setProp(v, o, k, val, inst.selector);
       };
       for (const [prop, kind] of Object.entries(props)) {
         if (kind[0] === "x") continue;

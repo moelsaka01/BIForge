@@ -18,6 +18,7 @@ import { gazetteer } from "./geo";
 import { linkModel } from "./linkModel";
 import { applyTooltipContent, tooltipContentChanges, tooltipLook } from "./tooltipLook";
 import { bubbleMap, filledMap } from "./mapOptions";
+import { bandStyle, stackBands, type Stacked } from "./ribbonBands";
 
 import type { O } from "./chartFormat";
 
@@ -118,6 +119,9 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
   const showSeriesName = f.bool("labels", "showSeries", false);
   const fillAlpha = opacityOf(f.num("dataPoint", "fillTransparency", 0));
   const borderOn = f.bool("dataPoint", "borderShow", false);
+  // layout > gap between the segments of a stack: a border in the color of the background
+  const stackGap = stacked ? Math.max(0, f.num("layout", "stackedGapSize", 0)) : 0;
+  const gapEdge: O = stackGap > 0 ? { borderColor: theme.background, borderWidth: stackGap } : {};
   const addSeries = (vi: number, si: number, isHighlight: boolean) => {
     const role = valueCols[vi].role;
     const asLine = lineOnly || areaOnly || (combo && role === "Y2");
@@ -132,18 +136,19 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
       const c = cond?.[ci] ?? color;
       const item: O = { value: v, raw: cells[vi][si][ci] };
       // a border with transparency, or "outline only" (empty bar, border in the bar's color), is decided per bar
-      const edge = borderOn && !asLine ? sliceItemStyle(f, theme, c) : {};
+      const edge = asLine ? {} : borderOn ? sliceItemStyle(f, theme, c) : gapEdge;
       if (!asLine || cond) item.itemStyle = { color: c, opacity: (dimmed ? DIM : 1) * (asLine ? 1 : fillAlpha), ...edge };
       if (asLine && dimmed) item.itemStyle = { ...(item.itemStyle ?? {}), opacity: DIM };
       return item;
     });
-    const barBorder = borderOn ? sliceItemStyle(f, theme, color) : {};
+    const barBorder = borderOn ? sliceItemStyle(f, theme, color) : gapEdge;
     const s: O = {
       name: isHighlight ? `${name} (highlighted)` : name,
       type: asLine ? "line" : "bar",
       data,
       itemStyle: { color, ...(asLine ? {} : { opacity: fillAlpha, ...barBorder }) },
-      emphasis: { focus: "none" },
+      // the gap widens when the pointer is on a segment ("explodes")
+      emphasis: { focus: "none", ...(stackGap > 0 && !asLine && f.bool("layout", "stackedGapExplodes", false) ? { itemStyle: { borderWidth: stackGap * 2 + 2, borderColor: theme.background } } : {}) },
       label: labelBlock({
         f,
         theme,
@@ -170,6 +175,11 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
       if (f.has("categoryAxis", "outerPadding")) s.barCategoryGap = `${f.num("categoryAxis", "outerPadding", 20)}%`;
       // the layout card's gap between the groups of bars, as a percentage of a bar
       if (f.has("layout", "clusteredGapSize")) s.barCategoryGap = `${Math.min(500, Math.max(0, f.num("layout", "clusteredGapSize", 20)))}%`;
+      // the bars of a cluster overlap; reversed, the first series is drawn on top
+      if (!stacked && f.bool("layout", "clusteredGapOverlaps", false)) {
+        s.barGap = "-40%";
+        s.z = 2 + (f.bool("layout", "clusteredGapOverlapReverse", false) ? p.series.length - si : si);
+      }
     }
     if (isHighlight) {
       s.z = 5;
@@ -179,20 +189,32 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
     seriesOut.push(s);
     meta.push({ vi, si });
   };
-  valueCols.forEach((_, vi) => p.series.forEach((_s, si) => addSeries(vi, si, false)));
-  if (hl) valueCols.forEach((_, vi) => p.series.forEach((_s, si) => addSeries(vi, si, true)));
+  // layout > sort series: the series with the largest total comes first
+  const order = p.series.map((_s, si) => si);
+  if (f.bool("layout", "seriesOrderSorted", false)) {
+    const total = (si: number) => p.categories.reduce((a, _c, ci) => a + Math.abs(p.cells[0][si][ci] ?? 0), 0);
+    order.sort((a, b) => total(b) - total(a));
+  }
+  valueCols.forEach((_, vi) => order.forEach((si) => addSeries(vi, si, false)));
+  if (hl) valueCols.forEach((_, vi) => order.forEach((si) => addSeries(vi, si, true)));
   // layout > series order reversed: the stack (and the legend) lists the series from the last to the first
-  if (f.bool("layout", "seriesOrderReversed", false) && stacked) {
+  const reverseOrder = () => {
     seriesOut.reverse();
     meta.reverse();
-  }
+  };
+  if (f.bool("layout", "seriesOrderReversed", false) && !ribbon && (stacked || !(lineOnly || areaOnly))) reverseOrder();
 
   if (ribbon) {
     // one custom series per legend entry: a column slot per category and a ribbon to the next category
     seriesOut.length = 0;
     meta.length = 0;
     const layout = ribbonLayout(p.series.map((_s, si) => p.cells[0][si]));
-    p.series.forEach((s, si) => {
+    const gap = Math.max(0, f.num("layout", "ribbonGapSize", 0));
+    const bands = f.bool("ribbonBands", "show", true);
+    const colGap = Math.max(0, f.num("layout", "stackedGapSize", 0));
+    const explodes = colGap > 0 && f.bool("layout", "stackedGapExplodes", false);
+    order.forEach((si) => {
+      const s = p.series[si];
       const name = hasSeries ? s.label || BLANK_LABEL : valueCols[0].label;
       const color = f.color("dataPoint", "fill", name) ?? f.color("dataPoint", "defaultColor") ?? seriesColor(theme, si);
       const dimmed = p.categories.map((_c, ci) => selecting && !isSelected(ci, si));
@@ -201,6 +223,12 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
         type: "custom",
         encode: { x: 0, y: [1, 2] },
         itemStyle: { color },
+        // what the bands to the next column look like, kept on the series (the renderer below reads it)
+        bandLook: bandStyle(f, theme, color, 1),
+        bandGap: gap,
+        bandsShown: bands,
+        columnGap: colGap,
+        columnGapExplodes: explodes,
         data: p.categories.map((_c, ci) => {
           const slot = layout[ci][si];
           const next = layout[ci + 1]?.[si];
@@ -213,17 +241,34 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
           const hi = api.coord([ci, api.value(2)]);
           const half = api.size([1, 0])[0] * 0.28;
           const op = dimmed[ci] ? DIM : 1;
-          const children: O[] = [{ type: "rect", shape: { x: lo[0] - half, y: Math.min(lo[1], hi[1]), width: half * 2, height: Math.abs(lo[1] - hi[1]) }, style: { fill: color, opacity: op } }];
-          if (api.value(3) !== null && api.value(3) !== undefined && !Number.isNaN(api.value(3))) {
+          const children: O[] = [{ type: "rect", shape: { x: lo[0] - half, y: Math.min(lo[1], hi[1]), width: half * 2, height: Math.abs(lo[1] - hi[1]) }, style: { fill: color, opacity: op, ...(colGap > 0 ? { stroke: theme.background, lineWidth: colGap } : {}) }, ...(explodes ? { emphasis: { style: { stroke: theme.background, lineWidth: colGap * 2 + 2 } } } : {}) }];
+          if (bands && api.value(3) !== null && api.value(3) !== undefined && !Number.isNaN(api.value(3))) {
             const nlo = api.coord([ci + 1, api.value(3)]);
             const nhi = api.coord([ci + 1, api.value(4)]);
-            children.push({ type: "polygon", shape: { points: [[lo[0] + half, lo[1]], [nlo[0] - half, nlo[1]], [nhi[0] - half, nhi[1]], [hi[0] + half, hi[1]]] }, style: { fill: color, opacity: op * 0.4 } });
+            children.push({ type: "polygon", shape: { points: [[lo[0] + half + gap, lo[1]], [nlo[0] - half - gap, nlo[1]], [nhi[0] - half - gap, nhi[1]], [hi[0] + half + gap, hi[1]]] }, style: { ...bandStyle(f, theme, color, 1), opacity: (bandStyle(f, theme, color, 1).opacity as number) * op } });
           }
           return { type: "group", children };
         },
       });
       meta.push({ vi: 0, si });
     });
+    if (f.bool("layout", "seriesOrderReversed", false)) reverseOrder();
+  }
+
+  // bands that join the segments of a stacked chart (off unless the ribbon bands card turns them on)
+  if (stacked && !lineOnly && !areaOnly && f.bool("ribbonBands", "show", false)) {
+    const top = p.categories.map(() => 0);
+    const stacks: Stacked[] = [];
+    for (const s of seriesOut) {
+      if (s.type !== "bar" || s.stack !== "total") continue;
+      const spans = (s.data as O[]).map((d, ci): [number, number] => {
+        const lo = top[ci];
+        top[ci] += Math.max(0, Number(d.value ?? 0));
+        return [lo, top[ci]];
+      });
+      stacks.push({ name: s.name, color: s.itemStyle.color, spans });
+    }
+    seriesOut.push(...stackBands(f, theme, stacks, horizontal, f.has("categoryAxis", "outerPadding") ? f.num("categoryAxis", "outerPadding", 20) : 20));
   }
 
   const autoPoints: number[] = [];
@@ -723,6 +768,9 @@ function treemap(inp: ChartInput): ChartBuild {
         },
         upperLabel: { show: groups.length > 1 && showCat, height: 18, ...echartsText({ ...catFont, color: catFont.color }, white) },
         itemStyle: { borderColor: theme.background, borderWidth: 1, gapWidth: f.has("layout", "innerPadding") ? f.num("layout", "innerPadding", 1) : 1 },
+        // layout > outer padding (space around the whole treemap) and tiling method (the aspect ratio the rectangles aim for)
+        ...(f.has("layout", "outerPadding") ? (() => { const pad = Math.max(0, f.num("layout", "outerPadding", 0)); return { left: pad, right: pad, top: pad, bottom: pad }; })() : {}),
+        squareRatio: { stableSquarified: 0.5 * (1 + Math.sqrt(5)), binary: 1, alternating: 3 }[f.str("layout", "tilingMethod", "stableSquarified")] ?? 0.5 * (1 + Math.sqrt(5)),
       },
     ],
   };
