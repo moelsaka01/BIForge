@@ -566,14 +566,14 @@ D | Tab cycles visuals
 N | Ctrl+F6 / Shift+Ctrl+F6 move focus between sections
 D | Ctrl+Shift+F11 show visuals as tables
 N | Ctrl+Shift+F10 show/hide tooltip
-N | Alt+Shift+F10 focus visual menu
+D | Alt+Shift+F10 focus visual menu
 N | Ctrl+Space multi-select data points
 N | Ctrl+H show data point details
 D | Ctrl+Shift+C clear data selection
 N | Ctrl+Alt+I annotations visibility
 D | Alt+Shift+1 collapse all tables, Alt+Shift+9 expand all tables
-N | Ctrl+Right Arrow enter visual
-N | Esc exit visual
+D | Ctrl+Right Arrow enter visual
+D | Esc exit visual
 N | Enter slicer control
 D | F1 help
 ### Text editors

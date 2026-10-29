@@ -274,6 +274,12 @@ export function PageCanvas(p: PageCanvasProps) {
     if (!p.editing) return;
     if (c.readOnly && e.key !== "Escape") return;
     if (e.key === "Escape") {
+      // Esc leaves a visual that Ctrl+Right Arrow (or Enter on a slicer) entered: the focus returns to the page, the selection stays
+      const active = document.activeElement as HTMLElement | null;
+      if (active && active !== root.current && active.closest("[data-visual]") && root.current?.contains(active)) {
+        root.current.focus();
+        return;
+      }
       if (c.snap.editInteractions) c.dispatch("report.interaction.edit", { source: null });
       else if (c.snap.selection) c.dispatch("report.view.clearSelection");
       else p.onSelection([]);
@@ -313,6 +319,31 @@ export function PageCanvas(p: PageCanvasProps) {
       return;
     }
     if (selection.length === 0) return;
+    const frameOf = (name: string) => root.current?.querySelector<HTMLElement>(`[data-visual="${name}"]`) ?? null;
+    const slicerSelected = selection.length === 1 && /slicer/i.test(page.visuals.find((v) => v.name === selection[0])?.visualType ?? "");
+    // Ctrl+Right Arrow enters the selected visual (Enter does it for a slicer): the focus moves to its first control, or to the visual itself
+    if (selection.length === 1 && ((mod && e.key === "ArrowRight") || (slicerSelected && e.key === "Enter" && !mod))) {
+      const frame = frameOf(selection[0]);
+      if (frame) {
+        e.preventDefault();
+        const inner = Array.from(frame.querySelectorAll<HTMLElement>('input, select, [role="option"], [role="checkbox"], [role="radio"], [role="treeitem"], a[href], [tabindex]:not([tabindex="-1"])')).find((x) => !x.closest("[data-visual-header]") && x.getAttribute("aria-label") !== "More options");
+        if (inner) inner.focus();
+        else {
+          frame.tabIndex = -1;
+          frame.focus();
+        }
+      }
+      return;
+    }
+    // Alt+Shift+F10 puts the focus on the selected visual's "More options" button
+    if (selection.length === 1 && e.altKey && e.shiftKey && e.key === "F10") {
+      const more = frameOf(selection[0])?.querySelector<HTMLElement>('[aria-label="More options"]');
+      if (more) {
+        e.preventDefault();
+        more.focus();
+      }
+      return;
+    }
     if (mod && e.key.toLowerCase() === "d") {
       e.preventDefault();
       for (const name of selection) if (!page.groups.some((g) => g.name === name)) c.dispatch("report.visual.duplicate", { page: page.name, visual: name });

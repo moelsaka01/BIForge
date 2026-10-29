@@ -232,6 +232,24 @@ describe("ReportView: editing", () => {
     expect(await screen.findByText(/This page is empty/)).toBeTruthy();
   });
 
+  it("keyboard: Ctrl+Right Arrow enters the selected visual, Esc leaves it, Alt+Shift+F10 focuses its menu button", async () => {
+    const t = setup();
+    await t.run("report.visual.add", { page: "page1", type: "card", position: { x: 100, y: 100 }, fields: [{ role: "Values", field: Qty }] });
+    t.dax.handler = () => ({ results: [result(["m"], [[cell("5")]])], elapsedMs: 1 });
+    render(<t.Host />);
+    const v = t.page().visuals[0];
+    const frame = await waitFor(() => document.querySelector(`[data-visual="${v.name}"]`) as HTMLElement);
+    fireEvent.pointerDown(frame, { button: 0 });
+    const region = screen.getByRole("region", { name: /Page Page 1/ });
+    fireEvent.keyDown(region, { key: "ArrowRight", ctrlKey: true });
+    expect(frame.contains(document.activeElement)).toBe(true);
+    fireEvent.keyDown(document.activeElement!, { key: "Escape" });
+    expect(document.activeElement).toBe(region);
+    expect(t.page().visuals).toHaveLength(1);
+    fireEvent.keyDown(region, { key: "F10", altKey: true, shiftKey: true });
+    expect((document.activeElement as HTMLElement).getAttribute("aria-label")).toBe("More options");
+  });
+
   it("the Visualizations pane adds a visual of the chosen type and changes the type of the selected one", async () => {
     const t = setup();
     t.dax.handler = () => ({ results: [result(["a", "b"], rows(["Bikes", 1]))], elapsedMs: 1 });
