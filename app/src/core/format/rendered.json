@@ -3605,8 +3605,13 @@
    "formatString"
   ],
   "categoryAxis": [
+   "bold",
    "color",
-   "show"
+   "fontFamily",
+   "fontSize",
+   "italic",
+   "show",
+   "underline"
   ],
   "dataPoint": [
    "defaultColor",
@@ -3614,6 +3619,7 @@
   ],
   "labels": [
    "backgroundColor",
+   "backgroundTransparency",
    "bold",
    "color",
    "enableBackground",
@@ -3624,6 +3630,7 @@
    "labelDisplayUnits",
    "labelPosition",
    "labelPrecision",
+   "percentageLabelPrecision",
    "show",
    "underline"
   ]

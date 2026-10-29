@@ -784,7 +784,9 @@ function funnel(inp: ChartInput): ChartBuild {
     const pctFirst = first ? `${((v / first) * 100).toFixed(pctDigits)}%` : "";
     const pctPrev = prev ? `${((v / prev) * 100).toFixed(pctDigits)}%` : "";
     const body = fmtStyle === "Percent of first" ? pctFirst : fmtStyle === "Percent of previous" ? pctPrev : fmtStyle === "Data, percent of first" ? `${val} (${pctFirst})` : fmtStyle === "Data, percent of previous" ? `${val} (${pctPrev})` : val;
-    return showCat ? `${pa.name}  ${body}` : body;
+    // the category and the figures are two spans, each in its own font (Category labels and Labels cards)
+    const part = (text: string, ft: { underline: boolean }) => (ft.underline ? underlined(text) : text);
+    return showCat ? `{c|${part(String(pa.name), catFont)}}  {v|${part(body, font)}}` : `{v|${part(body, font)}}`;
   };
   const option: O = {
     animation: false,
@@ -803,8 +805,9 @@ function funnel(inp: ChartInput): ChartBuild {
           show: f.bool("labels", "show", true),
           position: f.str("labels", "labelPosition", "Auto") === "OutsideEnd" ? "outside" : "inside",
           ...echartsText({ ...font, color: font.color ?? (showCat ? catFont.color : undefined) ?? "#ffffff" }, labelDefaults(theme)),
-          formatter: font.underline ? (pa: O) => underlined(labelText(pa)) : labelText,
-          ...(f.bool("labels", "enableBackground", false) ? { backgroundColor: f.color("labels", "backgroundColor") ?? theme.background, padding: [2, 4] } : {}),
+          formatter: labelText,
+          rich: { c: echartsText({ ...catFont, color: catFont.color ?? font.color ?? "#ffffff" }, labelDefaults(theme)), v: echartsText({ ...font, color: font.color ?? (showCat ? catFont.color : undefined) ?? "#ffffff" }, labelDefaults(theme)) },
+          ...(f.bool("labels", "enableBackground", false) ? { backgroundColor: withOpacity(f.color("labels", "backgroundColor") ?? theme.background, opacityOf(f.num("labels", "backgroundTransparency", 0))), padding: [2, 4] } : {}),
         },
         itemStyle: { borderColor: theme.background, borderWidth: 1 },
         labelLine: { show: showCat },
