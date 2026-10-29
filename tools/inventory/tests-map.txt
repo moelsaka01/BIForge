@@ -453,3 +453,5 @@
 26|Ctrl+P print => app/src/views/shell/shortcuts.ui.test.tsx :: Ctrl\+P opens the print dialog
 28|Real-window UI tests (WebDriver) => app/e2e/o1.mjs :: connectOverCDP
 26|F2 rename in Model and Table view => app/src/views/shell/shortcuts.ui.test.tsx :: F2 opens Rename
+21|try ... otherwise ... and error values => tests/m/stdlib/language.json :: otherwise 5
+21|Type system (type declarations, ascription) => tests/m/stdlib/language.json :: 5 as number

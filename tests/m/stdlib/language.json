@@ -1,0 +1,92 @@
+[
+ {
+  "fn": "Type.Is",
+  "m": "try error \"x\" otherwise 5",
+  "expect": "5",
+  "mode": "value"
+ },
+ {
+  "fn": "Type.Is",
+  "m": "try 7 otherwise 5",
+  "expect": "7",
+  "mode": "value"
+ },
+ {
+  "fn": "Type.Is",
+  "m": "(try error \"boom\")[HasError]",
+  "expect": "true",
+  "mode": "value"
+ },
+ {
+  "fn": "Type.Is",
+  "m": "(try error \"boom\")[Error][Message]",
+  "expect": "boom",
+  "mode": "value"
+ },
+ {
+  "fn": "Type.Is",
+  "m": "(try 3)[Value]",
+  "expect": "3",
+  "mode": "value"
+ },
+ {
+  "fn": "Type.Is",
+  "m": "(try 3)[HasError]",
+  "expect": "false",
+  "mode": "value"
+ },
+ {
+  "fn": "Type.Is",
+  "m": "try error [Reason = \"My.Reason\", Message = \"m\", Detail = null] otherwise \"caught\"",
+  "expect": "caught",
+  "mode": "value"
+ },
+ {
+  "fn": "Type.Is",
+  "m": "(try error [Reason = \"My.Reason\", Message = \"m\", Detail = null])[Error][Reason]",
+  "expect": "My.Reason",
+  "mode": "value"
+ },
+ {
+  "fn": "Type.Is",
+  "m": "5 is number",
+  "expect": "true",
+  "mode": "value"
+ },
+ {
+  "fn": "Type.Is",
+  "m": "\"a\" is number",
+  "expect": "false",
+  "mode": "value"
+ },
+ {
+  "fn": "Type.Is",
+  "m": "null is nullable number",
+  "expect": "true",
+  "mode": "value"
+ },
+ {
+  "fn": "Type.Is",
+  "m": "5 as number",
+  "expect": "5",
+  "mode": "value"
+ },
+ {
+  "fn": "Type.Is",
+  "m": "{1, 2} is list",
+  "expect": "true",
+  "mode": "value"
+ },
+ {
+  "fn": "Type.Is",
+  "m": "[a = 1] is record",
+  "expect": "true",
+  "mode": "value"
+ },
+ {
+  "fn": "Type.Is",
+  "m": "Type.Is(type nullable number, type number)",
+  "expect": "false",
+  "mode": "value"
+ }
+]

@@ -326,9 +326,9 @@ N | Text / Number / Date / DateTime / Duration / Time column tools
 D | Parser: let, each, functions, records, lists, if, try (partly), types
 N | Parser: section documents
 N | Parser: function types and implicit projection
-N | try ... otherwise ... and error values
+D | try ... otherwise ... and error values
 N | Row-level error values in tables
-N | Type system (type declarations, ascription)
+D | Type system (type declarations, ascription)
 N | Query folding indicators
 D | Evaluator folding to DuckDB SQL (symbolic scalars, CTE chains)
 N | Native query / Value.NativeQuery
