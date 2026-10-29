@@ -300,3 +300,17 @@ describe("small multiples layout", () => {
     expect(left(build(v, grouped(v, rows4)).option)).toBe(4);
   });
 });
+
+describe("underlined chart text", () => {
+  it("puts a combining low line after each character of the legend, labels and axis text when the card asks for it", () => {
+    const v = visualOf("clusteredColumnChart", { Category: [Cat], Series: [Country], Y: [Qty] });
+    const rows = [[c("A"), c("France"), c(10)], [c("A"), c("Canada"), c(30)]];
+    const plain = build(v, grouped(v, rows)).option;
+    expect(plain.legend.formatter).toBeUndefined();
+    fmt(v, "legend", "underline", lit.bool(true));
+    fmt(v, "categoryAxis", "underline", lit.bool(true));
+    const o = build(v, grouped(v, rows)).option;
+    expect(o.legend.formatter("Ab")).toBe("A̲b̲");
+    expect(o.xAxis.axisLabel.formatter("A")).toBe("A̲");
+  });
+});

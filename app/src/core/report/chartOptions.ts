@@ -10,7 +10,7 @@ import type { Loaded } from "./dataLoader";
 import type { SelectedPoint } from "./interactions";
 import { formatCompact, formatNumber } from "./numberFormat";
 import { axisBlock, plotImage, type PlotImage, CAP, dashOf, gridFor, labelBlock, labelDefaults, legendBlock, lineSeriesStyle, referenceLineMark, referenceLineShade, sliceItemStyle, valueText, zoomBlock, type LineSpec } from "./chartFormat";
-import { echartsText, opacityOf, readFont } from "../format/styles";
+import { echartsText, opacityOf, readFont, underlined } from "../format/styles";
 import { seriesColor, type Theme } from "./theme";
 import type { VisualModel } from "./visualDoc";
 import { visualType } from "./visualTypes";
@@ -705,7 +705,7 @@ function pie(inp: ChartInput): ChartBuild {
         label: {
           show: f.bool("labels", "show", true),
           position: PIE_POS[f.str("labels", "position", "outside")] ?? "outside",
-          formatter: text,
+          formatter: font.underline ? (pa: O) => underlined(text(pa)) : text,
           ...echartsText(font, labelDefaults(theme)),
           ...(bg === "on" ? { backgroundColor: theme.background, padding: [2, 4] } : {}),
           overflow: f.bool("labels", "overflow", false) ? "none" : "truncate",
@@ -757,7 +757,7 @@ function funnel(inp: ChartInput): ChartBuild {
           show: f.bool("labels", "show", true),
           position: f.str("labels", "labelPosition", "Auto") === "OutsideEnd" ? "outside" : "inside",
           ...echartsText({ ...font, color: font.color ?? (showCat ? catFont.color : undefined) ?? "#ffffff" }, labelDefaults(theme)),
-          formatter: labelText,
+          formatter: font.underline ? (pa: O) => underlined(labelText(pa)) : labelText,
           ...(f.bool("labels", "enableBackground", false) ? { backgroundColor: f.color("labels", "backgroundColor") ?? theme.background, padding: [2, 4] } : {}),
         },
         itemStyle: { borderColor: theme.background, borderWidth: 1 },
@@ -808,10 +808,14 @@ function treemap(inp: ChartInput): ChartBuild {
         data: colored,
         label: {
           show: showCat || showVal,
-          formatter: (pa: O) => [showCat ? pa.name : "", showVal ? valueText(pa.value, vcol?.format ?? null, f) : ""].filter(Boolean).join("\n"),
-          ...echartsText({ ...catFont, color: catFont.color ?? valFont.color }, white),
+          // the category and the value are two spans, each with its own font (Category labels and Labels cards)
+          formatter: (pa: O) => {
+            const val = showVal ? valueText(pa.value, vcol?.format ?? null, f) : "";
+            return [showCat ? `{c|${catFont.underline ? underlined(String(pa.name)) : pa.name}}` : "", showVal ? `{v|${valFont.underline ? underlined(val) : val}}` : ""].filter(Boolean).join("\n");
+          },
+          rich: { c: echartsText({ ...catFont, color: catFont.color ?? valFont.color }, white), v: echartsText({ ...valFont, color: valFont.color ?? catFont.color }, white) },
         },
-        upperLabel: { show: groups.length > 1 && showCat, height: 18, ...echartsText({ ...catFont, color: catFont.color }, white) },
+        upperLabel: { show: groups.length > 1 && showCat, height: 18, ...(catFont.underline ? { formatter: (pa: O) => underlined(String(pa.name)) } : {}), ...echartsText({ ...catFont, color: catFont.color }, white) },
         itemStyle: { borderColor: theme.background, borderWidth: 1, gapWidth: f.has("layout", "innerPadding") ? f.num("layout", "innerPadding", 1) : 1 },
         // layout > outer padding (space around the whole treemap) and tiling method (the aspect ratio the rectangles aim for)
         ...(f.has("layout", "outerPadding") ? (() => { const pad = Math.max(0, f.num("layout", "outerPadding", 0)); return { left: pad, right: pad, top: pad, bottom: pad }; })() : {}),

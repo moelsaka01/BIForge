@@ -186,7 +186,9 @@
    "titleFontFamily",
    "titleFontSize",
    "titleItalic",
-   "titleText"
+   "titleText",
+   "titleUnderline",
+   "underline"
   ],
   "dataPoint": [
    "borderColor",
@@ -218,6 +220,7 @@
    "showBlankAs",
    "showSeries",
    "transparency",
+   "underline",
    "valueCustomFormatString",
    "valueFormatString",
    "wordWrap"
@@ -238,7 +241,8 @@
    "position",
    "show",
    "showTitle",
-   "titleText"
+   "titleText",
+   "underline"
   ],
   "plotArea": [
    "color",
@@ -315,7 +319,9 @@
    "titleFontFamily",
    "titleFontSize",
    "titleItalic",
-   "titleText"
+   "titleText",
+   "titleUnderline",
+   "underline"
   ],
   "xAxisReferenceLine": [
    "dashArray",
@@ -437,7 +443,9 @@
    "titleFontFamily",
    "titleFontSize",
    "titleItalic",
-   "titleText"
+   "titleText",
+   "titleUnderline",
+   "underline"
   ],
   "dataPoint": [
    "borderColor",
@@ -469,6 +477,7 @@
    "showBlankAs",
    "showSeries",
    "transparency",
+   "underline",
    "valueCustomFormatString",
    "valueFormatString",
    "wordWrap"
@@ -489,7 +498,8 @@
    "position",
    "show",
    "showTitle",
-   "titleText"
+   "titleText",
+   "underline"
   ],
   "plotArea": [
    "color",
@@ -566,7 +576,9 @@
    "titleFontFamily",
    "titleFontSize",
    "titleItalic",
-   "titleText"
+   "titleText",
+   "titleUnderline",
+   "underline"
   ],
   "xAxisReferenceLine": [
    "dashArray",
@@ -688,7 +700,9 @@
    "titleFontFamily",
    "titleFontSize",
    "titleItalic",
-   "titleText"
+   "titleText",
+   "titleUnderline",
+   "underline"
   ],
   "dataPoint": [
    "borderColor",
@@ -721,6 +735,7 @@
    "showBlankAs",
    "showSeries",
    "transparency",
+   "underline",
    "valueCustomFormatString",
    "valueFormatString",
    "wordWrap"
@@ -741,7 +756,8 @@
    "position",
    "show",
    "showTitle",
-   "titleText"
+   "titleText",
+   "underline"
   ],
   "plotArea": [
    "color",
@@ -804,7 +820,9 @@
    "titleFontFamily",
    "titleFontSize",
    "titleItalic",
-   "titleText"
+   "titleText",
+   "titleUnderline",
+   "underline"
   ],
   "xAxisReferenceLine": [
    "dashArray",
@@ -926,7 +944,9 @@
    "titleFontFamily",
    "titleFontSize",
    "titleItalic",
-   "titleText"
+   "titleText",
+   "titleUnderline",
+   "underline"
   ],
   "dataPoint": [
    "borderColor",
@@ -959,6 +979,7 @@
    "showBlankAs",
    "showSeries",
    "transparency",
+   "underline",
    "valueCustomFormatString",
    "valueFormatString",
    "wordWrap"
@@ -979,7 +1000,8 @@
    "position",
    "show",
    "showTitle",
-   "titleText"
+   "titleText",
+   "underline"
   ],
   "plotArea": [
    "color",
@@ -1042,7 +1064,9 @@
    "titleFontFamily",
    "titleFontSize",
    "titleItalic",
-   "titleText"
+   "titleText",
+   "titleUnderline",
+   "underline"
   ],
   "xAxisReferenceLine": [
    "dashArray",
@@ -1164,7 +1188,9 @@
    "titleFontFamily",
    "titleFontSize",
    "titleItalic",
-   "titleText"
+   "titleText",
+   "titleUnderline",
+   "underline"
   ],
   "dataPoint": [
    "borderColor",
@@ -1194,6 +1220,7 @@
    "show",
    "showSeries",
    "transparency",
+   "underline",
    "wordWrap"
   ],
   "layout": [
@@ -1212,7 +1239,8 @@
    "position",
    "show",
    "showTitle",
-   "titleText"
+   "titleText",
+   "underline"
   ],
   "plotArea": [
    "color",
@@ -1272,7 +1300,9 @@
    "titleFontFamily",
    "titleFontSize",
    "titleItalic",
-   "titleText"
+   "titleText",
+   "titleUnderline",
+   "underline"
   ],
   "xAxisReferenceLine": [
    "dashArray",
@@ -1394,7 +1424,9 @@
    "titleFontFamily",
    "titleFontSize",
    "titleItalic",
-   "titleText"
+   "titleText",
+   "titleUnderline",
+   "underline"
   ],
   "dataPoint": [
    "borderColor",
@@ -1424,6 +1456,7 @@
    "show",
    "showSeries",
    "transparency",
+   "underline",
    "wordWrap"
   ],
   "layout": [
@@ -1442,7 +1475,8 @@
    "position",
    "show",
    "showTitle",
-   "titleText"
+   "titleText",
+   "underline"
   ],
   "plotArea": [
    "color",
@@ -1502,7 +1536,9 @@
    "titleFontFamily",
    "titleFontSize",
    "titleItalic",
-   "titleText"
+   "titleText",
+   "titleUnderline",
+   "underline"
   ],
   "xAxisReferenceLine": [
    "dashArray",
@@ -1621,7 +1657,9 @@
    "titleFontFamily",
    "titleFontSize",
    "titleItalic",
-   "titleText"
+   "titleText",
+   "titleUnderline",
+   "underline"
   ],
   "dataPoint": [
    "defaultColor",
@@ -1647,6 +1685,7 @@
    "showBlankAs",
    "showSeries",
    "transparency",
+   "underline",
    "valueCustomFormatString",
    "valueFormatString"
   ],
@@ -1660,7 +1699,8 @@
    "position",
    "show",
    "showTitle",
-   "titleText"
+   "titleText",
+   "underline"
   ],
   "lineStyles": [
    "areaShow",
@@ -1766,7 +1806,9 @@
    "titleFontFamily",
    "titleFontSize",
    "titleItalic",
-   "titleText"
+   "titleText",
+   "titleUnderline",
+   "underline"
   ],
   "xAxisReferenceLine": [
    "dashArray",
@@ -1885,7 +1927,9 @@
    "titleFontFamily",
    "titleFontSize",
    "titleItalic",
-   "titleText"
+   "titleText",
+   "titleUnderline",
+   "underline"
   ],
   "dataPoint": [
    "defaultColor",
@@ -1911,6 +1955,7 @@
    "showBlankAs",
    "showSeries",
    "transparency",
+   "underline",
    "valueCustomFormatString",
    "valueFormatString"
   ],
@@ -1924,7 +1969,8 @@
    "position",
    "show",
    "showTitle",
-   "titleText"
+   "titleText",
+   "underline"
   ],
   "lineStyles": [
    "interpolationSmooth",
@@ -2029,7 +2075,9 @@
    "titleFontFamily",
    "titleFontSize",
    "titleItalic",
-   "titleText"
+   "titleText",
+   "titleUnderline",
+   "underline"
   ],
   "xAxisReferenceLine": [
    "dashArray",
@@ -2148,7 +2196,9 @@
    "titleFontFamily",
    "titleFontSize",
    "titleItalic",
-   "titleText"
+   "titleText",
+   "titleUnderline",
+   "underline"
   ],
   "dataPoint": [
    "defaultColor",
@@ -2174,6 +2224,7 @@
    "showBlankAs",
    "showSeries",
    "transparency",
+   "underline",
    "valueCustomFormatString",
    "valueFormatString"
   ],
@@ -2190,7 +2241,8 @@
    "position",
    "show",
    "showTitle",
-   "titleText"
+   "titleText",
+   "underline"
   ],
   "lineStyles": [
    "interpolationSmooth",
@@ -2270,7 +2322,9 @@
    "titleFontFamily",
    "titleFontSize",
    "titleItalic",
-   "titleText"
+   "titleText",
+   "titleUnderline",
+   "underline"
   ],
   "xAxisReferenceLine": [
    "dashArray",
@@ -2389,7 +2443,9 @@
    "titleFontFamily",
    "titleFontSize",
    "titleItalic",
-   "titleText"
+   "titleText",
+   "titleUnderline",
+   "underline"
   ],
   "dataPoint": [
    "defaultColor",
@@ -2411,7 +2467,8 @@
    "optimizeLabelDisplay",
    "show",
    "showSeries",
-   "transparency"
+   "transparency",
+   "underline"
   ],
   "layout": [
    "seriesOrderReversed"
@@ -2426,7 +2483,8 @@
    "position",
    "show",
    "showTitle",
-   "titleText"
+   "titleText",
+   "underline"
   ],
   "lineStyles": [
    "interpolationSmooth",
@@ -2503,7 +2561,9 @@
    "titleFontFamily",
    "titleFontSize",
    "titleItalic",
-   "titleText"
+   "titleText",
+   "titleUnderline",
+   "underline"
   ],
   "xAxisReferenceLine": [
    "dashArray",
@@ -2623,7 +2683,9 @@
    "titleFontFamily",
    "titleFontSize",
    "titleItalic",
-   "titleText"
+   "titleText",
+   "titleUnderline",
+   "underline"
   ],
   "dataPoint": [
    "borderColor",
@@ -2652,7 +2714,8 @@
    "position",
    "show",
    "showTitle",
-   "titleText"
+   "titleText",
+   "underline"
   ],
   "plotArea": [
    "color",
@@ -2715,7 +2778,9 @@
    "titleFontFamily",
    "titleFontSize",
    "titleItalic",
-   "titleText"
+   "titleText",
+   "titleUnderline",
+   "underline"
   ],
   "xAxisReferenceLine": [
    "dashArray",
@@ -2807,7 +2872,9 @@
    "titleFontFamily",
    "titleFontSize",
    "titleItalic",
-   "titleText"
+   "titleText",
+   "titleUnderline",
+   "underline"
   ],
   "dataPoint": [
    "borderColor",
@@ -2839,6 +2906,7 @@
    "showBlankAs",
    "showSeries",
    "transparency",
+   "underline",
    "valueCustomFormatString",
    "valueFormatString"
   ],
@@ -2858,7 +2926,8 @@
    "position",
    "show",
    "showTitle",
-   "titleText"
+   "titleText",
+   "underline"
   ],
   "lineStyles": [
    "areaShow",
@@ -2972,6 +3041,8 @@
    "secTitleFontSize",
    "secTitleItalic",
    "secTitleText",
+   "secTitleUnderline",
+   "secUnderline",
    "show",
    "showAxisTitle",
    "start",
@@ -2981,7 +3052,9 @@
    "titleFontFamily",
    "titleFontSize",
    "titleItalic",
-   "titleText"
+   "titleText",
+   "titleUnderline",
+   "underline"
   ],
   "xAxisReferenceLine": [
    "dashArray",
@@ -3077,7 +3150,9 @@
    "titleFontFamily",
    "titleFontSize",
    "titleItalic",
-   "titleText"
+   "titleText",
+   "titleUnderline",
+   "underline"
   ],
   "dataPoint": [
    "borderColor",
@@ -3110,6 +3185,7 @@
    "showBlankAs",
    "showSeries",
    "transparency",
+   "underline",
    "valueCustomFormatString",
    "valueFormatString"
   ],
@@ -3127,7 +3203,8 @@
    "position",
    "show",
    "showTitle",
-   "titleText"
+   "titleText",
+   "underline"
   ],
   "lineStyles": [
    "areaShow",
@@ -3204,6 +3281,8 @@
    "secTitleFontSize",
    "secTitleItalic",
    "secTitleText",
+   "secTitleUnderline",
+   "secUnderline",
    "show",
    "showAxisTitle",
    "start",
@@ -3213,7 +3292,9 @@
    "titleFontFamily",
    "titleFontSize",
    "titleItalic",
-   "titleText"
+   "titleText",
+   "titleUnderline",
+   "underline"
   ],
   "xAxisReferenceLine": [
    "dashArray",
@@ -3308,7 +3389,8 @@
    "overflow",
    "percentageLabelPrecision",
    "position",
-   "show"
+   "show",
+   "underline"
   ],
   "legend": [
    "bold",
@@ -3319,7 +3401,8 @@
    "position",
    "show",
    "showTitle",
-   "titleText"
+   "titleText",
+   "underline"
   ],
   "slices": [
    "startAngle"
@@ -3353,7 +3436,8 @@
    "overflow",
    "percentageLabelPrecision",
    "position",
-   "show"
+   "show",
+   "underline"
   ],
   "legend": [
    "bold",
@@ -3364,7 +3448,8 @@
    "position",
    "show",
    "showTitle",
-   "titleText"
+   "titleText",
+   "underline"
   ],
   "slices": [
    "innerRadiusRatio",
@@ -3395,7 +3480,8 @@
    "labelDisplayUnits",
    "labelPosition",
    "labelPrecision",
-   "show"
+   "show",
+   "underline"
   ]
  },
  "treemap": {
@@ -3408,16 +3494,22 @@
    "fontFamily",
    "fontSize",
    "italic",
-   "show"
+   "show",
+   "underline"
   ],
   "dataPoint": [
    "fill"
   ],
   "labels": [
+   "bold",
    "color",
+   "fontFamily",
+   "fontSize",
+   "italic",
    "labelDisplayUnits",
    "labelPrecision",
-   "show"
+   "show",
+   "underline"
   ],
   "layout": [
    "innerPadding",
@@ -3433,7 +3525,8 @@
    "position",
    "show",
    "showTitle",
-   "titleText"
+   "titleText",
+   "underline"
   ]
  },
  "scatterChart": {
@@ -3471,7 +3564,9 @@
    "titleFontFamily",
    "titleFontSize",
    "titleItalic",
-   "titleText"
+   "titleText",
+   "titleUnderline",
+   "underline"
   ],
   "categoryLabels": [
    "bold",
@@ -3494,7 +3589,8 @@
    "position",
    "show",
    "showTitle",
-   "titleText"
+   "titleText",
+   "underline"
   ],
   "markers": [
    "borderColor",
@@ -3541,7 +3637,9 @@
    "titleFontFamily",
    "titleFontSize",
    "titleItalic",
-   "titleText"
+   "titleText",
+   "titleUnderline",
+   "underline"
   ]
  },
  "map": {
@@ -3580,7 +3678,8 @@
    "position",
    "show",
    "showTitle",
-   "titleText"
+   "titleText",
+   "underline"
   ],
   "mapControls": [
    "autoZoom",
@@ -3660,7 +3759,9 @@
    "titleFontFamily",
    "titleFontSize",
    "titleItalic",
-   "titleText"
+   "titleText",
+   "titleUnderline",
+   "underline"
   ],
   "labels": [
    "backgroundColor",
@@ -3675,7 +3776,8 @@
    "labelOrientation",
    "labelPosition",
    "labelPrecision",
-   "show"
+   "show",
+   "underline"
   ],
   "legend": [
    "bold",
@@ -3686,7 +3788,8 @@
    "position",
    "show",
    "showTitle",
-   "titleText"
+   "titleText",
+   "underline"
   ],
   "plotArea": [
    "color",
@@ -3730,7 +3833,9 @@
    "titleFontSize",
    "titleItalic",
    "titleText",
-   "totalsEnabled"
+   "titleUnderline",
+   "totalsEnabled",
+   "underline"
   ]
  },
  "gauge": {

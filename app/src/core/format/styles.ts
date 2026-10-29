@@ -69,7 +69,13 @@ export function cssFont(font: Font, d: { family: string; size: number; color: st
   };
 }
 
-/** ECharts text style; ECharts has no underline for chart text. */
+/**
+ * Chart text cannot be underlined by ECharts; a combining low line (U+0332) after every character draws the same line in the
+ * text of the chart (checked in Chromium, which the app's WebView2 is built on). Use it on the text a formatter returns.
+ */
+export const underlined = (s: string): string => [...s].map((c) => c + "̲").join("");
+
+/** ECharts text style; underline is not part of it (see underlined). */
 export function echartsText(font: Font, d: { family: string; size: number; color: string }): Record<string, unknown> {
   const x = withDefaults(font, d);
   return { fontFamily: x.family, fontSize: x.size, color: x.color, fontWeight: x.bold ? "bold" : "normal", fontStyle: x.italic ? "italic" : "normal" };
