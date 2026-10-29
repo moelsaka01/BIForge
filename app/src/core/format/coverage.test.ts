@@ -170,6 +170,7 @@ const WITH: Record<string, Record<string, Record<string, Lit>>> = {
     field: { sourceType: lit.str("imageData") },
     imageTransparency: { imageSplitTransparency: lit.bool(true) },
   },
+  label: { matchValueAlignment: { horizontalAlignment: lit.str("right") } },
   glowCustom: { angle: { glowDistance: lit.num(5) } },
   ribbonBands: { fillColor: { fillMatchColor: lit.bool(false) }, borderColor: { borderColorMatchFill: lit.bool(false) } },
   smallMultiplesLayout: { columnCount: { layoutType: lit.str("custom") }, rowCount: { layoutType: lit.str("custom") } },
@@ -243,7 +244,8 @@ const SCENARIOS: Record<string, Scenario> = {
     render: (v) => buildMatrix(v, matrixParts.map((p) => p.map(dec)), buildMatrixQuery(v, model, { filters: [] })!, DEFAULT_THEME, new Set()),
   },
   card: { make: () => visualOf("card", { Values: [Qty] }), render: (v) => buildCard(v, grouped(v, [[n(1234567)]]), DEFAULT_THEME) },
-  cardVisual: { make: () => visualOf("cardVisual", { Data: [Qty, Price] }), render: (v) => buildNewCard(v, grouped(v, [[n(1234567), d(3.5)]]), DEFAULT_THEME) },
+  // the third field has no value, so that "show blank as" can be seen
+  cardVisual: { make: () => visualOf("cardVisual", { Data: [Qty, Price, Cost] }), render: (v) => buildNewCard(v, grouped(v, [[n(1234567), d(3.5), ["blank", ""]]]), DEFAULT_THEME) },
   aiNarratives: { make: () => visualOf("aiNarratives", { Values: [Cat, Qty] }), render: (v) => buildNarrative(v, grouped(v, [[t("Bikes"), n(60)], [t("Clothing"), n(40)]]), DEFAULT_THEME) },
   qnaVisual: { make: () => visualOf("qnaVisual", {}), render: (v) => [qnaLook(v, DEFAULT_THEME), savedQuestion(v)] },
   scriptVisual: { make: () => visualOf("scriptVisual", { Values: [Cat, Qty] }), render: (v) => scriptSettings(v) },

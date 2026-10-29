@@ -364,6 +364,10 @@ export interface NewCardModel {
   accent: { color: string; width: number; position: "Left" | "Right" | "Top" | "Bottom"; opacity: number } | null;
   /** Tiles side by side (Horizontal) or stacked. */
   orientation: "row" | "column";
+  /** Label > align baselines: the tiles line up on the baseline of their text instead of the top. */
+  alignBaselines: boolean;
+  /** Label > heading: the caption is announced as a heading of this level (2 to 6) to screen readers. */
+  labelLevel: number | null;
 }
 
 /** The new card: a tile for each field of the Data well, from the first row of the result. */
@@ -375,7 +379,7 @@ export function buildNewCard(visual: VisualModel, loaded: Extract<Loaded, { kind
   const tiles = fields.map((pf, i) => {
     const col = loaded.query.columns.find((c) => c.role === "Data" && c.order === i && c.kind !== "helper");
     const v = col && row ? row[col.index] : undefined;
-    const value = !v ? "" : v.kind === "blank" ? f.str("value", "showBlankAs", "") : isNumeric(v) && v.num !== null ? valueText(v.num, fmt || col!.format, f, "value") : v.text;
+    const value = !v ? "" : v.kind === "blank" ? f.str("value", "showBlankAs", "") : isNumeric(v) && v.num !== null ? (fmt && !f.has("value", "labelDisplayUnits") ? formatNumber(v.num, fmt) : valueText(v.num, fmt || col!.format, f, "value")) : v.text;
     return { value, label: f.str("label", "text", "") || pf.displayName || col?.label || "" };
   });
   const co = theme.textClasses.callout;
@@ -386,6 +390,8 @@ export function buildNewCard(visual: VisualModel, loaded: Extract<Loaded, { kind
   };
   const vf = readFont(f, "value", { color: "fontColor" });
   const lf = readFont(f, "label", { color: "fontColor" });
+  // text that does not wrap stays on one line and ends in an ellipsis
+  const wrap = (on: boolean): CSSProperties => (on ? { whiteSpace: "normal" } : { whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" });
   const accentOn = f.bool("accentBar", "show", false);
   return {
     tile: tileLook(f),
@@ -394,10 +400,18 @@ export function buildNewCard(visual: VisualModel, loaded: Extract<Loaded, { kind
     showLabel: f.bool("label", "show", true),
     labelAbove: f.str("label", "position", "belowValue") === "aboveValue",
     align: alignOf("value"),
-    valueStyle: { ...cssFont(vf, { family: co.fontFace, size: f.num("value", "fontSize", co.fontSize), color: co.color }), textAlign: alignOf("value"), opacity: 1 - f.num("value", "transparency", 0) / 100 },
-    labelStyle: { ...cssFont(lf, { family: lb.fontFace, size: f.num("label", "fontSize", lb.fontSize + 1), color: theme.muted }), textAlign: alignOf("label"), opacity: 1 - f.num("label", "transparency", 0) / 100 },
+    valueStyle: { ...cssFont(vf, { family: co.fontFace, size: f.num("value", "fontSize", co.fontSize), color: co.color }), textAlign: alignOf("value"), opacity: 1 - f.num("value", "transparency", 0) / 100, ...wrap(f.bool("value", "textWrap", true)) },
+    // a caption can take the alignment of the value
+    labelStyle: {
+      ...cssFont(lf, { family: lb.fontFace, size: f.num("label", "fontSize", lb.fontSize + 1), color: theme.muted }),
+      textAlign: f.bool("label", "matchValueAlignment", false) ? alignOf("value") : alignOf("label"),
+      opacity: 1 - f.num("label", "transparency", 0) / 100,
+      ...wrap(f.bool("label", "textWrap", true)),
+    },
     accent: accentOn ? { color: f.color("accentBar", "color") ?? theme.dataColors[0], width: f.num("accentBar", "width", 4), position: f.str("accentBar", "position", "Left") as "Left" | "Right" | "Top" | "Bottom", opacity: 1 - f.num("accentBar", "transparency", 0) / 100 } : null,
     orientation: f.num("layout", "orientation", 2) === 1 ? "column" : "row",
+    alignBaselines: f.bool("label", "alignBaselines", false),
+    labelLevel: Number(/^Heading([2-6])$/.exec(f.str("label", "heading", "Normal"))?.[1]) || null,
   };
 }
 

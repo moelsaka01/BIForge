@@ -239,11 +239,11 @@ export function CardView({ model, theme, width, height }: { model: CardModel; th
 
 export function NewCardView({ model, theme, width, height }: { model: NewCardModel; theme: Theme; width: number; height: number }) {
   return (
-    <div data-testid="new-card" style={{ width, height, boxSizing: "border-box", padding: 8, display: "flex", flexDirection: model.orientation, flexWrap: "wrap", gap: 12, alignContent: "flex-start", overflow: "auto" }}>
+    <div data-testid="new-card" style={{ width, height, boxSizing: "border-box", padding: 8, display: "flex", flexDirection: model.orientation, flexWrap: "wrap", gap: 12, alignContent: "flex-start", alignItems: model.alignBaselines ? "baseline" : undefined, overflow: "auto" }}>
       {model.tiles.map((t, i) => {
         const a = model.accent;
         const bar = a ? { [`border${a.position}`]: `${a.width}px solid ${a.color}` } : {};
-        const label = model.showLabel && <div style={model.labelStyle} data-testid="new-card-label">{t.label}</div>;
+        const label = model.showLabel && <div style={model.labelStyle} data-testid="new-card-label" {...(model.labelLevel ? { role: "heading", "aria-level": model.labelLevel } : {})}>{t.label}</div>;
         return (
           <div key={i} data-testid="new-card-tile" style={{ flex: "1 1 120px", minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "center", padding: "4px 8px", ...bar }}>
             {model.labelAbove && label}

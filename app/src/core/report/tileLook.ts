@@ -103,6 +103,10 @@ export function tileLook(f: FormatReader, slicer = false): TileLook {
       clipPath: shape.clip,
       boxShadow: shadows.length ? shadows.join(", ") : undefined,
       transform: turn(rot.shape),
+      // the accent bar of a slicer is one edge of the frame (a card draws one per tile)
+      ...(slicer && f.bool("accentBar", "show", false)
+        ? { [`border${f.str("accentBar", "position", "Left")}`]: `${Math.max(0, f.num("accentBar", "width", 4))}px solid ${mix(f.color("accentBar", "color") ?? "#118dff", opacityOf(f.num("accentBar", "transparency", 0)))}` }
+        : {}),
     },
     image,
     contentTransform: turn(rot.text - rot.shape),

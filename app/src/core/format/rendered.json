@@ -3983,15 +3983,19 @@
    "transparency"
   ],
   "label": [
+   "alignBaselines",
    "bold",
    "fontColor",
    "fontFamily",
    "fontSize",
+   "heading",
    "horizontalAlignment",
    "italic",
+   "matchValueAlignment",
    "position",
    "show",
    "text",
+   "textWrap",
    "transparency",
    "underline"
   ],
@@ -4042,6 +4046,7 @@
   ],
   "value": [
    "bold",
+   "customFormatString",
    "fontColor",
    "fontFamily",
    "fontSize",
@@ -4050,6 +4055,8 @@
    "labelDisplayUnits",
    "labelPrecision",
    "show",
+   "showBlankAs",
+   "textWrap",
    "transparency",
    "underline"
   ]
@@ -4286,6 +4293,13 @@
   "general": [
    "selfFilterEnabled"
   ],
+  "accentBar": [
+   "color",
+   "position",
+   "show",
+   "transparency",
+   "width"
+  ],
   "fillCustom": [
    "blur",
    "contrast",
@@ -4365,6 +4379,13 @@
  "listSlicer": {
   "general": [
    "selfFilterEnabled"
+  ],
+  "accentBar": [
+   "color",
+   "position",
+   "show",
+   "transparency",
+   "width"
   ],
   "fillCustom": [
    "blur",
