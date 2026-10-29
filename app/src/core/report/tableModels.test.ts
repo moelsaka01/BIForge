@@ -135,6 +135,36 @@ describe("matrix", () => {
     expect(texts(off.rows[0])).toEqual(["", ""]);
   });
 
+  // two column levels: a subtotal column after each group of the first level
+  const twoLevels = (props: Record<string, Lit> = {}) => {
+    const v3 = visualOf("pivotTable", { Rows: [Cat], Columns: [Ch, Country], Values: [Qty] });
+    for (const [k, val] of Object.entries(props)) setFormat(v3.json, "subTotals", k, val);
+    const q3 = buildMatrixQuery(v3, model, { filters: [] })!;
+    expect(q3.parts).toHaveLength(6);
+    const p3: Cell[][][] = [
+      [[n(100)]],
+      [[t("Online"), n(70)], [t("Store"), n(30)]],
+      [[t("Online"), t("France"), n(40)], [t("Online"), t("Canada"), n(30)], [t("Store"), t("France"), n(30)]],
+      [[t("Bikes"), n(60)], [t("Clothing"), n(40)]],
+      [[t("Bikes"), t("Online"), n(45)], [t("Bikes"), t("Store"), n(15)], [t("Clothing"), t("Online"), n(25)], [t("Clothing"), t("Store"), n(15)]],
+      [[t("Bikes"), t("Online"), t("France"), n(25)], [t("Bikes"), t("Online"), t("Canada"), n(20)], [t("Bikes"), t("Store"), t("France"), n(15)], [t("Clothing"), t("Online"), t("France"), n(15)], [t("Clothing"), t("Online"), t("Canada"), n(10)], [t("Clothing"), t("Store"), t("France"), n(15)]],
+    ];
+    return buildMatrix(v3, p3.map((p) => p.map(dec)), q3, DEFAULT_THEME, new Set());
+  };
+  it("column subtotals: a subtotal column after each group of the first column level", () => {
+    const m = twoLevels();
+    expect(m.headers[0].map((h) => [h.text, h.span])).toEqual([["Online", 3], ["Store", 2]]);
+    expect(m.headers[1].map((h) => [h.text, h.span])).toEqual([["France", 1], ["Canada", 1], ["Online Total", 1], ["France", 1], ["Store Total", 1]]);
+    expect(texts(m.rows[0])).toEqual(["25", "20", "45", "15", "15"]);
+    expect(texts(m.rows[m.rows.length - 1])).toEqual(["40", "30", "70", "30", "30"]);
+  });
+  it("column subtotals off or relabelled", () => {
+    const off = twoLevels({ columnSubtotals: lit.bool(false) });
+    expect(off.headers[1].map((h) => h.text)).toEqual(["France", "Canada", "France"]);
+    expect(texts(off.rows[0])).toEqual(["25", "20", "15"]);
+    expect(twoLevels({ columnSubtotalsLabel: lit.str("Sum") }).headers[1][2].text).toBe("Online Sum");
+  });
+
   it("several values add a header row of value names", () => {
     const v2 = visualOf("pivotTable", { Rows: [Cat], Columns: [Ch], Values: [Qty, agg("Sales", "UnitPrice", 1)] });
     const q2 = buildMatrixQuery(v2, model, { filters: [] })!;

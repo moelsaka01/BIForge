@@ -139,6 +139,12 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
       const dimmed = (selecting && !isSelected(ci, si)) || (hl !== null && !isHighlight);
       const c = cond?.[ci] ?? color;
       const item: O = { value: v, raw: cells[vi][si][ci] };
+      // Show blank as: a bar without a value is a bar of no extent that carries the text of the label
+      if (v === null && !asLine && !isHighlight && labelOn && f.has("labels", "showBlankAs")) {
+        item.value = 0;
+        item.blank = true;
+        item.label = { show: true };
+      }
       // a border with transparency, or "outline only" (empty bar, border in the bar's color), is decided per bar
       const edge = asLine ? {} : borderOn ? sliceItemStyle(f, theme, c) : gapEdge;
       if (!asLine || cond) item.itemStyle = { color: c, opacity: (dimmed ? DIM : 1) * (asLine ? 1 : fillAlpha), ...edge };
@@ -181,8 +187,8 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
       if (hl) s.barGap = "-100%";
       else if (f.has("categoryAxis", "innerPadding")) {
         s.barGap = `${f.num("categoryAxis", "innerPadding", 0)}%`;
-        // a stacked bar has no neighbour in its category: the padding between the bands is the gap between categories
-        if (stacked) s.barCategoryGap = s.barGap;
+        // a bar that has no neighbour in its category (stacked, or the only column): the padding between the bands is the gap between categories
+        if (stacked || (!hasSeries && valueCols.filter((c) => c.role === "Y").length <= 1)) s.barCategoryGap = s.barGap;
       }
       if (f.has("categoryAxis", "outerPadding")) s.barCategoryGap = `${f.num("categoryAxis", "outerPadding", 20)}%`;
       // the layout card's gap between the groups of bars, as a percentage of a bar
@@ -615,7 +621,7 @@ function smallMultiples(inp: ChartInput, sm: { index: number; format: string | n
         top: headerAtBottom ? `calc(${area(r + 1, rows)} - ${headerH + pad}px)` : `calc(${area(r, rows)} + ${topMargin}px)`,
         textAlign: align,
         // Title wrap: a long header breaks into lines (within the width of a panel's header) instead of being cut
-        textStyle: { ...echartsText(font, { family: theme.textClasses.label.fontFace, size: theme.textClasses.label.fontSize, color: theme.textClasses.label.color }), width: 140, overflow: f.bool("subheader", "titleWrap", false) ? "break" : "truncate" },
+        textStyle: { ...echartsText(font, { family: theme.textClasses.label.fontFace, size: theme.textClasses.label.fontSize, color: theme.textClasses.label.color }), width: 140, overflow: f.bool("subheader", "titleWrap", false) ? "breakAll" : "truncate" },
       });
     }
   });

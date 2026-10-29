@@ -71,7 +71,7 @@ export function SlicerView(p: SlicerViewProps) {
   const fontOf = p.look ? cssFont(p.look.items.font, { family: theme.textClasses.label.fontFace, size: theme.textClasses.label.fontSize + 2, color: theme.foreground }) : { color: theme.foreground, fontSize: theme.textClasses.label.fontSize + 2 };
   const box = { width: p.width, height: p.height, boxSizing: "border-box" as const, padding: 6 + (p.look?.items.padding ?? 0), ...fontOf, background: p.look?.items.background, display: "flex", flexDirection: "column" as const, gap: 4, overflow: "hidden" };
   const header = p.look?.header.show ? (
-    <div data-testid="slicer-header" style={{ ...cssFont(p.look.header.font, { family: theme.textClasses.label.fontFace, size: theme.textClasses.label.fontSize + 2, color: theme.foreground }), background: p.look.header.background, fontWeight: 600 }}>
+    <div data-testid="slicer-header" style={{ ...cssFont(p.look.header.font, { family: theme.textClasses.label.fontFace, size: theme.textClasses.label.fontSize + 2, color: theme.foreground }), background: p.look.header.background, fontWeight: p.look.header.font.bold ? 700 : 600 }}>
       {p.look.header.text || p.fieldName || ""}
     </div>
   ) : null;
@@ -83,7 +83,7 @@ export function SlicerView(p: SlicerViewProps) {
     <div role="listbox" aria-label="Values" aria-multiselectable={!p.singleSelect} style={{ overflow: "auto", flex: 1, minHeight: 0 }}>
       {p.selectAll && !p.singleSelect && !q && (
         <Checkbox
-          label="Select all"
+          label={{ children: "Select all", style: fontOf }}
           checked={p.cond?.kind === "notIn" && p.cond.values.length === 0 ? true : p.cond?.kind === "notIn" || p.cond?.kind === "in" ? "mixed" : false}
           onChange={() => p.onChange(p.cond?.kind === "notIn" && p.cond.values.length === 0 ? null : { kind: "notIn", values: [] })}
         />
@@ -91,11 +91,11 @@ export function SlicerView(p: SlicerViewProps) {
       {shown.map((it) =>
         p.singleSelect ? (
           <div key={it.label} role="option" aria-selected={isSelected(p.cond, it.lit)}>
-            <Radio checked={isSelected(p.cond, it.lit)} label={it.label} value={it.label} onClick={() => p.onChange(toggleItem(p.cond, it.lit, all, true))} onChange={() => undefined} />
+            <Radio checked={isSelected(p.cond, it.lit)} label={{ children: it.label, style: fontOf }} value={it.label} onClick={() => p.onChange(toggleItem(p.cond, it.lit, all, true))} onChange={() => undefined} />
           </div>
         ) : (
           <div key={it.label} role="option" aria-selected={isSelected(p.cond, it.lit)}>
-            <Checkbox checked={isSelected(p.cond, it.lit)} label={it.label} onChange={() => p.onChange(toggleItem(p.cond, it.lit, all, false))} />
+            <Checkbox checked={isSelected(p.cond, it.lit)} label={{ children: it.label, style: fontOf }} onChange={() => p.onChange(toggleItem(p.cond, it.lit, all, false))} />
           </div>
         ),
       )}

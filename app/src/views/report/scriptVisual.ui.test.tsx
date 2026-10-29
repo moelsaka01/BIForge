@@ -75,3 +75,14 @@ describe("script visuals", () => {
     expect(datasetCsv(loaded)).toBe('"Na""me",N\n"a""b",\n"x\ny",5\n');
   });
 });
+
+describe("script > provider", () => {
+  it("the name of the script in the visual's buttons and notes is the provider of the card", async () => {
+    const t = setup();
+    await t.registry.execute("report.visual.add", { type: "pythonVisual", fields });
+    await t.registry.execute("report.format.set", { page: "page1", visual: t.visual().name, object: "script", prop: "provider", value: lit.str("Zz") });
+    render(<t.Host />);
+    expect(await screen.findByRole("button", { name: "Run the Zz script" })).toBeTruthy();
+    expect(screen.getByText(/Runs your own Zz on this computer/)).toBeTruthy();
+  });
+});

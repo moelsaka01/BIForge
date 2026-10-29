@@ -1,0 +1,46 @@
+name: render-audit
+# The full real-window render audit: every property counted as drawn is compared as pixels with and without it (about 4700 cases,
+# an hour or more), too slow for every push; ci.yml runs the sample (e2e/render.mjs) on each one.
+on:
+  schedule:
+    - cron: "0 3 * * 0"
+  workflow_dispatch:
+jobs:
+  audit:
+    runs-on: windows-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - name: Frontend install
+        working-directory: app
+        run: npm ci
+      - name: Write the cases (every drawn property with its visual before and after)
+        working-directory: app
+        shell: pwsh
+        run: |
+          $env:WRITE_RENDER_CASES = "1"; $env:UPDATE_RENDERED = "1"
+          npx vitest run src/core/format/coverage.test.ts
+      - name: Build the app (debug, frontend embedded)
+        working-directory: app
+        run: npx tauri build --debug --no-bundle
+      - name: Audit
+        working-directory: app
+        env:
+          RENDER_WORKERS: "2"
+        run: node e2e/render-all.mjs
+      - name: Report and gate
+        working-directory: app
+        run: node e2e/render-report.mjs
+      - name: Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: render-audit-results
+          path: app/e2e/_cases/results.jsonl

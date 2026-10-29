@@ -74,8 +74,8 @@ export function donutCentre(f: FormatReader, theme: Theme, total: number | null,
   for (const b of blocks) {
     const mid = y + b.h / 2;
     if (b.kind === "image") images.push({ src: srcOf(f, "image"), size: imageSize, dy: mid, opacity: opacityOf(f.num("image", "transparency", 0)), alt: f.str("image", "altText", "") });
-    else if (b.kind === "label") graphic.push({ type: "text", x: 0, y: mid, z: 5, silent: true, style: { text: f.str("label", "text", "Total"), fill: labelFont.color, fontFamily: labelFont.fontFamily, fontSize: labelFont.fontSize, fontWeight: labelFont.fontWeight, fontStyle: labelFont.fontStyle, textAlign: "center", textVerticalAlign: "middle", ...(wrap ? { width: 90, overflow: "break" } : {}) } });
-    else graphic.push({ type: "text", x: 0, y: mid, z: 5, silent: true, style: { text: valueText(total, format, f, "value"), fill: valueFont.color, fontFamily: valueFont.fontFamily, fontSize: valueFont.fontSize, fontWeight: valueFont.fontWeight, fontStyle: valueFont.fontStyle, textAlign: "center", textVerticalAlign: "middle", ...(wrapValue ? { width: 90, overflow: "break" } : {}) } });
+    else if (b.kind === "label") graphic.push({ type: "text", x: 0, y: mid, z: 5, silent: true, style: { text: f.str("label", "text", "Total"), fill: labelFont.color, fontFamily: labelFont.fontFamily, fontSize: labelFont.fontSize, fontWeight: labelFont.fontWeight, fontStyle: labelFont.fontStyle, textAlign: "center", textVerticalAlign: "middle", ...(wrap ? { width: 90, overflow: "breakAll" } : {}) } });
+    else graphic.push({ type: "text", x: 0, y: mid, z: 5, silent: true, style: { text: valueText(total, format, f, "value"), fill: valueFont.color, fontFamily: valueFont.fontFamily, fontSize: valueFont.fontSize, fontWeight: valueFont.fontWeight, fontStyle: valueFont.fontStyle, textAlign: "center", textVerticalAlign: "middle", ...(wrapValue ? { width: 90, overflow: "breakAll" } : {}) } });
     y += b.h + b.gapAfter;
   }
   // one group, centred as a whole by its bounding box (an element with left/top ignores its own x and y)

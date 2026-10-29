@@ -449,3 +449,20 @@ describe("layout > series order reversed", () => {
     expect(rev.point!.values[1]).toEqual(lit.str(rev.names[0]));
   });
 });
+
+describe("Show blank as", () => {
+  it("a bar without a value carries the text of the label; the others keep their numbers", () => {
+    const v = visualOf("columnChart", { Category: [Cat], Series: [Country], Y: [Qty] });
+    setFormat(v.json, "labels", "show", lit.bool(true));
+    setFormat(v.json, "labels", "showBlankAs", lit.str("n/a"));
+    const o = build(v, grouped(v, [[c("Bikes"), c("France"), c(50)], [c("Accessories"), c("Canada"), c(10)]])).option;
+    const canada = o.series.find((s: { name: string }) => s.name === "Canada");
+    const bikes = canada.data[o.xAxis.data.indexOf("Bikes")];
+    expect(bikes.blank).toBe(true);
+    expect(bikes.value).toBe(0);
+    expect(canada.label.formatter({ data: bikes })).toBe("n/a");
+    const accessories = canada.data[o.xAxis.data.indexOf("Accessories")];
+    expect(accessories.blank).toBeUndefined();
+    expect(canada.label.formatter({ data: accessories })).toBe("10");
+  });
+});

@@ -16,7 +16,7 @@ export function ScriptVisualView({ page, visual, loaded, width, height }: { page
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(s.source);
   useEffect(() => setDraft(s.source), [s.source]);
-  const label = s.language === "python" ? "Python" : "R";
+  const label = s.provider; // script > provider: what the script is called
   const save = (source: string) => c.dispatch("report.format.set", { page: page.name, visual: visual.name, object: "script", prop: "source", value: { t: "string", v: source } });
   const start = () =>
     c.dispatch("report.script.run", { visual: visual.name, language: s.language, code: s.source || DEFAULT_SCRIPTS[s.language], csv: datasetCsv(loaded, c.theme), width: Math.round(width), height: Math.round(height - 34) });

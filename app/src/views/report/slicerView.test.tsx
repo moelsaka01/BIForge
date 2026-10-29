@@ -147,3 +147,18 @@ describe("SlicerView", () => {
     expect(screen.getByText("No values")).toBeTruthy();
   });
 });
+
+describe("SlicerView look", () => {
+  const look = (items: { color?: string; bold?: boolean }, header: { bold?: boolean } = {}) =>
+    ({ header: { show: true, text: "Region", font: { ...header }, background: undefined }, items: { font: { ...items }, background: undefined, padding: 0 } }) as unknown as SlicerViewProps["look"];
+  it("the item font is the font of the value labels (the checkbox label does not inherit it)", () => {
+    render(<SlicerView {...props({ look: look({ color: "#aa0000" }) })} />);
+    expect((screen.getByText("France") as HTMLElement).style.color).toMatch(/rgb\(170, 0, 0\)|#aa0000/);
+  });
+  it("the header is bold when its font says so, semibold otherwise", () => {
+    const { rerender } = render(<SlicerView {...props({ look: look({}) })} />);
+    expect((screen.getByTestId("slicer-header") as HTMLElement).style.fontWeight).toBe("600");
+    rerender(<SlicerView {...props({ look: look({}, { bold: true }) })} />);
+    expect((screen.getByTestId("slicer-header") as HTMLElement).style.fontWeight).toBe("700");
+  });
+});

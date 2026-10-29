@@ -101,7 +101,7 @@ export function HierarchySlicerView(p: HierarchySlicerProps) {
   const font = p.look ? cssFont(p.look.items.font, { family: theme.textClasses.label.fontFace, size: theme.textClasses.label.fontSize + 2, color: theme.foreground }) : { color: theme.foreground, fontSize: theme.textClasses.label.fontSize + 2 };
   const matches = (n: TreeNode): boolean => !q || n.label.toLowerCase().includes(q.toLowerCase()) || n.children.some(matches);
   const header = p.look?.header.show ? (
-    <div data-testid="slicer-header" style={{ ...cssFont(p.look.header.font, { family: theme.textClasses.label.fontFace, size: theme.textClasses.label.fontSize + 2, color: theme.foreground }), background: p.look.header.background, fontWeight: 600 }}>
+    <div data-testid="slicer-header" style={{ ...cssFont(p.look.header.font, { family: theme.textClasses.label.fontFace, size: theme.textClasses.label.fontSize + 2, color: theme.foreground }), background: p.look.header.background, fontWeight: p.look.header.font.bold ? 700 : 600 }}>
       {p.look.header.text || p.fieldName || ""}
     </div>
   ) : null;

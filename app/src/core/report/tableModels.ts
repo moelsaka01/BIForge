@@ -231,20 +231,44 @@ export function buildMatrix(visual: VisualModel, parts: Value[][][], q: BuiltMat
     return v ? { text: displayValue(v, fmtOf(vi), f), style: stylers[vi]?.(v) ?? {} } : { text: "", style: {} };
   };
 
+  const style = tableStyle(f, theme);
+  // the columns: one per leaf path, and after each group of a column level above the last its subtotal (Subtotals > Column subtotals)
+  const entries: { path: Value[]; depth: number }[] = [];
+  colPaths.forEach((cp, i) => {
+    entries.push({ path: cp, depth: C });
+    if (!(C > 1 && style.columnSubtotals)) return;
+    for (let L = C - 1; L >= 1; L--) {
+      const next = colPaths[i + 1];
+      if (next && next.slice(0, L).map(valueKey).join() === cp.slice(0, L).map(valueKey).join()) break;
+      entries.push({ path: cp.slice(0, L), depth: L });
+    }
+  });
+  const V1 = Math.max(1, V);
+
   // headers
   const headers: MatrixHeaderCell[][] = [];
   for (let level = 0; level < C; level++) {
     const row: MatrixHeaderCell[] = [];
     let i = 0;
-    while (i < colPaths.length) {
-      let j = i + 1;
-      while (j < colPaths.length && colPaths.slice(i, j + 1).every((p) => p.slice(0, level + 1).map(valueKey).join() === colPaths[i].slice(0, level + 1).map(valueKey).join())) j++;
-      row.push({ text: labelOf(colPaths[i][level], colCols[level].format), span: (j - i) * Math.max(1, V) });
-      i = j;
+    while (i < entries.length) {
+      const e = entries[i];
+      if (e.depth > level) {
+        const key = e.path.slice(0, level + 1).map(valueKey).join();
+        let j = i + 1;
+        while (j < entries.length && entries[j].depth > level && entries[j].path.slice(0, level + 1).map(valueKey).join() === key) j++;
+        row.push({ text: labelOf(e.path[level], colCols[level].format), span: (j - i) * V1 });
+        i = j;
+      } else if (e.depth === level) {
+        row.push({ text: `${labelOf(e.path[level - 1], colCols[level - 1].format)} ${style.columnSubtotalLabel}`, span: V1 });
+        i++;
+      } else {
+        row.push({ text: "", span: V1 });
+        i++;
+      }
     }
     headers.push(row);
   }
-  if (V > 1 || C === 0) headers.push(colPaths.flatMap(() => Array.from({ length: V }, (_, vi) => ({ text: labelFor(vi), span: 1 }))));
+  if (V > 1 || C === 0) headers.push(entries.flatMap(() => Array.from({ length: V }, (_, vi) => ({ text: labelFor(vi), span: 1 }))));
 
   // rows (stepped layout; collapsed parents hide their children)
   const rows: MatrixRow[] = [];
@@ -262,7 +286,7 @@ export function buildMatrix(visual: VisualModel, parts: Value[][][], q: BuiltMat
       expandable,
       expanded: expandable && !isCollapsed,
       path: path.slice(0, depth + 1),
-      cells: colPaths.flatMap((cp) => Array.from({ length: V }, (_, vi) => mk(cell(depth + 1, C, path, cp), vi))),
+      cells: entries.flatMap((e) => Array.from({ length: V }, (_, vi) => mk(cell(depth + 1, e.depth, path, e.path), vi))),
       total: Array.from({ length: V }, (_, vi) => mk(cell(depth + 1, 0, path, []), vi)),
     });
   };
@@ -274,7 +298,7 @@ export function buildMatrix(visual: VisualModel, parts: Value[][][], q: BuiltMat
       expandable: false,
       expanded: false,
       path: [],
-      cells: colPaths.flatMap((cp) => Array.from({ length: V }, (_, vi) => mk(cell(0, C, [], cp), vi))),
+      cells: entries.flatMap((e) => Array.from({ length: V }, (_, vi) => mk(cell(0, e.depth, [], e.path), vi))),
       total: Array.from({ length: V }, (_, vi) => mk(cell(0, 0, [], []), vi)),
     });
   } else {
@@ -287,7 +311,6 @@ export function buildMatrix(visual: VisualModel, parts: Value[][][], q: BuiltMat
     }
   }
   // Subtotals card: the group's subtotal stands on its own row under the group (position Bottom), stays in the group's row (Top), or is left out
-  const style = tableStyle(f, theme);
   if (R > 1) {
     const bottom = !style.subtotalsOnTop;
     const blank = (cells: { text: string; style: CellStyle }[]) => cells.map(() => ({ text: "", style: {} }));
@@ -319,7 +342,7 @@ export function buildMatrix(visual: VisualModel, parts: Value[][][], q: BuiltMat
       expanded: false,
       path: [],
       isGrand: true,
-      cells: colPaths.flatMap((cp) => Array.from({ length: V }, (_, vi) => mk(cell(0, C, [], cp), vi))),
+      cells: entries.flatMap((e) => Array.from({ length: V }, (_, vi) => mk(cell(0, e.depth, [], e.path), vi))),
       total: Array.from({ length: V }, (_, vi) => mk(cell(0, 0, [], []), vi)),
     });
   }

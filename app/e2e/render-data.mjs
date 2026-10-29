@@ -55,9 +55,41 @@ export function months(json) {
 }
 
 const TRUE = { expr: { Literal: { Value: "true" } } };
-const LONG = "A long title that needs more room than the visual is wide, so it wraps";
+const LONG = Array.from({ length: 5 }, () => "A long title that needs more room than the visual is wide, so it wraps").join(" and ");
+
+/** A second column level (the year), so that column subtotals have groups to add up. */
+export function twoColumnLevels(json) {
+  const cols = json.visual?.query?.queryState?.Columns;
+  if (cols && cols.projections.length === 1) cols.projections.push({ field: { Column: { Expression: { SourceRef: { Entity: "Date" } }, Property: "Year" } }, queryRef: "Date.Year", nativeQueryRef: "Year" });
+}
+
+/** A KPI is in the bad state when the goal is far above the indicator, in the neutral state when they are equal. */
+export function kpiState(json, state) {
+  const qs = json.visual?.query?.queryState;
+  const goal = qs?.Goal?.projections?.[0];
+  const ind = qs?.Indicator?.projections?.[0];
+  if (!goal || !ind) return;
+  if (state === "neutral") { goal.field = JSON.parse(JSON.stringify(ind.field)); goal.queryRef = ind.queryRef; goal.nativeQueryRef = ind.nativeQueryRef; }
+  else { goal.field = { Aggregation: { Expression: { Column: { Expression: { SourceRef: { Entity: "Product" } }, Property: "ListPrice" } }, Function: 0 } }; goal.queryRef = "Sum(Product.ListPrice)"; goal.nativeQueryRef = "Sum of ListPrice"; }
+}
+
+/** A second column series (the order count), so that columns have a neighbour to overlap. */
+export function secondColumn(json) {
+  const y = json.visual?.query?.queryState?.Y;
+  if (y && y.projections.length === 1) y.projections.push({ field: { Measure: { Expression: { SourceRef: { Entity: "Sales" } }, Property: "Orders" } }, queryRef: "Sales.Orders", nativeQueryRef: "Orders" });
+}
 
 export function dataFor(json, c) {
+  if (/ComboChart$/.test(c.visualType) && c.object === "layout" && /^clusteredGap/.test(c.prop)) secondColumn(json);
+  // a disc shows its padding only in a color that differs from the page
+  if (c.object === "centerBackground" && c.prop === "padding") setProps(json, "centerBackground", { fillColor: colorLit("#ffcc00") });
+  // a 100 % axis ends at 100: the constant line stands at 50
+  if (/^hundredPercent/.test(c.visualType) && c.object === "y1AxisReferenceLine" && c.prop !== "value" && c.prop !== "autoScale") for (const e of json.visual?.objects?.y1AxisReferenceLine ?? []) if (e.selector?.id === "constant") e.properties.value = numLit(50);
+  if (c.visualType === "kpi" && c.object === "status") kpiState(json, c.prop === "neutralColor" ? "neutral" : "bad");
+  if (c.visualType === "cardVisual" && c.object === "accentBar") setProps(json, "accentBar", { show: TRUE });
+  if (c.object === "subTotals" && /^columnSubtotals/.test(c.prop)) twoColumnLevels(json);
+  // the label of a row subtotal shows on the subtotal row, which is under the group
+  if (c.object === "subTotals" && c.prop === "rowSubtotalsLabel") setProps(json, "subTotals", { rowSubtotalsPosition: { expr: { Literal: { Value: "'Bottom'" } } } });
   if (/^category(Min|Max|Size)$/.test(c.prop) && c.object === "zoom") months(json);
   // a background shows its transparency only where it has a color of its own
   if (/^backgroundTransparency$/.test(c.prop) && /^(labels|totals)$/.test(c.object)) setProps(json, c.object, { enableBackground: TRUE, backgroundColor: colorLit("#ffcc00") });

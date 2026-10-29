@@ -27,12 +27,12 @@ for (let d = start; d <= new Date(Date.UTC(2024, 11, 31)); d = addDays(d, 1)) {
 }
 csv("Date.csv", ["Date", "Year", "Quarter", "MonthNumber", "Month", "YearMonth"], dates);
 
-const regions = [["Nordic", "Oslo"], ["Iberia", "Madrid"], ["Alps", "Zurich"], ["Benelux", "Utrecht"], ["Baltic", "Riga"], ["Balkans", "Sofia"]];
+const regions = [["Nordic", "Oslo", "Norway"], ["Iberia", "Madrid", "Spain"], ["Alps", "Zurich", "Switzerland"], ["Benelux", "Utrecht", "Netherlands"], ["Baltic", "Riga", "Latvia"], ["Balkans", "Sofia", "Bulgaria"]];
 const customers = Array.from({ length: 24 }, (_, i) => {
   const r = regions[i % regions.length];
-  return [i + 1, `Customer ${String(i + 1).padStart(2, "0")}`, r[1], r[0], pick(["Retail", "Club", "Corporate"])];
+  return [i + 1, `Customer ${String(i + 1).padStart(2, "0")}`, r[1], r[0], pick(["Retail", "Club", "Corporate"]), r[2]];
 });
-csv("Customer.csv", ["CustomerKey", "Customer", "City", "Region", "Segment"], customers);
+csv("Customer.csv", ["CustomerKey", "Customer", "City", "Region", "Segment", "Country"], customers);
 
 const products = [
   [1, "Ridge Mountain Bike", "Bikes", "Mountain", 1450, 880],

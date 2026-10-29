@@ -4,7 +4,7 @@
 // "must" = properties added in the latest batches; "random" = a seeded random sample of the others (the first RANDOM_N whose
 // unformatted visual shows data). Run: node e2e/render.mjs   (needs `npx tauri build --debug --no-bundle` first)
 import { spawn } from "node:child_process";
-import { appendFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { appendFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { chromium } from "playwright-core";
@@ -72,6 +72,17 @@ const MEASURE_TEXT = MEASURES.map(([n, e, g]) => ["", `\tmeasure ${n} = ${e}`, `
 const salesTable = join(parent, "Rn", "Rn.SemanticModel", "definition", "tables", "Sales.tmdl");
 if (existsSync(salesTable) && !readFileSync(salesTable, "utf8").includes("measure Variance")) appendFileSync(salesTable, MEASURE_TEXT);
 const def = join(parent, "Rn", "Rn.Report", "definition");
+// a custom theme with a style preset named Zz (a yellow background), so that Style preset > name changes something
+{
+  const res = join(parent, 'Rn', 'Rn.Report', 'StaticResources', 'RegisteredResources');
+  mkdirSync(res, { recursive: true });
+  writeFileSync(join(res, 'AuditTheme.json'), JSON.stringify({ name: 'AuditTheme', dataColors: ['#118DFF', '#12239E', '#E66C37', '#6B007B', '#E044A7', '#744EC2', '#D9B300', '#D64550'], visualStyles: { '*': { Zz: { background: [{ show: true, color: { solid: { color: '#ffcc00' } } }] } } } }, null, 2));
+  const rj = join(def, 'report.json');
+  const report = JSON.parse(readFileSync(rj, 'utf8'));
+  report.themeCollection.customTheme = { name: 'AuditTheme', reportVersionAtImport: { visual: '2.13.0', page: '2.1.0', report: '3.3.0' }, type: 'RegisteredResources' };
+  report.resourcePackages = [{ name: 'RegisteredResources', type: 'RegisteredResources', items: [{ name: 'AuditTheme.json', path: 'AuditTheme.json', type: 'CustomTheme' }] }];
+  writeFileSync(rj, JSON.stringify(report, null, 2));
+}
 // three bookmarks, so that a bookmark navigator has buttons to draw
 {
   const dir = join(def, "bookmarks");
@@ -83,7 +94,7 @@ const def = join(parent, "Rn", "Rn.Report", "definition");
 }
 const pages = JSON.parse(readFileSync(join(def, "pages", "pages.json"), "utf8"));
 // the unit-test fixtures have a few columns the sample project does not (Customer.Country is Customer.Region here)
-const forSample = (json) => JSON.parse(JSON.stringify(json).replaceAll("Customer.Country", "Customer.Region").replaceAll('"Country"', '"Region"'));
+const forSample = (json) => json; // the sample has Customer.Country (src-tauri/sample), like the fixtures
 // a value written into the first entry without a selector (or the one with the given selector id) of an object, as the app writes literals
 const setLit = (json, object, prop, value, id) => {
   const bag = (json.visual.objects ??= {});
@@ -180,7 +191,7 @@ try {
     const r = await compare("c" + i, c.variants.length);
     if (process.env.RENDER_EVAL) console.log("EVAL", c.idx, JSON.stringify(await page.evaluate(process.env.RENDER_EVAL)));
     // a 100 % axis ends at 100: a constant line at 250 has no place on it
-    const offAxis = /^hundredPercent/.test(c.visualType) && /ReferenceLine/.test(c.object);
+    const offAxis = false; // 100 % charts get their constant line inside the axis (render-data.mjs)
     // the tooltip and the visual header are drawn on hover only: not compared here
     const hoverOnly = /^(visualTooltip|visualHeaderTooltip|visualHeader)$/.test(c.object);
     const empty = offAxis || hoverOnly || (r.a.text.trim() === "" && r.a.html.length < 600) || /Cannot load this visual|No data to show/.test(r.a.text + r.b.text);

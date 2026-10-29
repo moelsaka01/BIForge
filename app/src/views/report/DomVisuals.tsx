@@ -1,5 +1,6 @@
 // Visuals drawn with HTML: table, matrix, cards and KPI.
 import { useMemo, useRef, useState, type CSSProperties } from "react";
+import { withOpacity } from "../../core/report/chartFormat";
 import { valueToLit } from "../../core/report/chartData";
 import type { FieldRef } from "../../core/report/fields";
 import type { SelectedPoint } from "../../core/report/interactions";
@@ -247,7 +248,7 @@ export function NewCardView({ model, theme, width, height }: { model: NewCardMod
     <div data-testid="new-card" style={{ width, height, boxSizing: "border-box", padding: 8, display: "flex", flexDirection: model.orientation, flexWrap: "wrap", gap: 12, alignContent: "flex-start", alignItems: model.alignBaselines ? "baseline" : undefined, overflow: "auto" }}>
       {model.tiles.map((t, i) => {
         const a = model.accent;
-        const bar = a ? { [`border${a.position}`]: `${a.width}px solid ${a.color}` } : {};
+        const bar = a ? { [`border${a.position}`]: `${a.width}px solid ${withOpacity(a.color, a.opacity)}` } : {};
         const label = model.showLabel && <div style={model.labelStyle} data-testid="new-card-label" {...(model.labelLevel ? { role: "heading", "aria-level": model.labelLevel } : {})}>{t.label}</div>;
         return (
           <div key={i} data-testid="new-card-tile" style={{ flex: "1 1 120px", minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "center", padding: "4px 8px", ...bar }}>

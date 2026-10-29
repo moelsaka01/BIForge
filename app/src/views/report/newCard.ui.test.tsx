@@ -47,6 +47,9 @@ describe("Card (new)", () => {
     await waitFor(() => expect((screen.getAllByTestId("new-card-tile")[0] as HTMLElement).style.borderLeft).toMatch(/4px solid/));
     const first = screen.getAllByTestId("new-card-tile")[0];
     expect(first.firstElementChild?.getAttribute("data-testid")).toBe("new-card-label");
+    // Accent bar > transparency lightens the bar
+    await run("report.format.set", { page: "page1", visual: name, object: "accentBar", prop: "transparency", value: lit.num(60) });
+    await waitFor(() => expect((screen.getAllByTestId("new-card-tile")[0] as HTMLElement).style.borderLeft).toMatch(/rgba(.*0.4)/));
   });
 });
 

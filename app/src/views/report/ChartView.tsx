@@ -37,6 +37,8 @@ export function hideLabelsThatDoNotFit(c: EChartsInstance, option: { series?: { 
     if (!data) return;
     for (let di = 0; di < data.count(); di++) {
       const bar = data.getItemGraphicEl(di);
+      // a blank value (Show blank as) has a label and no extent
+      if (data.getRawDataItem?.(di)?.blank) continue;
       const text = bar?.getTextContent?.();
       if (!bar || !text) continue;
       const box = text.getBoundingRect();

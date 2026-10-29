@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { hideLabelsThatDoNotFit, type EChartsInstance as _I } from "./ChartView";
+import { hideLabelsThatDoNotFit } from "./ChartView";
+import type { EChartsInstance as _I } from "./echartsSetup";
 
 type Fake = { ignore: boolean; dirty(): void; getBoundingRect(): { width: number; height: number } };
 // a chart with one series of bars: shape extents as ECharts reports them (a column grows upwards: its height is negative)

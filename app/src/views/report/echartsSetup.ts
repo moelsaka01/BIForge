@@ -2,13 +2,13 @@
 import * as echarts from "echarts/core";
 import { BarChart, CustomChart, FunnelChart, GaugeChart, HeatmapChart, LineChart, MapChart, PieChart, ScatterChart, TreemapChart } from "echarts/charts";
 import { DataZoomComponent, GeoComponent, GraphicComponent, GridComponent, LegendComponent, MarkAreaComponent, MarkLineComponent, TitleComponent, TooltipComponent, VisualMapComponent } from "echarts/components";
-import { LegacyGridContainLabel } from "echarts/features";
+import { LabelLayout, LegacyGridContainLabel } from "echarts/features";
 import { SVGRenderer } from "echarts/renderers";
 import type { WorldData } from "../../core/report/geo";
 
 // reference lines and shading (markLine, markArea), the zoom slider (dataZoom), the ribbon (custom series) and the donut centre (graphic)
-// are options BIForge builds: a component that is not registered here is silently not drawn, which jsdom tests of the option cannot see.
-echarts.use([CustomChart, DataZoomComponent, GraphicComponent, MarkAreaComponent, MarkLineComponent, BarChart, LineChart, PieChart, ScatterChart, TreemapChart, FunnelChart, GaugeChart, HeatmapChart, MapChart, GeoComponent, VisualMapComponent, LegacyGridContainLabel, GridComponent, LegendComponent, TitleComponent, TooltipComponent, SVGRenderer]);
+// and the label layout (hide overlapping labels) are options BIForge builds: a component that is not registered here is silently not drawn, which jsdom tests of the option cannot see.
+echarts.use([LabelLayout, CustomChart, DataZoomComponent, GraphicComponent, MarkAreaComponent, MarkLineComponent, BarChart, LineChart, PieChart, ScatterChart, TreemapChart, FunnelChart, GaugeChart, HeatmapChart, MapChart, GeoComponent, VisualMapComponent, LegacyGridContainLabel, GridComponent, LegendComponent, TitleComponent, TooltipComponent, SVGRenderer]);
 
 let registered = false;
 /** Registers the outlines of the countries (map "world") and of the US states (map "states") once. */
