@@ -403,6 +403,11 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
     yAxis: horizontal ? catAxis : valAxes,
     series: seriesOut,
   };
+  // Legend > match line color: a line's legend marker takes the color of the line instead of the series color
+  if (f.bool("legend", "matchLineColor", false)) {
+    const entries = seriesOut.filter((s) => s.name && s.type === "line" && !String(s.name).endsWith("(highlighted)"));
+    option.legend = { ...option.legend, data: entries.map((s) => ({ name: s.name, itemStyle: { color: s.lineStyle?.color ?? s.itemStyle?.color } })) };
+  }
   const zoom = zoomBlock(f, horizontal, combo && y2Cols.length > 0);
   if (zoom) {
     option.dataZoom = zoom.dataZoom;
@@ -554,11 +559,12 @@ function smallMultiples(inp: ChartInput, sm: { index: number; format: string | n
     });
     if (headerShow) {
       titles.push({
-        text: labelOf(values[i], sm.format),
+        text: font.underline ? underlined(labelOf(values[i], sm.format)) : labelOf(values[i], sm.format),
         left: `calc(${area(c, columns)} + ${pad + 4}px)`,
         top: headerAtBottom ? `calc(${area(r + 1, rows)} - ${headerH + pad}px)` : `calc(${area(r, rows)} + ${topMargin}px)`,
         textAlign: align,
-        textStyle: echartsText(font, { family: theme.textClasses.label.fontFace, size: theme.textClasses.label.fontSize, color: theme.textClasses.label.color }),
+        // Title wrap: a long header breaks into lines (within the width of a panel's header) instead of being cut
+        textStyle: { ...echartsText(font, { family: theme.textClasses.label.fontFace, size: theme.textClasses.label.fontSize, color: theme.textClasses.label.color }), width: 140, overflow: f.bool("subheader", "titleWrap", false) ? "break" : "truncate" },
       });
     }
   });

@@ -92,7 +92,7 @@ const ENABLE: Record<string, Record<string, Lit>> = {
   categoryAxis: { show: lit.bool(true), showAxisTitle: lit.bool(true), gridlineShow: lit.bool(true) },
   valueAxis: { show: lit.bool(true), showAxisTitle: lit.bool(true), gridlineShow: lit.bool(true), secShowAxisTitle: lit.bool(true) },
   dataPoint: { borderShow: lit.bool(true) },
-  lineStyles: { strokeShow: lit.bool(true), showMarker: lit.bool(true), areaShow: lit.bool(true) },
+  lineStyles: { strokeShow: lit.bool(true), showMarker: lit.bool(true), areaShow: lit.bool(true), strokeColor: lit.str("#a1b2c3") },
   markers: { borderShow: lit.bool(true) },
   title: { show: lit.bool(true), text: lit.str("T") },
   subTitle: { show: lit.bool(true), text: lit.str("S") },

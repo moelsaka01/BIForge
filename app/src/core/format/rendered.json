@@ -410,7 +410,9 @@
    "fontSize",
    "italic",
    "position",
-   "show"
+   "show",
+   "titleWrap",
+   "underline"
   ]
  },
  "clusteredBarChart": {
@@ -667,7 +669,9 @@
    "fontSize",
    "italic",
    "position",
-   "show"
+   "show",
+   "titleWrap",
+   "underline"
   ]
  },
  "columnChart": {
@@ -911,7 +915,9 @@
    "fontSize",
    "italic",
    "position",
-   "show"
+   "show",
+   "titleWrap",
+   "underline"
   ]
  },
  "barChart": {
@@ -1155,7 +1161,9 @@
    "fontSize",
    "italic",
    "position",
-   "show"
+   "show",
+   "titleWrap",
+   "underline"
   ]
  },
  "hundredPercentStackedColumnChart": {
@@ -1391,7 +1399,9 @@
    "fontSize",
    "italic",
    "position",
-   "show"
+   "show",
+   "titleWrap",
+   "underline"
   ]
  },
  "hundredPercentStackedBarChart": {
@@ -1627,7 +1637,9 @@
    "fontSize",
    "italic",
    "position",
-   "show"
+   "show",
+   "titleWrap",
+   "underline"
   ]
  },
  "lineChart": {
@@ -1696,6 +1708,7 @@
    "italic",
    "labelColor",
    "legendMarkerRendering",
+   "matchLineColor",
    "position",
    "show",
    "showTitle",
@@ -1897,7 +1910,9 @@
    "fontSize",
    "italic",
    "position",
-   "show"
+   "show",
+   "titleWrap",
+   "underline"
   ]
  },
  "areaChart": {
@@ -1966,6 +1981,7 @@
    "italic",
    "labelColor",
    "legendMarkerRendering",
+   "matchLineColor",
    "position",
    "show",
    "showTitle",
@@ -2166,7 +2182,9 @@
    "fontSize",
    "italic",
    "position",
-   "show"
+   "show",
+   "titleWrap",
+   "underline"
   ]
  },
  "stackedAreaChart": {
@@ -2238,6 +2256,7 @@
    "italic",
    "labelColor",
    "legendMarkerRendering",
+   "matchLineColor",
    "position",
    "show",
    "showTitle",
@@ -2413,7 +2432,9 @@
    "fontSize",
    "italic",
    "position",
-   "show"
+   "show",
+   "titleWrap",
+   "underline"
   ]
  },
  "hundredPercentStackedAreaChart": {
@@ -2480,6 +2501,7 @@
    "italic",
    "labelColor",
    "legendMarkerRendering",
+   "matchLineColor",
    "position",
    "show",
    "showTitle",
@@ -2652,7 +2674,9 @@
    "fontSize",
    "italic",
    "position",
-   "show"
+   "show",
+   "titleWrap",
+   "underline"
   ]
  },
  "ribbonChart": {
@@ -2923,6 +2947,7 @@
    "italic",
    "labelColor",
    "legendMarkerRendering",
+   "matchLineColor",
    "position",
    "show",
    "showTitle",
@@ -3200,6 +3225,7 @@
    "italic",
    "labelColor",
    "legendMarkerRendering",
+   "matchLineColor",
    "position",
    "show",
    "showTitle",
