@@ -52,8 +52,9 @@ export function tableStyle(f: FormatReader, theme: Theme): TableStyle {
   const headFont = readFont(f, "columnHeaders");
   const rowHeadFont = mergeFonts(valuesFont, readFont(f, "rowHeaders"));
   const totalFont = readFont(f, "total");
-  const rowTotalFont = readFont(f, "rowTotal");
-  const colTotalFont = readFont(f, "columnTotal");
+  // "total" is the grand total in general; the row and column grand totals refine it
+  const rowTotalFont = mergeFonts(totalFont, readFont(f, "rowTotal"));
+  const colTotalFont = mergeFonts(totalFont, readFont(f, "columnTotal"));
   const subFont = readFont(f, "subTotals");
 
   const wrap = (object: string, dflt = false): CSSProperties => (f.bool(object, "wordWrap", dflt) ? { whiteSpace: "normal", height: "auto", minHeight: rowHeight, lineHeight: 1.3 } : {});
@@ -97,14 +98,14 @@ export function tableStyle(f: FormatReader, theme: Theme): TableStyle {
     },
     total: { ...cellBase(totalFont, "total"), fontWeight: totalFont.bold ? 700 : 600, ...(totalBg ? { background: totalBg } : {}), borderTop: `2px solid ${theme.dark ? "#555" : "#cccccc"}`, borderBottom: undefined },
     totalLabel: f.str("total", "label", "Total"),
-    rowTotal: { ...cellBase(rowTotalFont, "rowTotal"), fontWeight: rowTotalFont.bold ? 700 : 600, background: f.color("rowTotal", "backColor") },
-    columnTotal: { ...cellBase(colTotalFont, "columnTotal"), fontWeight: colTotalFont.bold ? 700 : 600, background: f.color("columnTotal", "backColor") },
+    rowTotal: { ...cellBase(rowTotalFont, "rowTotal"), fontWeight: rowTotalFont.bold ? 700 : 600, background: f.color("rowTotal", "backColor") ?? totalBg },
+    columnTotal: { ...cellBase(colTotalFont, "columnTotal"), fontWeight: colTotalFont.bold ? 700 : 600, background: f.color("columnTotal", "backColor") ?? totalBg },
     subtotal: { ...cellBase(subFont, "subTotals"), fontWeight: subFont.bold ? 700 : 600, background: f.color("subTotals", "backColor") },
     columnWidth: width,
     rowSubtotals: f.bool("subTotals", "rowSubtotals", true),
     columnSubtotals: f.bool("subTotals", "columnSubtotals", true),
     rowSubtotalLabel: f.str("subTotals", "rowSubtotalsLabel", "Total"),
     columnSubtotalLabel: f.str("subTotals", "columnSubtotalsLabel", "Total"),
-    subtotalsOnTop: f.str("subTotals", "rowSubtotalsPosition", "Bottom") === "Top",
+    subtotalsOnTop: f.str("subTotals", "rowSubtotalsPosition", "Top") === "Top",
   };
 }

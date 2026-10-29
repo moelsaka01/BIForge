@@ -10,7 +10,7 @@ import type { Loaded } from "./dataLoader";
 import type { SelectedPoint } from "./interactions";
 import { formatCompact, formatNumber } from "./numberFormat";
 import { donutCentre, type CentreImage } from "./donutCentre";
-import { axisBlock, plotImage, type PlotImage, CAP, dashOf, gridFor, labelBlock, labelDefaults, legendBlock, lineSeriesStyle, referenceLineMark, referenceLineShade, sliceItemStyle, valueText, zoomBlock, type LineSpec } from "./chartFormat";
+import { attachMarks, axisBlock, plotImage, type PlotImage, CAP, dashOf, gridFor, labelBlock, labelDefaults, legendBlock, lineSeriesStyle, referenceLineMark, referenceLineShade, sliceItemStyle, valueText, zoomBlock, type LineSpec } from "./chartFormat";
 import { echartsText, opacityOf, readFont } from "../format/styles";
 import { seriesColor, type Theme } from "./theme";
 import type { VisualModel } from "./visualDoc";
@@ -179,7 +179,11 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
       if (combo && role === "Y2") s.yAxisIndex = 1;
     } else {
       if (hl) s.barGap = "-100%";
-      else if (f.has("categoryAxis", "innerPadding")) s.barGap = `${f.num("categoryAxis", "innerPadding", 0)}%`;
+      else if (f.has("categoryAxis", "innerPadding")) {
+        s.barGap = `${f.num("categoryAxis", "innerPadding", 0)}%`;
+        // a stacked bar has no neighbour in its category: the padding between the bands is the gap between categories
+        if (stacked) s.barCategoryGap = s.barGap;
+      }
       if (f.has("categoryAxis", "outerPadding")) s.barCategoryGap = `${f.num("categoryAxis", "outerPadding", 20)}%`;
       // the layout card's gap between the groups of bars, as a percentage of a bar
       if (f.has("layout", "clusteredGapSize")) s.barCategoryGap = `${Math.min(500, Math.max(0, f.num("layout", "clusteredGapSize", 20)))}%`;
@@ -364,8 +368,7 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
       host = { name: "", type: "line", data: p.categories.map(() => null), silent: true, symbol: "none", tooltip: { show: false } };
       seriesOut.push(host);
     }
-    if (marks.length) host.markLine = { silent: true, symbol: "none", animation: false, data: marks };
-    if (shades.length) host.markArea = { silent: true, animation: false, data: shades };
+    attachMarks(seriesOut, host, marks, shades);
     if (f.bool("trend", "show", false) && valueCols.length > 0 && p.series.length > 0) {
       const style = f.str("trend", "style", "dashed");
       const trendDash = dashOf(f.str("trend", "dashArray", ""));
@@ -429,7 +432,7 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
   const option: O = {
     animation: false,
     textStyle: { fontFamily: theme.textClasses.label.fontFace },
-    grid: roomForTitles(gridFor(f, f.bool("legend", "show", legendShown)), horizontal ? valAxes[0] : catAxis, horizontal ? catAxis : valAxes[0]),
+    grid: roomForTitles(gridFor(f, f.bool("legend", "show", legendShown)), horizontal ? valAxes[0] : catAxis, horizontal ? catAxis : valAxes[0], horizontal ? undefined : valAxes[1]),
     legend: legendBlock(f, theme, legendShown),
     tooltip: {
       trigger: "axis",
@@ -710,10 +713,12 @@ const SLICE_STYLES: Record<string, { cat: boolean; val: boolean; pct: boolean }>
 const PIE_POS: Record<string, string> = { outside: "outside", inside: "inside", preferOutside: "outside", preferInside: "inside" };
 
 /** An axis title stands outside the labels, which the grid does not count: the side the title is on gets room for it. */
-function roomForTitles(grid: O, xAxis: O, yAxis: O): O {
+function roomForTitles(grid: O, xAxis: O, yAxis: O, secondary?: O): O {
   const room = 22;
   if (xAxis?.name) grid.bottom = (grid.bottom as number) + room;
   if (yAxis?.name) grid.left = (grid.left as number) + room;
+  // the title of the second value axis (combo charts) stands at the right edge
+  if (secondary?.name) grid.right = (grid.right as number) + room;
   return grid;
 }
 
@@ -999,9 +1004,9 @@ function scatter(inp: ChartInput): ChartBuild {
     yAxis: axis("valueAxis", yc),
     series,
   };
+  option.grid = roomForTitles(option.grid, option.xAxis, option.yAxis);
   const first = (option.series as O[])[0];
-  if (first && marks.length) first.markLine = { silent: true, symbol: "none", animation: false, data: marks };
-  if (first && shades.length) first.markArea = { silent: true, animation: false, data: shades };
+  if (first) attachMarks(option.series as O[], first, marks, shades);
   // "Include in auto scale": an axis grows to show a line
   for (const [axisOpt, pts] of [[option.yAxis, grow.y], [option.xAxis, grow.x]] as const) {
     if (!pts.length) continue;
@@ -1070,14 +1075,14 @@ function waterfall(inp: ChartInput): ChartBuild {
       { ...common, name: "Total", data: total, itemStyle: { color: colors.total }, label: label(1) },
     ],
   };
+  option.grid = roomForTitles(option.grid, option.xAxis, option.yAxis);
   // the constant line of the Analytics pane
   const sel = "id:constant";
   const at = f.has("y1AxisReferenceLine", "value", sel) ? f.num("y1AxisReferenceLine", "value", 0, sel) : null;
   const spec: LineSpec = { object: "y1AxisReferenceLine", id: "constant" };
   const mark = referenceLineMark(f, theme, spec, at, "Constant", "yAxis", vcol?.format ?? null);
   const shade = referenceLineShade(f, theme, spec, at, "yAxis");
-  if (mark) option.series[0].markLine = { silent: true, symbol: "none", animation: false, data: [mark] };
-  if (shade) option.series[0].markArea = { silent: true, animation: false, data: [shade] };
+  attachMarks(option.series, option.series[0], mark ? [mark] : [], shade ? [shade] : []);
   // "Include in auto scale": the value axis grows to show the line
   if (mark && at !== null && f.bool("y1AxisReferenceLine", "autoScale", false, sel)) {
     if (option.yAxis.min === undefined) option.yAxis.min = (e: { min: number }) => Math.min(e.min, at);

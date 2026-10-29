@@ -1,0 +1,94 @@
+// Data changes of the render audit: the sample data must exercise the property under test.
+const eachProjection = (json, fn) => { for (const w of Object.values(json.visual?.query?.queryState ?? {})) for (const p of w.projections ?? []) fn(p, w); };
+
+/** A measure with decimals (average unit price) instead of the integer quantity, so that precision and rounding show. */
+export function decimals(json) {
+  eachProjection(json, (p) => {
+    const a = p.field?.Aggregation;
+    if (a?.Expression?.Column?.Property === "Quantity") {
+      a.Expression.Column.Property = "UnitPrice";
+      a.Function = 1;
+      p.queryRef = "Average(Sales.UnitPrice)";
+      p.nativeQueryRef = "Average of UnitPrice";
+    }
+  });
+}
+
+/** One series only, so that every bar segment is large enough to hold its label. */
+export function singleSeries(json) {
+  const qs = json.visual?.query?.queryState;
+  if (qs?.Series) delete qs.Series;
+}
+
+const STACKED = /^(columnChart|barChart|hundredPercentStacked\w+|stackedAreaChart)$/;
+
+/** Display units in millions, so that the ticks of an axis and the labels carry decimals the precision can cut. */
+export function millions(json, c) {
+  const units = c.prop.replace(/[pP]recision$/, "DisplayUnits");
+  for (const e of json.visual?.objects?.[c.object] ?? []) e.properties[units] = { expr: { Literal: { Value: "1000000L" } } };
+}
+
+const colorLit = (hex) => ({ solid: { color: { expr: { Literal: { Value: `'${hex}'` } } } } });
+function setProps(json, object, props) {
+  const list = ((json.visual.objects ??= {})[object] ??= [{ properties: {} }]);
+  Object.assign(list[0].properties, props);
+}
+
+const numLit = (v) => ({ expr: { Literal: { Value: `${v}D` } } });
+
+/** Swaps the quantity (or the average price) of the visual for a measure of the sample model: Variance (negatives), Sparse (blanks), Empty. */
+export function measure(json, name) {
+  eachProjection(json, (p) => {
+    const a = p.field?.Aggregation;
+    if (a?.Expression?.Column?.Property === "Quantity") {
+      p.field = { Measure: { Expression: { SourceRef: { Entity: "Sales" } }, Property: name } };
+      p.queryRef = `Sales.${name}`;
+      p.nativeQueryRef = name;
+    }
+  });
+}
+
+/** The category axis shows the months (twelve of them), so that a zoom range or a label rotation has something to cut. */
+export function months(json) {
+  const cat = json.visual?.query?.queryState?.Category?.projections?.[0];
+  if (cat?.field?.Column) { cat.field.Column.Expression.SourceRef.Entity = "Date"; cat.field.Column.Property = "Month"; cat.queryRef = "Date.Month"; cat.nativeQueryRef = "Month"; }
+}
+
+const TRUE = { expr: { Literal: { Value: "true" } } };
+const LONG = "A long title that needs more room than the visual is wide, so it wraps";
+
+export function dataFor(json, c) {
+  if (/^category(Min|Max|Size)$/.test(c.prop) && c.object === "zoom") months(json);
+  // a background shows its transparency only where it has a color of its own
+  if (/^backgroundTransparency$/.test(c.prop) && /^(labels|totals)$/.test(c.object)) setProps(json, c.object, { enableBackground: TRUE, backgroundColor: colorLit("#ffcc00") });
+  // a title wraps only where it is longer than the visual is wide
+  if (c.prop === "titleWrap" && /^(title|subTitle)$/.test(c.object)) setProps(json, c.object, { show: TRUE, text: { expr: { Literal: { Value: "'" + LONG + "'" } } } });
+  // text wraps only where it is wider than its column: narrow columns
+  if (c.prop === "wordWrap" && /^(tableEx|pivotTable)$/.test(c.visualType) && /^(values|columnHeaders)$/.test(c.object)) setProps(json, "columnHeaders", { customColumnWidth: { expr: { Literal: { Value: "true" } } }, defaultColumnWidth: numLit(50) });
+  // a line behind or in front of the data shows only where it crosses a bar: a constant that lies inside the bars
+  if (c.object === "y1AxisReferenceLine" && c.prop === "position") for (const e of json.visual?.objects?.y1AxisReferenceLine ?? []) if (e.selector?.id === "constant") e.properties.value = numLit(60);
+  if (c.prop === "showPositiveAndNegative" || c.prop === "decreaseFill") measure(json, "Variance");
+  // a blank value: the pairs of category and series with a small quantity have none; a card has nothing at all
+  if (c.prop === "showBlankAs") measure(json, c.visualType === "cardVisual" ? "Empty" : "Sparse");
+  // overlapping labels: large ones, so that neighbouring labels collide
+  if (c.prop === "optimizeLabelDisplay") setProps(json, "labels", { show: { expr: { Literal: { Value: "true" } } }, fontSize: numLit(28) });
+  // the format string of the visual is used by the labels
+  if (c.object === "general" && c.prop === "formatString") setProps(json, "labels", { show: { expr: { Literal: { Value: "true" } } } });
+  // text wraps where it is wider than its box
+  if (/^(label|value)$/.test(c.object) && c.prop === "textWrap" && c.visualType === "donutChart") setProps(json, c.object, { fontSize: numLit(40) });
+  // a label that wraps needs a narrow box
+  if (c.object === "labels" && c.prop === "wordWrap") setProps(json, "labels", { labelContainerMaxWidth: numLit(10) });
+  // a header wraps only where its text is wider than the header: a large font does that for any month name
+  if (c.object === "subheader" && c.prop === "titleWrap") setProps(json, "subheader", { fontSize: numLit(40) });
+  // the legend marker takes the line's color only where that differs from the series color
+  if (c.prop === "matchLineColor") setProps(json, "lineStyles", { strokeColor: colorLit("#112233") });
+  if (/recision$/.test(c.prop)) { decimals(json); millions(json, c); }
+  if (STACKED.test(c.visualType) && /^(labels|totals)$/.test(c.object) && c.prop !== "showSeries" && c.prop !== "showBlankAs") singleSeries(json);
+  if (STACKED.test(c.visualType) && c.object === "labels") shortLabels(json, c);
+}
+
+/** A long label style ("Data value, percent of total") does not fit inside a stacked segment and is hidden there, as in Desktop: the short style is used. */
+export function shortLabels(json, c) {
+  if (c.prop === "labelStyle") return;
+  for (const e of json.visual?.objects?.labels ?? []) delete e.properties?.labelStyle;
+}

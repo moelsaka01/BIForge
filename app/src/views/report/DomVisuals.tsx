@@ -146,11 +146,16 @@ export function MatrixView(p: MatrixViewProps) {
   const { model, theme } = p;
   const st = model.style;
   const selKeys = new Set(p.selected.map((s) => JSON.stringify(s.values)));
-  const th: CSSProperties = { ...cellBase(theme), ...st.header, textAlign: st.headerAlign ?? "center", position: "sticky", top: 0, zIndex: 1 };
+  const th: CSSProperties = { ...cellBase(theme), ...st.header, textAlign: st.headerAlign ?? "center", position: "sticky", top: 0, zIndex: 1, height: st.headHeight };
+  // Grid > row padding: the height of a row
+  const rowH: CSSProperties = { height: st.rowHeight };
+  // Column headers > column adjustment / custom column width: value columns of a fixed width
+  const fixed = st.columnWidth.endsWith("px");
+  const colW: CSSProperties = fixed ? { width: st.columnWidth, minWidth: st.columnWidth, maxWidth: st.columnWidth } : {};
   const showTotals = model.showRowTotals;
   return (
     <div style={{ width: p.width, height: p.height, overflow: "auto" }} data-testid="matrix">
-      <table role="table" aria-label="Matrix" style={{ borderCollapse: "collapse", minWidth: "100%" }}>
+      <table role="table" aria-label="Matrix" style={{ borderCollapse: "collapse", ...(fixed ? { width: "auto" } : { minWidth: "100%" }) }}>
         <thead>
           {model.headers.map((h, hi) => (
             <tr key={hi}>
@@ -160,7 +165,7 @@ export function MatrixView(p: MatrixViewProps) {
                 </th>
               )}
               {h.map((c, ci) => (
-                <th key={ci} colSpan={c.span} style={th} scope="col">
+                <th key={ci} colSpan={c.span} style={{ ...th, ...(c.span === 1 ? colW : {}) }} scope="col">
                   {c.text}
                 </th>
               ))}
@@ -182,9 +187,9 @@ export function MatrixView(p: MatrixViewProps) {
             const pt: SelectedPoint | null = r.path.length ? { fields: p.rowFields.slice(0, r.path.length), values: r.path.map(valueToLit) } : null;
             const isSel = pt ? selKeys.has(JSON.stringify(pt.values)) : false;
             return (
-              <tr key={r.key} data-row={r.key} style={{ background: isSel ? (theme.dark ? "#334b66" : "#d6e8fa") : undefined, fontWeight: r.isGrand || r.expandable ? 600 : 400, opacity: selKeys.size && !isSel && pt ? 0.55 : 1 }}>
+              <tr key={r.key} data-row={r.key} style={{ background: isSel ? (theme.dark ? "#334b66" : "#d6e8fa") : undefined, fontWeight: r.isGrand || r.expandable || r.isSubtotal ? 600 : 400, opacity: selKeys.size && !isSel && pt ? 0.55 : 1 }}>
                 <td
-                  style={{ ...cellBase(theme), ...st.rowHeaderCell, ...(r.isGrand ? st.columnTotal : r.expandable ? st.subtotal : {}), paddingLeft: 8 + r.depth * 16, cursor: pt ? "pointer" : "default", textAlign: "left" }}
+                  style={{ ...cellBase(theme), ...st.rowHeaderCell, ...(r.isGrand ? st.columnTotal : r.expandable || r.isSubtotal ? st.subtotal : {}), paddingLeft: 8 + r.depth * 16, ...rowH, cursor: pt ? "pointer" : "default", textAlign: "left" }}
                   onClick={(e) => pt && p.onRow(pt, e.ctrlKey || e.metaKey || e.shiftKey)}
                 >
                   {r.expandable ? (
@@ -205,12 +210,12 @@ export function MatrixView(p: MatrixViewProps) {
                   {r.label}
                 </td>
                 {r.cells.map((c, ci) => (
-                  <td key={ci} style={styled({ ...cellBase(theme), ...st.cell(ri), ...(r.isGrand ? st.columnTotal : r.expandable ? st.subtotal : {}), textAlign: "right" }, c.style)}>
+                  <td key={ci} style={styled({ ...cellBase(theme), ...st.cell(ri), ...(r.isGrand ? st.columnTotal : r.expandable || r.isSubtotal ? st.subtotal : {}), ...rowH, ...colW, textAlign: "right" }, c.style)}>
                     {c.text}
                   </td>
                 ))}
                 {showTotals && r.total.map((c, ci) => (
-                  <td key={`t${ci}`} style={styled({ ...cellBase(theme), ...st.rowTotal, textAlign: "right", borderLeft: `1px solid ${theme.dark ? "#444" : "#ddd"}` }, c.style)}>
+                  <td key={`t${ci}`} style={styled({ ...cellBase(theme), ...st.rowTotal, ...rowH, textAlign: "right", borderLeft: `1px solid ${theme.dark ? "#444" : "#ddd"}` }, c.style)}>
                     {c.text}
                   </td>
                 ))}

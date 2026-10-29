@@ -4,15 +4,23 @@
 // "must" = properties added in the latest batches; "random" = a seeded random sample of the others (the first RANDOM_N whose
 // unformatted visual shows data). Run: node e2e/render.mjs   (needs `npx tauri build --debug --no-bundle` first)
 import { spawn } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { appendFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { chromium } from "playwright-core";
+import { dataFor } from "./render-data.mjs";
+import { pictures } from "./render-pictures.mjs";
+import { skipReason } from "./render-skips.mjs";
 
 const exe = resolve(process.env.BIFORGE_EXE ?? "../target/debug/biforge-app.exe");
-const cases = JSON.parse(readFileSync(new URL("./render-cases.json", import.meta.url), "utf8"));
+// RENDER_RANGE=a-b: audit mode, cases a..b-1 of _cases/all.json (every drawn property, see render-all.mjs); RENDER_OUT = a JSON-lines result file
+const range = process.env.RENDER_RANGE?.split("-").map(Number);
 const RANDOM_N = Number(process.env.RENDER_RANDOM ?? 20);
-const picked = [...cases.must.map((c) => ({ ...c, group: "must" })), ...cases.random.slice(0, RANDOM_N + 12).map((c) => ({ ...c, group: "random" }))];
+const ids = process.env.RENDER_IDS?.split(",").map(Number); // RENDER_IDS=3,17: exactly these cases; RENDER_IMG=dir keeps the images of the ones that did not change
+const picked = range || ids
+  ? (() => { const all = JSON.parse(readFileSync(new URL("./_cases/all.json", import.meta.url), "utf8")); return ids ? ids.map((i) => ({ ...all[i], group: "audit", idx: i })) : all.slice(range[0], range[1]).map((c, k) => ({ ...c, group: "audit", idx: range[0] + k })); })()
+  : (() => { const cases = JSON.parse(readFileSync(new URL("./render-cases.json", import.meta.url), "utf8")); return [...cases.must.map((c) => ({ ...c, group: "must" })), ...cases.random.slice(0, RANDOM_N + 12).map((c) => ({ ...c, group: "random" }))]; })();
+const PORT = Number(process.env.RENDER_PORT ?? 9396);
 const work = mkdtempSync(join(tmpdir(), "biforge-e2e-rn-"));
 const parent = join(work, "projects");
 mkdirSync(parent);
@@ -36,20 +44,43 @@ async function launch(port, picks) {
 }
 
 // 1. a sample project, created by the app itself
-let session = await launch(9396, parent);
-try {
-  const { page } = session;
-  await page.getByRole("button", { name: /Learn with sample data/ }).click();
-  const dlg = page.getByRole("dialog");
-  await dlg.getByLabel("Project name").fill("Rn");
-  await dlg.getByRole("button", { name: "Browse…" }).click();
-  await dlg.getByRole("button", { name: "Create" }).click();
-  await page.waitForTimeout(5000);
-} finally { try { process.kill(session.child.pid); } catch { /* gone */ } }
-await sleep(2000);
+let session;
+if (process.env.RENDER_BASE) cpSync(join(process.env.RENDER_BASE, "Rn"), join(parent, "Rn"), { recursive: true });
+else {
+  session = await launch(PORT, parent);
+  try {
+    const { page } = session;
+    await page.getByRole("button", { name: /Learn with sample data/ }).click();
+    const dlg = page.getByRole("dialog");
+    await dlg.getByLabel("Project name").fill("Rn");
+    await dlg.getByRole("button", { name: "Browse…" }).click();
+    await dlg.getByRole("button", { name: "Create" }).click();
+    await page.waitForTimeout(5000);
+  } finally { try { process.kill(session.child.pid); } catch { /* gone */ } }
+  await sleep(2000);
+}
+if (process.env.RENDER_MAKE_BASE) { cpSync(join(parent, "Rn"), join(process.env.RENDER_MAKE_BASE, "Rn"), { recursive: true }); console.log("BASE READY"); process.exit(0); }
 
-// 2. one page per case: page "cNa" has it without the property, "cNb" with it (pages "ctla" and "ctlb" hold the unformatted visual twice, as a control)
+// the sample model gets a measure with negative values (render-data.mjs: negatives)
+// measures with negative values (Variance), with blanks (Sparse: blank where the quantity is small) and only blank (Empty); see render-data.mjs
+const MEASURES = [
+  ["Variance", "SUM(Sales[Quantity]) - AVERAGEX(ALL(Product[Category]), CALCULATE(SUM(Sales[Quantity])))", "0b6f2a5e-1c3d-4e7a-9a11-5d2c8f3e7b01"],
+  ["Sparse", "IF(SUM(Sales[Quantity]) > 60, SUM(Sales[Quantity]), BLANK())", "0b6f2a5e-1c3d-4e7a-9a11-5d2c8f3e7b02"],
+  ["Empty", "BLANK()", "0b6f2a5e-1c3d-4e7a-9a11-5d2c8f3e7b03"],
+];
+const MEASURE_TEXT = MEASURES.map(([n, e, g]) => ["", `\tmeasure ${n} = ${e}`, `\t\tlineageTag: ${g}`].join("\n")).join("\n") + "\n";
+const salesTable = join(parent, "Rn", "Rn.SemanticModel", "definition", "tables", "Sales.tmdl");
+if (existsSync(salesTable) && !readFileSync(salesTable, "utf8").includes("measure Variance")) appendFileSync(salesTable, MEASURE_TEXT);
 const def = join(parent, "Rn", "Rn.Report", "definition");
+// three bookmarks, so that a bookmark navigator has buttons to draw
+{
+  const dir = join(def, "bookmarks");
+  mkdirSync(dir, { recursive: true });
+  const first = JSON.parse(readFileSync(join(def, "pages", "pages.json"), "utf8")).pageOrder[0];
+  const names = ["b1", "b2", "b3"];
+  writeFileSync(join(dir, "bookmarks.json"), JSON.stringify({ $schema: "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/bookmarksMetadata/1.0.0/schema.json", items: names.map((name) => ({ name })) }, null, 2));
+  names.forEach((name, i) => writeFileSync(join(dir, name + ".bookmark.json"), JSON.stringify({ $schema: "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/bookmark/2.1.0/schema.json", displayName: ["First view", "Second view", "Third view"][i], name, options: {}, explorationState: { version: "1.3", activeSection: first } }, null, 2)));
+}
 const pages = JSON.parse(readFileSync(join(def, "pages", "pages.json"), "utf8"));
 // the unit-test fixtures have a few columns the sample project does not (Customer.Country is Customer.Region here)
 const forSample = (json) => JSON.parse(JSON.stringify(json).replaceAll("Customer.Country", "Customer.Region").replaceAll('"Country"', '"Region"'));
@@ -69,13 +100,20 @@ const TWEAKS = {
 const tweak = (c, json) => {
   const out = JSON.parse(JSON.stringify(json));
   TWEAKS[`${c.visualType}.${c.object}.${c.prop}`]?.(out);
+  pictures(out, c);
+  dataFor(out, c);
+  // small multiples: the sample has two channels only; the months give twelve panels, so that columns, rows and padding have something to arrange
+  const rows = out.visual?.query?.queryState?.Rows?.projections;
+  if (rows && out.visual.visualType !== "pivotTable") for (const p of rows) if (p.field?.Column?.Property === "Channel") { p.field.Column.Expression.SourceRef.Entity = "Date"; p.field.Column.Property = "Month"; p.queryRef = "Date.Month"; p.nativeQueryRef = "Month"; }
   // a constant reference line at a value outside the axis is not drawn: let the axis grow to it
-  if (c.prop !== "autoScale") for (const e of out.visual?.objects?.y1AxisReferenceLine ?? []) if (e.selector?.id === "constant") e.properties.autoScale = { expr: { Literal: { Value: "true" } } };
+  if (c.prop !== "autoScale" && !/ComboChart$/.test(c.visualType)) for (const e of out.visual?.objects?.y1AxisReferenceLine ?? []) if (e.selector?.id === "constant") e.properties.autoScale = { expr: { Literal: { Value: "true" } } };
   return out;
 };
 const put = (pageName, name, json) => {
   const x = 10;
-  const v = { ...forSample(json), name, position: { x, y: 10, z: 1, width: 600, height: 420, tabOrder: 1 } };
+  // tables and matrices are given the whole page, so that their last rows (the totals) are not scrolled out of sight
+  const big = /^(pivotTable|tableEx)$/.test(json.visual?.visualType);
+  const v = { ...forSample(json), name, position: { x, y: 10, z: 1, width: big ? 1200 : 600, height: big ? 700 : 420, tabOrder: 1 } };
   const dir = join(def, "pages", pageName, "visuals", name);
   mkdirSync(dir, { recursive: true });
   writeFileSync(join(dir, "visual.json"), JSON.stringify(v, null, 2));
@@ -94,24 +132,30 @@ picked.forEach((c, i) => { addPage("c" + i + "a", c.base, c); c.variants.forEach
 writeFileSync(join(def, "pages", "pages.json"), JSON.stringify(pages, null, 2));
 
 // 3. open it in the real window and compare
-session = await launch(9397, join(parent, "Rn", "Rn.pbip"));
+session = await launch(PORT + 1, join(parent, "Rn", "Rn.pbip"));
 const norm = (h) => h.replace(/ data-visual="[^"]*"/g, "").replace(/\b(zr\d+-[\w-]+|clip-?[\w-]*\d+|_echarts_instance_="[^"]*")/g, "").replace(/\s+/g, " ");
 const grab = async (page, name) => {
   const f = page.locator(`[data-visual="${name}"]`).first();
   await f.waitFor();
   return { html: norm(await f.evaluate((el) => el.outerHTML)), text: await f.evaluate((el) => el.innerText), png: await f.screenshot({ animations: "disabled" }) };
 };
+const AUDIT = !!(range || ids);
+const logResult = (obj) => { if (process.env.RENDER_OUT) appendFileSync(process.env.RENDER_OUT, JSON.stringify(obj) + "\n"); };
 let counted = 0;
 let unchanged = 0;
 const rows = [];
 try {
   const { page } = session;
+  if (process.env.RENDER_CONSOLE) page.on("console", (m) => { if (/error|warn/.test(m.type())) console.log("CONSOLE", m.type(), m.text().slice(0, 300)); });
   await page.getByRole("button", { name: /^Open/ }).first().click();
   await page.getByRole("tab", { name: "ctla", exact: true }).waitFor({ timeout: 60000 });
   const shot = async (name) => {
     await page.getByRole("tab", { name, exact: true }).click();
-    await page.waitForTimeout(2500);
-    return grab(page, "probe");
+    // wait until two shots of the visual are identical (animations done, data loaded)
+    await page.waitForTimeout(AUDIT ? 700 : 2500);
+    let g = await grab(page, "probe");
+    for (let t = 0; AUDIT && t < 5; t++) { await page.waitForTimeout(400); const h = await grab(page, "probe"); if (h.png.equals(g.png)) break; g = h; }
+    return g;
   };
   // the page with the property is tried with up to four values; one that looks different is enough
   const compare = async (id, variants) => {
@@ -132,12 +176,22 @@ try {
   for (let i = 0; i < picked.length; i++) {
     const c = picked[i];
     if (c.group === "random" && counted >= RANDOM_N) break;
+    const key = `${c.visualType}.${c.object}.${c.prop}`;
     const r = await compare("c" + i, c.variants.length);
+    if (process.env.RENDER_EVAL) console.log("EVAL", c.idx, JSON.stringify(await page.evaluate(process.env.RENDER_EVAL)));
     // a 100 % axis ends at 100: a constant line at 250 has no place on it
     const offAxis = /^hundredPercent/.test(c.visualType) && /ReferenceLine/.test(c.object);
     // the tooltip and the visual header are drawn on hover only: not compared here
     const hoverOnly = /^(visualTooltip|visualHeaderTooltip|visualHeader)$/.test(c.object);
     const empty = offAxis || hoverOnly || (r.a.text.trim() === "" && r.a.html.length < 600) || /Cannot load this visual|No data to show/.test(r.a.text + r.b.text);
+    if (c.group === "audit") {
+      const why = skipReason(key);
+      const status = hoverOnly ? "SKIP-hover" : why?.kind === "interaction" ? "SKIP-interaction" : offAxis ? "SKIP-offaxis" : empty ? "NODATA" : r.pixels ? "ok" : why?.kind === "semantic" && r.dom ? "SEMANTIC" : r.dom ? "DOM-ONLY" : "FAIL";
+      logResult({ idx: c.idx, key, status, pixels: r.pixels, dom: r.dom, ...(why ? { why: why.why } : {}) });
+      rows.push(`${status} ${key}`);
+      if ((status !== "ok" || process.env.RENDER_IMG_ALL) && !status.startsWith("SKIP") && process.env.RENDER_IMG) { mkdirSync(process.env.RENDER_IMG, { recursive: true }); writeFileSync(join(process.env.RENDER_IMG, c.idx + "-a.png"), r.a.png); writeFileSync(join(process.env.RENDER_IMG, c.idx + "-b.png"), r.b.png); }
+      continue;
+    }
     if (c.group === "random" && empty) { rows.push(`SKIP (not compared: no data here, off the axis or drawn on hover only): ${c.visualType}.${c.object}.${c.prop}`); continue; }
     if (c.group === "random") counted++;
     const ok = r.pixels; // a change only in the DOM is not something a person sees
@@ -148,8 +202,8 @@ try {
   }
   console.log(rows.join("\n"));
   // a random property may not show with the sample data (a KPI that is not neutral, one small-multiples panel): up to 4 of 20 are tolerated and listed
-  check(unchanged <= 4, `${unchanged} of ${counted} random properties looked the same with and without the property`);
-  check(counted >= RANDOM_N, `${counted} random Done-tested properties compared in the real window`);
+  if (!AUDIT) check(unchanged <= 4, `${unchanged} of ${counted} random properties looked the same with and without the property`);
+  if (!AUDIT) check(counted >= RANDOM_N, `${counted} random Done-tested properties compared in the real window`);
   console.log(`WORK ${work}`);
 } catch (e) {
   failures++;

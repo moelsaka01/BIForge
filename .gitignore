@@ -53,3 +53,4 @@ data/local/
 !.env.example
 *.pem
 *.key
+app/e2e/_cases/

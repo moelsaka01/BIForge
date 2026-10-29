@@ -172,6 +172,8 @@ export interface MatrixRow {
   /** Row-field values leading to this row (for selection). */
   path: Value[];
   isGrand?: boolean;
+  /** A subtotal row under its group (Subtotals > Row subtotals position "Bottom"). */
+  isSubtotal?: boolean;
 }
 
 export interface MatrixModel {
@@ -284,6 +286,29 @@ export function buildMatrix(visual: VisualModel, parts: Value[][][], q: BuiltMat
       }
     }
   }
+  // Subtotals card: the group's subtotal stands on its own row under the group (position Bottom), stays in the group's row (Top), or is left out
+  const style = tableStyle(f, theme);
+  if (R > 1) {
+    const bottom = !style.subtotalsOnTop;
+    const blank = (cells: { text: string; style: CellStyle }[]) => cells.map(() => ({ text: "", style: {} }));
+    const out: MatrixRow[] = [];
+    const open: MatrixRow[] = [];
+    const close = (to: number) => {
+      while (open.length && open[open.length - 1].depth >= to) {
+        const g = open.pop()!;
+        if (bottom && style.rowSubtotals) out.push({ ...g, key: `${g.key}subtotal`, label: `${g.label} ${style.rowSubtotalLabel}`, expandable: false, expanded: false, isSubtotal: true });
+      }
+    };
+    for (const r of rows) {
+      close(r.depth);
+      if (r.expandable && r.expanded) {
+        open.push(r);
+        out.push(!style.rowSubtotals || bottom ? { ...r, cells: blank(r.cells), total: blank(r.total) } : r);
+      } else out.push(r);
+    }
+    close(0);
+    rows.splice(0, rows.length, ...out);
+  }
   // grand total row
   if (R > 0 && V > 0 && f.bool("rowTotals", "show", true)) {
     rows.push({
@@ -299,7 +324,7 @@ export function buildMatrix(visual: VisualModel, parts: Value[][][], q: BuiltMat
     });
   }
   return {
-    style: tableStyle(f, theme),
+    style,
     rowHeader: q.rows.map((r) => r.name).join(" / "),
     headers,
     rows,

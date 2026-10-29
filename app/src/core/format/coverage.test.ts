@@ -515,6 +515,11 @@ describe("rendered coverage", () => {
     const fsName = "node:fs";
     const fs = (await import(/* @vite-ignore */ fsName)) as { writeFileSync(path: string, data: string): void };
     fs.writeFileSync("e2e/render-cases.json", JSON.stringify({ must, random: pool.slice(0, 70) }, null, 1) + "\n");
+    // the full audit: every drawn property, for e2e/render.mjs with RENDER_ALL=1 (gitignored)
+    const mkName = "node:fs";
+    const mk = (await import(/* @vite-ignore */ mkName)) as { mkdirSync(p: string, o: object): void };
+    mk.mkdirSync("e2e/_cases", { recursive: true });
+    fs.writeFileSync("e2e/_cases/all.json", JSON.stringify(CASES));
   });
 
   it("every authored visual type is measured", () => {

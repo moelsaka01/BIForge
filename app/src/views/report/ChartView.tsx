@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { resolveCalc } from "../../core/report/calcLength";
 import type { ChartBuild } from "../../core/report/chartOptions";
 import type { SelectedPoint } from "../../core/report/interactions";
 import { UNDERLINE_FAMILY } from "../../core/format/styles";
@@ -39,7 +40,8 @@ export function hideLabelsThatDoNotFit(c: EChartsInstance, option: { series?: { 
       const text = bar?.getTextContent?.();
       if (!bar || !text) continue;
       const box = text.getBoundingRect();
-      const fits = s.fitLabel === "x" ? box.width <= (bar.shape?.width ?? Infinity) : box.height <= (bar.shape?.height ?? Infinity);
+      // the extent of a bar that grows downwards or to the left is negative
+      const fits = s.fitLabel === "x" ? box.width <= Math.abs(bar.shape?.width ?? Infinity) : box.height <= Math.abs(bar.shape?.height ?? Infinity);
       if (text.ignore === fits) {
         text.ignore = !fits;
         text.dirty();
@@ -61,6 +63,8 @@ export function ChartView(p: ChartViewProps) {
     const el = host.current!;
     const c = echarts.init(el, null, { renderer: "svg", width: Math.max(10, p.width), height: Math.max(10, p.height) });
     chart.current = c;
+    // the real-window checks (e2e/render.mjs) read the drawn option and elements from here
+    (el as unknown as { __chart?: EChartsInstance }).__chart = c;
     c.on("click", (e) => {
       const pt = latest.current.build.pointAt(e.seriesIndex ?? 0, e.dataIndex ?? 0);
       const ev = (e.event as { event?: MouseEvent } | undefined)?.event;
@@ -87,10 +91,15 @@ export function ChartView(p: ChartViewProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // small multiples position their panels with calc(): resolved against the size of the chart, so a resize redraws them
+  const hasCalc = JSON.stringify([p.build.option.grid, p.build.option.title]).includes("calc(");
+  const sizeKey = hasCalc ? `${p.width}x${p.height}` : "";
   useEffect(() => {
-    chart.current?.setOption(p.build.option, true);
-    if (chart.current) hideLabelsThatDoNotFit(chart.current, p.build.option);
-  }, [p.build]);
+    const option = resolveCalc(p.build.option, Math.max(10, p.width), Math.max(10, p.height));
+    chart.current?.setOption(option, true);
+    if (chart.current) hideLabelsThatDoNotFit(chart.current, option);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [p.build, sizeKey]);
 
   useEffect(() => {
     chart.current?.resize({ width: Math.max(10, p.width), height: Math.max(10, p.height) });

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { decodeCell, type Value } from "./cells";
 import { condFormatToPbir } from "./condFormat";
 import type { Loaded } from "./dataLoader";
-import { agg, column, lit } from "./fields";
+import { agg, column, lit, type Lit } from "./fields";
 import { litExpr, queryRefOf } from "./pbir";
 import { buildMatrixQuery, buildVisualQuery } from "./queryBuilder";
 import { buildCard, buildKpi, buildMatrix, buildMultiRowCard, buildTable } from "./tableModels";
@@ -113,6 +113,26 @@ describe("matrix", () => {
     const c = build(new Set([bikes]));
     expect(c.rows.map((r) => r.label)).toEqual(["Bikes", "Clothing", "France", "Total"]);
     expect(c.rows[0].expanded).toBe(false);
+  });
+
+  // the Subtotals card: where a group's subtotal stands, what it is called, and whether there is one
+  const withSub = (props: Record<string, Lit>) => {
+    const v2 = visualOf("pivotTable", { Rows: [Cat, Country], Columns: [Ch], Values: [Qty] });
+    for (const [k, val] of Object.entries(props)) setFormat(v2.json, "subTotals", k, val);
+    return buildMatrix(v2, parts.map((p) => p.map(dec)), q, DEFAULT_THEME, new Set());
+  };
+  it("Row subtotals position Bottom puts the subtotal on its own row under the group and empties the group's row", () => {
+    const m = withSub({ rowSubtotalsPosition: lit.str("Bottom") });
+    expect(m.rows.map((r) => r.label)).toEqual(["Bikes", "France", "Canada", "Bikes Total", "Clothing", "France", "Clothing Total", "Total"]);
+    expect(texts(m.rows[0])).toEqual(["", ""]);
+    expect(m.rows[3].isSubtotal).toBe(true);
+    expect(texts(m.rows[3])).toEqual(["40", "20"]);
+  });
+  it("the subtotal label is the one of the card; subtotals off leave none", () => {
+    expect(withSub({ rowSubtotalsPosition: lit.str("Bottom"), rowSubtotalsLabel: lit.str("Sum") }).rows[3].label).toBe("Bikes Sum");
+    const off = withSub({ rowSubtotals: lit.bool(false) });
+    expect(off.rows.map((r) => r.label)).toEqual(["Bikes", "France", "Canada", "Clothing", "France", "Total"]);
+    expect(texts(off.rows[0])).toEqual(["", ""]);
   });
 
   it("several values add a header row of value names", () => {

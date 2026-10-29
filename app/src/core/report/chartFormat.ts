@@ -339,6 +339,20 @@ export function referenceLineMark(f: FormatReader, theme: Theme, spec: LineSpec,
 }
 
 /**
+ * Puts reference lines and their shades on a host series. A line's Position (front / back) is a drawing order: ECharts gives
+ * one z to the whole markLine of a series, so the lines behind the data go to an invisible helper series (pushed on `series`)
+ * whose markLine is drawn below the bars (z 1); the others stay on the host above them (z 10).
+ */
+export function attachMarks(series: O[], host: O, marks: O[], shades: O[]): void {
+  const base = { silent: true, symbol: "none", animation: false };
+  const front = marks.filter((m) => m.z !== 1);
+  const back = marks.filter((m) => m.z === 1);
+  if (front.length) host.markLine = { ...base, z: 10, data: front };
+  if (shades.length) host.markArea = { silent: true, animation: false, data: shades };
+  if (back.length) series.push({ name: "", type: "line", data: [], silent: true, symbol: "none", tooltip: { show: false }, markLine: { ...base, z: 1, data: back } });
+}
+
+/**
  * The shaded side of a reference line (shadeRegion before / after the value) as an ECharts markArea entry; null when
  * the line is off, has no shading or no value. The area runs to the far edge of the axis (it is clipped by the plot).
  */
