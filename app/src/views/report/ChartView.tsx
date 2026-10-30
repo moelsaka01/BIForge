@@ -22,16 +22,51 @@ const UNDERLINE_CSS = `[data-testid="chart"] text[style*="${UNDERLINE_FAMILY}"] 
 
 const toolButton = { width: 26, height: 26, border: "1px solid #888", background: "rgba(255,255,255,0.92)", color: "#222", cursor: "pointer", fontSize: 15, lineHeight: "20px", padding: 0, borderRadius: 3 } as const;
 
+/** Show dynamic labels: a label whose full text (title, value, detail) is larger than its bar is written as the value alone; it comes back when the bar grows. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function shrinkDynamicLabels(model: any, si: number, axis: string): boolean {
+  const data = model.getSeriesByIndex(si)?.getData();
+  let changed = false;
+  // a line: the labels of the points, left to right; a label gives way (becomes the value) when it touches the one before it
+  let before: { x: number; y: number; width: number; height: number } | null = null;
+  for (let di = 0; di < (data?.count() ?? 0); di++) {
+    const bar = data.getItemGraphicEl(di);
+    const dyn = data.getRawDataItem?.(di)?.dyn as { full: string; compact: string } | undefined;
+    const text = bar?.getTextContent?.();
+    if (!bar || !text || !dyn) continue;
+    // measure the full text, whatever is shown now
+    text.setStyle({ text: dyn.full });
+    const box = text.getBoundingRect();
+    if (axis === "overlap") {
+      const tr = text.getComputedTransform?.();
+      const at = { x: box.x + (tr?.[4] ?? 0), y: box.y + (tr?.[5] ?? 0), width: box.width, height: box.height };
+      const touches = !!before && at.x < before.x + before.width && before.x < at.x + at.width && at.y < before.y + before.height && before.y < at.y + at.height;
+      text.setStyle({ text: touches ? dyn.compact : dyn.full });
+      text.dirty();
+      before = at;
+      changed = true;
+      continue;
+    }
+    const room = Math.abs((axis === "x" ? bar.shape?.width : bar.shape?.height) ?? Infinity);
+    const fits = (axis === "x" ? box.width : box.height) <= room;
+    text.setStyle({ text: fits ? dyn.full : dyn.compact });
+    text.dirty();
+    changed = true;
+  }
+  return changed;
+}
+
 /**
  * Hides the data labels of the series marked `fitLabel` ("x": bars grow sideways, "y": upwards) that are larger than their bar:
  * Desktop draws no label that does not fit in the bar. Runs after every drawing, so a label comes back when the bar grows.
  */
-export function hideLabelsThatDoNotFit(c: EChartsInstance, option: { series?: { fitLabel?: string }[] }): void {
+export function hideLabelsThatDoNotFit(c: EChartsInstance, option: { series?: { fitLabel?: string; dynamicLabel?: string }[] }): void {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const model = (c as any).getModel?.();
   if (!model) return;
   let changed = false;
   (option.series ?? []).forEach((s, si) => {
+    if (s.dynamicLabel) changed = shrinkDynamicLabels(model, si, s.dynamicLabel) || changed;
     if (!s.fitLabel) return;
     const data = model.getSeriesByIndex(si)?.getData();
     if (!data) return;

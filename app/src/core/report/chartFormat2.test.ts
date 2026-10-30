@@ -353,3 +353,48 @@ describe("gradient legend", () => {
     expect(build("clusteredColumnChart", () => undefined).visualMap).toBeUndefined();
   });
 });
+
+describe("data labels: title, value and detail", () => {
+  const on = (v: VisualModel, extra: Record<string, ReturnType<typeof lit.bool> | ReturnType<typeof lit.str> | ReturnType<typeof lit.num>> = {}) => {
+    setFormat(v.json, "labels", "show", lit.bool(true));
+    for (const [k, x] of Object.entries(extra)) setFormat(v.json, "labels", k, x);
+  };
+  const text = (s: { label: { formatter: (p: unknown) => string } }, i: number) => s.label.formatter({ data: s.data?.[i], value: s.data?.[i]?.value });
+  it("shows the series name above the value and the share of the total below", () => {
+    const o = build("clusteredColumnChart", (v) => on(v, { enableTitleDataLabel: lit.bool(true), enableDetailDataLabel: lit.bool(true) }));
+    const s = o.series[0];
+    expect(text(s, 1)).toBe("{t|Sum of Quantity}\n{v|30}\n{d|30%}");
+    expect(Object.keys(s.label.rich)).toEqual(["t", "v", "d"]);
+  });
+  it("Single line puts the parts in one row; the value can be switched off; the detail has its own decimals", () => {
+    const o = build("clusteredColumnChart", (v) => on(v, { enableTitleDataLabel: lit.bool(true), enableValueDataLabel: lit.bool(false), enableDetailDataLabel: lit.bool(true), labelContentLayout: lit.str("SingleLine"), detailFormatString: lit.str("0.0") }));
+    expect(text(o.series[0], 0)).toBe("{t|Sum of Quantity}  {d|50.0%}");
+  });
+  it("Custom content writes the value with the part's own format string; each part has its own font", () => {
+    const o = build("clusteredColumnChart", (v) => on(v, { enableTitleDataLabel: lit.bool(true), titleContentType: lit.str("Custom"), titleCustomFormatString: lit.str("0.00"), titleBold: lit.bool(true), titleFontSize: lit.num(20), detailColor: lit.str("#ff0000") }));
+    const s = o.series[0];
+    expect(text(s, 0)).toBe("{t|50.00}\n{v|50}");
+    expect(s.label.rich.t.fontWeight).toBe("bold");
+    expect(s.label.rich.t.fontSize).toBe(20);
+    expect(s.label.rich.d.color).toBe("#ff0000");
+  });
+  it("Label density keeps every k-th label, unless Show all is on; Show by default off labels only the hovered point", () => {
+    const labelsShown = (extra: Parameters<typeof on>[1]) => build("clusteredColumnChart", (v) => on(v, extra)).series[0].data.map((d: { label?: { show: boolean } }) => d.label?.show !== false);
+    expect(labelsShown({ labelDensity: lit.num(50) })).toEqual([true, false, true]);
+    expect(labelsShown({ labelDensity: lit.num(50), showAll: lit.bool(true) })).toEqual([true, true, true]);
+    const s = build("clusteredColumnChart", (v) => on(v, { showByDefault: lit.bool(false) })).series[0];
+    expect(s.label.show).toBe(false);
+    expect(s.emphasis.label.show).toBe(true);
+  });
+  it("Show dynamic labels prepares the full and the compact text of every point", () => {
+    const s = build("clusteredColumnChart", (v) => on(v, { enableTitleDataLabel: lit.bool(true), showDynamicLabels: lit.bool(true) })).series[0];
+    expect(s.dynamicLabel).toBe("y");
+    expect(s.data[0].dyn).toEqual({ full: "{t|Sum of Quantity}\n{v|50}", compact: "{v|50}" });
+  });
+  it("a 100 % chart writes the share with the label's decimals, units and format string", () => {
+    const o = (extra: Parameters<typeof on>[1]) => build("hundredPercentStackedColumnChart", (v) => on(v, extra)).series[0];
+    expect(text(o({}), 0)).toBe("100%");
+    expect(text(o({ valueFormatString: lit.str("0.000") }), 0)).toBe("100.000%");
+    expect(text(o({ labelDisplayUnits: lit.num(1000), labelPrecision: lit.num(2) }), 0)).toBe("0.1K%");
+  });
+});

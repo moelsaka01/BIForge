@@ -1,7 +1,7 @@
 // The formatting objects that most charts share, turned into ECharts options: legend, axes, data labels, lines and
 // markers, reference lines. One reading per object, so a property supported here works on every chart that has the
 // object, and the Format pane's controls for it do something everywhere.
-import { echartsText, readFont, opacityOf, type Font } from "../format/styles";
+import { echartsText, mergeFonts, readFont, opacityOf, type Font } from "../format/styles";
 import type { FormatReader } from "./formatReader";
 import { formatCompact, formatNumber, type DisplayUnits } from "./numberFormat";
 import type { Theme } from "./theme";
@@ -29,13 +29,27 @@ export function valueText(x: number | null, fmt: string | null, f: FormatReader,
   // General > Format string: the number format of the whole visual, used as written unless display units are chosen
   const general = f.str("general", "formatString", "");
   if (general && !prefix && !f.has(object, "labelDisplayUnits", selector)) return formatNumber(x, general);
-  const own = f.str(object, "valueCustomFormatString", "", selector) || (f.str(object, "valueFormatString", "", selector).replace(/^(Auto|Custom)$/i, ""));
-  if (own && !prefix) fmt = own;
+  // the title and detail labels have a format string of their own (titleFormatString, detailCustomFormatString, ...)
+  const own = prefix
+    ? f.str(object, `${prefix}CustomFormatString`, "", selector) || f.str(object, `${prefix}FormatString`, "", selector).replace(/^(Auto|Custom)$/i, "")
+    : f.str(object, "valueCustomFormatString", "", selector) || f.str(object, "valueFormatString", "", selector).replace(/^(Auto|Custom)$/i, "");
+  if (own) fmt = own;
   // a format string of the values means the number is written as that string unless display units are chosen too
-  const u = own && !prefix && !f.has(object, "labelDisplayUnits", selector) ? "none" : unitsOf(f, object, prefix ? `${prefix}LabelDisplayUnits` : "labelDisplayUnits", selector);
+  const unitsKey = prefix ? `${prefix}LabelDisplayUnits` : "labelDisplayUnits";
+  const u = own && !f.has(object, unitsKey, selector) ? "none" : unitsOf(f, object, unitsKey, selector);
   const precKey = prefix ? `${prefix}LabelPrecision` : "labelPrecision";
   const dec = f.has(object, precKey, selector) ? f.num(object, precKey, 1, selector) : u === "none" ? 2 : 1;
   return fmt && u === "none" ? formatNumber(x, fmt) : formatCompact(x, u, dec, fmt);
+}
+
+/** The label of a segment of a 100 % chart: its share as a percentage; Show blank as for a missing value, the label's format string, units and decimals for the number. */
+export function percentText(share: number, raw: number | null, f: FormatReader): string {
+  if (raw === null && f.has("labels", "showBlankAs")) return f.str("labels", "showBlankAs", "");
+  const own = f.str("labels", "valueCustomFormatString", "") || f.str("labels", "valueFormatString", "").replace(/^(Auto|Custom)$/i, "");
+  if (own) return `${formatNumber(share, own)}${own.includes("%") ? "" : "%"}`;
+  const u = unitsOf(f, "labels");
+  const dec = f.has("labels", "labelPrecision") ? f.num("labels", "labelPrecision", 0) : 0;
+  return `${u === "none" || u === "auto" ? formatNumber(share, dec > 0 ? `0.${"0".repeat(Math.min(10, dec))}` : "0") : formatCompact(share, u, dec, null)}%`;
 }
 
 export interface Defaults {
@@ -219,6 +233,53 @@ export interface LabelInput {
   stacked: boolean;
   asLine: boolean;
   text(pa: O): string;
+  /** The facts the title and detail labels need; without it the label is the value only. */
+  parts?(pa: O): LabelParts;
+}
+
+/** What the title and detail parts of a data label show for one point. */
+export interface LabelParts {
+  series: string;
+  value: number | null;
+  /** Share of the point in the total of its measure, 0 to 100; null when there is none. */
+  percent: number | null;
+}
+
+/** The label has the title / value / detail model (Data labels > Title, Value, Detail) once any of its switches is in the format. */
+export const hasLabelModel = (f: FormatReader): boolean => ["enableTitleDataLabel", "enableValueDataLabel", "enableDetailDataLabel", "labelContentLayout"].some((k) => f.has("labels", k));
+
+/** Rich text style of one part: the label's own font where the part sets nothing, the part's transparency on its color. */
+function partStyle(f: FormatReader, theme: Theme, prefix: "title" | "detail" | "value"): O {
+  const base = readFont(f, "labels", { color: "color" });
+  const font = prefix === "value" ? base : mergeFonts(base, readFont(f, "labels", { prefix, color: `${prefix}Color` }));
+  const t = echartsText(font, labelDefaults(theme));
+  const key = prefix === "value" ? "transparency" : `${prefix}Transparency`;
+  if (f.has("labels", key) && typeof t.color === "string") t.color = withOpacity(t.color, opacityOf(f.num("labels", key, 0)));
+  return { ...t, lineHeight: Math.round(Number(t.fontSize ?? 12) * 1.3) };
+}
+
+/** The text of a label with the title, value and detail parts, as ECharts rich text. */
+function partsText(a: LabelInput, pa: O): string {
+  const { f } = a;
+  const info = a.parts!(pa);
+  const out: string[] = [];
+  const clean = (s: string) => s.replace(/[{}|]/g, " ");
+  if (f.bool("labels", "enableTitleDataLabel", false)) {
+    // Series name, or Custom: the point's value written with the title's own format string, units and decimals
+    const t = f.str("labels", "titleContentType", "Series name") === "Custom" ? valueText(info.value, null, f, "labels", "title") : info.series || f.str("labels", "titleShowBlankAs", "");
+    if (t !== "") out.push(`{t|${clean(t)}}`);
+  }
+  if (f.bool("labels", "enableValueDataLabel", true)) {
+    const v = a.text(pa);
+    if (v !== "") out.push(`{v|${clean(v)}}`);
+  }
+  if (f.bool("labels", "enableDetailDataLabel", false)) {
+    // Percent of total, or Custom: the point's value written with the detail's own format string, units and decimals
+    const custom = f.str("labels", "detailContentType", "Percent of total") === "Custom";
+    const d = custom ? valueText(info.value, null, f, "labels", "detail") : info.percent === null ? f.str("labels", "detailShowBlankAs", "") : `${valueText(info.percent, null, f, "labels", "detail")}%`;
+    if (d !== "") out.push(`{d|${clean(d)}}`);
+  }
+  return out.join(f.str("labels", "labelContentLayout", "MultiLine") === "SingleLine" ? "  " : "\n");
 }
 
 /** The label of a series from the labels object. */
@@ -233,7 +294,8 @@ export function labelBlock(a: LabelInput): O {
     show: a.show,
     position,
     ...echartsText(font, labelDefaults(theme)),
-    formatter: a.text,
+    formatter: a.parts && hasLabelModel(f) ? (pa: O) => partsText(a, pa) : a.text,
+    ...(a.parts && hasLabelModel(f) ? { rich: { t: partStyle(f, theme, "title"), v: partStyle(f, theme, "value"), d: partStyle(f, theme, "detail") } } : {}),
     opacity: opacityOf(f.num("labels", "transparency", 0)),
   };
   if (f.has("labels", "horizontalAlignment")) out.align = f.str("labels", "horizontalAlignment", "center");

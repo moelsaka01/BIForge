@@ -88,12 +88,12 @@ describe("the schema-driven Format pane", () => {
 
   it("marks a setting no renderer reads as not drawn yet, and none that is drawn", async () => {
     const t = setup();
-    await t.run("report.visual.add", { type: "clusteredColumnChart", fields: [{ role: "Category", field: Cat }, { role: "Y", field: Qty }] });
+    await t.run("report.visual.add", { type: "lineChart", fields: [{ role: "Category", field: Cat }, { role: "Y", field: Qty }] });
     render(<t.Host />);
     await select(t.visual().name);
     fireEvent.click(await screen.findByRole("tab", { name: "Format visual" }));
     const labels = await card("labels");
-    // data labels: "Show" is drawn; the custom format string of the detail label is not
+    // data labels of a line chart: "Show" is drawn; the leader lines are not
     expect(within(labels).getByText("Show").parentElement?.textContent).not.toMatch(/not drawn yet/);
     const undrawn = within(labels).getAllByLabelText("not drawn yet");
     expect(undrawn.length).toBeGreaterThan(0);

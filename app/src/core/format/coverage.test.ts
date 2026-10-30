@@ -94,7 +94,7 @@ const PNG_WIDE = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAACCAIAAADq
 const PNG_1PX_GREEN = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGNgWMAAAAFEAKH5ZOq+AAAAAElFTkSuQmCC";
 const ENABLE: Record<string, Record<string, Lit>> = {
   // labelStyle matters for pies (a label with the value and the percentage), and is ignored elsewhere
-  labels: { show: lit.bool(true), enableBackground: lit.bool(true), labelStyle: lit.str("Data value, percent of total"), funnelLabelStyle: lit.str("Data, percent of first") },
+  labels: { show: lit.bool(true), enableBackground: lit.bool(true), enableTitleDataLabel: lit.bool(true), enableDetailDataLabel: lit.bool(true), labelStyle: lit.str("Data value, percent of total"), funnelLabelStyle: lit.str("Data, percent of first") },
   legend: { show: lit.bool(true), showTitle: lit.bool(true) },
   categoryAxis: { show: lit.bool(true), showAxisTitle: lit.bool(true), gridlineShow: lit.bool(true) },
   valueAxis: { show: lit.bool(true), showAxisTitle: lit.bool(true), gridlineShow: lit.bool(true), secShowAxisTitle: lit.bool(true) },
@@ -162,7 +162,21 @@ const WITH: Record<string, Record<string, Record<string, Lit>>> = {
   valueAxis: { labelDisplayUnits: { labelPrecision: lit.num(2) } },
   // the picture of the plot area comes from the data address when the source says so
   plotArea: { imageData: { sourceType: lit.str("imageData") } },
-  labels: { labelDisplayUnits: { labelPrecision: lit.num(2) }, labelPrecision: { labelDisplayUnits: lit.num(1000) } },
+  labels: {
+    labelDisplayUnits: { labelPrecision: lit.num(2) },
+    labelPrecision: { labelDisplayUnits: lit.num(1000) },
+    // the title and detail labels show a formatted number only with the content type Custom
+    ...Object.fromEntries(["FormatString", "CustomFormatString", "LabelDisplayUnits", "LabelPrecision", "ShowBlankAs"].flatMap((k) => ["title", "detail"].map((w) => [`${w}${k}`, { [`${w}ContentType`]: lit.str("Custom") }]))),
+    titleLabelPrecision: { titleContentType: lit.str("Custom"), titleLabelDisplayUnits: lit.num(1000) },
+    detailLabelPrecision: { detailContentType: lit.str("Custom"), detailLabelDisplayUnits: lit.num(1000) },
+    titleLabelDisplayUnits: { titleContentType: lit.str("Custom"), titleLabelPrecision: lit.num(2) },
+    detailLabelDisplayUnits: { detailContentType: lit.str("Custom"), detailLabelPrecision: lit.num(2) },
+    // the labels thin out only with a density below 100 and no Show all; dynamic labels need a label with more than the value
+    labelDensity: { showAll: lit.bool(false) },
+    showAll: { labelDensity: lit.num(30) },
+    // an inside label that does not fit is hidden unless it may overflow
+    labelOverflow: { labelPosition: lit.str("InsideEnd") },
+  },
   indicator: { indicatorPrecision: { indicatorDisplayUnits: lit.num(1000) }, iconSize: { showIcon: lit.bool(true) } },
   target: { labelPrecision: { labelDisplayUnits: lit.num(1000) } },
   value: { labelDisplayUnits: { labelPrecision: lit.num(2) }, labelPrecision: { labelDisplayUnits: lit.num(1000) } },

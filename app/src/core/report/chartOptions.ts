@@ -10,7 +10,7 @@ import type { Loaded } from "./dataLoader";
 import type { SelectedPoint } from "./interactions";
 import { formatCompact, formatNumber } from "./numberFormat";
 import { donutCentre, type CentreBackground, type CentreImage } from "./donutCentre";
-import { attachMarks, axisBlock, plotImage, type PlotImage, CAP, dashOf, gridFor, labelBlock, labelDefaults, legendBlock, LEGEND_POS, lineSeriesStyle, referenceLineMark, referenceLineShade, sliceItemStyle, valueText, zoomBlock, type LineSpec } from "./chartFormat";
+import { attachMarks, axisBlock, plotImage, type PlotImage, CAP, dashOf, gridFor, hasLabelModel, labelBlock, percentText, labelDefaults, legendBlock, LEGEND_POS, lineSeriesStyle, referenceLineMark, referenceLineShade, sliceItemStyle, valueText, zoomBlock, type LineSpec } from "./chartFormat";
 import { responsiveVisual } from "./responsive";
 import { echartsText, opacityOf, readFont } from "../format/styles";
 import { seriesColor, type Theme } from "./theme";
@@ -157,6 +157,10 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
   const seriesOut: O[] = [];
   const meta: { vi: number; si: number }[] = [];
   const labelOn = f.bool("labels", "show", false);
+  // Data labels > Label density / Show all: every k-th label of a series is kept; Show by default off: labels only for the point under the pointer
+  const density = f.has("labels", "labelDensity") && !f.bool("labels", "showAll", false) ? Math.min(100, Math.max(1, f.num("labels", "labelDensity", 100))) : 100;
+  const labelStep = Math.ceil(100 / density);
+  const labelModel = hasLabelModel(f);
   const showSeriesName = f.bool("labels", "showSeries", false);
   const fillAlpha = opacityOf(f.num("dataPoint", "fillTransparency", 0));
   const borderOn = f.bool("dataPoint", "borderShow", false);
@@ -176,11 +180,12 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
       const dimmed = (selecting && !isSelected(ci, si)) || (hl !== null && !isHighlight);
       const c = cond?.[ci] ?? color;
       const item: O = { value: v, raw: cells[vi][si][ci] };
+      if (labelStep > 1 && ci % labelStep !== 0) item.label = { show: false };
       // Show blank as: a bar without a value is a bar of no extent that carries the text of the label
       if (v === null && !asLine && !isHighlight && labelOn && f.has("labels", "showBlankAs")) {
         item.value = 0;
         item.blank = true;
-        item.label = { show: true };
+        item.label = { ...(item.label ?? {}), show: item.label?.show ?? true };
       }
       // a border with transparency, or "outline only" (empty bar, border in the bar's color), is decided per bar
       const edge = asLine ? {} : borderOn ? sliceItemStyle(f, theme, c) : gapEdge;
@@ -188,7 +193,13 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
       if (asLine && dimmed) item.itemStyle = { ...(item.itemStyle ?? {}), opacity: DIM };
       return item;
     });
+    // the share of a point in the total of its measure (Detail label: Percent of total)
+    const measureTotal = p.series.reduce((a, _s, sj) => a + p.categories.reduce((b, _c, cj) => b + Math.abs(p.cells[vi][sj][cj] ?? 0), 0), 0);
     const barBorder = borderOn ? sliceItemStyle(f, theme, color) : gapEdge;
+    const textOf = (pa: O) => {
+      const text = hundred ? percentText(pa.value ?? 0, pa.data?.raw ?? null, f) : valueText(pa.data?.raw ?? null, valueCols[vi].format, f);
+      return showSeriesName ? `${name}: ${text}` : text;
+    };
     const s: O = {
       name: isHighlight ? `${name} (highlighted)` : name,
       type: asLine ? "line" : "bar",
@@ -205,9 +216,10 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
         horizontal,
         stacked,
         asLine,
-        text: (pa: O) => {
-          const text = hundred ? `${Math.round(pa.value ?? 0)}%` : valueText(pa.data?.raw ?? null, valueCols[vi].format, f);
-          return showSeriesName ? `${name}: ${text}` : text;
+        text: textOf,
+        parts: (pa: O) => {
+          const raw = (pa.data?.raw ?? null) as number | null;
+          return { series: name, value: raw, percent: raw === null || measureTotal === 0 ? null : (Math.abs(raw) / measureTotal) * 100 };
         },
       }),
     };
@@ -215,6 +227,20 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
     // ECharts cannot hide a label by its size, so the series is marked and ChartView hides the labels that are wider than their bar.
     const insideLabel = !asLine && String(s.label.position).startsWith("inside") && !f.bool("labels", "labelOverflow", false);
     if (insideLabel) s.fitLabel = horizontal ? "x" : "y";
+    // Show by default off: the labels appear when the pointer is on the point
+    if (labelOn && f.has("labels", "showByDefault") && !f.bool("labels", "showByDefault", true) && !isHighlight) {
+      s.label.show = false;
+      s.emphasis = { ...s.emphasis, label: { show: true } };
+    }
+    // Show dynamic labels: a label whose title and detail do not fit in the bar shrinks to the value (ChartView decides after the drawing)
+    if (labelOn && labelModel && f.bool("labels", "showDynamicLabels", false) && !isHighlight) {
+      // bars: the room in the bar; lines: the room between neighbouring labels
+      s.dynamicLabel = asLine ? "overlap" : horizontal ? "x" : "y";
+      for (const it of data) {
+        const pa = { data: it, value: it.value };
+        it.dyn = { full: s.label.formatter(pa), compact: `{v|${textOf(pa).replace(/[{}|]/g, " ")}}` };
+      }
+    }
     if (f.bool("labels", "optimizeLabelDisplay", false)) s.labelLayout = { hideOverlap: true };
     // in the stacked combo only the columns stack; its lines are separate
     if (stacked && (!asLine || areaOnly)) s.stack = isHighlight ? "highlight" : "total";
