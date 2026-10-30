@@ -37,4 +37,19 @@ export const PREP = {
     const node = v.locator("[data-node]").first();
     if (await node.count()) { await node.click().catch(() => {}); await page.waitForTimeout(400); }
   },
+  // the pointer rests on the first bubble: the tooltip (drawn on hover only) is part of what is compared
+  async map(page) {
+    const v = probe(page);
+    const at = await v.evaluate((root) => {
+      const el = [...root.querySelectorAll("*")].find((e) => e.__chart);
+      const c = el?.__chart;
+      const pt = c?.getOption().series?.find((s) => s.type === "scatter" || s.type === "effectScatter")?.data?.[0];
+      const px = pt ? c.convertToPixel({ geoIndex: 0 }, [pt[0], pt[1]]) : null;
+      const r = el?.getBoundingClientRect();
+      // the page is scaled to fit the window: pixels of the chart are not pixels of the screen
+      const k = r && c ? r.width / c.getWidth() : 1;
+      return px && r ? [r.left + px[0] * k, r.top + px[1] * k] : null;
+    });
+    if (at) { await page.mouse.move(at[0] - 3, at[1] - 3); await page.mouse.move(at[0], at[1], { steps: 3 }); await page.waitForTimeout(500); }
+  },
 };

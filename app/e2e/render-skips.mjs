@@ -8,6 +8,7 @@ const RULES = [
   [/\.trend\.useHighlightValues$/, "interaction", "applies only while another visual cross-highlights this one"],
   [/\.layout\.stackedGapExplodes$/, "interaction", "the gap widens when the pointer is on a segment"],
   [/\.lockAspect\.show$/, "interaction", "keeps the aspect ratio while the visual is resized"],
+  [/\.map\.general\.formatString$/, "semantic", "the number format shows in the tooltip of a bubble: the pointer rests on the first bubble (render-prep.mjs, map) and the tooltip text in the DOM differs; the tooltip is not in the pixels of the element screenshot"],
   [/\.(general\.altText|image\.altText|title\.heading|subTitle\.heading|label\.heading)$/, "semantic", "an accessibility text or heading level: no pixels, the DOM changes"],
 ];
 export function skipReason(key) {

@@ -57,7 +57,8 @@ export function readSlicer(f: FormatReader, isDateOrNumeric: boolean, searchDefa
     singleSelect: f.bool("selection", "singleSelect", false) || f.str("data", "mode", "") === "Single",
     selectAll: f.bool("selection", "selectAllCheckboxEnabled", false),
     search: f.bool("general", "selfFilterEnabled", searchDefault),
-    formatString: f.str("general", "formatString", ""),
+    // the text slicer lists no values
+    formatString: visualType === "textSlicer" ? "" : f.str("general", "formatString", ""),
     header: { show: f.has("header", "show") && f.bool("header", "show", false), text: f.str("header", "text", ""), font: readFont(f, "header", { color: "fontColor", size: "textSize" }), background: f.color("header", "background") },
     items: { font: readFont(f, "items", { color: "fontColor", size: "textSize" }), background: f.color("items", "background"), padding: f.num("items", "padding", 0) },
   };

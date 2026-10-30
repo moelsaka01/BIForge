@@ -5009,11 +5009,6 @@
    "tileShape"
   ]
  },
- "textSlicer": {
-  "general": [
-   "formatString"
-  ]
- },
  "shape": {
   "fill": [
    "fillColor",

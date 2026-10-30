@@ -99,6 +99,12 @@ export function dataFor(json, c) {
   if (c.visualType === "shape" && c.object === "rotation") setProps(json, "text", { show: TRUE, text: { expr: { Literal: { Value: "'Rotated text'" } } } });
   // Q&A shows its states only for a saved question: understood, not understood (error), understood with an assumption (warning)
   if (c.visualType === "qnaVisual" && c.object !== "suggestions" && c.prop !== "savedUtterance") setProps(json, "hiddenProperties", { savedUtterance: { expr: { Literal: { Value: "'" + (c.prop === "errorColor" ? "zz qq xx" : c.prop === "warningColor" ? "quantity by category" : "total quantity by category") + "'" } } } });
+  // a number format shows on numbers: the slicers list a numeric column
+  if (/^(slicer|advancedSlicerVisual|listSlicer)$/.test(c.visualType) && c.object === "general" && c.prop === "formatString") {
+    for (const p of json.visual?.query?.queryState?.Values?.projections ?? []) { p.field = { Column: { Expression: { SourceRef: { Entity: "Sales" } }, Property: "Quantity" } }; p.queryRef = "Sales.Quantity"; p.nativeQueryRef = "Quantity"; }
+    // a number field would open as a range slider
+    setProps(json, "data", { mode: { expr: { Literal: { Value: c.visualType === "listSlicer" ? "'Dropdown'" : c.visualType === "advancedSlicerVisual" ? "'HorizontalList'" : "'Basic'" } } } });
+  }
   // the outcome of the key influencers analysis is one of the values of the target
   // (only the variant has the property: the visual without it takes the first value, Online)
   if (c.visualType === "keyDriversVisual" && c.prop === "targetValue" && json.visual?.objects?.keyDrivers) setProps(json, "keyDrivers", { targetValue: { expr: { Literal: { Value: "'Store'" } } } });
