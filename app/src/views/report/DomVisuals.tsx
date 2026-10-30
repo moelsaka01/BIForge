@@ -69,7 +69,7 @@ export function TableView(p: TableViewProps) {
   const head: CSSProperties = { ...cellBase(theme), ...st.header, height: HEAD_H, lineHeight: `${HEAD_H}px`, cursor: "pointer" };
   const widths = `repeat(${model.columns.length}, ${st.columnWidth})`;
   return (
-    <div style={{ width: p.width, height: p.height, display: "flex", flexDirection: "column", overflow: "hidden" }} role="table" aria-label="Table">
+    <div style={{ width: p.width, height: p.height, display: "flex", flexDirection: "column", overflow: "hidden", ...st.frame }} role="table" aria-label="Table">
       <div style={{ display: "grid", gridTemplateColumns: widths }} role="row">
         {model.columns.map((c) => (
           <div
@@ -155,7 +155,7 @@ export function MatrixView(p: MatrixViewProps) {
   const colW: CSSProperties = fixed ? { width: st.columnWidth, minWidth: st.columnWidth, maxWidth: st.columnWidth } : {};
   const showTotals = model.showRowTotals;
   return (
-    <div style={{ width: p.width, height: p.height, overflow: "auto" }} data-testid="matrix">
+    <div style={{ width: p.width, height: p.height, overflow: "auto", ...st.frame }} data-testid="matrix">
       <table role="table" aria-label="Matrix" style={{ borderCollapse: "collapse", ...(fixed ? { width: "auto" } : { minWidth: "100%" }) }}>
         <thead>
           {model.headers.map((h, hi) => (
@@ -312,18 +312,21 @@ export function KpiView({ model, theme, width, height }: { model: KpiModel; them
   }, [trend, width, height, color, model.showTrend, model.trendTransparency]);
   return (
     <div style={{ width, height, display: "flex", flexDirection: "column", overflow: "hidden" }} data-testid="kpi" role="group" aria-label={model.label}>
-      <div style={{ padding: "6px 10px 0", fontSize: 12, color: theme.muted }}>{model.label}</div>
-      <div style={{ padding: "0 10px", ...model.valueStyle, fontSize: Math.min(model.valueStyle.fontSize as number, height * 0.28), textAlign: model.align }} data-testid="kpi-value">
-        {model.showIcon && <span aria-hidden style={{ color, marginRight: 4 }}>{model.status === "bad" ? "▼" : model.status === "good" ? "▲" : "●"}</span>}
-        {model.value}
-      </div>
-      {model.goal !== null && model.showGoal && (
-        <div style={{ padding: "0 10px", ...model.goalStyle, color }} data-testid="kpi-goal">
-          {model.showDistance && model.varianceText ? `${model.varianceText} ` : ""}
-          {model.goalText}: {model.goal}
+      <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", justifyContent: model.verticalAlign }}>
+        <div style={{ padding: "6px 10px 0", fontSize: 12, color: theme.muted }}>{model.label}</div>
+        <div style={{ padding: "0 10px", ...model.valueStyle, fontSize: Math.min(model.valueStyle.fontSize as number, height * 0.28), textAlign: model.align }} data-testid="kpi-value">
+          {model.showIcon && <span aria-hidden style={{ color, marginRight: 4, fontSize: model.iconSize }}>{model.status === "bad" ? "▼" : model.status === "good" ? "▲" : "●"}</span>}
+          {model.value}
         </div>
-      )}
-      <div ref={ref} style={{ marginTop: "auto", height: height * 0.4, display: model.showTrend ? undefined : "none" }} aria-hidden />
+        {model.goal !== null && model.showGoal && (
+          <div style={{ padding: "0 10px", color }} data-testid="kpi-goal">
+            {model.showDistance && model.distanceText && <span style={{ ...model.distanceStyle, color: model.distanceColor ?? color }}>{model.distanceText} </span>}
+            <span style={{ ...model.titleStyle, color }}>{model.goalText}: </span>
+            <span style={{ ...model.goalStyle, color: model.goalColor ?? color }}>{model.goal}</span>
+          </div>
+        )}
+      </div>
+      <div ref={ref} style={{ flex: "none", height: height * 0.4, display: model.showTrend ? undefined : "none" }} aria-hidden />
     </div>
   );
 }

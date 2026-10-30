@@ -4215,6 +4215,8 @@
    "fontFamily",
    "fontSize",
    "italic",
+   "outlineColor",
+   "outlineStyle",
    "outlineWeight",
    "underline",
    "wordWrap"
@@ -4226,6 +4228,9 @@
    "gridVertical",
    "gridVerticalColor",
    "gridVerticalWeight",
+   "outlineColor",
+   "outlineStyle",
+   "outlineWeight",
    "rowPadding",
    "textSize"
   ],
@@ -4237,6 +4242,8 @@
    "fontSize",
    "italic",
    "label",
+   "outlineColor",
+   "outlineStyle",
    "outlineWeight",
    "totals",
    "underline"
@@ -4252,6 +4259,8 @@
    "fontFamily",
    "fontSize",
    "italic",
+   "outlineColor",
+   "outlineStyle",
    "outlineWeight",
    "underline",
    "wordWrap"
@@ -4273,6 +4282,8 @@
    "fontFamily",
    "fontSize",
    "italic",
+   "outlineColor",
+   "outlineStyle",
    "outlineWeight",
    "underline",
    "wordWrap"
@@ -4293,6 +4304,9 @@
    "gridVertical",
    "gridVerticalColor",
    "gridVerticalWeight",
+   "outlineColor",
+   "outlineStyle",
+   "outlineWeight",
    "rowPadding",
    "textSize"
   ],
@@ -4303,6 +4317,8 @@
    "fontFamily",
    "fontSize",
    "italic",
+   "outlineColor",
+   "outlineStyle",
    "outlineWeight",
    "underline",
    "wordWrap"
@@ -4348,6 +4364,8 @@
    "fontFamily",
    "fontSize",
    "italic",
+   "outlineColor",
+   "outlineStyle",
    "outlineWeight",
    "underline",
    "wordWrap"
@@ -4566,6 +4584,8 @@
    "barWeight",
    "cardBackground",
    "cardPadding",
+   "outlineColor",
+   "outlineStyle",
    "outlineWeight"
   ],
   "cardTitle": [
@@ -4601,12 +4621,21 @@
   "goals": [
    "bold",
    "direction",
+   "distanceFontColor",
+   "distanceFontFamily",
+   "distanceLabel",
    "fontSize",
+   "goalFontColor",
+   "goalFontFamily",
    "goalText",
    "italic",
    "labelPrecision",
    "showDistance",
    "showGoal",
+   "titleBold",
+   "titleFontSize",
+   "titleItalic",
+   "titleUnderline",
    "underline"
   ],
   "indicator": [
@@ -4615,13 +4644,17 @@
    "fontFamily",
    "fontSize",
    "horizontalAlignment",
+   "iconSize",
    "indicatorDisplayUnits",
+   "indicatorPrecision",
    "italic",
    "showIcon",
-   "underline"
+   "underline",
+   "verticalAlignment"
   ],
   "status": [
    "badColor",
+   "direction",
    "goodColor",
    "neutralColor"
   ],

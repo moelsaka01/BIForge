@@ -498,11 +498,13 @@ export function buildMultiRowCard(visual: VisualModel, loaded: Extract<Loaded, {
     cardStyle: {
       padding: f.num("card", "cardPadding", 0),
       background: f.color("card", "cardBackground"),
-      ...(outlineW ? { border: `${outlineW}px solid ${f.color("card", "outlineColor") ?? theme.muted}` } : {}),
+      ...(outlineW ? { border: `${outlineW}px ${CARD_LINE[f.num("card", "outlineStyle", 1)] ?? "solid"} ${f.color("card", "outlineColor") ?? theme.muted}` } : {}),
     },
     bar: barOn ? { color: f.color("card", "barColor") ?? seriesColor(theme, 0), weight: f.num("card", "barWeight", 4) } : null,
   };
 }
+
+const CARD_LINE: Record<number, string> = { 0: "none", 1: "solid", 2: "dashed", 3: "dotted" };
 
 export interface KpiModel {
   value: string;
@@ -515,6 +517,14 @@ export interface KpiModel {
   label: string;
   valueStyle: CSSProperties;
   goalStyle: CSSProperties;
+  /** The distance to the goal and the goal's title have fonts of their own; a color left unset is the status color. */
+  distanceStyle: CSSProperties;
+  titleStyle: CSSProperties;
+  goalColor?: string;
+  distanceColor?: string;
+  distanceText: string | null;
+  iconSize: number;
+  verticalAlign: "flex-start" | "center" | "flex-end";
   goalText: string;
   showGoal: boolean;
   showDistance: boolean;
@@ -540,12 +550,19 @@ export function buildKpi(visual: VisualModel, loaded: Extract<Loaded, { kind: "g
   const g = last && goal ? num(last[goal.index]) : null;
   const variance = v !== null && g !== null && g !== 0 ? (v - g) / Math.abs(g) : null;
   // status direction: "High is good" / "Low is good" (goals.direction)
-  const higherIsBetter = f.str("goals", "direction", "High is good") !== "Low is good";
+  const higherIsBetter = f.str("goals", "direction", "High is good") !== "Low is good" && f.str("status", "direction", "Positive") !== "Negative";
   const status = variance === null ? "neutral" : (variance >= 0) === higherIsBetter ? "good" : "bad";
   const co = theme.textClasses.callout;
   const lb = theme.textClasses.label;
   const pct = f.has("goals", "labelPrecision") ? f.num("goals", "labelPrecision", 1) : 1;
   const goalFont = readFont(f, "goals", { color: "goalFontColor" });
+  const goalFamily = f.str("goals", "goalFontFamily", "");
+  const distFamily = f.str("goals", "distanceFontFamily", "");
+  const distFont = { ...goalFont, ...(distFamily ? { family: distFamily } : { family: undefined }), color: f.color("goals", "distanceFontColor") };
+  const titleFont = readFont(f, "goals", { prefix: "title" });
+  const distanceLabel = f.str("goals", "distanceLabel", "Percent");
+  const sign = (x: number) => (x >= 0 ? "+" : "");
+  const distanceText = variance === null || v === null || g === null ? null : distanceLabel === "Value" ? `${sign(v - g)}${formatCompact(v - g, "auto", 1, goal?.format ?? null)}` : distanceLabel === "Value, percent" ? `${sign(v - g)}${formatCompact(v - g, "auto", 1, goal?.format ?? null)} (${sign(variance)}${(variance * 100).toFixed(pct)}%)` : `${sign(variance)}${(variance * 100).toFixed(pct)}%`;
   const indFont = readFont(f, "indicator", { color: "fontColor" });
   const units = unitsOf(f, "indicator", "indicatorDisplayUnits");
   const prec = f.has("indicator", "indicatorPrecision") ? f.num("indicator", "indicatorPrecision", 1) : 1;
@@ -558,7 +575,14 @@ export function buildKpi(visual: VisualModel, loaded: Extract<Loaded, { kind: "g
     trend: axis && ind ? rows.map((r) => ({ x: labelOf(r[axis.index], axis.format), y: num(r[ind.index]) })) : [],
     label: visual.roles.Indicator?.[0]?.displayName ?? ind?.label ?? "",
     valueStyle: cssFont(indFont, { family: co.fontFace, size: co.fontSize, color: theme.foreground }),
-    goalStyle: cssFont({ ...goalFont, color: undefined }, { family: lb.fontFace, size: 12, color: theme.foreground }),
+    goalStyle: cssFont({ ...goalFont, ...(goalFamily ? { family: goalFamily } : { family: undefined }), color: undefined }, { family: lb.fontFace, size: 12, color: theme.foreground }),
+    distanceStyle: cssFont({ ...distFont, color: undefined }, { family: lb.fontFace, size: 12, color: theme.foreground }),
+    titleStyle: cssFont({ ...titleFont, color: undefined }, { family: lb.fontFace, size: 12, color: theme.foreground }),
+    goalColor: goalFont.color,
+    distanceColor: distFont.color,
+    distanceText,
+    iconSize: f.num("indicator", "iconSize", 12),
+    verticalAlign: ({ top: "flex-start", middle: "center", bottom: "flex-end" } as const)[f.str("indicator", "verticalAlignment", "top") as "top"] ?? "flex-start",
     goalText: f.str("goals", "goalText", "Goal"),
     showGoal: f.bool("goals", "showGoal", true),
     showDistance: f.bool("goals", "showDistance", true),

@@ -229,6 +229,26 @@ describe("cards and KPI", () => {
   });
 });
 
+describe("KPI goal line", () => {
+  const mk = () => {
+    const v = visualOf("kpi", { Indicator: [Qty], TrendLine: [column("Date", "YearMonth")], Goal: [agg("Sales", "Quantity", 4)] });
+    return { v, g: grouped(v, [[n(202401), n(80), n(100)], [n(202402), n(120), n(100)]]) };
+  };
+  it("the distance has its own label type and font, the title and goal value theirs, the status card can flip the direction", () => {
+    const { v, g } = mk();
+    const k = (set?: () => void) => { set?.(); return buildKpi(v, g, DEFAULT_THEME); };
+    expect(k().distanceText).toBe("+20.0%");
+    expect(k(() => setFormat(v.json, "goals", "distanceLabel", lit.str("Value"))).distanceText).toBe("+20");
+    expect(k(() => setFormat(v.json, "goals", "distanceLabel", lit.str("Value, percent"))).distanceText).toBe("+20 (+20.0%)");
+    expect(k(() => setFormat(v.json, "goals", "distanceFontColor", lit.str("#112233"))).distanceColor).toBe("#112233");
+    expect(k(() => setFormat(v.json, "goals", "goalFontColor", lit.str("#445566"))).goalColor).toBe("#445566");
+    expect(k(() => setFormat(v.json, "goals", "titleBold", lit.bool(true))).titleStyle.fontWeight).toBe(700);
+    expect(k(() => setFormat(v.json, "status", "direction", lit.str("Negative"))).status).toBe("bad");
+    expect(k(() => setFormat(v.json, "indicator", "verticalAlignment", lit.str("bottom"))).verticalAlign).toBe("flex-end");
+    expect(k(() => setFormat(v.json, "indicator", "iconSize", lit.num(30))).iconSize).toBe(30);
+  });
+});
+
 describe("table word wrap", () => {
   it("a table whose values or headers wrap has rows of two lines", () => {
     const style = (object: string, on: boolean) => {

@@ -27,6 +27,8 @@ export interface TableStyle {
   rowSubtotalLabel: string;
   columnSubtotalLabel: string;
   subtotalsOnTop: boolean;
+  /** Grid > outline: a frame around the whole table or matrix. */
+  frame: CSSProperties;
 }
 
 const ALIGN: Record<string, CSSProperties["textAlign"] | null> = { Auto: null, Left: "left", Center: "center", Right: "right" };
@@ -103,6 +105,7 @@ export function tableStyle(f: FormatReader, theme: Theme): TableStyle {
     columnTotal: { ...cellBase(colTotalFont, "columnTotal"), fontWeight: colTotalFont.bold ? 700 : 600, background: f.color("columnTotal", "backColor") ?? totalBg },
     subtotal: { ...cellBase(subFont, "subTotals"), fontWeight: subFont.bold ? 700 : 600, background: f.color("subTotals", "backColor") },
     columnWidth: width,
+    frame: outline(f, "grid") ? { outline: outline(f, "grid"), outlineOffset: -f.num("grid", "outlineWeight", 0) } : {},
     rowSubtotals: f.bool("subTotals", "rowSubtotals", true),
     columnSubtotals: f.bool("subTotals", "columnSubtotals", true),
     rowSubtotalLabel: f.str("subTotals", "rowSubtotalsLabel", "Total"),
