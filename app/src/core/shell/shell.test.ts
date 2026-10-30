@@ -177,6 +177,18 @@ describe("ribbon definitions", () => {
     }
   });
 
+  it("Spotlight is on the Format tab: usable with a visual selected, pressed while that visual has the light", () => {
+    const c = allControls(ribbonFor("classic", "report")).find((x) => x.control.id === "spotlight")!.control;
+    const vis = { page: "p", name: "v1", type: "x", categories: 0, drillLevel: 0, drillMode: false, editingInteractions: false };
+    expect(c.command).toBe("report.view.spotlight");
+    expect(c.when!(ctx())).toBe(false);
+    expect(c.when!(ctx({ visual: vis }))).toBe(true);
+    expect(typeof c.args === "function" ? c.args(ctx({ visual: vis })) : c.args).toEqual({ visual: "v1" });
+    expect(c.checked!(ctx({ visual: vis }))).toBe(false);
+    expect(c.checked!(ctx({ visual: vis, spotlight: "v1" }))).toBe(true);
+    expect(c.checked!(ctx({ visual: vis, spotlight: "other" }))).toBe(false);
+  });
+
   it("contextual tabs appear only while a visual is selected", () => {
     const tabs = ribbonFor("classic", "report");
     expect(visibleTabs(tabs, ctx()).map((t) => t.id)).not.toContain("format");

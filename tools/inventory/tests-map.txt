@@ -465,3 +465,5 @@
 20|Statistics / Standard / Scientific / Trigonometry / Rounding / Information (new column) => app/src/core/queries/dialogs.test.ts :: every Standard operation opens a dialog ;; app/src/core/queries/dialogs.test.ts :: Atan
 4|Format painter => app/src/core/commands/arrangeCommands.test.ts :: format painter ;; app/src/views/report/multiSelect.ui.test.tsx :: format painter on the canvas ;; app/src/core/shell/shell.test.ts :: the format painter is on the Home and Format tabs
 11|Format painter => app/src/core/commands/arrangeCommands.test.ts :: format painter ;; app/src/core/shell/shell.test.ts :: the format painter is on the Home and Format tabs
+11|Spotlight => app/src/views/report/multiSelect.ui.test.tsx :: spotlight ;; app/src/core/shell/shell.test.ts :: Spotlight is on the Format tab
+12|Spotlight => app/src/views/report/multiSelect.ui.test.tsx :: spotlight

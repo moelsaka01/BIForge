@@ -57,6 +57,8 @@ export interface RibbonCtx {
   mobileLayout: boolean;
   /** The format painter holds a format and waits for a visual to paint. */
   formatPainter?: boolean;
+  /** The visual that has the spotlight on this page. */
+  spotlight?: string | null;
 }
 
 export type Args = Record<string, unknown> | ((c: RibbonCtx) => unknown);
@@ -345,6 +347,11 @@ const formatTab = (): RibbonTab => ({
       id: "painter",
       label: "Clipboard",
       controls: [cmd("formatPainterTab", "Format painter", "formatPainter", "report.formatPainter.pick", { size: "large", when: (c) => c.view === "report" && (c.selectedCount === 1 || c.formatPainter === true), checked: (c) => c.formatPainter === true })],
+    },
+    {
+      id: "spotlight",
+      label: "View",
+      controls: [cmd("spotlight", "Spotlight", "fit", "report.view.spotlight", { size: "large", args: (c) => ({ visual: c.visual?.name }), when: hasVisual, checked: (c) => c.spotlight === c.visual?.name && !!c.spotlight })],
     },
     {
       id: "interactions",

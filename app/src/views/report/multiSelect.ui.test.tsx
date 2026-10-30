@@ -296,3 +296,26 @@ describe("format painter on the canvas", () => {
     expect(JSON.stringify(t.vs().find((v) => v.name === b)!.json.visual)).toContain("#abcdef");
   });
 });
+
+describe("spotlight", () => {
+  it("fades every other visual of the page; the menu entry and a second press put the light out", async () => {
+    const t = setup();
+    const a = await t.add(0, 0);
+    const b = await t.add(300, 0);
+    render(<t.Host />);
+    const opacity = (name: string) => t.frame(name).style.opacity;
+    expect([opacity(a), opacity(b)]).toEqual(["1", "1"]);
+    await t.run("report.view.spotlight", { visual: a });
+    await waitFor(() => expect(opacity(b)).toBe("0.15"));
+    expect(opacity(a)).toBe("1");
+    await t.run("report.view.spotlight", { visual: a });
+    await waitFor(() => expect(opacity(b)).toBe("1"));
+    t.click(b);
+    await waitFor(() => expect(t.session.report.getSnapshot().canvas).toEqual([b]));
+    await t.run("report.view.spotlight");
+    expect(t.session.report.getSnapshot().spotlight).toBe(b);
+    t.session.report.goToPage("page1");
+    await t.run("report.page.add", {});
+    expect(t.session.report.getSnapshot().spotlight).toBeNull();
+  });
+});

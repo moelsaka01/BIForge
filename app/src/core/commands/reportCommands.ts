@@ -605,6 +605,13 @@ export function registerReportCommands(r: CommandRegistry<Session>): void {
     s.report.setFocus(v);
   });
   view("report.view.exitFocus", "Back to report", (s) => s.report.setFocus(null));
+  reg("report.view.spotlight", "Spotlight", (s, a) => {
+    const named = (a as { visual?: string } | undefined)?.visual;
+    const sel = s.report.getSnapshot().canvas;
+    const v = named ?? (sel.length === 1 ? sel[0] : null);
+    if (!v) throw new Error("Select one visual to put the spotlight on.");
+    s.report.setSpotlight(v);
+  });
   reg("report.view.asTableSelected", "Show visuals as tables", (s) => {
     const names = s.report.getSnapshot().canvas;
     if (names.length === 0) throw new Error("Select a visual first.");

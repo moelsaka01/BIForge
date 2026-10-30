@@ -36,6 +36,8 @@ export interface ViewSnapshot {
   canvas: string[];
   /** Visuals copied or cut in this window (a copy also goes to the system clipboard as JSON). */
   clipboard: unknown | null;
+  /** Spotlight: the visual that stays clear while the others on the page fade. */
+  spotlight: string | null;
   /** Format painter: the formatting picked up from a visual, waiting for the next visual that is selected. */
   painter: { page: string; visual: string; sample: unknown } | null;
   /** The canvas shows the phone layout instead of the desktop page. */
@@ -52,7 +54,7 @@ export interface ScriptRun {
 }
 
 export class ReportRuntime {
-  private snap: ViewSnapshot = { page: null, selection: null, drill: {}, drillRole: {}, focus: null, asTable: [], drillthrough: null, collapsed: {}, epoch: 0, drillMode: null, editInteractions: null, paused: false, refreshTick: 0, formatFocus: null, canvas: [], clipboard: null, painter: null, mobile: false };
+  private snap: ViewSnapshot = { page: null, selection: null, drill: {}, drillRole: {}, focus: null, asTable: [], drillthrough: null, collapsed: {}, epoch: 0, drillMode: null, editInteractions: null, paused: false, refreshTick: 0, formatFocus: null, canvas: [], clipboard: null, painter: null, spotlight: null, mobile: false };
   private listeners = new Set<() => void>();
 
   getSnapshot = (): ViewSnapshot => this.snap;
@@ -89,7 +91,7 @@ export class ReportRuntime {
   /** Switches page; selections and drillthrough belong to the page they were made on. */
   goToPage(page: string): void {
     if (page === this.snap.page) return;
-    this.set({ page, selection: null, drillthrough: null, editInteractions: null, drillMode: null, canvas: [], focus: null });
+    this.set({ page, selection: null, drillthrough: null, editInteractions: null, drillMode: null, canvas: [], focus: null, spotlight: null });
   }
 
   /** Called when the document's pages change: drops state that refers to pages or visuals that are gone. */
@@ -104,6 +106,7 @@ export class ReportRuntime {
     const drillRole = Object.fromEntries(Object.entries(this.snap.drillRole).filter(([v]) => visuals.has(v)));
     if (Object.keys(drillRole).length !== Object.keys(this.snap.drillRole).length) patch.drillRole = drillRole;
     if (this.snap.focus && !visuals.has(this.snap.focus)) patch.focus = null;
+    if (this.snap.spotlight && !visuals.has(this.snap.spotlight)) patch.spotlight = null;
     const asTable = this.snap.asTable.filter((v) => visuals.has(v));
     if (asTable.length !== this.snap.asTable.length) patch.asTable = asTable;
     if (this.snap.drillMode && !visuals.has(this.snap.drillMode)) patch.drillMode = null;
@@ -122,6 +125,11 @@ export class ReportRuntime {
     const a = this.snap.canvas;
     if (a.length === names.length && a.every((n, i) => n === names[i])) return;
     this.set({ canvas: names });
+  }
+
+  /** Spotlight: one visual stays clear and the others fade; null (or the same visual again) puts the light out. */
+  setSpotlight(visual: string | null): void {
+    this.set({ spotlight: visual === this.snap.spotlight ? null : visual });
   }
 
   setPainter(p: ViewSnapshot["painter"]): void {

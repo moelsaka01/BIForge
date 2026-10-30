@@ -239,6 +239,7 @@ export function Frame({ spec }: { spec: ShellSpec }) {
       canvas: canvasOptionsOf(settings.options),
       mobileLayout: report.mobile,
       formatPainter: report.painter !== null,
+      spotlight: report.spotlight,
       paused: report.paused,
       zoom: st.zoom,
     };

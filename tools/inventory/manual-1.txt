@@ -187,7 +187,7 @@ N | Include / Exclude
 N | Sort axis
 D | Show data as table
 D | Export data
-N | Spotlight
+D | Spotlight
 D | Focus mode
 D | Copy visual as image
 ### Shape / Text box / Image tabs
@@ -238,7 +238,7 @@ D | Report-page tooltips
 D | Sync slicers across pages
 D | Hierarchy slicer
 N | Show data point as a table / See records
-N | Spotlight
+D | Spotlight
 P | Export data (summarized / underlying)
 D | Copy visual as image
 N | Personalize visuals

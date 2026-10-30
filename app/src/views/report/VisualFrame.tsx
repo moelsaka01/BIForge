@@ -143,6 +143,7 @@ export function VisualFrame(p: FrameProps) {
     e.preventDefault();
     const all: MenuItem[] = [
         ...(type && !type.static && c.canvas.exportData ? [{ label: "Export data", viewOnly: true, onClick: () => void exportData() }] : []),
+        { label: c.snap.spotlight === visual.name ? "Remove spotlight" : "Spotlight", viewOnly: true, onClick: () => c.dispatch("report.view.spotlight", { visual: visual.name }) },
         { label: "Duplicate", onClick: () => c.dispatch("report.visual.duplicate", { page: page.name, visual: visual.name }) },
         { label: "Bring to front", onClick: () => c.dispatch("report.visual.arrange", { page: page.name, visual: visual.name, where: "front" }) },
         { label: "Send to back", onClick: () => c.dispatch("report.visual.arrange", { page: page.name, visual: visual.name, where: "back" }) },
@@ -169,7 +170,7 @@ export function VisualFrame(p: FrameProps) {
     outlineOffset: -1,
     overflow: "hidden",
     color: c.theme.foreground,
-    opacity: visual.hidden || effectivelyHidden(page, visual.name) ? 0.4 : 1,
+    opacity: c.snap.spotlight && c.snap.spotlight !== visual.name ? 0.15 : visual.hidden || effectivelyHidden(page, visual.name) ? 0.4 : 1,
   };
 
   const iconBtn = (label: string, glyph: string, onClick: () => void, opts: { pressed?: boolean; disabled?: boolean } = {}) => (
