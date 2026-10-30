@@ -11,6 +11,7 @@ import { chromium } from "playwright-core";
 import { dataFor } from "./render-data.mjs";
 import { pictures } from "./render-pictures.mjs";
 import { PREP } from "./render-prep.mjs";
+import { hoverStep, surroundings } from "./render-hover.mjs";
 import { skipReason } from "./render-skips.mjs";
 
 const exe = resolve(process.env.BIFORGE_EXE ?? "../target/debug/biforge-app.exe");
@@ -173,8 +174,12 @@ try {
     // wait until two shots of the visual are identical (animations done, data loaded)
     await page.waitForTimeout(AUDIT ? 700 : 2500);
     if (current && PREP[current.visualType]) await PREP[current.visualType](page);
+    // pointer steps (header, tooltips): the pointer is moved away first so that both sides of a pair start alike
+    const hover = current && !process.env.RENDER_NO_HOVER ? hoverStep(current) : undefined;
+    if (hover) { await page.mouse.move(2, 2); await hover(page, current); }
     let g = await grab(page, "probe");
     for (let t = 0; AUDIT && t < 5; t++) { await page.waitForTimeout(400); const h = await grab(page, "probe"); if (h.png.equals(g.png)) break; g = h; }
+    if (hover) g.around = await surroundings(page);
     return g;
   };
   // the page with the property is tried with up to four values; one that looks different is enough
@@ -185,7 +190,7 @@ try {
     let dom = false;
     for (let j = 0; j < variants && !pixels; j++) {
       b = await shot(`${id}v${j}`);
-      pixels = !a.png.equals(b.png);
+      pixels = !a.png.equals(b.png) || (!!a.around && !!b.around && !a.around.equals(b.around));
       dom ||= a.html !== b.html;
     }
     return { a, b, pixels, dom };
@@ -203,7 +208,7 @@ try {
     // a 100 % axis ends at 100: a constant line at 250 has no place on it
     const offAxis = false; // 100 % charts get their constant line inside the axis (render-data.mjs)
     // the tooltip and the visual header are drawn on hover only: not compared here
-    const hoverOnly = /^(visualTooltip|visualHeaderTooltip|visualHeader)$/.test(c.object);
+    const hoverOnly = /^(visualTooltip|visualHeaderTooltip|visualHeader)$/.test(c.object) && !!process.env.RENDER_NO_HOVER;
     const empty = offAxis || hoverOnly || (r.a.text.trim() === "" && r.a.html.length < 600) || /Cannot load this visual|No data to show/.test(r.a.text + r.b.text);
     if (c.group === "audit") {
       const why = skipReason(key);

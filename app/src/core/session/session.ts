@@ -9,7 +9,7 @@ import { QueryDraft } from "../queries/draft";
 import type { MApi } from "../queries/types";
 import { addRelationship } from "../model/relationships";
 import { autoDateExpression, finishAutoDate, planAutoDate, calcGroupData, setCalculationGroup, addCalculatedColumn, calculatedColumns, calculatedTables, listFieldParameters, setCalculatedColumn, setCalculatedTable, setColumnDataType } from "../model/modeling";
-import { applyGroups, applyQueryLoad, expressionExists, listGroups, listQueries, queryTexts, removeExpression, setQueryText, upsertExpression, userMTables } from "../queries/queries";
+import { applyGroups, applyQueryLoad, applyQueryProperties, excludedFromRefresh, expressionExists, listGroups, listQueries, queryTexts, removeExpression, setQueryText, upsertExpression, userMTables } from "../queries/queries";
 import { findTable } from "../model/ops";
 import { renameObject, sourceNames, type RenameReport, type RenameTarget } from "../model/rename";
 import { ShellStore } from "../shell/shellStore";
@@ -662,12 +662,21 @@ export class Session {
       for (const q of snap.queries) assign[q.name] = q.group;
       applyGroups(p, snap.groups, assign);
     });
+    // Query properties: description and Include in report refresh (nothing runs for them)
+    const withProps = snap.queries.filter((q) => draft.propsChanged(q) || (q.isNew && (q.description !== "" || !q.refresh))).map((q) => q.name);
+    if (withProps.length) {
+      this.store.transact("Apply query properties", (p) => {
+        const assign: Record<string, { description: string; refresh: boolean }> = {};
+        for (const q of snap.queries) if (withProps.includes(q.name)) assign[q.name] = { description: q.description, refresh: q.refresh };
+        applyQueryProperties(p, assign);
+      });
+    }
     for (const r of removedDone) {
       if (!snap.queries.some((q) => q.name === r)) await engine.dropTable(r).catch(() => undefined);
       this.set({ dataTables: this.snap.dataTables.filter((t) => t.toLowerCase() !== r.toLowerCase()), dataEpoch: this.snap.dataEpoch + 1 });
     }
     for (const { name } of loaded) this.markLoaded(name);
-    draft.markApplied([...loaded.map((l) => l.name), ...applied, ...regrouped], removedDone);
+    draft.markApplied([...loaded.map((l) => l.name), ...applied, ...regrouped, ...withProps], removedDone);
     this.setMessage(
       failures.length
         ? `Applied ${loaded.length} of ${toLoad.length} loaded quer${toLoad.length === 1 ? "y" : "ies"}. Failed: ${failures.map((f) => `${f.query} (${f.error})`).join("; ")}`
@@ -877,7 +886,9 @@ export class Session {
     const p = this.store.project;
     if (!p) throw new Error("Open or create a project first.");
     const failures: { table: string; error: string }[] = [];
-    const tables = [...importedTables(p), ...userMTables(p)];
+    // a query with Include in report refresh off keeps the data it has
+    const skipped = excludedFromRefresh(p);
+    const tables = [...importedTables(p), ...userMTables(p)].filter((t) => !skipped.has(t));
     for (const t of tables) {
       try {
         await this.refreshTable(t);

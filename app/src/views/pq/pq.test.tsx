@@ -8,6 +8,7 @@ import { createRegistry } from "../../core/commands/builtin";
 import { FakeDialogs, FakeIO } from "../../core/testing/fakes";
 import { FakeEngine, col } from "../../core/testing/fakeEngine";
 import { FakeM } from "../../core/testing/fakeM";
+import { listQueries } from "../../core/queries/queries";
 import type { EditorFactory } from "../../core/dax/editorTypes";
 
 afterEach(cleanup);
@@ -439,5 +440,40 @@ describe("dependency layout", () => {
     const cyc = layoutDependencies({ X: ["Y"], Y: ["X"] });
     expect(cyc.nodes).toHaveLength(2);
     expect(layoutDependencies({}).nodes).toEqual([]);
+  });
+});
+
+describe("Query properties dialog (Queries pane > Properties)", () => {
+  it("writes the description and Include in report refresh; Refresh all then leaves the query alone; both are in the saved model", async () => {
+    const { session, registry, engine } = await setup();
+    fireEvent.click(screen.getByRole("button", { name: "Properties..." }));
+    const dlg = await screen.findByRole("dialog", { name: "Query Properties" });
+    // the table is in the model already: its name and Enable load cannot be changed here
+    expect((within(dlg).getByLabelText("Name") as HTMLInputElement).disabled).toBe(true);
+    expect((within(dlg).getByRole("checkbox", { name: "Enable load to report" }) as HTMLInputElement).disabled).toBe(true);
+    fireEvent.change(within(dlg).getByLabelText("Description"), { target: { value: "Orders of the shop" } });
+    fireEvent.click(within(dlg).getByRole("checkbox", { name: "Include in report refresh" }));
+    fireEvent.click(within(dlg).getByRole("button", { name: "OK" }));
+    await waitFor(() => expect(session.queries.get("Orders")?.description).toBe("Orders of the shop"));
+    expect(session.queries.get("Orders")?.refresh).toBe(false);
+    // only the properties changed: the editor counts a change, and applying it runs nothing
+    expect(session.queries.dirty).toBe(true);
+    const loadsBefore = engine.calls.filter((c) => c.startsWith("import:")).length;
+    await registry.execute("query.apply");
+    expect(session.queries.dirty).toBe(false);
+    expect(engine.calls.filter((c) => c.startsWith("import:")).length).toBe(loadsBefore);
+    const q = listQueries(session.store.project!).find((x) => x.name === "Orders")!;
+    expect(q.description).toBe("Orders of the shop");
+    expect(q.refresh).toBe(false);
+    // Refresh all skips it
+    const r = await registry.execute("data.refreshAll");
+    expect(r.ok).toBe(true);
+    expect(engine.calls.filter((c) => c.startsWith("import:")).length).toBe(loadsBefore);
+    expect(session.getSnapshot().lastMessage).toContain("Refreshed 0 table(s)");
+    // switched on again, it is refreshed
+    await registry.execute("query.setProperties", { name: "Orders", refresh: true });
+    await registry.execute("query.apply");
+    await registry.execute("data.refreshAll");
+    expect(engine.calls.filter((c) => c.startsWith("import:")).length).toBeGreaterThan(loadsBefore);
   });
 });

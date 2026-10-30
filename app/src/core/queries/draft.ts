@@ -5,12 +5,15 @@ export interface DraftQuery {
   name: string;
   text: string;
   loaded: boolean;
+  /** Query properties: free text, and whether Refresh all reloads the query. */
+  description: string;
+  refresh: boolean;
   /** Not in the project yet. */
   isNew: boolean;
   /** Query group (a folder in the Queries pane) or null. */
   group: string | null;
   /** Text, load flag and group in the project (null for a new query). */
-  original: { text: string; loaded: boolean; group: string | null } | null;
+  original: { text: string; loaded: boolean; group: string | null; description: string; refresh: boolean } | null;
   /** BIForge wrote the M and it is unchanged. */
   generated: boolean;
 }
@@ -55,9 +58,11 @@ export class QueryDraft {
       name: q.name,
       text: q.text,
       loaded: q.loaded,
+      description: q.description ?? "",
+      refresh: q.refresh ?? true,
       isNew: false,
       group: q.group ?? null,
-      original: { text: q.text, loaded: q.loaded, group: q.group ?? null },
+      original: { text: q.text, loaded: q.loaded, group: q.group ?? null, description: q.description ?? "", refresh: q.refresh ?? true },
       generated: q.generated,
     }));
     const all = [...new Set([...groups, ...qs.map((q) => q.group).filter((g): g is string => !!g)])];
@@ -82,6 +87,11 @@ export class QueryDraft {
     return q.isNew || !q.original || q.original.text !== q.text || q.original.loaded !== q.loaded || q.original.group !== q.group;
   }
 
+  /** Only the Query properties (description, Include in report refresh) differ from the project: nothing has to run. */
+  propsChanged(q: DraftQuery): boolean {
+    return !!q.original && (q.original.description !== q.description || q.original.refresh !== q.refresh);
+  }
+
   get groupsChanged(): boolean {
     const a = this.snap.groups;
     const b = this.snap.originalGroups;
@@ -89,7 +99,7 @@ export class QueryDraft {
   }
 
   get dirty(): boolean {
-    return this.snap.removed.length > 0 || this.groupsChanged || this.snap.queries.some((q) => this.isChanged(q));
+    return this.snap.removed.length > 0 || this.groupsChanged || this.snap.queries.some((q) => this.isChanged(q) || this.propsChanged(q));
   }
 
   private checkGroup(name: string, except?: string): string {
@@ -161,7 +171,7 @@ export class QueryDraft {
 
   add(name: string, text: string, loaded: boolean): string {
     const n = this.checkName(name);
-    const q: DraftQuery = { name: n, text, loaded, isNew: true, group: null, original: null, generated: false };
+    const q: DraftQuery = { name: n, text, loaded, description: "", refresh: true, isNew: true, group: null, original: null, generated: false };
     this.set({ queries: [...this.snap.queries, q], selected: n, step: null });
     return n;
   }
@@ -204,10 +214,17 @@ export class QueryDraft {
     this.set({ queries: this.snap.queries.map((x) => (x.name === name ? { ...x, loaded } : x)) });
   }
 
+  /** Query properties: the description and Include in report refresh. */
+  setProperties(name: string, props: { description?: string; refresh?: boolean }): void {
+    const q = this.get(name);
+    if (!q) throw new Error(`The query "${name}" does not exist.`);
+    this.set({ queries: this.snap.queries.map((x) => (x.name === name ? { ...x, description: props.description ?? x.description, refresh: props.refresh ?? x.refresh } : x)) });
+  }
+
   /** After a successful apply the applied queries become the new baseline. */
   markApplied(names: string[], removedDone: string[]): void {
     this.set({
-      queries: this.snap.queries.map((q) => (names.includes(q.name) ? { ...q, isNew: false, original: { text: q.text, loaded: q.loaded, group: q.group }, generated: false } : q)),
+      queries: this.snap.queries.map((q) => (names.includes(q.name) ? { ...q, isNew: false, original: { text: q.text, loaded: q.loaded, group: q.group, description: q.description, refresh: q.refresh }, generated: false } : q)),
       originalGroups: this.snap.groups,
       removed: this.snap.removed.filter((r) => !removedDone.includes(r)),
     });

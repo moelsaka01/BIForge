@@ -161,6 +161,12 @@ export function registerQueryCommands(r: CommandRegistry<Session>): void {
     s.queries.setGroup(args.query, args.group ?? null);
   });
 
+  reg("query.setProperties", "Query properties", (s, a) => {
+    const args = need<{ name: string; description?: string; loaded?: boolean; refresh?: boolean }>(a, ["name"]);
+    if (args.loaded !== undefined) s.queries.setLoaded(args.name, args.loaded);
+    s.queries.setProperties(args.name, { description: args.description, refresh: args.refresh });
+  });
+
   reg("query.setLoad", "Enable load", (s, a) => {
     const { name, loaded } = need<{ name: string; loaded: boolean }>(a, ["name", "loaded"]);
     s.queries.setLoaded(name, loaded);

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button, Checkbox, Input, Menu, MenuItem, MenuList, MenuPopover, MenuTrigger } from "@fluentui/react-components";
+import { Button, Checkbox, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, Field, Input, Menu, MenuItem, MenuList, MenuPopover, MenuTrigger, Textarea } from "@fluentui/react-components";
 import type { DraftQuery } from "../../core/queries/draft";
 import type { StepView } from "./useEditorData";
 
@@ -12,7 +12,7 @@ export interface QueriesPaneProps {
   selected: string | null;
   kinds: Record<string, string>;
   onSelect(name: string): void;
-  onAction(action: "new" | "duplicate" | "delete" | "rename" | "setLoad", name: string, extra?: unknown): void;
+  onAction(action: "new" | "duplicate" | "delete" | "rename" | "setLoad" | "properties", name: string, extra?: unknown): void;
   /** Query groups (folders), in order. */
   groups?: string[];
   /** Queries that are parameters. */
@@ -20,10 +20,52 @@ export interface QueriesPaneProps {
   onGroup?(action: "new" | "move" | "ungroup" | "rename" | "delete"): void;
 }
 
+/** What the Query properties dialog writes. */
+export interface QueryProperties {
+  name: string;
+  description: string;
+  loaded: boolean;
+  refresh: boolean;
+}
+
+/** Query properties: name, description, Enable load and Include in report refresh of one query. */
+function QueryPropertiesDialog({ query, canRename, canLoad, onClose, onOk }: { query: DraftQuery; canRename: boolean; canLoad: boolean; onClose(): void; onOk(p: QueryProperties): void }) {
+  const [name, setName] = useState(query.name);
+  const [description, setDescription] = useState(query.description);
+  const [loaded, setLoaded] = useState(query.loaded);
+  const [refresh, setRefresh] = useState(query.refresh);
+  return (
+    <Dialog open onOpenChange={(_, d) => !d.open && onClose()}>
+      <DialogSurface aria-label="Query Properties">
+        <DialogBody>
+          <DialogTitle>Query Properties</DialogTitle>
+          <DialogContent style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <Field label="Name">
+              <Input value={name} disabled={!canRename} title={canRename ? undefined : "A query that is loaded into the model cannot be renamed yet."} onChange={(_, d) => setName(d.value)} />
+            </Field>
+            <Field label="Description">
+              <Textarea value={description} onChange={(_, d) => setDescription(d.value)} />
+            </Field>
+            <Checkbox label="Enable load to report" disabled={!canLoad} checked={loaded} onChange={(_, d) => setLoaded(!!d.checked)} />
+            <Checkbox label="Include in report refresh" checked={refresh} onChange={(_, d) => setRefresh(!!d.checked)} />
+          </DialogContent>
+          <DialogActions>
+            <Button appearance="primary" disabled={name.trim() === ""} onClick={() => onOk({ name: name.trim(), description, loaded, refresh })}>
+              OK
+            </Button>
+            <Button onClick={onClose}>Cancel</Button>
+          </DialogActions>
+        </DialogBody>
+      </DialogSurface>
+    </Dialog>
+  );
+}
+
 export function QueriesPane({ queries, changed, selected, kinds, onSelect, onAction, groups = [], parameters, onGroup }: QueriesPaneProps) {
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [renaming, setRenaming] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
+  const [properties, setProperties] = useState(false);
   const sel = queries.find((q) => q.name === selected);
   const renameAllowed = !!sel && (!sel.loaded || sel.isNew);
   const sections: { group: string | null; items: DraftQuery[] }[] = [
@@ -112,6 +154,21 @@ export function QueriesPane({ queries, changed, selected, kinds, onSelect, onAct
         <Button size="small" disabled={!sel} onClick={() => sel && onAction("delete", sel.name)}>
           Delete
         </Button>
+        <Button size="small" disabled={!sel} onClick={() => setProperties(true)}>
+          Properties...
+        </Button>
+        {sel && properties && (
+          <QueryPropertiesDialog
+            query={sel}
+            canRename={renameAllowed}
+            canLoad={!(kinds[sel.name] && kinds[sel.name] !== "table") && !(sel.original?.loaded && sel.loaded)}
+            onClose={() => setProperties(false)}
+            onOk={(p) => {
+              setProperties(false);
+              onAction("properties", sel.name, p);
+            }}
+          />
+        )}
         {onGroup && (
           <Menu>
             <MenuTrigger disableButtonEnhancement>

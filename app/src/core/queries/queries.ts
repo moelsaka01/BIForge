@@ -19,7 +19,16 @@ export interface ProjectQuery {
   generated: boolean;
   /** The query group (folder) of the query. */
   group: string | null;
+  /** Free text of the Query properties dialog (the description of the table or expression). */
+  description: string;
+  /** Include in report refresh: Refresh all reloads the query (default true). */
+  refresh: boolean;
 }
+
+const NO_REFRESH = "BIForge.ExcludedFromRefresh";
+
+const descriptionOf = (n: TmdlNode): string => n.description.join("\n");
+const refreshOf = (n: TmdlNode): boolean => !n.children.some((a) => a.kind === "annotation" && a.name === NO_REFRESH);
 
 const GROUP_PROP = "queryGroup";
 
@@ -51,12 +60,32 @@ export function listQueries(p: Project): ProjectQuery[] {
     if (n.kind === "table" && n.name) {
       const part = n.children.find(isMPartition);
       const src = part ? sourceOf(part) : null;
-      if (part && src !== null) out.push({ name: n.name, text: src, loaded: true, generated: isGenerated(part), group: groupOf(n) });
+      if (part && src !== null) out.push({ name: n.name, text: src, loaded: true, generated: isGenerated(part), group: groupOf(n), description: descriptionOf(n), refresh: refreshOf(n) });
     } else if (n.kind === "expression" && n.name && n.default) {
-      out.push({ name: n.name, text: n.default.text, loaded: false, generated: false, group: groupOf(n) });
+      out.push({ name: n.name, text: n.default.text, loaded: false, generated: false, group: groupOf(n), description: descriptionOf(n), refresh: refreshOf(n) });
     }
   }
   return out;
+}
+
+/** Writes the description and the refresh flag of queries (a query missing from `assign` keeps its own). */
+export function applyQueryProperties(p: Project, assign: Record<string, { description: string; refresh: boolean }>): void {
+  for (const n of allNodes(p)) {
+    if (!n.name || !(n.name in assign) || (n.kind !== "table" && n.kind !== "expression")) continue;
+    const a = assign[n.name];
+    n.description = a.description.trim() === "" ? [] : a.description.split(/\r?\n/);
+    n.children = n.children.filter((c) => !(c.kind === "annotation" && c.name === NO_REFRESH));
+    if (!a.refresh) {
+      const ann = node("annotation", NO_REFRESH);
+      ann.default = { text: "true", verbatim: false };
+      n.children.push(ann);
+    }
+  }
+}
+
+/** The tables whose queries are left out of Refresh all (Query properties > Include in report refresh off). */
+export function excludedFromRefresh(p: Project): Set<string> {
+  return new Set(listQueries(p).filter((q) => !q.refresh).map((q) => q.name));
 }
 
 /** The query groups of the model, in order (the `queryGroup` objects of model.tmdl). */

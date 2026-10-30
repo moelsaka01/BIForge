@@ -663,3 +663,19 @@ Non-visual items (tests of the visible result): Power Query Standard math (add .
 2. Label contents (title / value / detail, 34 properties, 24 cards): needs the Title and Detail fields in the Data labels section; plan the field wells first.
 3. Query properties dialog (name, description, Enable load, Include in report refresh): 20.12, 20.13 and 20.33 together; queries hold name, text, load flag and group today.
 4. Hover and interaction audit properties (216 / 97): a Playwright hover or click case each; render-prep.mjs already has the pattern (map).
+
+## 2026-10-30 (sprint 3, stopped early: token limit)
+
+### Done and committed
+- Data label contents (title / value / detail, label density, show all, show by default, dynamic labels, 100 % label number formats), value axis Round range / Scale to fit / Align zeros / gridline and line Auto scale / 100 % axis units / Shared axis (small multiples). Unit tests in chartFormat2.test.ts (shown to fail without the code). Inventory regenerated after these: 2181 / 158 / 624 (before real-window confirmation; **render-keys.mjs for the new drawn properties was NOT run**).
+- Readings, not checked against Desktop: Custom title/detail = the point's value with the part's own format; Auto scale reference is 400 px; Label density = every k-th label; dynamic labels shrink to the value when the full text does not fit.
+
+### Uncommitted-then-committed at the stop (check `git log`)
+- e2e/render-hover.mjs + render.mjs/render-data.mjs: real-window hover steps for visualHeader / visualTooltip / visualHeaderTooltip. clusteredColumnChart: 52 of 54 ok in the real window (open: visualHeader.showPersonalizeVisualButton needs viewing mode; visualHeaderTooltip.section needs a Tooltip page; visualTooltip.actionFontColor was being rerun). The run for clusteredBarChart, barChart, hundredPercentStackedBarChart was started and NOT read (/tmp/hover3.log).
+- Query properties dialog (Queries pane > Properties...: name, description, Include in report refresh; Enable load shown): query.setProperties, TMDL description + annotation BIForge.ExcludedFromRefresh, Refresh all skips excluded queries. Test in pq.test.tsx passes and fails without the refresh skip. Full frontend suite, cargo test and npm run e2e were NOT rerun after it.
+
+### Next steps
+1. Run `npx vitest run`, fix anything red; rebuild debug exe; `node e2e/render-keys.mjs` for labels.* / valueAxis.* new properties; `node e2e/render-keys.mjs '^(clusteredBarChart|barChart|hundredPercentStackedBarChart)\.(visualTooltip|visualHeader|visualHeaderTooltip)\.'`.
+2. Interaction-class properties (visualLink, zoom labels, stackedGapExplodes, lockAspect, useHighlightValues): not started.
+3. Line/area label leader lines and offsets (11 properties, 4 cards).
+4. Regenerate inventory, run cargo test --workspace and npm run e2e.

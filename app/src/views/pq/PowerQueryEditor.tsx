@@ -248,11 +248,20 @@ export function PowerQueryEditor({ session, registry, factory = createMMonacoEdi
     await run("query.step.edit", { edit });
   };
 
-  const queryAction = async (action: "new" | "duplicate" | "delete" | "rename" | "setLoad", name: string, extra?: unknown) => {
+  const queryAction = async (action: "new" | "duplicate" | "delete" | "rename" | "setLoad" | "properties", name: string, extra?: unknown) => {
     if (action === "new") await run("query.add", {});
     else if (action === "duplicate") await run("query.duplicate", { name });
     else if (action === "delete") await run("query.delete", { name });
     else if (action === "rename") await run("query.rename", { name, to: String(extra ?? "") });
+    else if (action === "properties") {
+      const p = extra as { name: string; description: string; loaded: boolean; refresh: boolean };
+      let current = name;
+      if (p.name !== name) {
+        await run("query.rename", { name, to: p.name });
+        current = p.name;
+      }
+      await run("query.setProperties", { name: current, description: p.description, loaded: p.loaded, refresh: p.refresh });
+    }
     else await run("query.setLoad", { name, loaded: !!extra });
   };
 
@@ -262,7 +271,7 @@ export function PowerQueryEditor({ session, registry, factory = createMMonacoEdi
     } else void openDialog(action === "new" ? "newGroup" : action === "move" ? "moveToGroup" : action === "rename" ? "renameGroup" : "deleteGroup");
   };
 
-  const changedCount = snap.queries.filter((q) => session.queries.isChanged(q)).length + snap.removed.length + (session.queries.groupsChanged ? 1 : 0);
+  const changedCount = snap.queries.filter((q) => session.queries.isChanged(q) || session.queries.propsChanged(q)).length + snap.removed.length + (session.queries.groupsChanged ? 1 : 0);
   const loadedSet = new Set(snap.queries.filter((q) => q.loaded).map((q) => q.name));
   const mCtx = { columns: data.columns.map((c) => c.name), queries: snap.queries.filter((q) => q.name !== snap.selected).map((q) => q.name), steps: data.steps.map((s) => s.name) };
   const total = data.page?.total ?? 0;

@@ -83,7 +83,27 @@ export function secondColumn(json) {
   if (y && y.projections.length === 1) y.projections.push({ field: { Measure: { Expression: { SourceRef: { Entity: "Sales" } }, Property: "Orders" } }, queryRef: "Sales.Orders", nativeQueryRef: "Orders" });
 }
 
+/** A header button shows only where the visual has what it acts on: a second level to drill into, a filter to restate, a tooltip text for the info icon. */
+function headerState(json, c) {
+  const qs = json.visual?.query?.queryState;
+  if (c.object === "visualHeader" && /^showDrill(Up|Toggle|DownLevel|DownExpand)Button$/.test(c.prop) && qs?.Category) {
+    qs.Category.projections.push({ field: { Column: { Expression: { SourceRef: { Entity: "Product" } }, Property: "Subcategory" } }, queryRef: "Product.Subcategory", nativeQueryRef: "Subcategory" });
+  }
+  if (c.object === "visualHeader" && c.prop === "showFilterRestatementButton") {
+    const col = { Column: { Expression: { SourceRef: { Source: "p" } }, Property: "Category" } };
+    json.filterConfig = { filters: [{ name: "f1", field: { Column: { Expression: { SourceRef: { Entity: "Product" } }, Property: "Category" } }, type: "Categorical", filter: { Version: 2, From: [{ Name: "p", Entity: "Product", Type: 0 }], Where: [{ Condition: { In: { Expressions: [col], Values: [[{ Literal: { Value: "'Bikes'" } }]] } } }] } }] };
+  }
+  // the sentence and the colour of the action hint show only where they are on
+  if (c.object === "visualTooltip" && c.prop === "sentenceTemplate") setProps(json, "visualTooltip", { showSentenceFormat: TRUE });
+  if (c.object === "visualTooltip" && c.prop === "actionFontColor") setProps(json, "visualTooltip", { showActionsInTooltips: TRUE });
+  // the info icon of the header exists once the tooltip has a text (both sides of the pair)
+  if ((c.object === "visualHeader" && c.prop === "showTooltipButton") || (c.object === "visualHeaderTooltip" && c.prop !== "text")) {
+    setProps(json, "visualHeaderTooltip", { text: { expr: { Literal: { Value: "'Tip text'" } } } });
+  }
+}
+
 export function dataFor(json, c) {
+  headerState(json, c);
   // panel headers that are wider than the header: the subcategory names (long words), in a large font
   if (c.object === "subheader" && c.prop === "titleWrap") {
     const rows = json.visual?.query?.queryState?.Rows?.projections?.[0];
