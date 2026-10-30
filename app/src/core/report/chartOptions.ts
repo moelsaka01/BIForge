@@ -119,6 +119,46 @@ function alignHighlight(base: Pivot, hl: Pivot): (number | null)[][][] {
 
 // ---- cartesian ----------------------------------------------------------------------------------------
 
+/** Align zeros (combo charts): both value axes put zero at the same height, with the range each needs. */
+export function alignAxisZeros(axes: O[], series: O[]): void {
+  const extents = axes.map((axis, ai) => {
+    let lo = 0;
+    let hi = 0;
+    const stacks = new Map<string, { pos: number; neg: number }>();
+    for (const s of series.filter((x) => (x.yAxisIndex ?? 0) === ai)) {
+      (s.data as O[]).forEach((d, di) => {
+        const x = typeof d === "object" && d ? d.value : d;
+        if (typeof x !== "number" || !Number.isFinite(x)) return;
+        if (s.stack) {
+          const key = `${s.stack}:${di}`;
+          const st = stacks.get(key) ?? { pos: 0, neg: 0 };
+          if (x >= 0) st.pos += x;
+          else st.neg += x;
+          stacks.set(key, st);
+        } else {
+          lo = Math.min(lo, x);
+          hi = Math.max(hi, x);
+        }
+      });
+    }
+    for (const st of stacks.values()) {
+      lo = Math.min(lo, st.neg);
+      hi = Math.max(hi, st.pos);
+    }
+    return typeof axis.min === "number" || typeof axis.max === "number" ? null : { lo, hi };
+  });
+  if (extents.some((e) => !e || e.hi === e.lo)) return;
+  // the share of the axis below zero: the larger one wins
+  const share = Math.max(...extents.map((e) => -e!.lo / (e!.hi - e!.lo)));
+  if (share <= 0 || share >= 1) return;
+  axes.forEach((axis, ai) => {
+    const { lo, hi } = extents[ai]!;
+    const range = Math.max(-lo / share, hi / (1 - share));
+    axis.min = -range * share;
+    axis.max = range * (1 - share);
+  });
+}
+
 function cartesianPanel(inp: ChartInput): ChartBuild {
   const { visual, loaded, theme } = inp;
   const q = loaded.query;
@@ -245,7 +285,7 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
     // in the stacked combo only the columns stack; its lines are separate
     if (stacked && (!asLine || areaOnly)) s.stack = isHighlight ? "highlight" : "total";
     if (asLine) {
-      Object.assign(s, lineSeriesStyle(f, color, hl !== null && !isHighlight));
+      Object.assign(s, lineSeriesStyle(f, color, hl !== null && !isHighlight, inp.size));
       if (areaOnly || f.bool("lineStyles", "areaShow", false)) s.areaStyle = { opacity: isHighlight ? 0.85 : hl ? 0.2 : 0.4, color: f.bool("lineStyles", "areaMatchStrokeColor", true) ? undefined : f.color("lineStyles", "areaColor") };
       if (combo && role === "Y2") s.yAxisIndex = 1;
     } else {
@@ -484,12 +524,12 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
 
   const catLabels = p.categories.map((c) => c.label);
   const catAxis: O = {
-    ...axisBlock({ f, theme, object: "categoryAxis", kind: "category", titleDefault: columnsOf(q, "Category", "group").map((c) => c.label).join(", "), inverseDefault: horizontal, horizontal }),
+    ...axisBlock({ f, theme, object: "categoryAxis", kind: "category", titleDefault: columnsOf(q, "Category", "group").map((c) => c.label).join(", "), inverseDefault: horizontal, horizontal, size: inp.size }),
     data: catLabels,
     boundaryGap: !(lineOnly || areaOnly),
   };
   const fmt0 = valueCols[0]?.format ?? null;
-  const valAxis = axisBlock({ f, theme, object: "valueAxis", kind: "value", fmt: fmt0, titleDefault: valueCols.map((c) => c.label).join(", "), hundred, horizontal });
+  const valAxis = axisBlock({ f, theme, object: "valueAxis", kind: "value", fmt: fmt0, titleDefault: valueCols.map((c) => c.label).join(", "), hundred, horizontal, includeZero: !lineOnly, size: inp.size });
   if (autoPoints.length) {
     const lo = Math.min(...autoPoints);
     const hi = Math.max(...autoPoints);
@@ -503,7 +543,9 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
     }
   }
   const y2Cols = columnsOf(q, "Y2", "value");
-  const valAxes = combo && y2Cols.length ? [valAxis, { ...axisBlock({ f, theme, object: "valueAxis", prefix: "sec", kind: "value", fmt: y2Cols[0].format, titleDefault: y2Cols.map((c) => c.label).join(", "), horizontal }), splitLine: { show: false } }] : [valAxis];
+  const valAxes = combo && y2Cols.length ? [valAxis, { ...axisBlock({ f, theme, object: "valueAxis", prefix: "sec", kind: "value", fmt: y2Cols[0].format, titleDefault: y2Cols.map((c) => c.label).join(", "), horizontal, size: inp.size }), splitLine: { show: false } }] : [valAxis];
+
+  if (combo && valAxes.length === 2 && f.bool("valueAxis", "alignZeros", false)) alignAxisZeros(valAxes, seriesOut);
 
   const gradient = !hasSeries || p.series.length === 1 ? gradientLegend(f, theme, p, valueCols, 0) : null;
   const option: O = {
@@ -679,7 +721,7 @@ function smallMultiples(inp: ChartInput, sm: { index: number; format: string | n
     const xa: O = { ...first(sub.option.xAxis), gridIndex: i };
     const ya: O = { ...first(sub.option.yAxis), gridIndex: i };
     const valueAxis = horizontal ? xa : ya;
-    if (valueAxis.type === "value" && Number.isFinite(hi) && valueAxis.min === undefined && valueAxis.max === undefined && !userMin && !userMax) {
+    if (f.bool("valueAxis", "sharedAxis", true) && valueAxis.type === "value" && Number.isFinite(hi) && (valueAxis.min === undefined || typeof valueAxis.min === "function") && (valueAxis.max === undefined || typeof valueAxis.max === "function") && !userMin && !userMax) {
       valueAxis.min = Math.min(0, lo);
       valueAxis.max = hi;
     }
@@ -1083,7 +1125,7 @@ function scatter(inp: ChartInput): ChartBuild {
       } as never);
     }
   }
-  const axis = (object: "categoryAxis" | "valueAxis", c: typeof xc): O => ({ ...axisBlock({ f, theme, object, kind: "value", fmt: c?.format ?? null, titleDefault: c?.label ?? "", gridDefault: true }), scale: true });
+  const axis = (object: "categoryAxis" | "valueAxis", c: typeof xc): O => ({ ...axisBlock({ f, theme, object, kind: "value", fmt: c?.format ?? null, titleDefault: c?.label ?? "", gridDefault: true, size: inp.size }), scale: true });
   const option: O = {
     animation: false,
     legend: legendBlock(f, theme, !!ser),
@@ -1156,7 +1198,7 @@ function waterfall(inp: ChartInput): ChartBuild {
     grid: gridFor(f, f.bool("legend", "show", false)),
     tooltip: { trigger: "axis", confine: true, formatter: (ps: O[]) => `${ps[0].name}<br/>${ps.filter((x) => x.seriesName !== "base" && x.value !== "-").map((x) => `${x.marker}${x.seriesName}: <b>${formatNumber(x.seriesName === "Decrease" ? -x.value : x.value, vcol?.format ?? null)}</b>`).join("<br/>")}` },
     xAxis: { ...axisBlock({ f, theme, object: "categoryAxis", kind: "category", titleDefault: columnsOf(q, "Category", "group").map((c) => c.label).join(", ") }), data: names },
-    yAxis: axisBlock({ f, theme, object: "valueAxis", kind: "value", fmt: vcol?.format ?? null, titleDefault: vcol?.label ?? "" }),
+    yAxis: axisBlock({ f, theme, object: "valueAxis", kind: "value", fmt: vcol?.format ?? null, titleDefault: vcol?.label ?? "", size: inp.size }),
     series: [
       { ...common, name: "base", data: base, itemStyle: { color: "transparent" }, silent: true, tooltip: { show: false } },
       { ...common, name: "Increase", data: up, itemStyle: { color: colors.up }, label: label(1) },

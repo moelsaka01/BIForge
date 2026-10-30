@@ -4,7 +4,7 @@
 import { describe, expect, it } from "vitest";
 import { decodeCell } from "./cells";
 import { dashOf, withOpacity } from "./chartFormat";
-import { buildChart } from "./chartOptions";
+import { alignAxisZeros, buildChart } from "./chartOptions";
 import type { Loaded } from "./dataLoader";
 import { agg, column, lit } from "./fields";
 import { buildVisualQuery } from "./queryBuilder";
@@ -359,7 +359,7 @@ describe("data labels: title, value and detail", () => {
     setFormat(v.json, "labels", "show", lit.bool(true));
     for (const [k, x] of Object.entries(extra)) setFormat(v.json, "labels", k, x);
   };
-  const text = (s: { label: { formatter: (p: unknown) => string } }, i: number) => s.label.formatter({ data: s.data?.[i], value: s.data?.[i]?.value });
+  const text = (s: { label: { formatter: (p: unknown) => string }; data?: { value?: unknown }[] }, i: number) => s.label.formatter({ data: s.data?.[i], value: s.data?.[i]?.value });
   it("shows the series name above the value and the share of the total below", () => {
     const o = build("clusteredColumnChart", (v) => on(v, { enableTitleDataLabel: lit.bool(true), enableDetailDataLabel: lit.bool(true) }));
     const s = o.series[0];
@@ -396,5 +396,47 @@ describe("data labels: title, value and detail", () => {
     expect(text(o({}), 0)).toBe("100%");
     expect(text(o({ valueFormatString: lit.str("0.000") }), 0)).toBe("100.000%");
     expect(text(o({ labelDisplayUnits: lit.num(1000), labelPrecision: lit.num(2) }), 0)).toBe("0.1K%");
+  });
+});
+
+describe("value axis: round range, scale to fit, align zeros, gridline auto scale", () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const axisOf = (o: any) => (Array.isArray(o.yAxis) ? o.yAxis[0] : o.yAxis) as { min?: unknown; max?: unknown; splitLine: { lineStyle: { width: number } } };
+  it("Round range off ends the axis at the data (and at zero for bars) instead of a round number", () => {
+    const rounded = axisOf(build("clusteredColumnChart", () => undefined));
+    expect(rounded.min).toBeUndefined();
+    const tight = axisOf(build("clusteredColumnChart", (v) => setFormat(v.json, "valueAxis", "roundRange", lit.bool(false))));
+    expect((tight.min as (e: { min: number }) => number)({ min: 20 })).toBe(0);
+    expect((tight.max as (e: { max: number }) => number)({ max: 47 })).toBe(47);
+    const line = axisOf(build("lineChart", (v) => setFormat(v.json, "valueAxis", "roundRange", lit.bool(false))));
+    expect((line.min as (e: { min: number }) => number)({ min: 20 })).toBe(20);
+  });
+  it("Scale to fit makes the zoom filter the data, so that the value axis follows the visible categories", () => {
+    const mode = (extra?: boolean) => build("clusteredColumnChart", (v) => { setFormat(v.json, "zoom", "show", lit.bool(true)); if (extra !== undefined) setFormat(v.json, "valueAxis", "scaleToFit", lit.bool(extra)); }).dataZoom[0].filterMode;
+    expect(mode()).toBe("none");
+    expect(mode(true)).toBe("filter");
+  });
+  it("Auto scale makes gridlines thinner in a small visual and thicker in a large one", () => {
+    const w = (size: { width: number; height: number } | undefined, on: boolean) => {
+      const v = visualOf("clusteredColumnChart", { Category: [Cat], Y: [Qty] });
+      setFormat(v.json, "valueAxis", "gridlineThickness", lit.num(2));
+      if (on) setFormat(v.json, "valueAxis", "gridlineAutoScale", lit.bool(true));
+      const loaded: Extract<Loaded, { kind: "grouped" }> = { kind: "grouped", query: buildVisualQuery(v, model, { filters: [] })!, rows: rows.map((r) => r.map(([t, x]) => decodeCell({ t: t as never, v: x }))), highlightRows: null, totals: null, truncated: false, ms: 0 };
+      return axisOf(buildChart({ visual: v, loaded, theme: DEFAULT_THEME, selected: [], size })!.option).splitLine.lineStyle.width;
+    };
+    expect(w({ width: 200, height: 200 }, false)).toBe(2);
+    expect(w({ width: 200, height: 200 }, true)).toBe(1);
+    expect(w({ width: 800, height: 800 }, true)).toBe(4);
+  });
+  it("Align zeros gives both axes of a combo chart the same share below zero", () => {
+    const axes: Record<string, unknown>[] = [{}, {}];
+    alignAxisZeros(axes, [{ type: "bar", data: [{ value: -10 }, { value: 30 }] }, { type: "line", yAxisIndex: 1, data: [5, 40] }]);
+    // the columns reach from -10 to 30 (a quarter below zero); the line has nothing below zero and takes the same share
+    expect(axes[0]).toEqual({ min: -10, max: 30 });
+    expect(axes[1]).toEqual({ min: -13.333333333333334, max: 40 });
+    // an axis with bounds of its own is left alone
+    const fixed: Record<string, unknown>[] = [{ min: 0 }, {}];
+    alignAxisZeros(fixed, [{ type: "bar", data: [-10, 30] }, { type: "line", yAxisIndex: 1, data: [5, 40] }]);
+    expect(fixed[1]).toEqual({});
   });
 });
