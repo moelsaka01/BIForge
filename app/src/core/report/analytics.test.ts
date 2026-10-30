@@ -341,6 +341,16 @@ describe("total labels of stacked charts", () => {
   });
 });
 
+describe("100 % area labels", () => {
+  it("are not clipped by the plot: the area reaches the top of the axis", () => {
+    const rows = [[c("A"), c("France"), c(10)], [c("B"), c("France"), c(20)]];
+    const v = visualOf("hundredPercentStackedAreaChart", { Category: [Cat], Series: [Country], Y: [Qty] });
+    expect(build(v, grouped(v, rows)).option.series[0].clip).toBe(false);
+    const plain = visualOf("stackedAreaChart", { Category: [Cat], Series: [Country], Y: [Qty] });
+    expect(build(plain, grouped(plain, rows)).option.series[0].clip).toBeUndefined();
+  });
+});
+
 describe("scatter chart analytics", () => {
   const X = agg("Product", "ListPrice", 1);
   const Y = agg("Sales", "UnitPrice", 1);

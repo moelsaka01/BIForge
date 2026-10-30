@@ -156,6 +156,8 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
     const s: O = {
       name: isHighlight ? `${name} (highlighted)` : name,
       type: asLine ? "line" : "bar",
+      // a 100 % area reaches the top of the axis: its labels hang above that edge and must not be clipped
+      ...(hundred && asLine ? { clip: false } : {}),
       data,
       itemStyle: { color, ...(asLine ? (f.has("dataPoint", "transparency") ? { opacity: opacityOf(f.num("dataPoint", "transparency", 0)) } : {}) : { opacity: fillAlpha, ...barBorder }) },
       // the gap widens when the pointer is on a segment ("explodes")
