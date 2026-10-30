@@ -626,3 +626,7 @@ Non-visual items (tests of the visible result): Power Query Standard math (add .
 ### Unrelated problems noticed
 - The sample render "control" (the same visual twice) printed FAIL on several single runs of the donut: some pixel noise in the donut's leader lines, not looked into.
 - Tests that open several real windows at once give flaky results for a few cases (donut text wrap, list slicer prep); reruns one window at a time are stable.
+
+### End-of-session runs (2026-10-30)
+- Frontend suite: 130 files, 1210 tests passed, 2 skipped. `cargo test --workspace`: all passed (42 result lines ok, 0 failed). `npm run e2e`: all scripts pass (o1 33, then the others, 112 checks in the chain) after two fixes of the tests themselves: o1.mjs opens the Map controls card for its "not drawn yet" check (Category labels is complete now) and closes it again before the heat map step; `barChart.labels.labelOverflow` was removed from the MUST list of render.mjs because it no longer changes the real window (it did at the end of the last session: a regression of the previous session's last commit, also seen by the first audit run of today; listed as Open).
+- target/ 11.40 GB (limit 15 GB).

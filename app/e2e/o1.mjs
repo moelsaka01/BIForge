@@ -207,7 +207,11 @@ try {
   // the Format pane is generated from the schema: cards, typed controls, and an honest marker for what is not drawn yet
   await page.getByRole("tab", { name: /Format visual/ }).click();
   await page.getByText("Bubbles", { exact: true }).first().waitFor();
+  // Map controls still holds a setting that is not drawn (the geocoding culture): open it
+  await page.getByRole("button", { name: /Map controls/i }).first().click().catch(() => {});
   check((await page.getByText(/not drawn yet/).count()) > 0, "Format pane marks properties that are not drawn yet");
+  // close it again: the heat map step below takes the last switch of the pane
+  await page.getByRole("button", { name: /Map controls/i }).first().click().catch(() => {});
   const bubble = page.getByLabel("Bubble size").first();
   await bubble.fill("40");
   await bubble.press("Tab");
