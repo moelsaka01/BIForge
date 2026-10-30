@@ -5,6 +5,8 @@ import { Session } from "../session/session";
 import { agg, column, lit } from "../report/fields";
 import { fixtureProject } from "../report/testFixture";
 import { resolveTheme } from "../report/theme";
+import { buildVisualQuery } from "../report/queryBuilder";
+import { modelInfo as modelInfoOf } from "../report/modelInfo";
 import { listBookmarks } from "../report/bookmarks";
 import { activePageName, getFormat, listPageNames, parsePage, visualKey } from "../report/visualDoc";
 
@@ -79,6 +81,29 @@ describe("report commands", () => {
     expect(parsePage(t.project(), "page1")!.visuals[0].filters.defs[0].cond).toEqual({ kind: "in", values: [lit.str("France")] });
     await t.run("report.slicer.select", { page: "page1", visual: v, field, cond: null });
     expect(parsePage(t.project(), "page1")!.visuals[0].filters.defs).toEqual([]);
+  });
+
+  it("Include and Exclude on a data point add to a visual filter that the visual's query applies; one undo step each", async () => {
+    const t = setup();
+    await t.run("report.visual.add", { page: "page1", type: "clusteredColumnChart", fields: [{ role: "Category", field: Cat }, { role: "Y", field: Qty }] });
+    const v = parsePage(t.project(), "page1")!.visuals[0].name;
+    const defs = () => parsePage(t.project(), "page1")!.visuals[0].filters.defs;
+    const point = (name: string) => ({ fields: [Cat], values: [lit.str(name)] });
+    await t.run("report.visual.includeExclude", { page: "page1", visual: v, mode: "exclude", point: point("Bikes") });
+    expect(defs().map((d) => d.cond)).toEqual([{ kind: "notIn", values: [lit.str("Bikes")] }]);
+    await t.run("report.visual.includeExclude", { page: "page1", visual: v, mode: "exclude", point: point("Shoes") });
+    await t.run("report.visual.includeExclude", { page: "page1", visual: v, mode: "exclude", point: point("Shoes") });
+    expect(defs()[0].cond).toEqual({ kind: "notIn", values: [lit.str("Bikes"), lit.str("Shoes")] });
+    const visual = parsePage(t.project(), "page1")!.visuals[0];
+    const dax = buildVisualQuery(visual, modelInfoOf(t.project()), { filters: visual.filters.defs })!.dax;
+    expect(dax).toMatch(/Bikes/);
+    expect(dax).toMatch(/Shoes/);
+    await t.run("report.visual.includeExclude", { page: "page1", visual: v, mode: "include", point: point("Shoes") });
+    expect(defs()).toHaveLength(1);
+    expect(defs()[0].cond).toEqual({ kind: "in", values: [lit.str("Shoes")] });
+    await t.run("edit.undo");
+    expect(defs()[0].cond.kind).toBe("notIn");
+    expect(await t.fail("report.visual.includeExclude", { page: "page1", visual: v, mode: "include", point: { fields: [], values: [] } })).toMatch(/no value/);
   });
 
   it("view actions change the runtime, not the document", async () => {

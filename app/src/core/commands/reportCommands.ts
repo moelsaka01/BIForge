@@ -457,6 +457,11 @@ export function registerReportCommands(r: CommandRegistry<Session>): void {
     const x = need<{ scope: ops.FilterScope; filter: FilterDef }>(a, ["scope", "filter"]);
     editView(s, "Set filter", (p) => ops.upsertFilter(p, x.scope, x.filter));
   });
+  reg("report.visual.includeExclude", "Include or exclude a data point", (s, a) => {
+    const x = need<{ page: string; visual: string; mode: "include" | "exclude"; point: SelectedPoint }>(a, ["page", "visual", "mode", "point"]);
+    if (x.mode !== "include" && x.mode !== "exclude") throw new Error("Choose Include or Exclude.");
+    editView(s, x.mode === "include" ? "Include" : "Exclude", (p) => ops.includeExclude(p, x.page, x.visual, x.point, x.mode));
+  });
   reg("report.filter.remove", "Clear filter", (s, a) => {
     const x = need<{ scope: ops.FilterScope; name: string }>(a, ["scope", "name"]);
     editView(s, "Clear filter", (p) => ops.removeFilter(p, x.scope, x.name));

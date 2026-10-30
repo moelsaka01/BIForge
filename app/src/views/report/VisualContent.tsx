@@ -103,6 +103,11 @@ export function VisualContent({ page, visual, width, height, runOnClick, onInfo 
           ? targets.map((t) => ({ label: `Drill through to ${t.displayName}`, onClick: () => c.dispatch("report.view.drillthrough", { page: page.name, target: t.page, point }) }))
           : [{ label: "Drill through (no page accepts this data)", disabled: true, onClick: () => undefined }]),
         { separator: true, label: "", onClick: () => undefined },
+        ...(c.readOnly ? [] : [
+          { label: "Include", onClick: () => c.dispatch("report.visual.includeExclude", { page: page.name, visual: visual.name, mode: "include", point }) },
+          { label: "Exclude", onClick: () => c.dispatch("report.visual.includeExclude", { page: page.name, visual: visual.name, mode: "exclude", point }) },
+        ]),
+        { separator: true, label: "", onClick: () => undefined },
         { label: "Clear selection", disabled: selected.length === 0, onClick: () => c.dispatch("report.view.clearSelection") },
       ],
       x,

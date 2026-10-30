@@ -1,6 +1,7 @@
 import { useRef, useState, type CSSProperties } from "react";
 import { generalCards, visualCards } from "../../core/report/formatSchema";
-import { fieldLabel } from "../../core/report/fields";
+import { fieldKey, fieldLabel } from "../../core/report/fields";
+import type { SortSpec } from "../../core/report/visualDoc";
 import { FormatReader } from "../../core/report/formatReader";
 import { resolveInteraction, supportsHighlight } from "../../core/report/interactions";
 import type { PageModel, Position, VisualModel } from "../../core/report/visualDoc";
@@ -137,6 +138,18 @@ export function VisualFrame(p: FrameProps) {
     setTimeout(() => setCopyNote(null), 3000);
   };
 
+  /** Sort axis: the chart is sorted by its category or by a value, ascending or descending (the pointer reads the visual's sort). */
+  const sortAxisItems = (): MenuItem[] => {
+    if (type?.family !== "cartesian" && type?.family !== "waterfall") return [];
+    const by = [...(visual.roles.Category ?? []).slice(0, 1), ...(visual.roles.Y ?? []).slice(0, 1)];
+    const cur = visual.sort;
+    const set = (sort: SortSpec | null) => c.dispatch("report.visual.setSort", { page: page.name, visual: visual.name, sort });
+    return [
+      ...by.flatMap((pf) => (["asc", "desc"] as const).map((dir) => ({ label: `Sort axis: ${pf.displayName ?? fieldLabel(pf.field)} ${dir === "asc" ? "ascending" : "descending"}`, checked: !!cur && cur.dir === dir && fieldKey(cur.field) === fieldKey(pf.field), onClick: () => set({ field: pf.field, dir }) }))),
+      ...(cur ? [{ label: "Sort axis: clear", onClick: () => set(null) }] : []),
+    ];
+  };
+
   const menu = (e: React.MouseEvent) => {
     // a right-click on a data point has its own menu (the chart prevents the default before this runs)
     if (e.defaultPrevented) return;
@@ -144,6 +157,7 @@ export function VisualFrame(p: FrameProps) {
     const all: MenuItem[] = [
         ...(type && !type.static && c.canvas.exportData ? [{ label: "Export data", viewOnly: true, onClick: () => void exportData() }] : []),
         { label: c.snap.spotlight === visual.name ? "Remove spotlight" : "Spotlight", viewOnly: true, onClick: () => c.dispatch("report.view.spotlight", { visual: visual.name }) },
+        ...sortAxisItems(),
         { label: "Duplicate", onClick: () => c.dispatch("report.visual.duplicate", { page: page.name, visual: visual.name }) },
         { label: "Bring to front", onClick: () => c.dispatch("report.visual.arrange", { page: page.name, visual: visual.name, where: "front" }) },
         { label: "Send to back", onClick: () => c.dispatch("report.visual.arrange", { page: page.name, visual: visual.name, where: "back" }) },

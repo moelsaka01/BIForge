@@ -419,6 +419,39 @@ describe("ReportView: chart data points", () => {
     expect(await screen.findByText(/Drillthrough from another page/)).toBeTruthy();
   });
 
+  it("right-click > Exclude takes the point out of the chart's query; Include keeps only it", async () => {
+    const t = setup();
+    await t.run("report.visual.add", { page: "page1", type: "clusteredColumnChart", position: { x: 20, y: 20, width: 500, height: 300 }, fields: [{ role: "Category", field: Cat }, { role: "Y", field: Qty }] });
+    t.dax.handler = () => ({ results: [result(["a", "b"], rows(["Accessories", 278], ["Bikes", 270]))], elapsedMs: 1 });
+    render(<t.Host />);
+    const chart = await screen.findByTestId("chart");
+    await waitFor(() => expect(chart.textContent).toContain("Bikes"));
+    const { x, y, root } = pointerAt(chart, "Bikes", 100);
+    fireEvent.mouseMove(root, { clientX: x, clientY: y });
+    fireEvent.contextMenu(root, { clientX: x, clientY: y });
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Exclude" }));
+    await waitFor(() => expect(t.dax.calls.some((c) => /Bikes/.test(c) && /NOT|<>|IN/.test(c))).toBe(true));
+    const visual = parsePage(t.session.store.project!, "page1")!.visuals[0];
+    expect(visual.filters.defs[0].cond).toEqual({ kind: "notIn", values: [lit.str("Bikes")] });
+  });
+
+  it("More options > Sort axis sorts the chart by its category or value and the query follows", async () => {
+    const t = setup();
+    await t.run("report.visual.add", { page: "page1", type: "clusteredColumnChart", position: { x: 20, y: 20, width: 500, height: 300 }, fields: [{ role: "Category", field: Cat }, { role: "Y", field: Qty }] });
+    t.dax.handler = () => ({ results: [result(["a", "b"], rows(["Accessories", 278], ["Bikes", 270]))], elapsedMs: 1 });
+    render(<t.Host />);
+    await waitFor(() => expect(screen.getByTestId("chart").textContent).toContain("Bikes"));
+    const frame = document.querySelector(`[data-visual="${t.page().visuals[0].name}"]`)!;
+    fireEvent.pointerDown(frame, { button: 0 });
+    fireEvent.click(await screen.findByRole("button", { name: "More options" }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: /Sort axis: Sum of Quantity descending/ }));
+    await waitFor(() => expect(t.page().visuals[0].sort).toEqual({ field: Qty, dir: "desc" }));
+    await waitFor(() => expect(t.dax.calls.some((c) => c.includes("ORDER BY") && c.includes("DESC"))).toBe(true));
+    fireEvent.click(await screen.findByRole("button", { name: "More options" }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Sort axis: clear" }));
+    await waitFor(() => expect(t.page().visuals[0].sort).toBeNull());
+  });
+
   it("hovering a point whose tooltip is a report page shows that page filtered to the point", async () => {
     const t = setup();
     await t.run("report.page.add", { name: "Tip", type: "Tooltip" });
@@ -440,7 +473,7 @@ describe("ReportView: chart data points", () => {
     fireEvent.mouseOut(root, { clientX: 0, clientY: 0, relatedTarget: document.body });
   });
 
-  it("viewing mode: right-click on a visual shows no editing items", async () => {
+  it("viewing mode: right-click on a visual shows no editing items (Export data and Spotlight stay)", async () => {
     const edit = setup();
     await edit.run("report.visual.add", { page: "page1", type: "card", position: { x: 20, y: 20, width: 200, height: 120 }, fields: [{ role: "Values", field: Qty }] });
     const view = setup(undefined, true);
@@ -452,7 +485,7 @@ describe("ReportView: chart data points", () => {
     const card = await screen.findByTestId("card-value");
     fireEvent.contextMenu(card);
     expect(screen.queryByRole("menuitem", { name: "Delete" })).toBeNull();
-    expect(screen.getAllByRole("menuitem").map((m) => m.textContent)).toEqual(["Export data"]);
+    expect(screen.getAllByRole("menuitem").map((m) => m.textContent)).toEqual(["Export data", "Spotlight"]);
     cleanup();
     render(<edit.Host />);
     fireEvent.contextMenu(await screen.findByTestId("card-value"));

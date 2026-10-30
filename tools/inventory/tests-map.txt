@@ -467,3 +467,5 @@
 11|Format painter => app/src/core/commands/arrangeCommands.test.ts :: format painter ;; app/src/core/shell/shell.test.ts :: the format painter is on the Home and Format tabs
 11|Spotlight => app/src/views/report/multiSelect.ui.test.tsx :: spotlight ;; app/src/core/shell/shell.test.ts :: Spotlight is on the Format tab
 12|Spotlight => app/src/views/report/multiSelect.ui.test.tsx :: spotlight
+11|Include / Exclude => app/src/views/report/reportView.test.tsx :: right-click > Exclude takes the point out ;; app/src/core/commands/reportCommands.test.ts :: Include and Exclude on a data point
+11|Sort axis => app/src/views/report/reportView.test.tsx :: More options > Sort axis sorts the chart

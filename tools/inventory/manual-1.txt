@@ -183,8 +183,8 @@ D | Drill down / Drill up
 D | Expand all down one level
 D | Go to the next level
 D | Show next level
-N | Include / Exclude
-N | Sort axis
+D | Include / Exclude
+D | Sort axis
 D | Show data as table
 D | Export data
 D | Spotlight

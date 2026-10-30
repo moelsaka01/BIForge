@@ -1,7 +1,7 @@
 // Edits of the report part of a Project draft. All functions mutate the draft passed in and throw ReportError
 // on invalid input; DocumentStore.transact discards the draft on error, so a failed edit changes nothing.
 import type { Project } from "../model/types";
-import { sameField, type FieldRef, type Lit } from "./fields";
+import { fieldKey, litEqual, sameField, type FieldRef, type Lit } from "./fields";
 import { readFilters, writeFilters, type FilterDef } from "./filters";
 import { fieldToPbir, litExpr, readLitProp, type J } from "./pbir";
 import {
@@ -971,4 +971,24 @@ export function applyFormat(p: Project, page: string, visual: string, sample: Fo
   if (Object.keys(container).length) v.visualContainerObjects = container;
   else delete v.visualContainerObjects;
   return Object.keys(objects).length + Object.keys(container).length;
+}
+
+// ---- include / exclude data points ----------------------------------------------------------------
+
+/**
+ * Include / Exclude on a data point: a visual-level filter on the point's first field. Excluding adds the point's value to the values the
+ * visual leaves out; including keeps only that value (more included points add to the list). Including after excluding, or the other way
+ * round, replaces the earlier filter on that field.
+ */
+export function includeExclude(p: Project, page: string, visual: string, point: { fields: FieldRef[]; values: Lit[] }, mode: "include" | "exclude"): void {
+  const field = point.fields[0];
+  const value = point.values[0];
+  if (!field || value === undefined) throw new ReportError("This data point has no value to include or exclude.");
+  const scope: FilterScope = { level: "visual", page, visual };
+  const name = `point:${fieldKey(field)}`;
+  const cur = getFilters(p, scope).find((d) => d.name === name);
+  const kind = mode === "include" ? "in" : "notIn";
+  const same = cur && (cur.cond.kind === "in" || cur.cond.kind === "notIn") && cur.cond.kind === kind ? cur.cond.values : [];
+  const values = same.some((v) => litEqual(v, value)) ? same : [...same, value];
+  upsertFilter(p, scope, { name, field, cond: { kind, values } });
 }
