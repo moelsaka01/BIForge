@@ -388,8 +388,9 @@ export function buildCard(visual: VisualModel, loaded: Extract<Loaded, { kind: "
     color,
     fontSize: f.num("labels", "fontSize", co.fontSize),
     showLabel: f.bool("categoryLabels", "show", true),
-    valueStyle: cssFont({ ...font, color }, { family: co.fontFace, size: co.fontSize, color: co.color }),
-    labelStyle: cssFont(readFont(f, "categoryLabels", { color: "color" }), { family: lb.fontFace, size: lb.fontSize + 1, color: theme.muted }),
+    // "Preserve whitespace": runs of spaces are kept instead of collapsed to one
+    valueStyle: { ...cssFont({ ...font, color }, { family: co.fontFace, size: co.fontSize, color: co.color }), ...(f.bool("labels", "preserveWhitespace", false) ? { whiteSpace: "pre-wrap" as const } : {}) },
+    labelStyle: { ...cssFont(readFont(f, "categoryLabels", { color: "color" }), { family: lb.fontFace, size: lb.fontSize + 1, color: theme.muted }), ...(f.bool("categoryLabels", "preserveWhitespace", false) ? { whiteSpace: "pre-wrap" as const } : {}) },
   };
 }
 

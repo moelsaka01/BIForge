@@ -105,6 +105,11 @@ export function dataFor(json, c) {
   if (c.object === "centerBackground" && c.prop === "padding") setProps(json, "centerBackground", { fillColor: colorLit("#ffcc00") });
   // a 100 % axis ends at 100: the constant line stands at 50
   if (/^hundredPercent/.test(c.visualType) && c.object === "y1AxisReferenceLine" && c.prop !== "value" && c.prop !== "autoScale") for (const e of json.visual?.objects?.y1AxisReferenceLine ?? []) if (e.selector?.id === "constant") e.properties.value = numLit(50);
+  // spaces are kept only where the text has runs of them: a value format with a long literal, a caption with several spaces
+  if (c.visualType === "card" && c.prop === "preserveWhitespace") {
+    if (c.object === "labels") setProps(json, "labels", { valueCustomFormatString: { expr: { Literal: { Value: "'0\"        units\"'" } } } });
+    else { const pr = json.visual?.query?.queryState?.Values?.projections?.[0]; if (pr) pr.displayName = "Total          quantity"; }
+  }
   // a gauge takes the target of the Axis card only where no field gives one
   if (c.visualType === "gauge" && c.object === "axis" && c.prop === "target") delete json.visual?.query?.queryState?.TargetValue;
   if (c.visualType === "kpi" && c.object === "status") kpiState(json, c.prop === "neutralColor" ? "neutral" : "bad");

@@ -4363,6 +4363,7 @@
    "fontFamily",
    "fontSize",
    "italic",
+   "preserveWhitespace",
    "show",
    "underline"
   ],
@@ -4374,6 +4375,7 @@
    "italic",
    "labelDisplayUnits",
    "labelPrecision",
+   "preserveWhitespace",
    "underline"
   ]
  },
