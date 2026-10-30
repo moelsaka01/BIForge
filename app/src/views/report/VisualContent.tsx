@@ -63,9 +63,9 @@ export function VisualContent({ page, visual, width, height, runOnClick, onInfo 
     const fam = visualType(visual.visualType)?.family;
     if (fam === "table" || fam === "card" || fam === "kpi") return null;
     if (fam === "map" && !geoReady) return null;
-    return buildChart({ visual, loaded, theme: c.theme, selected });
+    return buildChart({ visual, loaded, theme: c.theme, selected, size: { width, height } });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loaded, visual, c.theme, selectedKey, geoReady]);
+  }, [loaded, visual, c.theme, selectedKey, geoReady, width, height]);
   // what the header says about this visual: a failed query, a partial load, a note of the chart
   const info = useMemo(() => {
     const status: VisualStatus = {};

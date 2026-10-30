@@ -11,6 +11,7 @@ import type { SelectedPoint } from "./interactions";
 import { formatCompact, formatNumber } from "./numberFormat";
 import { donutCentre, type CentreBackground, type CentreImage } from "./donutCentre";
 import { attachMarks, axisBlock, plotImage, type PlotImage, CAP, dashOf, gridFor, labelBlock, labelDefaults, legendBlock, LEGEND_POS, lineSeriesStyle, referenceLineMark, referenceLineShade, sliceItemStyle, valueText, zoomBlock, type LineSpec } from "./chartFormat";
+import { responsiveVisual } from "./responsive";
 import { echartsText, opacityOf, readFont } from "../format/styles";
 import { seriesColor, type Theme } from "./theme";
 import type { VisualModel } from "./visualDoc";
@@ -32,6 +33,8 @@ export interface ChartInput {
   selected: SelectedPoint[];
   /** Small multiples: the color index of a series by its label, so that every panel colors a series alike. */
   colorBy?: (seriesLabel: string) => number | undefined;
+  /** The size the chart is drawn in: General > Responsive drops legend, axes and titles that do not fit. */
+  size?: { width: number; height: number };
 }
 
 export interface ChartBuild {
@@ -1226,7 +1229,8 @@ function gauge(inp: ChartInput): ChartBuild {
 }
 
 /** Builds the chart for the visual, or null when the visual is not an ECharts visual. */
-export function buildChart(inp0: ChartInput): ChartBuild | null {
+export function buildChart(inp00: ChartInput): ChartBuild | null {
+  const inp0: ChartInput = inp00.size ? { ...inp00, visual: responsiveVisual(inp00.visual, inp00.theme, inp00.size) } : inp00;
   // general > Format string: a number format for the values of the visual that replaces the fields' own
   const fs = new FormatReader(inp0.visual.json, inp0.theme, inp0.visual.visualType).str("general", "formatString", "");
   const inp: ChartInput = fs

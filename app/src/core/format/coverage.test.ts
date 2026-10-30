@@ -155,6 +155,8 @@ const CROSS: Record<string, [string, string, Lit][]> = { layout: [["ribbonBands"
 
 /** Properties that only matter together with another one. */
 const WITH: Record<string, Record<string, Record<string, Lit>>> = {
+  // the legacy rules apply only where the new ones are off
+  general: { responsiveLegacy: { responsive: lit.bool(false) } },
   // custom spacing only replaces the default gaps once the switch is on
   spacing: { customizeSpacing: { spaceBelowTitle: lit.num(9) } },
   valueAxis: { labelDisplayUnits: { labelPrecision: lit.num(2) } },
@@ -250,10 +252,24 @@ const matrixParts: Cell[][][] = [
   [[t("Bikes"), t("France"), t("Online"), n(15)], [t("Bikes"), t("France"), t("Store"), n(10)], [t("Bikes"), t("Canada"), t("Online"), n(25)], [t("Bikes"), t("Canada"), t("Store"), n(10)], [t("Clothing"), t("France"), t("Online"), n(30)], [t("Clothing"), t("France"), t("Store"), n(10)]],
 ];
 
+const SCENARIOS_FOR_SMALL: Record<string, [Record<string, ReturnType<typeof column>[] | (typeof Qty)[]>, Cell[][]]> = Object.fromEntries(
+  ["barChart", "columnChart", "clusteredBarChart", "clusteredColumnChart", "hundredPercentStackedBarChart", "hundredPercentStackedColumnChart", "lineChart", "areaChart", "stackedAreaChart", "hundredPercentStackedAreaChart", "ribbonChart", "waterfallChart"].map((id) => [id, [{ Category: [Cat], Series: [Country], Y: [Qty] }, [[t("Accessories"), t("France"), n(30)], [t("Bikes"), t("France"), n(50)], [t("Bikes"), t("Canada"), n(70)], [t("Accessories"), t("Canada"), n(15)]]]]),
+);
+const comboRows: Cell[][] = [[t("Accessories"), n(30), d(2.5)], [t("Bikes"), n(50), d(3.5)], [t("Shoes"), n(20), d(1.5)]];
+SCENARIOS_FOR_SMALL.lineClusteredColumnComboChart = [{ Category: [Cat], Y: [Qty], Y2: [Price] }, comboRows];
+SCENARIOS_FOR_SMALL.lineStackedColumnComboChart = [{ Category: [Cat], Y: [Qty], Y2: [Price] }, comboRows];
+SCENARIOS_FOR_SMALL.scatterChart = [{ Category: [Prod], Series: [Country], X: [Cost], Y: [Price], Size: [Qty] }, [[t("A"), t("France"), d(3), d(4), n(5)], [t("B"), t("Canada"), d(6), d(1), n(9)], [t("C"), t("France"), d(8), d(7), n(2)]]];
 const EXTRA_SCENARIOS: Record<string, [Scenario, string[]][]> = {
   donutChart: [[chart("donutChart", { Category: [Cat], Y: [Qty] }, [[t("Accessories"), ["blank", ""]], [t("Bikes"), ["blank", ""]]]), ["value"]]],
   gauge: [[chart("gauge", { Y: [Qty] }, [[n(60)]]), ["axis"]]],
 };
+
+// General > Responsive acts in a visual that is small: the same chart in a viewport of 50 x 50
+const smallChart = (type: string, roles: Record<string, ReturnType<typeof column>[] | (typeof Qty)[]>, rows: Cell[][]): Scenario => ({
+  make: () => visualOf(type, roles as never),
+  render: (v) => buildChart({ visual: v, loaded: grouped(v, rows), theme: DEFAULT_THEME, selected: [], size: { width: 50, height: 50 } }),
+});
+for (const id of Object.keys(SCENARIOS_FOR_SMALL)) (EXTRA_SCENARIOS[id] ??= []).push([smallChart(id, SCENARIOS_FOR_SMALL[id][0], SCENARIOS_FOR_SMALL[id][1]), ["general"]]);
 
 // a gradient legend belongs to a gradient rule, which the series of the main scenario rule out: one series only
 for (const id of ["barChart", "columnChart", "clusteredBarChart", "clusteredColumnChart", "hundredPercentStackedBarChart", "hundredPercentStackedColumnChart", "lineChart", "areaChart"]) {

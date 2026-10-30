@@ -230,6 +230,7 @@ export function filledMap(inp: ChartInput, gaz: Gazetteer): ChartBuild {
   const strokeWidth = f.num("stroke", "strokeWidth", 1);
   const showLabels = f.bool("labels", "show", false) || f.bool("categoryLabels", "show", false);
   const labelFont = readFont(f, f.bool("labels", "show", false) ? "labels" : "categoryLabels", { color: "color" });
+  const placeNames = f.bool("mapStyles", "showLabels", false);
   const data = used.map((r, i) => {
     const v = values[i];
     const t = v === null || vmax === vmin ? 1 : 0.2 + 0.8 * ((v - vmin) / (vmax - vmin));
@@ -245,7 +246,8 @@ export function filledMap(inp: ChartInput, gaz: Gazetteer): ChartBuild {
         type: "map",
         map: kind === "state" ? "states" : "world",
         ...mapGeo(f, themeKey, used, false, kind === "state" ? "states" : "world"),
-        label: { show: showLabels, formatter: (pa: O) => (vc && pa.data ? `${pa.data.label}: ${valueText(pa.data.value, vc.format ?? null, f, "labels")}` : String(pa.data?.label ?? pa.name)), ...echartsText(labelFont, { ...labelDefaults(theme), color: theme.foreground }) },
+        // Map styles > Show labels: the names of the regions (small, in the color of the map style) when no data labels are asked for
+        label: { show: showLabels || placeNames, formatter: (pa: O) => (vc && pa.data ? `${pa.data.label}: ${valueText(pa.data.value, vc.format ?? null, f, "labels")}` : String(pa.data?.label ?? pa.name)), ...(showLabels ? echartsText(labelFont, { ...labelDefaults(theme), color: theme.foreground }) : { color: mt.text, fontSize: 9 }) },
         itemStyle: { areaColor: mt.land, borderColor: strokeOn ? strokeColor : mt.border, borderWidth: strokeOn ? strokeWidth : 0.5 },
         data,
       },

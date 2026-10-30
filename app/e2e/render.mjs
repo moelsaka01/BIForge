@@ -122,17 +122,20 @@ const tweak = (c, json) => {
   if (c.prop !== "autoScale" && !/ComboChart$/.test(c.visualType)) for (const e of out.visual?.objects?.y1AxisReferenceLine ?? []) if (e.selector?.id === "constant") e.properties.autoScale = { expr: { Literal: { Value: "true" } } };
   return out;
 };
+let tiny = false;
 const put = (pageName, name, json) => {
   const x = 10;
   // tables and matrices are given the whole page, so that their last rows (the totals) are not scrolled out of sight
   const big = /^(pivotTable|tableEx)$/.test(json.visual?.visualType);
-  const v = { ...forSample(json), name, position: { x, y: 10, z: 1, width: big ? 1200 : 600, height: big ? 700 : 420, tabOrder: 1 } };
+  // General > Responsive acts in a small visual
+  const v = { ...forSample(json), name, position: { x, y: 10, z: 1, width: tiny ? 60 : big ? 1200 : 600, height: tiny ? 60 : big ? 700 : 420, tabOrder: 1 } };
   const dir = join(def, "pages", pageName, "visuals", name);
   mkdirSync(dir, { recursive: true });
   writeFileSync(join(dir, "visual.json"), JSON.stringify(v, null, 2));
 };
 const addPage = (id, json0, c) => {
   const json = tweak(c, json0);
+  tiny = c.object === "general" && /^responsive/.test(c.prop);
   mkdirSync(join(def, "pages", id), { recursive: true });
   writeFileSync(join(def, "pages", id, "page.json"), JSON.stringify({ $schema: "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/page/1.0.0/schema.json", name: id, displayName: id, displayOption: "FitToPage", height: 720, width: 1280 }, null, 2));
   put(id, "probe", json);

@@ -197,3 +197,16 @@ describe("tooltip look (Format > General > Tooltips)", () => {
     expect(build(apply([["valueFontColor", lit.str("#00ff00")]]), rows).option.tooltip.formatter(sample)).toContain('<b style="color:#00ff00">');
   });
 });
+
+describe("filled map: Map styles > Show labels", () => {
+  it("names the regions in a small label when no data labels are on", () => {
+    const v = visualOf("filledMap", { Category: [Country], Size: [Qty] });
+    const rows = [[c("France"), c(50)], [c("Canada"), c(10)]];
+    const off = build(v, rows).option.series[0].label;
+    const on = build(setFormat(v, "mapStyles", "showLabels", lit.bool(true)), rows).option.series[0].label;
+    expect(off.show).toBe(false);
+    expect(on).toMatchObject({ show: true, fontSize: 9 });
+    // a region without data is named by itself
+    expect(on.formatter({ name: "Peru" })).toBe("Peru");
+  });
+});
