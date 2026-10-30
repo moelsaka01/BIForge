@@ -30,5 +30,8 @@ export const PREP = {
       await items.nth(2 + (level - 1)).click();
       await page.waitForTimeout(600);
     }
+    // the first node of the first level is selected (its border takes the accent colour)
+    const node = v.locator("[data-node]").first();
+    if (await node.count()) { await node.click().catch(() => {}); await page.waitForTimeout(400); }
   },
 };

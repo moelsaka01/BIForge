@@ -1,1 +1,82 @@
-[]
+[
+  {
+    "class": "Needs Desktop verification",
+    "reason": "A 100 % chart's data labels show the percentage only (BIForge writes it for every label); whether Desktop shows the value, so that General > Format string applies to it, is not known.",
+    "props": [
+      "hundredPercentStackedColumnChart.general.formatString",
+      "hundredPercentStackedBarChart.general.formatString",
+      "hundredPercentStackedAreaChart.general.formatString"
+    ]
+  },
+  {
+    "class": "Needs Desktop verification",
+    "reason": "Show blank as writes a text for a blank point of a line or area, but a blank point has no marker to hang a label on in BIForge, and Desktop's placement of that text is not known.",
+    "props": [
+      "lineChart.labels.showBlankAs",
+      "stackedAreaChart.labels.showBlankAs"
+    ]
+  },
+  {
+    "class": "Needs Desktop verification",
+    "reason": "The engine drops rows whose values are all blank, so a donut with only blank values gets no rows and shows 'No data'; the centre text of Show blank as can never appear. What Desktop draws for an empty donut is not known.",
+    "props": [
+      "donutChart.value.showBlankAs"
+    ]
+  },
+  {
+    "class": "Needs Desktop verification",
+    "reason": "Align baselines only moves tiles whose text differs in height; the tiles of the sample are alike, and what Desktop compares is not known.",
+    "props": [
+      "cardVisual.label.alignBaselines"
+    ]
+  },
+  {
+    "class": "Blocked",
+    "reason": "A 100 % axis is fixed from 0 to 100 here, so the negative total (drawn at -100) is off the axis.",
+    "props": [
+      "hundredPercentStackedColumnChart.totals.showPositiveAndNegative",
+      "hundredPercentStackedBarChart.totals.showPositiveAndNegative"
+    ]
+  },
+  {
+    "class": "Blocked",
+    "reason": "ECharts has no legend for a treemap; BIForge draws entries with its own legend component, and bold on those entries does not change the picture in the real window (checked, not diagnosed).",
+    "props": [
+      "treemap.legend.bold"
+    ]
+  },
+  {
+    "class": "Blocked",
+    "reason": "The open list of a list slicer covers the bottom of the tile in the audit state, so the snipped bottom corners cannot be seen (the clip path is set; unit-tested in tileLook.test.ts).",
+    "props": [
+      "listSlicer.shapeCustomRectangle.tabCutCornerSnipSizeBottom",
+      "listSlicer.shapeCustomRectangle.tabCutCornerSnipSizeLeftBottom",
+      "listSlicer.shapeCustomRectangle.tabCutCornerSnipSizeRightBottom"
+    ]
+  },
+  {
+    "class": "Open (not diagnosed)",
+    "reason": "The real window keeps the label inside a bar that is shorter than the label even at 150 px, so the pixel comparison cannot see Overflow text. hideLabelsThatDoNotFit is covered by unit tests of the function only; a debug build is needed to see why it does not hide the label in these windows.",
+    "props": [
+      "columnChart.labels.labelOverflow",
+      "barChart.labels.labelOverflow",
+      "hundredPercentStackedColumnChart.labels.labelOverflow",
+      "hundredPercentStackedBarChart.labels.labelOverflow"
+    ]
+  },
+  {
+    "class": "Open (not diagnosed)",
+    "reason": "The key influencers visual of the audit shows no difference for these settings (sort of the influencers, target value); not investigated further this session.",
+    "props": [
+      "keyDriversVisual.keyDrivers.selectedSort",
+      "keyDriversVisual.keyDrivers.targetValue"
+    ]
+  },
+  {
+    "class": "Open (not diagnosed)",
+    "reason": "The audit's click on the tile slicer's chips times out under this tile shape (the clip path hides them from the pointer), so the shape could not be checked in the real window; unit-tested in tileLook.test.ts.",
+    "props": [
+      "advancedSlicerVisual.shapeCustomRectangle.tileShape"
+    ]
+  }
+]

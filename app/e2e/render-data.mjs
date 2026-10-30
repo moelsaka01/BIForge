@@ -102,6 +102,8 @@ export function dataFor(json, c) {
   // the outcome of the key influencers analysis is one of the values of the target
   if (c.visualType === "keyDriversVisual" && c.prop === "targetValue") setProps(json, "keyDrivers", { targetValue: { expr: { Literal: { Value: "'Store'" } } } });
   if (/ComboChart$/.test(c.visualType) && c.object === "layout" && /^clusteredGap/.test(c.prop)) secondColumn(json);
+  // two column measures side by side: their large labels meet
+  if (/ComboChart$/.test(c.visualType) && c.object === "labels" && c.prop === "optimizeLabelDisplay") secondColumn(json);
   // a disc shows its padding only in a color that differs from the page
   if (c.object === "centerBackground" && c.prop === "padding") setProps(json, "centerBackground", { fillColor: colorLit("#ffcc00") });
   // a 100 % axis ends at 100: the constant line stands at 50
@@ -144,7 +146,7 @@ export function dataFor(json, c) {
   // the format string of the visual is used by the labels
   if (c.object === "general" && c.prop === "formatString") setProps(json, "labels", { show: TRUE, labelStyle: { expr: { Literal: { Value: "'Data'" } } } });
   // text wraps where it is wider than its box
-  if (/^(label|value)$/.test(c.object) && c.prop === "textWrap" && c.visualType === "donutChart") setProps(json, c.object, { fontSize: numLit(40) });
+  if (/^(label|value)$/.test(c.object) && c.prop === "textWrap" && c.visualType === "donutChart") setProps(json, c.object, { fontSize: numLit(72) });
   // a label that wraps needs a narrow box
   if (c.object === "labels" && c.prop === "wordWrap") setProps(json, "labels", { labelContainerMaxWidth: numLit(10) });
   // a header wraps only where its text is wider than the header: a large font does that for any month name

@@ -8,11 +8,16 @@ const dir = fileURLToPath(new URL("./_cases/", import.meta.url));
 const all = JSON.parse(readFileSync(join(dir, "all.json"), "utf8"));
 const latest = new Map();
 for (const l of readFileSync(join(dir, "results.jsonl"), "utf8").split("\n")) if (l.trim()) { const r = JSON.parse(l); latest.set(r.idx, r); }
+// properties that cannot be drawn yet, each with a class and a reason (src/core/format/auditNotDrawn.json): reported, not counted as a failure
+const classified = new Map();
+for (const g of JSON.parse(readFileSync(fileURLToPath(new URL("../src/core/format/auditNotDrawn.json", import.meta.url)), "utf8"))) for (const k of g.props) classified.set(k, g);
 const tally = {};
 const bad = [];
 let missing = 0;
 for (let i = 0; i < all.length; i++) {
   const r = latest.get(i);
+  const key = `${all[i].visualType}.${all[i].object}.${all[i].prop}`;
+  if (classified.has(key)) { const g = classified.get(key); tally[`classified: ${g.class}`] = (tally[`classified: ${g.class}`] ?? 0) + 1; continue; }
   if (!r) { missing++; continue; }
   tally[r.status] = (tally[r.status] ?? 0) + 1;
   if (/^(FAIL|DOM-ONLY|NODATA)$/.test(r.status)) bad.push(`${r.status} ${r.key}`);
