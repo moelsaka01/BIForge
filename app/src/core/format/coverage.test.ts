@@ -556,8 +556,7 @@ describe("rendered coverage", () => {
   // Picks the properties checked in the real window: the MUST list (properties added in the latest batches) and a seeded random
   // sample of the others. Run with WRITE_RENDER_CASES=1 UPDATE_RENDERED=1.
   it.skipIf(!WRITE_CASES)("writes the cases of the real-window render check", async () => {
-    // barChart.labels.labelOverflow was in this list until 2026-10-30: the real window no longer shows a difference for it (see auditNotDrawn.json, "Open")
-    const MUST: [string, string, string][] = [["cardVisual", "outline", "show"], ["donutChart", "centerValue", "show"], ["donutChart", "label", "text"], ["donutChart", "image", "size"], ["funnel", "percentBarLabel", "show"], ["clusteredColumnChart", "valueAxis", "showAxisTitle"], ["clusteredColumnChart", "referenceLine", "show"], ["pivotTable", "subTotals", "fontColor"]];
+    const MUST: [string, string, string][] = [["cardVisual", "outline", "show"], ["donutChart", "centerValue", "show"], ["donutChart", "label", "text"], ["donutChart", "image", "size"], ["funnel", "percentBarLabel", "show"], ["clusteredColumnChart", "valueAxis", "showAxisTitle"], ["clusteredColumnChart", "referenceLine", "show"], ["pivotTable", "subTotals", "fontColor"], ["barChart", "labels", "labelOverflow"]];
     const SKIP = /^(scriptVisual|pythonVisual|qnaVisual|aiNarratives|keyDriversVisual|decompositionTreeVisual|map|filledMap|shapeMap|page)$/;
     let seed = 20261029;
     const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 2 ** 32);

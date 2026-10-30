@@ -56,16 +56,6 @@
   },
   {
     "class": "Open (not diagnosed)",
-    "reason": "The real window keeps the label inside a bar that is shorter than the label even at 150 px, so the pixel comparison cannot see Overflow text. hideLabelsThatDoNotFit is covered by unit tests of the function only; a debug build is needed to see why it does not hide the label in these windows.",
-    "props": [
-      "columnChart.labels.labelOverflow",
-      "barChart.labels.labelOverflow",
-      "hundredPercentStackedColumnChart.labels.labelOverflow",
-      "hundredPercentStackedBarChart.labels.labelOverflow"
-    ]
-  },
-  {
-    "class": "Open (not diagnosed)",
     "reason": "The key influencers visual of the audit shows no difference for these settings (sort of the influencers, target value); not investigated further this session.",
     "props": [
       "keyDriversVisual.keyDrivers.selectedSort",

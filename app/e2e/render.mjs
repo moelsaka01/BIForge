@@ -107,7 +107,8 @@ const setLit = (json, object, prop, value, id) => {
 // cases whose data would hide the effect are given a setting that makes it visible in both visuals of the pair
 const TWEAKS = {
   // a label larger than the short bars does not fit inside them
-  "barChart.labels.labelOverflow": (json) => { setLit(json, "labels", "show", "true"); setLit(json, "labels", "fontSize", "36D"); },
+  // (bars are 280 to 450 px long in the 600 px wide probe: a label that does not fit needs a very large font)
+  ...Object.fromEntries(["barChart", "columnChart", "hundredPercentStackedBarChart", "hundredPercentStackedColumnChart"].map((t) => [t + ".labels.labelOverflow", (json) => { setLit(json, "labels", "show", "true"); setLit(json, "labels", "fontSize", "200D"); }])),
 };
 const tweak = (c, json) => {
   const out = JSON.parse(JSON.stringify(json));

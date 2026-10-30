@@ -154,7 +154,7 @@ export function dataFor(json, c) {
   // the legend marker takes the line's color only where that differs from the series color
   if (c.prop === "matchLineColor") setProps(json, "lineStyles", { strokeColor: colorLit("#112233") });
   if (/recision$/.test(c.prop)) { decimals(json); millions(json, c); }
-  if (STACKED.test(c.visualType) && /^(labels|totals)$/.test(c.object) && c.prop !== "showSeries" && c.prop !== "showBlankAs" && c.prop !== "optimizeLabelDisplay") singleSeries(json);
+  if (STACKED.test(c.visualType) && /^(labels|totals)$/.test(c.object) && c.prop !== "showSeries" && c.prop !== "showBlankAs" && c.prop !== "optimizeLabelDisplay" && c.prop !== "labelOverflow") singleSeries(json);
   if (STACKED.test(c.visualType) && c.object === "labels") shortLabels(json, c);
 }
 
