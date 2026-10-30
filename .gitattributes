@@ -1,1 +1,7 @@
+* text=auto eol=lf
 *.tmdl text eol=lf
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff2 binary
+*.parquet binary

@@ -69,3 +69,14 @@ docs/                COVERAGE.md, ARCHITECTURE.md, PROGRESS.md
 Verified (from repo root, with cargo on PATH): `cargo test --workspace`; in `app/`: `npm install`, `npm run build`, `npm test`, `npx tauri dev` (opens the window).
 RE tooling: dotnet SDK 9 at `C:\Program Files\dotnet`; ilspycmd 9.1.0.7988 in ~/.dotnet/tools; rea via `npx rea-agents`. Power BI Desktop is read in place from its WindowsApps folder (see research/README.md). Keep raw output in research/_raw/ and search it with rg.
 Environment note: on this machine `cargo`/`rustc` live in `~/.cargo/bin` and may not be on the bash PATH (`export PATH="$HOME/.cargo/bin:$PATH"`).
+
+## Definition of done (binding, added 2026-10-30)
+The 2026-10-30 render audit found 681 of 4730 drawn properties counted Done-tested that did not change the screen, because their tests checked settings only.
+1. A drawn (visual) property is Done-tested ONLY if its `app/e2e/render.mjs` / `render-all.mjs` case passes in the real window: pixels differ with and without the property, using data that exercises it (KPI in the neutral state, several small-multiple panels, series for legends).
+2. A non-visual item needs a test asserting the user-visible result (DOM, file written, query result), not just internal state.
+3. Every new test must be shown to fail without the new code (revert, run, restore) before the item is counted.
+4. Register every ECharts component, feature or renderer a new property needs; a check must fail when a used component is not registered.
+5. Hover-only and interaction-only properties get an interaction test (hover/click in the real window via Playwright), not a static pixel diff.
+
+## Editing tools (recurring friction)
+Text files are LF (`.gitattributes`). For edits with backslashes or CRLF use the Edit tool or the Node edit helper; never sed or heredocs for source edits.
