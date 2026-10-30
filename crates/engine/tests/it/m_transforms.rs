@@ -268,3 +268,43 @@ fn extract_date_and_number_functions_on_a_column() {
     assert!(apply_transform(BASE, None, &tr(r#"{"kind":"transformColumn","columns":["Name"],"function":"File.Contents","label":"x"}"#)).is_err());
     assert!(apply_transform(BASE, None, &tr(r#"{"kind":"transformColumn","columns":["Name"],"function":"Text.Upper(1); x","label":"x"}"#)).is_err());
 }
+
+#[test]
+fn standard_math_text_affix_and_inverse_trig_on_columns() {
+    // Qty typed as numbers is 10, null, 7.5, 7.5
+    let col = |t: &str, i: usize| {
+        let (_, r, _) = chain(BASE, &[TYPED, t], &[]);
+        r.iter().map(|x| x[i].clone()).collect::<Vec<_>>()
+    };
+    let math = |op: &str, n: &str| col(&format!(r#"{{"kind":"arithmetic","columns":["Qty"],"op":"{op}","operand":{n}}}"#), 2);
+    assert_eq!(math("add", "5"), ["15", "~", "12.5", "12.5"]);
+    assert_eq!(math("subtract", "2.5"), ["7.5", "~", "5", "5"]);
+    assert_eq!(math("multiply", "2"), ["20", "~", "15", "15"]);
+    assert_eq!(math("divide", "4"), ["2.5", "~", "1.875", "1.875"]);
+    assert_eq!(math("integerDivide", "3"), ["3", "~", "2", "2"]);
+    assert_eq!(math("modulo", "3"), ["1", "~", "1.5", "1.5"]);
+    assert_eq!(math("power", "2"), ["100", "~", "56.25", "56.25"]);
+    assert_eq!(math("percentage", "50"), ["5", "~", "3.75", "3.75"]);
+    assert_eq!(math("percentOf", "20"), ["50", "~", "37.5", "37.5"]);
+    assert_eq!(math("add", "-1"), ["9", "~", "6.5", "6.5"]);
+    let (_, _, text) = chain(BASE, &[TYPED, r#"{"kind":"arithmetic","columns":["Qty"],"op":"add","operand":5}"#], &[]);
+    assert!(text.contains("each _ + 5"), "{text}");
+    assert!(apply_transform(BASE, None, &tr(r#"{"kind":"arithmetic","columns":["Qty"],"op":"divide","operand":0}"#)).is_err());
+    assert!(apply_transform(BASE, None, &tr(r#"{"kind":"arithmetic","columns":["Qty"],"op":"nope","operand":1}"#)).is_err());
+
+    let (_, r, text) = chain(BASE, &[r#"{"kind":"textAffix","columns":["Name"],"prefix":"<","suffix":">"}"#], &[]);
+    assert_eq!(r.iter().map(|x| x[1].clone()).collect::<Vec<_>>(), ["<  ann >", "<BOB>", "<cy>", "<cy>"]);
+    assert!(text.contains("Table.TransformColumns"));
+    assert!(apply_transform(BASE, None, &tr(r#"{"kind":"textAffix","columns":["Name"]}"#)).is_err());
+
+    let trig = |f: &str| {
+        let t = format!(r#"{{"kind":"transformColumn","columns":["Qty"],"function":"{f}","valueType":"number","label":"T"}}"#);
+        let q = format!("let Source = #table({{\"Qty\"}}, {{{{\"0.5\"}}}}), T = Table.TransformColumnTypes(Source, {{{{\"Qty\", type number}}}}) in T");
+        chain(&q, &[&t], &[]).1[0][0].clone()
+    };
+    assert!(trig("Number.Asin").starts_with("0.5235"), "asin");
+    assert!(trig("Number.Acos").starts_with("1.0471"), "acos");
+    assert!(trig("Number.Atan").starts_with("0.4636"), "atan");
+    let fact = chain("let Source = #table({\"Qty\"}, {{\"5\"}}), T = Table.TransformColumnTypes(Source, {{\"Qty\", type number}}) in T", &[r#"{"kind":"transformColumn","columns":["Qty"],"function":"Number.Factorial","valueType":"number","label":"F"}"#], &[]);
+    assert_eq!(fact.1[0][0], "120");
+}

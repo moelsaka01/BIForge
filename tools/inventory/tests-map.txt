@@ -458,3 +458,8 @@
 26|Alt+Shift+F10 focus visual menu => app/src/views/report/reportView.test.tsx :: Ctrl\+Right Arrow enters the selected visual
 26|Ctrl+Right Arrow enter visual => app/src/views/report/reportView.test.tsx :: Ctrl\+Right Arrow enters the selected visual
 26|Esc exit visual => app/src/views/report/reportView.test.tsx :: Ctrl\+Right Arrow enters the selected visual
+20|Move (to beginning, left, right, to end) => app/src/core/queries/dialogs.test.ts :: Move puts the selected columns
+20|Format: lowercase, UPPERCASE, Capitalize each word, Trim, Clean, Add prefix, Add suffix => app/src/core/queries/dialogs.test.ts :: Format has capitalize, prefix and suffix ;; crates/engine/tests/it/m_transforms.rs :: textAffix
+20|Standard: add, multiply, subtract, divide, integer-divide, modulo, percentage, percent of => app/src/core/queries/dialogs.test.ts :: every Standard operation opens a dialog ;; crates/engine/tests/it/m_transforms.rs :: percentOf
+20|Scientific: absolute, power, square root, exponent, logarithm, factorial, trig => app/src/core/queries/dialogs.test.ts :: inverse trigonometry, factorial and power ;; crates/engine/tests/it/m_transforms.rs :: Number.Factorial
+20|Statistics / Standard / Scientific / Trigonometry / Rounding / Information (new column) => app/src/core/queries/dialogs.test.ts :: every Standard operation opens a dialog ;; app/src/core/queries/dialogs.test.ts :: Atan

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { csvQueryText, dialogFor, enterDataText, excelQueryText, typeLabelOf, valueTypeOf, type DialogContext, type DialogKind, type Values } from "./dialogs";
-import { itemState, RIBBON, type RibbonContext, type RibbonItem } from "./ribbon";
+import { itemState, movedColumns, RIBBON, type RibbonContext, type RibbonItem } from "./ribbon";
 import { completionsAt, monarchLanguage, quoteIdentifier, SUPPORTED_FUNCTIONS } from "./mLanguage";
 
 const ctx: DialogContext = {
@@ -315,5 +315,47 @@ describe("M language", () => {
     expect(quoteIdentifier("Source")).toBe("Source");
     expect(quoteIdentifier("a b")).toBe('#"a b"');
     expect(quoteIdentifier("let")).toBe('#"let"');
+  });
+});
+
+describe("Standard math, Format prefix and suffix, Move, and the new-column variants", () => {
+  const amount: DialogContext = { ...ctx, selected: ["Amount"] };
+  const run = (id: string, selected: string[]) => {
+    const a = item(id).action;
+    if (a.type !== "transform") throw new Error(`${id} is not a transform`);
+    return a.build(rc({ selected }));
+  };
+  it("every Standard operation opens a dialog that builds an arithmetic step, or a new column formula", () => {
+    for (const op of ["add", "multiply", "subtract", "divide", "integerDivide", "modulo", "percentage", "percentOf"] as const) {
+      expect(item(`t.std.${op}`).action).toEqual({ type: "dialog", dialog: `arith.${op}` });
+      expect(item(`a.std.${op}`).action).toEqual({ type: "dialog", dialog: `arithNew.${op}` });
+    }
+    expect(transformOf(build("arith.add", { operand: "5" }, amount))).toEqual({ kind: "arithmetic", columns: ["Amount"], op: "add", operand: 5 });
+    expect(transformOf(build("arith.power", { operand: 3 }, amount))).toMatchObject({ op: "power", operand: 3 });
+    expect(() => build("arith.divide", { operand: 0 }, amount)).toThrow("divide by zero");
+    expect(() => build("arith.add", { operand: "" }, amount)).toThrow("must be a number");
+    expect(transformOf(build("arithNew.multiply", { operand: 2 }, amount))).toEqual({ kind: "addCustomColumn", name: "Multiplication", formula: "[Amount] * 2", valueType: "number" });
+    expect(transformOf(build("arithNew.modulo", { operand: -3 }, amount))).toMatchObject({ formula: "Number.Mod([Amount], (-3))" });
+    expect(transformOf(build("arithNew.add", { operand: 1 }, { ...amount, columns: [...ctx.columns, { name: "Addition", duckdbType: "DOUBLE" }] }))).toMatchObject({ name: "Addition 2" });
+  });
+  it("Format has capitalize, prefix and suffix; Scientific has the inverse trigonometry, factorial and power", () => {
+    expect(run("format.proper", ["Name"])).toMatchObject({ kind: "transformColumn", function: "Text.Proper" });
+    expect(transformOf(build("addPrefix", { text: "ID-" }))).toEqual({ kind: "textAffix", columns: ["Name"], prefix: "ID-" });
+    expect(transformOf(build("addSuffix", { text: "!" }))).toEqual({ kind: "textAffix", columns: ["Name"], suffix: "!" });
+    expect(() => build("addPrefix", { text: "" })).toThrow("required");
+    expect(run("t.sci.asin", ["Amount"])).toMatchObject({ function: "Number.Asin" });
+    expect(run("t.sci.factorial", ["Amount"])).toMatchObject({ function: "Number.Factorial" });
+    expect(item("t.sci.power").action).toEqual({ type: "dialog", dialog: "arith.power" });
+    expect(run("a.trig.atan", ["Amount"])).toMatchObject({ kind: "addCustomColumn", formula: "Number.Atan([Amount])", name: "Arctangent" });
+    expect(run("a.info.sign", ["Amount"])).toMatchObject({ formula: "Number.Sign([Amount])" });
+  });
+  it("Move puts the selected columns at the beginning, one place left or right, or at the end", () => {
+    const names = ["Id", "Name", "When", "Ok", "Amount"];
+    expect(movedColumns(names, ["When", "Amount"], "beginning")).toEqual(["When", "Amount", "Id", "Name", "Ok"]);
+    expect(movedColumns(names, ["Name", "Ok"], "end")).toEqual(["Id", "When", "Amount", "Name", "Ok"]);
+    expect(movedColumns(names, ["Name", "Ok"], "left")).toEqual(["Name", "Id", "Ok", "When", "Amount"]);
+    expect(movedColumns(names, ["Name", "Ok"], "right")).toEqual(["Id", "When", "Name", "Amount", "Ok"]);
+    expect(movedColumns(names, ["Id"], "left")).toEqual(names);
+    expect(run("t.move.end", ["Id"])).toEqual({ kind: "reorderColumns", columns: ["Name", "When", "Ok", "Amount", "Id"] });
   });
 });

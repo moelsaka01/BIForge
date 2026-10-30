@@ -279,15 +279,15 @@ D | Rename column
 D | Replace values / Replace errors
 D | Fill down / up
 D | Pivot column / Unpivot columns / Unpivot other / Unpivot selected
-N | Move (to beginning, left, right, to end)
+D | Move (to beginning, left, right, to end)
 N | Convert to list
-N | Format: lowercase, UPPERCASE, Capitalize each word, Trim, Clean, Add prefix, Add suffix
+D | Format: lowercase, UPPERCASE, Capitalize each word, Trim, Clean, Add prefix, Add suffix
 D | Merge columns
 D | Extract: length, first characters, last characters, range, text before/after/between delimiter
 P | Parse: JSON, XML
 P | Statistics: sum, min, max, median, average, count values, count distinct, standard deviation
-N | Standard: add, multiply, subtract, divide, integer-divide, modulo, percentage, percent of
-N | Scientific: absolute, power, square root, exponent, logarithm, factorial, trig
+D | Standard: add, multiply, subtract, divide, integer-divide, modulo, percentage, percent of
+D | Scientific: absolute, power, square root, exponent, logarithm, factorial, trig
 D | Rounding: round up, down, round
 D | Information: is even, is odd, sign
 N | Date: age, date only, year, quarter, month, week, day, day of week, day of year, start/end of period, name of day/month
@@ -305,7 +305,7 @@ D | Column from examples
 N | Invoke custom function
 D | Duplicate column
 N | Format / Extract / Parse (same as Transform on a new column)
-N | Statistics / Standard / Scientific / Trigonometry / Rounding / Information (new column)
+D | Statistics / Standard / Scientific / Trigonometry / Rounding / Information (new column)
 N | Date / Time / Duration (new column)
 ### View tab
 N | Layout: Query Settings pane, formula bar, status bar, monospace, show whitespace

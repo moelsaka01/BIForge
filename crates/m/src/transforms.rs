@@ -159,6 +159,11 @@ pub enum Transform {
         value_type: Option<String>,
         label: String,
     },
+    /// Standard math on each value of the columns with a number: `each _ + n` (add, subtract, multiply, divide), `Number.IntegerDivide`,
+    /// `Number.Mod`, `Number.Power`, percentage (`_ * n / 100`) and percent of (`_ / n * 100`).
+    Arithmetic { columns: Vec<String>, op: String, operand: f64 },
+    /// Text put before and/or after each value of the columns.
+    TextAffix { columns: Vec<String>, #[serde(default)] prefix: String, #[serde(default)] suffix: String },
     /// Any M expression as a new step (the formula bar / "Add step").
     Custom { name: String, expr: String },
 }
@@ -565,6 +570,51 @@ impl Transform {
                 let ty = match value_type { Some(t) => format!(", {}", m_type(t)?), None => String::new() };
                 let items: Vec<String> = columns.iter().map(|c| format!("{{{}, each {call}{ty}}}", m_text(c))).collect();
                 step(label, format!("Table.TransformColumns({p}, {{{}}})", items.join(", ")))
+            }
+            Arithmetic { columns, op, operand } => {
+                if columns.is_empty() {
+                    return Err("No column was chosen.".into());
+                }
+                if !operand.is_finite() {
+                    return Err("Enter a number.".into());
+                }
+                let n = if operand.fract() == 0.0 && operand.abs() < 1e15 { format!("{}", *operand as i64) } else { format!("{operand}") };
+                let n = if *operand < 0.0 { format!("({n})") } else { n };
+                let (label, body) = match op.as_str() {
+                    "add" => ("Added to Column", format!("_ + {n}")),
+                    "subtract" => ("Subtracted Column", format!("_ - {n}")),
+                    "multiply" => ("Multiplied Column", format!("_ * {n}")),
+                    "divide" => ("Divided Column", format!("_ / {n}")),
+                    "integerDivide" => ("Integer-Divided Column", format!("Number.IntegerDivide(_, {n})")),
+                    "modulo" => ("Calculated Modulo", format!("Number.Mod(_, {n})")),
+                    "power" => ("Calculated Power", format!("Number.Power(_, {n})")),
+                    "percentage" => ("Calculated Percentage", format!("_ * {n} / 100")),
+                    "percentOf" => ("Calculated Percent Of", format!("_ / {n} * 100")),
+                    other => return Err(format!("Unknown operation \"{other}\".")),
+                };
+                if matches!(op.as_str(), "divide" | "integerDivide" | "modulo" | "percentOf") && *operand == 0.0 {
+                    return Err("Cannot divide by zero.".into());
+                }
+                let items: Vec<String> = columns.iter().map(|c| format!("{{{}, each {body}, type number}}", m_text(c))).collect();
+                step(label, format!("Table.TransformColumns({p}, {{{}}})", items.join(", ")))
+            }
+            TextAffix { columns, prefix, suffix } => {
+                if columns.is_empty() {
+                    return Err("No column was chosen.".into());
+                }
+                if prefix.is_empty() && suffix.is_empty() {
+                    return Err("Enter a prefix or a suffix.".into());
+                }
+                let mut body = String::new();
+                if !prefix.is_empty() {
+                    body.push_str(&format!("{} & ", m_text(prefix)));
+                }
+                body.push_str("Text.From(_)");
+                if !suffix.is_empty() {
+                    body.push_str(&format!(" & {}", m_text(suffix)));
+                }
+                let items: Vec<String> = columns.iter().map(|c| format!("{{{}, each {body}, type text}}", m_text(c))).collect();
+                step(if prefix.is_empty() { "Added Suffix" } else { "Added Prefix" }, format!("Table.TransformColumns({p}, {{{}}})", items.join(", ")))
             }
             Custom { name, expr } => step(name, expr.trim().to_string()),
         })

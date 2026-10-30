@@ -2,7 +2,8 @@
 // research/ui-ribbon-commands.md). A button either opens a dialog, runs a transform on the selected columns, runs a
 // command, or is listed as not implemented (shown disabled with a tooltip so the gap is visible).
 import type { DataTypeName, StatisticOp, StepColumn, Transform } from "./types";
-import { DATA_TYPES, isTextType, valueTypeOf, type DialogKind } from "./dialogs";
+import { ARITH_LABELS, DATA_TYPES, isTextType, valueTypeOf, type DialogKind } from "./dialogs";
+import type { ArithOp } from "./types";
 
 export interface RibbonContext {
   /** Columns of the selected step (empty when the step is not a table). */
@@ -56,6 +57,25 @@ const colFn = (id: string, label: string, fn: string, step: string, valueType: D
   need: "columns",
   action: tf((c) => ({ kind: "transformColumn", columns: c.selected, function: fn, valueType, label: step })),
 });
+/** The column order after moving the selected columns to the beginning, left, right or to the end. */
+export function movedColumns(all: string[], selected: string[], to: "beginning" | "left" | "right" | "end"): string[] {
+  const sel = new Set(selected);
+  const out = [...all];
+  if (to === "beginning") return [...out.filter((x) => sel.has(x)), ...out.filter((x) => !sel.has(x))];
+  if (to === "end") return [...out.filter((x) => !sel.has(x)), ...out.filter((x) => sel.has(x))];
+  if (to === "left") {
+    for (let i = 1; i < out.length; i++) if (sel.has(out[i]) && !sel.has(out[i - 1])) [out[i - 1], out[i]] = [out[i], out[i - 1]];
+  } else {
+    for (let i = out.length - 2; i >= 0; i--) if (sel.has(out[i]) && !sel.has(out[i + 1])) [out[i + 1], out[i]] = [out[i], out[i + 1]];
+  }
+  return out;
+}
+const moveItem = (id: string, label: string, to: "beginning" | "left" | "right" | "end"): RibbonItem => ({
+  id,
+  label,
+  need: "columns",
+  action: tf((c) => ({ kind: "reorderColumns", columns: movedColumns(c.columns.map((x) => x.name), c.selected, to) })),
+});
 const todo = (id: string, label: string, need: Need = "table"): RibbonItem => ({ id, label, need, action: { type: "none" }, notImplemented: true });
 
 const STATISTICS: [StatisticOp, string][] = [
@@ -105,6 +125,23 @@ const formatItems: RibbonItem[] = (
     ["clean", "Clean"],
   ] as const
 ).map(([op, label]) => ({ id: `format.${op}`, label, need: "textColumn" as const, action: tf((c) => ({ kind: "transformText", columns: c.selected, op })) }));
+formatItems.splice(
+  2,
+  0,
+  colFn("format.proper", "Capitalize Each Word", "Text.Proper", "Capitalized Each Word", "text"),
+);
+formatItems.push({ id: "format.prefix", label: "Add Prefix...", need: "textColumn", action: dlg("addPrefix") }, { id: "format.suffix", label: "Add Suffix...", need: "textColumn", action: dlg("addSuffix") });
+
+const ARITH_ORDER: ArithOp[] = ["add", "multiply", "subtract", "divide", "integerDivide", "modulo", "percentage", "percentOf"];
+const arithItems = (prefix: "arith" | "arithNew", idPrefix: string): RibbonItem[] =>
+  ARITH_ORDER.map((op) => ({ id: `${idPrefix}.${op}`, label: `${ARITH_LABELS[op].title}...`, need: prefix === "arith" ? ("numberColumn" as const) : ("numberColumn" as const), action: dlg(`${prefix}.${op}` as DialogKind) }));
+/** A button that adds a column holding a library function of the selected column. */
+const newColFn = (id: string, label: string, fn: string, valueType: DataTypeName): RibbonItem => ({
+  id,
+  label,
+  need: "numberColumn",
+  action: tf((c) => ({ kind: "addCustomColumn", name: label, formula: `${fn}([${c.selected[0]}])`, valueType })),
+});
 
 const datePart = (id: string, label: string, fn: string): RibbonItem => ({
   id,
@@ -303,6 +340,7 @@ export const RIBBON: RibbonTab[] = [
             ],
           },
           { id: "t.rename", label: "Rename", need: "column", action: dlg("rename") },
+          { id: "t.move", label: "Move", need: "columns", action: { type: "none" }, menu: [moveItem("t.move.begin", "To Beginning", "beginning"), moveItem("t.move.left", "Left", "left"), moveItem("t.move.right", "Right", "right"), moveItem("t.move.end", "To End", "end")] },
         ],
       },
       {
@@ -360,7 +398,7 @@ export const RIBBON: RibbonTab[] = [
             label: "Standard",
             need: "numberColumn",
             action: { type: "none" },
-            menu: [colFn("t.std.abs", "Absolute Value", "Number.Abs", "Calculated Absolute Value", "number")],
+            menu: [...arithItems("arith", "t.std"), colFn("t.std.abs", "Absolute Value", "Number.Abs", "Calculated Absolute Value", "number")],
           },
           {
             id: "t.info",
@@ -386,6 +424,11 @@ export const RIBBON: RibbonTab[] = [
               colFn("t.sci.sin", "Sine", "Number.Sin", "Calculated Sine", "number"),
               colFn("t.sci.cos", "Cosine", "Number.Cos", "Calculated Cosine", "number"),
               colFn("t.sci.tan", "Tangent", "Number.Tan", "Calculated Tangent", "number"),
+              colFn("t.sci.asin", "Arcsine", "Number.Asin", "Calculated Arcsine", "number"),
+              colFn("t.sci.acos", "Arccosine", "Number.Acos", "Calculated Arccosine", "number"),
+              colFn("t.sci.atan", "Arctangent", "Number.Atan", "Calculated Arctangent", "number"),
+              colFn("t.sci.factorial", "Factorial", "Number.Factorial", "Calculated Factorial", "number"),
+              { id: "t.sci.power", label: "Power...", need: "numberColumn", action: dlg("arith.power") },
             ],
           },
         ],
@@ -476,7 +519,52 @@ export const RIBBON: RibbonTab[] = [
       {
         id: "fromNumber",
         label: "From Number",
-        items: [{ id: "a.numstats", label: "Statistics", need: "columns", action: { type: "none" }, menu: rowStatistics }, todo("a.numstandard", "Standard", "numberColumn")],
+        items: [
+          { id: "a.numstats", label: "Statistics", need: "columns", action: { type: "none" }, menu: rowStatistics },
+          { id: "a.numstandard", label: "Standard", need: "numberColumn", action: { type: "none" }, menu: [...arithItems("arithNew", "a.std"), newColFn("a.std.abs", "Absolute Value", "Number.Abs", "number")] },
+          {
+            id: "a.numscientific",
+            label: "Scientific",
+            need: "numberColumn",
+            action: { type: "none" },
+            menu: [
+              newColFn("a.sci.sqrt", "Square Root", "Number.Sqrt", "number"),
+              newColFn("a.sci.exp", "Exponent", "Number.Exp", "number"),
+              newColFn("a.sci.ln", "Natural Logarithm", "Number.Ln", "number"),
+              newColFn("a.sci.log10", "Logarithm", "Number.Log10", "number"),
+              newColFn("a.sci.factorial", "Factorial", "Number.Factorial", "number"),
+              { id: "a.sci.power", label: "Power...", need: "numberColumn", action: dlg("arithNew.power") },
+            ],
+          },
+          {
+            id: "a.numtrig",
+            label: "Trigonometry",
+            need: "numberColumn",
+            action: { type: "none" },
+            menu: [
+              newColFn("a.trig.sin", "Sine", "Number.Sin", "number"),
+              newColFn("a.trig.cos", "Cosine", "Number.Cos", "number"),
+              newColFn("a.trig.tan", "Tangent", "Number.Tan", "number"),
+              newColFn("a.trig.asin", "Arcsine", "Number.Asin", "number"),
+              newColFn("a.trig.acos", "Arccosine", "Number.Acos", "number"),
+              newColFn("a.trig.atan", "Arctangent", "Number.Atan", "number"),
+            ],
+          },
+          {
+            id: "a.numrounding",
+            label: "Rounding",
+            need: "numberColumn",
+            action: { type: "none" },
+            menu: [newColFn("a.round.up", "Round Up", "Number.RoundUp", "int64"), newColFn("a.round.down", "Round Down", "Number.RoundDown", "int64")],
+          },
+          {
+            id: "a.numinfo",
+            label: "Information",
+            need: "numberColumn",
+            action: { type: "none" },
+            menu: [newColFn("a.info.even", "Is Even", "Number.IsEven", "logical"), newColFn("a.info.odd", "Is Odd", "Number.IsOdd", "logical"), newColFn("a.info.sign", "Sign", "Number.Sign", "int64")],
+          },
+        ],
       },
       {
         id: "fromDate",

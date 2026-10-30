@@ -138,7 +138,12 @@ export type Transform =
   | { kind: "keepErrors"; columns: string[] }
   | { kind: "replaceErrors"; columns: string[]; value: string | number | boolean | null; valueType?: "text" | "number" | "logical" }
   | { kind: "transformColumn"; columns: string[]; function: string; args?: (string | number)[]; valueType?: DataTypeName; label: string }
+  | { kind: "arithmetic"; columns: string[]; op: ArithOp; operand: number }
+  | { kind: "textAffix"; columns: string[]; prefix?: string; suffix?: string }
   | { kind: "custom"; name: string; expr: string };
+
+/** Transform > Standard operations that take a number. */
+export type ArithOp = "add" | "subtract" | "multiply" | "divide" | "integerDivide" | "modulo" | "power" | "percentage" | "percentOf";
 
 /** The M engine and M text tools as the UI sees them. The real implementation calls Tauri commands. */
 /** Statistics of one column of a step (View > Column quality / distribution / profile); mirrors the engine's ColumnProfile. */

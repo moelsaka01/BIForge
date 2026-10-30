@@ -1,6 +1,6 @@
 // The forms of the Power Query editor as data: fields to show and a builder that turns the values into a transform
 // or a command. No React here, so every dialog's output can be tested.
-import type { StepColumn, Transform, DataTypeName, Condition, FilterOp } from "./types";
+import type { ArithOp, StepColumn, Transform, DataTypeName, Condition, FilterOp } from "./types";
 import { m_text } from "./mText";
 import { PARAMETER_TYPES, parameterText, type ParameterDef, type ParameterType } from "./parameters";
 
@@ -53,7 +53,40 @@ export type DialogKind =
   | "append" | "conditional" | "custom" | "chooseColumns" | "pivot" | "round" | "rename" | "newCsv" | "newExcel" | "newFolder"
   | "enterData" | "customStep" | "indexCustom" | "removeAlt" | "mergeColumns" | "extractFirst" | "extractLast" | "extractRange"
   | "extractBefore" | "extractAfter" | "extractBetween" | "replaceErrors" | "newParameter" | "editParameter"
-  | "parseJson" | "newGroup" | "moveToGroup" | "renameGroup" | "deleteGroup";
+  | "parseJson" | "newGroup" | "moveToGroup" | "renameGroup" | "deleteGroup" | "addPrefix" | "addSuffix" | ArithDialog | ArithNewDialog;
+
+/** The Standard operations of the Transform tab (in place) and of the Add Column tab (a new column). */
+export type ArithDialog = `arith.${ArithOp}`;
+export type ArithNewDialog = `arithNew.${ArithOp}`;
+
+export const ARITH_LABELS: Record<ArithOp, { title: string; operand: string; symbol: string; column: string }> = {
+  add: { title: "Add", operand: "Value to add", symbol: "+", column: "Addition" },
+  subtract: { title: "Subtract", operand: "Value to subtract", symbol: "-", column: "Subtraction" },
+  multiply: { title: "Multiply", operand: "Value to multiply by", symbol: "*", column: "Multiplication" },
+  divide: { title: "Divide", operand: "Value to divide by", symbol: "/", column: "Division" },
+  integerDivide: { title: "Integer-Divide", operand: "Value to divide by", symbol: "div", column: "Integer-division" },
+  modulo: { title: "Modulo", operand: "Value to divide by", symbol: "mod", column: "Modulo" },
+  power: { title: "Power", operand: "Exponent", symbol: "^", column: "Power" },
+  percentage: { title: "Percentage", operand: "Percent", symbol: "%", column: "Percentage" },
+  percentOf: { title: "Percent Of", operand: "Total", symbol: "%of", column: "Percent Of" },
+};
+
+/** The M formula of a Standard operation on a column, for a new column. */
+export function arithFormula(op: ArithOp, column: string, n: number): string {
+  const x = `[${column}]`;
+  const v = n < 0 ? `(${n})` : String(n);
+  switch (op) {
+    case "add": return `${x} + ${v}`;
+    case "subtract": return `${x} - ${v}`;
+    case "multiply": return `${x} * ${v}`;
+    case "divide": return `${x} / ${v}`;
+    case "integerDivide": return `Number.IntegerDivide(${x}, ${v})`;
+    case "modulo": return `Number.Mod(${x}, ${v})`;
+    case "power": return `Number.Power(${x}, ${v})`;
+    case "percentage": return `${x} * ${v} / 100`;
+    case "percentOf": return `${x} / ${v} * 100`;
+  }
+}
 
 const NUMERIC = /^(TINYINT|SMALLINT|INTEGER|BIGINT|HUGEINT|UTINYINT|USMALLINT|UINTEGER|UBIGINT|FLOAT|DOUBLE|DECIMAL)/i;
 
@@ -181,7 +214,38 @@ export function enterDataText(input: string): string {
 export function dialogFor(kind: DialogKind, c: DialogContext): DialogDef {
   const cols = colOptions(c);
   const first = c.selected[0] ?? c.columns[0]?.name ?? "";
+  if (kind.startsWith("arith.") || kind.startsWith("arithNew.")) {
+    const inPlace = kind.startsWith("arith.");
+    const op = kind.slice(kind.indexOf(".") + 1) as ArithOp;
+    const lab = ARITH_LABELS[op];
+    return {
+      title: inPlace ? lab.title : `Add Column: ${lab.title}`,
+      submitLabel: "OK",
+      fields: [{ kind: "number", key: "operand", label: lab.operand, default: op === "percentage" || op === "percentOf" ? 100 : op === "power" ? 2 : 1 }],
+      build: (v) => {
+        const operand = Number(v.operand);
+        if (v.operand === "" || v.operand === undefined || !Number.isFinite(operand)) throw new Error(`${lab.operand} must be a number.`);
+        if ((op === "divide" || op === "integerDivide" || op === "modulo" || op === "percentOf") && operand === 0) throw new Error("Cannot divide by zero.");
+        if (inPlace) return { transform: { kind: "arithmetic", columns: c.selected, op, operand } };
+        let name = lab.column;
+        for (let i = 2; c.columns.some((x) => x.name === name); i++) name = `${lab.column} ${i}`;
+        return { transform: { kind: "addCustomColumn", name, formula: arithFormula(op, first, operand), valueType: "number" } };
+      },
+    };
+  }
   switch (kind) {
+    case "addPrefix":
+    case "addSuffix":
+      return {
+        title: kind === "addPrefix" ? "Add Prefix" : "Add Suffix",
+        submitLabel: "OK",
+        fields: [{ kind: "text", key: "text", label: kind === "addPrefix" ? "Prefix" : "Suffix", default: "" }],
+        build: (v) => {
+          const text = typeof v.text === "string" ? v.text : "";
+          if (!text) throw new Error(`The ${kind === "addPrefix" ? "prefix" : "suffix"} is required.`);
+          return { transform: { kind: "textAffix", columns: c.selected, ...(kind === "addPrefix" ? { prefix: text } : { suffix: text }) } };
+        },
+      };
     case "filter":
       return {
         title: "Filter Rows",
@@ -774,4 +838,5 @@ export function dialogFor(kind: DialogKind, c: DialogContext): DialogDef {
         build: (v) => ({ command: "query.add", args: { name: need(v.name, "The query name"), text: enterDataText(String(v.data ?? "")), loaded: true } }),
       };
   }
+  throw new Error(`Unknown dialog "${String(kind)}".`);
 }

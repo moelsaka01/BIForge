@@ -128,7 +128,7 @@ export function ChartView(p: ChartViewProps) {
   };
 
   return (
-    <div style={{ position: "relative", width: p.width, height: p.height }}>
+    <div style={{ position: "relative", isolation: "isolate", width: p.width, height: p.height }}>
       {p.build.plotImage && (
         <div
           data-testid="plot-image"
@@ -141,8 +141,8 @@ export function ChartView(p: ChartViewProps) {
         const d = (Math.min(p.width, p.height) * b.radiusPct) / 100;
         return (
           <>
-            <div data-testid="centre-background" aria-hidden style={{ position: "absolute", left: "50%", top: "50%", width: d, height: d, marginLeft: -d / 2, marginTop: -d / 2, borderRadius: "50%", background: b.fill, opacity: b.fillOpacity, pointerEvents: "none" }} />
-            <div data-testid="centre-background-image" aria-hidden style={{ position: "absolute", left: "50%", top: "50%", width: d, height: d, marginLeft: -d / 2, marginTop: -d / 2, borderRadius: "50%", backgroundImage: `url("${b.src.replace(/"/g, "%22")}")`, backgroundRepeat: "no-repeat", backgroundPosition: "center", backgroundSize: b.fit, opacity: b.opacity, pointerEvents: "none" }} />
+            <div data-testid="centre-background" aria-hidden style={{ zIndex: -1, position: "absolute", left: "50%", top: "50%", width: d, height: d, marginLeft: -d / 2, marginTop: -d / 2, borderRadius: "50%", background: b.fill, opacity: b.fillOpacity, pointerEvents: "none" }} />
+            <div data-testid="centre-background-image" aria-hidden style={{ zIndex: -1, position: "absolute", left: "50%", top: "50%", width: d, height: d, marginLeft: -d / 2, marginTop: -d / 2, borderRadius: "50%", backgroundImage: `url("${b.src.replace(/"/g, "%22")}")`, backgroundRepeat: "no-repeat", backgroundPosition: "center", backgroundSize: b.fit, opacity: b.opacity, pointerEvents: "none" }} />
           </>
         );
       })()}
