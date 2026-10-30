@@ -115,7 +115,8 @@ const ENABLE: Record<string, Record<string, Lit>> = {
   shadow: { show: lit.bool(true) },
   glow: { show: lit.bool(true) },
   image: { show: lit.bool(true), imageUrl: lit.str(PNG_1PX), strokeShow: lit.bool(true), backgroundEnabled: lit.bool(true), effects: lit.bool(true), cornerRadiusAdvanced: lit.bool(true), sourceUrl: lit.str(PNG_1PX) },
-  grid: { gridHorizontal: lit.bool(true), gridVertical: lit.bool(true) },
+  grid: { gridHorizontal: lit.bool(true), gridVertical: lit.bool(true), show: lit.bool(true) },
+  cardCalloutArea: { show: lit.bool(true) },
   values: { backColorSecondary: lit.str("#654321") },
   header: { show: lit.bool(true) },
   categoryLabels: { show: lit.bool(true), enableBackground: lit.bool(true) },
@@ -161,6 +162,11 @@ const WITH: Record<string, Record<string, Record<string, Lit>>> = {
   indicator: { indicatorPrecision: { indicatorDisplayUnits: lit.num(1000) } },
   target: { labelPrecision: { labelDisplayUnits: lit.num(1000) } },
   value: { labelDisplayUnits: { labelPrecision: lit.num(2) }, labelPrecision: { labelDisplayUnits: lit.num(1000) } },
+  // the callout area: individual paddings and corners need their switch
+  cardCalloutArea: {
+    paddingTop: { paddingIndividual: lit.bool(true) }, paddingBottom: { paddingIndividual: lit.bool(true) }, paddingLeft: { paddingIndividual: lit.bool(true) }, paddingRight: { paddingIndividual: lit.bool(true) },
+    rectangleRoundedCurveLeftTop: { rectangleRoundedCurveCustomStyle: lit.bool(true) }, rectangleRoundedCurveLeftBottom: { rectangleRoundedCurveCustomStyle: lit.bool(true) }, rectangleRoundedCurveRightTop: { rectangleRoundedCurveCustomStyle: lit.bool(true) }, rectangleRoundedCurveRightBottom: { rectangleRoundedCurveCustomStyle: lit.bool(true) },
+  },
   // an outline has a color and a style only where it has a weight
   grid: { outlineColor: { outlineWeight: lit.num(2) }, outlineStyle: { outlineWeight: lit.num(2) } },
   values: { outlineColor: { outlineWeight: lit.num(2) }, outlineStyle: { outlineWeight: lit.num(2) } },

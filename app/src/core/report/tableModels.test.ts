@@ -5,7 +5,7 @@ import type { Loaded } from "./dataLoader";
 import { agg, column, lit, type Lit } from "./fields";
 import { litExpr, queryRefOf } from "./pbir";
 import { buildMatrixQuery, buildVisualQuery } from "./queryBuilder";
-import { buildCard, buildKpi, buildMatrix, buildMultiRowCard, buildTable } from "./tableModels";
+import { buildCard, buildKpi, buildNewCard, buildMatrix, buildMultiRowCard, buildTable } from "./tableModels";
 import { fixtureModel, visualOf } from "./testFixture";
 import { DEFAULT_THEME } from "./theme";
 import { setFormat, setRawProp, type VisualModel } from "./visualDoc";
@@ -226,6 +226,28 @@ describe("cards and KPI", () => {
     const none = visualOf("kpi", { Indicator: [Qty] });
     const k2 = buildKpi(none, grouped(none, [[n(5)]]), DEFAULT_THEME);
     expect([k2.goal, k2.variance, k2.status]).toEqual([null, null, "neutral"]);
+  });
+});
+
+describe("Card (new) grid and callout area", () => {
+  const mk = () => {
+    const v = visualOf("cardVisual", { Data: [Qty, Qty] });
+    return { v, g: grouped(v, [[n(5), n(7)]]) };
+  };
+  it("Grid puts a line between the tiles, the callout area boxes the value", () => {
+    const { v, g } = mk();
+    expect(buildNewCard(v, g, DEFAULT_THEME).grid).toBeNull();
+    expect(buildNewCard(v, g, DEFAULT_THEME).callout).toEqual({});
+    setFormat(v.json, "grid", "show", lit.bool(true));
+    setFormat(v.json, "grid", "width", lit.num(3));
+    setFormat(v.json, "grid", "style", lit.str("dashed"));
+    expect(buildNewCard(v, g, DEFAULT_THEME).grid?.border).toMatch(/^3px dashed /);
+    setFormat(v.json, "cardCalloutArea", "show", lit.bool(true));
+    setFormat(v.json, "cardCalloutArea", "backgroundFillColor", lit.str("#ff0000"));
+    setFormat(v.json, "cardCalloutArea", "paddingUniform", lit.num(9));
+    setFormat(v.json, "cardCalloutArea", "rectangleRoundedCurve", lit.num(6));
+    const c = buildNewCard(v, g, DEFAULT_THEME).callout;
+    expect([c.background, c.padding, c.borderRadius]).toEqual(["rgba(255, 0, 0, 1)", "9px", "6px"]);
   });
 });
 

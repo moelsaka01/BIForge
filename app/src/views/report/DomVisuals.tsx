@@ -249,11 +249,13 @@ export function NewCardView({ model, theme, width, height }: { model: NewCardMod
       {model.tiles.map((t, i) => {
         const a = model.accent;
         const bar = a ? { [`border${a.position}`]: `${a.width}px solid ${withOpacity(a.color, a.opacity)}` } : {};
+        // Grid: a line between the tiles, on the side the next tile follows
+        const line = model.grid && i > 0 ? { [model.orientation === "row" ? "borderLeft" : "borderTop"]: model.grid.border } : {};
         const label = model.showLabel && <div style={model.labelStyle} data-testid="new-card-label" {...(model.labelLevel ? { role: "heading", "aria-level": model.labelLevel } : {})}>{t.label}</div>;
         return (
-          <div key={i} data-testid="new-card-tile" style={{ flex: "1 1 120px", minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "center", padding: "4px 8px", ...bar }}>
+          <div key={i} data-testid="new-card-tile" style={{ flex: "1 1 120px", minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "center", padding: "4px 8px", ...line, ...bar }}>
             {model.labelAbove && label}
-            {model.showValue && <div style={{ ...model.valueStyle, lineHeight: 1.15 }} data-testid="new-card-value">{t.value}</div>}
+            {model.showValue && <div style={{ ...model.valueStyle, ...model.callout, lineHeight: 1.15 }} data-testid="new-card-value">{t.value}</div>}
             {!model.labelAbove && label}
           </div>
         );

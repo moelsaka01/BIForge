@@ -4408,6 +4408,23 @@
    "transparency",
    "width"
   ],
+  "cardCalloutArea": [
+   "backgroundFillColor",
+   "backgroundTransparency",
+   "paddingBottom",
+   "paddingIndividual",
+   "paddingLeft",
+   "paddingRight",
+   "paddingTop",
+   "paddingUniform",
+   "rectangleRoundedCurve",
+   "rectangleRoundedCurveCustomStyle",
+   "rectangleRoundedCurveLeftBottom",
+   "rectangleRoundedCurveLeftTop",
+   "rectangleRoundedCurveRightBottom",
+   "rectangleRoundedCurveRightTop",
+   "show"
+  ],
   "fillCustom": [
    "fillColor",
    "imageBlur",
@@ -4436,6 +4453,13 @@
    "shadowBlur",
    "show",
    "transparency"
+  ],
+  "grid": [
+   "color",
+   "show",
+   "style",
+   "transparency",
+   "width"
   ],
   "label": [
    "alignBaselines",

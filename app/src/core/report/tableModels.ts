@@ -7,7 +7,7 @@ import type { Loaded } from "./dataLoader";
 import { fieldKey, type FieldRef } from "./fields";
 import { FormatReader } from "./formatReader";
 import { formatCompact, formatNumber } from "./numberFormat";
-import { unitsOf, valueText } from "./chartFormat";
+import { unitsOf, valueText, withOpacity } from "./chartFormat";
 import { cssFont, readFont, withDefaults } from "../format/styles";
 import { tableStyle, type TableStyle } from "./tableStyle";
 import type { CSSProperties } from "react";
@@ -415,11 +415,31 @@ export interface NewCardModel {
   orientation: "row" | "column";
   /** Label > align baselines: the tiles line up on the baseline of their text instead of the top. */
   alignBaselines: boolean;
+  /** Grid: lines between the tiles. */
+  grid: { border: string } | null;
+  /** Callout area: a background, padding and rounded corners around the value. */
+  callout: CSSProperties;
   /** Label > heading: the caption is announced as a heading of this level (2 to 6) to screen readers. */
   labelLevel: number | null;
 }
 
 /** The new card: a tile for each field of the Data well, from the first row of the result. */
+const LINE_STYLES = ["solid", "dashed", "dotted"];
+
+/** Card (new) > Callout area: the box around the value. */
+function calloutArea(f: FormatReader, theme: Theme): CSSProperties {
+  if (!f.bool("cardCalloutArea", "show", false)) return {};
+  const pad = (side: string) => f.num("cardCalloutArea", `padding${side}`, 0);
+  const individual = f.bool("cardCalloutArea", "paddingIndividual", false);
+  const u = f.num("cardCalloutArea", "paddingUniform", 4);
+  const c = (prop: string) => `${Math.max(0, f.num("cardCalloutArea", prop, f.num("cardCalloutArea", "rectangleRoundedCurve", 0)))}px`;
+  return {
+    background: withOpacity(f.color("cardCalloutArea", "backgroundFillColor") ?? (theme.dark ? "#333333" : "#eeeeee"), 1 - f.num("cardCalloutArea", "backgroundTransparency", 0) / 100),
+    padding: individual ? `${pad("Top")}px ${pad("Right")}px ${pad("Bottom")}px ${pad("Left")}px` : `${u}px`,
+    borderRadius: f.bool("cardCalloutArea", "rectangleRoundedCurveCustomStyle", false) ? `${c("rectangleRoundedCurveLeftTop")} ${c("rectangleRoundedCurveRightTop")} ${c("rectangleRoundedCurveRightBottom")} ${c("rectangleRoundedCurveLeftBottom")}` : c("rectangleRoundedCurve"),
+  };
+}
+
 export function buildNewCard(visual: VisualModel, loaded: Extract<Loaded, { kind: "grouped" }>, theme: Theme): NewCardModel {
   const f = new FormatReader(visual.json, theme, visual.visualType);
   const fmt = f.str("value", "customFormatString", "");
@@ -461,6 +481,8 @@ export function buildNewCard(visual: VisualModel, loaded: Extract<Loaded, { kind
     orientation: f.num("layout", "orientation", 2) === 1 ? "column" : "row",
     alignBaselines: f.bool("label", "alignBaselines", false),
     labelLevel: Number(/^Heading([2-6])$/.exec(f.str("label", "heading", "Normal"))?.[1]) || null,
+    grid: f.bool("grid", "show", false) ? { border: `${f.num("grid", "width", 1)}px ${LINE_STYLES.includes(f.str("grid", "style", "solid")) ? f.str("grid", "style", "solid") : "solid"} ${withOpacity(f.color("grid", "color") ?? theme.muted, 1 - f.num("grid", "transparency", 0) / 100)}` } : null,
+    callout: calloutArea(f, theme),
   };
 }
 
