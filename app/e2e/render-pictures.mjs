@@ -36,6 +36,8 @@ export function pictures(json, c) {
       if ("imageUrl" in (e.properties ?? {})) { delete e.properties.imageUrl; if (c.prop !== "sourceUrl") e.properties.sourceUrl = lit("data:placeholder"); }
     }
   }
+  // the scaling of a picture needs a picture
+  if (json.visual?.visualType === "image" && c.object === "imageScaling") ((json.visual.objects ??= {}).image ??= [{ properties: {} }])[0].properties.sourceUrl = lit("data:placeholder");
   for (const list of Object.values(json.visual?.objects ?? {})) {
     for (const e of list) {
       for (const [k, p] of Object.entries(e.properties ?? {})) {
