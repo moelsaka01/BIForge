@@ -438,7 +438,7 @@ function measure(scenarioOf: Scenario, visualType: string, objects: string[]): R
         if (kind[0] === "x") continue;
         const base = scenarioOf.make();
         prepare(base, prop);
-        const baseline = scenarioOf.render(base);
+        const baseline = track(scenarioOf.render(base));
         let drawn = false;
         const variants: unknown[] = [];
         let reference = base;
@@ -452,9 +452,9 @@ function measure(scenarioOf: Scenario, visualType: string, objects: string[]): R
             const b2 = scenarioOf.make();
             prepare(b2, prop);
             for (const [k, val] of Object.entries(WITH[object][prop])) setProp(b2, object, k, val, inst.selector);
-            here = !same(scenarioOf.render(v), scenarioOf.render(b2));
+            here = !same(track(scenarioOf.render(v)), track(scenarioOf.render(b2)));
             reference = b2;
-          } else here = !same(scenarioOf.render(v), baseline);
+          } else here = !same(track(scenarioOf.render(v)), baseline);
           if (!here) continue;
           drawn = true;
           // the real-window check tries up to four values: a value can change the option and still look like the default (a dash cap "none" is the default cap)
@@ -496,6 +496,26 @@ function measurePage(): Record<string, string[]> {
   }
   for (const k of Object.keys(out)) out[k] = [...new Set(out[k])].sort();
   return out;
+}
+
+/** Every ECharts series type and component an option of this run uses (see echartsSetup.ts: one that is not registered is silently not drawn). */
+const USED = new Set<string>();
+function track<T>(result: T): T {
+  const o = (result as { option?: Record<string, unknown> } | null)?.option;
+  if (!o || typeof o !== "object") return result;
+  const need = (name: string) => USED.add(name);
+  for (const key of Object.keys(o)) {
+    if (["legend", "title", "tooltip", "dataZoom", "graphic", "geo", "visualMap"].includes(key)) need(key);
+    else if (key === "grid" || key === "xAxis" || key === "yAxis") need("grid");
+  }
+  const series = Array.isArray(o.series) ? (o.series as Record<string, unknown>[]) : [];
+  for (const s of series) {
+    if (typeof s.type === "string") need(s.type);
+    if (s.markLine) need("markLine");
+    if (s.markArea) need("markArea");
+    if (s.labelLayout) need("labelLayout");
+  }
+  return result;
 }
 
 function computeAll(): Coverage {
@@ -554,6 +574,12 @@ describe("rendered coverage", () => {
     const mk = (await import(/* @vite-ignore */ mkName)) as { mkdirSync(p: string, o: object): void };
     mk.mkdirSync("e2e/_cases", { recursive: true });
     fs.writeFileSync("e2e/_cases/all.json", JSON.stringify(CASES));
+  });
+
+  it("every ECharts series type and component the options use is registered in echartsSetup.ts", async () => {
+    const { COMPONENTS } = await import("../../views/report/echartsSetup");
+    expect(USED.size).toBeGreaterThan(8);
+    expect([...USED].filter((n) => !(n in COMPONENTS))).toEqual([]);
   });
 
   it("every authored visual type is measured", () => {

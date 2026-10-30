@@ -8,7 +8,31 @@ import type { WorldData } from "../../core/report/geo";
 
 // reference lines and shading (markLine, markArea), the zoom slider (dataZoom), the ribbon (custom series) and the donut centre (graphic)
 // and the label layout (hide overlapping labels) are options BIForge builds: a component that is not registered here is silently not drawn, which jsdom tests of the option cannot see.
-echarts.use([LabelLayout, CustomChart, DataZoomComponent, GraphicComponent, MarkAreaComponent, MarkLineComponent, BarChart, LineChart, PieChart, ScatterChart, TreemapChart, FunnelChart, GaugeChart, HeatmapChart, MapChart, GeoComponent, VisualMapComponent, LegacyGridContainLabel, GridComponent, LegendComponent, TitleComponent, TooltipComponent, SVGRenderer]);
+// One list drives the registration and the coverage test (src/core/format/coverage.test.ts): every series type and component key an option uses must be a key here.
+export const COMPONENTS = {
+  labelLayout: LabelLayout,
+  custom: CustomChart,
+  dataZoom: DataZoomComponent,
+  graphic: GraphicComponent,
+  markArea: MarkAreaComponent,
+  markLine: MarkLineComponent,
+  bar: BarChart,
+  line: LineChart,
+  pie: PieChart,
+  scatter: ScatterChart,
+  treemap: TreemapChart,
+  funnel: FunnelChart,
+  gauge: GaugeChart,
+  heatmap: HeatmapChart,
+  map: MapChart,
+  geo: GeoComponent,
+  visualMap: VisualMapComponent,
+  grid: GridComponent,
+  legend: LegendComponent,
+  title: TitleComponent,
+  tooltip: TooltipComponent,
+};
+echarts.use([...Object.values(COMPONENTS), LegacyGridContainLabel, SVGRenderer]);
 
 let registered = false;
 /** Registers the outlines of the countries (map "world") and of the US states (map "states") once. */
