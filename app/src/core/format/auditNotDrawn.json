@@ -53,20 +53,5 @@
       "listSlicer.shapeCustomRectangle.tabCutCornerSnipSizeLeftBottom",
       "listSlicer.shapeCustomRectangle.tabCutCornerSnipSizeRightBottom"
     ]
-  },
-  {
-    "class": "Open (not diagnosed)",
-    "reason": "The key influencers visual of the audit shows no difference for these settings (sort of the influencers, target value); not investigated further this session.",
-    "props": [
-      "keyDriversVisual.keyDrivers.selectedSort",
-      "keyDriversVisual.keyDrivers.targetValue"
-    ]
-  },
-  {
-    "class": "Open (not diagnosed)",
-    "reason": "The audit's click on the tile slicer's chips times out under this tile shape (the clip path hides them from the pointer), so the shape could not be checked in the real window; unit-tested in tileLook.test.ts.",
-    "props": [
-      "advancedSlicerVisual.shapeCustomRectangle.tileShape"
-    ]
   }
 ]

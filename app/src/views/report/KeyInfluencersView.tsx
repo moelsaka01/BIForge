@@ -36,6 +36,12 @@ export function KeyInfluencersView({ page, visual, width, height }: { page: Page
   const [error, setError] = useState<string | null>(null);
   const categorical = target?.kind === "column";
 
+  // the Format pane sets the sort order and the outcome: a change there replaces what was picked in the visual
+  useEffect(() => setSort(style.sort), [style.sort]);
+  useEffect(() => {
+    if (style.targetValue) setOutcome(style.targetValue);
+  }, [style.targetValue]);
+
   // the outcomes of a categorical target
   useEffect(() => {
     if (!target || target.kind !== "column") return;

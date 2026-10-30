@@ -7,7 +7,10 @@ export const PREP = {
   async advancedSlicerVisual(page) {
     const chips = probe(page).getByRole("option");
     const n = await chips.count();
-    if (n > 2) { await chips.nth(n - 1).click(); await page.waitForTimeout(300); await chips.nth(n - 2).click(); await page.waitForTimeout(500); }
+    if (n > 2) {
+      // dispatched, not clicked: a tile shape (arrow, heart) clips the chips out of the pointer's reach
+      await chips.nth(n - 1).dispatchEvent("click"); await page.waitForTimeout(300); await chips.nth(n - 2).dispatchEvent("click"); await page.waitForTimeout(500);
+    }
   },
   // the drop-down list is opened (its surface is drawn over the visual)
   async listSlicer(page) {

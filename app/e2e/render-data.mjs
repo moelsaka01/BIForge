@@ -100,7 +100,13 @@ export function dataFor(json, c) {
   // Q&A shows its states only for a saved question: understood, not understood (error), understood with an assumption (warning)
   if (c.visualType === "qnaVisual" && c.object !== "suggestions" && c.prop !== "savedUtterance") setProps(json, "hiddenProperties", { savedUtterance: { expr: { Literal: { Value: "'" + (c.prop === "errorColor" ? "zz qq xx" : c.prop === "warningColor" ? "quantity by category" : "total quantity by category") + "'" } } } });
   // the outcome of the key influencers analysis is one of the values of the target
-  if (c.visualType === "keyDriversVisual" && c.prop === "targetValue") setProps(json, "keyDrivers", { targetValue: { expr: { Literal: { Value: "'Store'" } } } });
+  // (only the variant has the property: the visual without it takes the first value, Online)
+  if (c.visualType === "keyDriversVisual" && c.prop === "targetValue" && json.visual?.objects?.keyDrivers) setProps(json, "keyDrivers", { targetValue: { expr: { Literal: { Value: "'Store'" } } } });
+  // the sort order of the influencers shows when there are several fields to explain by
+  if (c.visualType === "keyDriversVisual" && c.prop === "selectedSort") {
+    const ex = json.visual.query.queryState.ExplainBy.projections;
+    for (const [ent, prop] of [["Product", "Subcategory"], ["Customer", "Country"]]) ex.push({ field: { Column: { Expression: { SourceRef: { Entity: ent } }, Property: prop } }, queryRef: ent + "." + prop, nativeQueryRef: prop });
+  }
   if (/ComboChart$/.test(c.visualType) && c.object === "layout" && /^clusteredGap/.test(c.prop)) secondColumn(json);
   // two column measures side by side: their large labels meet
   if (/ComboChart$/.test(c.visualType) && c.object === "labels" && c.prop === "optimizeLabelDisplay") secondColumn(json);
