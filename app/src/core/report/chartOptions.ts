@@ -22,7 +22,7 @@ import { bubbleMap, filledMap } from "./mapOptions";
 import { bandStyle, stackBands, type Stacked } from "./ribbonBands";
 
 import type { O } from "./chartFormat";
-import { withOpacity } from "./chartFormat";
+import { labelBackground, withOpacity } from "./chartFormat";
 
 export interface ChartInput {
   visual: VisualModel;
@@ -948,11 +948,11 @@ function scatter(inp: ChartInput): ChartBuild {
     return {
       name: s.name,
       type: "scatter",
-      itemStyle: { color, opacity: markerAlpha, ...(markerBorder ? { borderColor: f.bool("markers", "borderColorMatchFill", false) ? color : (f.color("markers", "borderColor") ?? theme.foreground), borderWidth: f.num("markers", "borderWidth", 1) } : {}) },
+      itemStyle: { color, opacity: markerAlpha, ...(markerBorder ? { borderColor: withOpacity(f.bool("markers", "borderColorMatchFill", false) ? color : (f.color("markers", "borderColor") ?? theme.foreground), opacityOf(f.num("markers", "borderTransparency", 0))), borderWidth: f.num("markers", "borderWidth", 1) } : {}) },
       symbol: SYMBOLS[f.str("bubbles", "markerShape", "circle")] ?? "circle",
       symbolRotate: f.num("markers", "rotation", 0),
       symbolSize: (d: number[]) => bubble * (sc ? 8 + (smax === smin ? 0.5 : (d[2] - smin) / (smax - smin)) * 28 : 10),
-      label: { show: showPointLabels, formatter: (pa: O) => String(pa.data[3] ?? ""), position: "right", ...echartsText(ptFont, labelDefaults(theme)) },
+      label: { show: showPointLabels, formatter: (pa: O) => String(pa.data[3] ?? ""), position: "right", ...echartsText(ptFont, labelDefaults(theme)), ...labelBackground(f, theme, "categoryLabels") },
       data: s.pts.map((pt) => [valueNum(pt.row[xc?.index ?? 0]), valueNum(pt.row[yc?.index ?? 0]), sc ? (valueNum(pt.row[sc.index]) ?? 0) : 0, cat ? labelOf(pt.row[cat.index], cat.format) : ""]),
     };
   });
@@ -1138,7 +1138,7 @@ function gauge(inp: ChartInput): ChartBuild {
           show: f.bool("labels", "show", true),
           distance: 16,
           ...echartsText(axisFont, { ...labelDefaults(theme), size: 10 }),
-          formatter: (v: number) => (f.has("labels", "labelDisplayUnits") ? valueText(v, fmt, f, "labels") : formatCompact(v, "auto", 1, fmt)),
+          formatter: (v: number) => (f.has("labels", "labelDisplayUnits") || f.has("labels", "labelPrecision") ? valueText(v, fmt, f, "labels") : formatCompact(v, "auto", 1, fmt)),
         },
         detail: { show: f.bool("calloutValue", "show", true), valueAnimation: false, offsetCenter: [0, "20%"], ...echartsText(calloutFont, calloutDefaults), formatter: (v: number) => valueText(v, fmt, f, "calloutValue") },
         title: { show: false },

@@ -2,7 +2,7 @@
 // Locations are found in the gazetteer by name (Category) or taken from longitude and latitude values (X and Y of the
 // bubble map). A label the data does not know is not drawn and is listed in `notice`.
 import { labelOf, columnsOf, num as valueNum, valueToLit } from "./chartData";
-import { legendBlock, valueText, labelDefaults } from "./chartFormat";
+import { labelBackground, legendBlock, valueText, labelDefaults } from "./chartFormat";
 import type { ChartBuild, ChartInput } from "./chartOptions";
 import { FormatReader } from "./formatReader";
 import type { Gazetteer, Place } from "./geo";
@@ -170,7 +170,7 @@ export function bubbleMap(inp: ChartInput, gaz: Gazetteer): ChartBuild {
       coordinateSystem: "geo",
       itemStyle: { color, opacity: alpha, borderColor: color, borderWidth: 1 },
       symbolSize: (d: number[]) => radius(d[2]),
-      label: { show: showLabels, formatter: (pa: O) => String(pa.data[3] ?? ""), position: "right", ...echartsText(labelFont, labelDefaults(theme)) },
+      label: { show: showLabels, formatter: (pa: O) => String(pa.data[3] ?? ""), position: "right", ...echartsText(labelFont, labelDefaults(theme)), ...labelBackground(f, theme, "categoryLabels") },
       data: s.items.map(({ r }) => [r.lon, r.lat, sc ? (valueNum(r.row[sc.index]) ?? 0) : 0, r.label]),
     };
   });

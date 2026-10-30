@@ -105,6 +105,8 @@ export function dataFor(json, c) {
   if (c.object === "centerBackground" && c.prop === "padding") setProps(json, "centerBackground", { fillColor: colorLit("#ffcc00") });
   // a 100 % axis ends at 100: the constant line stands at 50
   if (/^hundredPercent/.test(c.visualType) && c.object === "y1AxisReferenceLine" && c.prop !== "value" && c.prop !== "autoScale") for (const e of json.visual?.objects?.y1AxisReferenceLine ?? []) if (e.selector?.id === "constant") e.properties.value = numLit(50);
+  // a gauge takes the target of the Axis card only where no field gives one
+  if (c.visualType === "gauge" && c.object === "axis" && c.prop === "target") delete json.visual?.query?.queryState?.TargetValue;
   if (c.visualType === "kpi" && c.object === "status") kpiState(json, c.prop === "neutralColor" ? "neutral" : "bad");
   if (c.visualType === "cardVisual" && c.object === "accentBar") setProps(json, "accentBar", { show: TRUE });
   if (c.object === "subTotals" && /^columnSubtotals/.test(c.prop)) twoColumnLevels(json);
@@ -112,7 +114,8 @@ export function dataFor(json, c) {
   if (c.object === "subTotals" && c.prop === "rowSubtotalsLabel") setProps(json, "subTotals", { rowSubtotalsPosition: { expr: { Literal: { Value: "'Bottom'" } } } });
   if (/^category(Min|Max|Size)$/.test(c.prop) && c.object === "zoom") months(json);
   // a background shows its transparency only where it has a color of its own
-  if (/^backgroundTransparency$/.test(c.prop) && /^(labels|totals)$/.test(c.object)) setProps(json, c.object, { enableBackground: TRUE, backgroundColor: colorLit("#ffcc00") });
+  if (/^backgroundTransparency$/.test(c.prop) && /^(labels|totals|categoryLabels)$/.test(c.object)) setProps(json, c.object, { enableBackground: TRUE, backgroundColor: colorLit("#ffcc00") });
+  if (c.object === "categoryLabels" && /^(enableBackground|backgroundColor)$/.test(c.prop)) setProps(json, c.object, { show: TRUE, enableBackground: TRUE, backgroundColor: colorLit("#ffcc00") });
   // a title wraps only where it is longer than the visual is wide
   if (c.prop === "titleWrap" && /^(title|subTitle)$/.test(c.object)) setProps(json, c.object, { show: TRUE, text: { expr: { Literal: { Value: "'" + LONG + "'" } } } });
   // text wraps only where it is wider than its column: narrow columns

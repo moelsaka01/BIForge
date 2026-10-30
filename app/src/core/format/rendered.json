@@ -3784,8 +3784,11 @@
    "underline"
   ],
   "categoryLabels": [
+   "backgroundColor",
+   "backgroundTransparency",
    "bold",
    "color",
+   "enableBackground",
    "fontFamily",
    "fontSize",
    "italic",
@@ -3812,6 +3815,7 @@
    "borderColor",
    "borderColorMatchFill",
    "borderShow",
+   "borderTransparency",
    "borderWidth",
    "rotation",
    "transparency"
@@ -3926,8 +3930,11 @@
    "markerRangeType"
   ],
   "categoryLabels": [
+   "backgroundColor",
+   "backgroundTransparency",
    "bold",
    "color",
+   "enableBackground",
    "fontFamily",
    "fontSize",
    "italic",
@@ -4148,7 +4155,8 @@
   ],
   "axis": [
    "max",
-   "min"
+   "min",
+   "target"
   ],
   "calloutValue": [
    "bold",
@@ -4171,6 +4179,7 @@
    "fontSize",
    "italic",
    "labelDisplayUnits",
+   "labelPrecision",
    "show",
    "underline"
   ],
@@ -4181,6 +4190,7 @@
    "fontSize",
    "italic",
    "labelDisplayUnits",
+   "labelPrecision",
    "show",
    "underline"
   ]

@@ -157,11 +157,15 @@ const WITH: Record<string, Record<string, Record<string, Lit>>> = {
   valueAxis: { labelDisplayUnits: { labelPrecision: lit.num(2) } },
   // the picture of the plot area comes from the data address when the source says so
   plotArea: { imageData: { sourceType: lit.str("imageData") } },
-  labels: { labelDisplayUnits: { labelPrecision: lit.num(2) } },
+  labels: { labelDisplayUnits: { labelPrecision: lit.num(2) }, labelPrecision: { labelDisplayUnits: lit.num(1000) } },
+  target: { labelPrecision: { labelDisplayUnits: lit.num(1000) } },
   value: { labelDisplayUnits: { labelPrecision: lit.num(2) }, labelPrecision: { labelDisplayUnits: lit.num(1000) } },
   image: { imageData: { imageType: lit.str("imageData") } },
   centerBackground: { fit: { imageType: lit.str("imageData"), imageData: lit.str(PNG_WIDE) }, imageData: { imageType: lit.str("imageData") }, imageType: { imageData: lit.str(PNG_1PX_GREEN) }, imageTransparency: { imageUrl: lit.str(PNG_1PX) } },
   mapControls: { zoomLevel: { autoZoom: lit.bool(false) } },
+  // the background of a category label needs a color of its own to be seen; the marker border needs to be shown
+  categoryLabels: { backgroundColor: { enableBackground: lit.bool(true) }, backgroundTransparency: { enableBackground: lit.bool(true), backgroundColor: lit.str("#ffcc00") } },
+  markers: { borderTransparency: { borderShow: lit.bool(true) } },
   layout: { clusteredGapOverlapReverse: { clusteredGapOverlaps: lit.bool(true) }, stackedGapExplodes: { stackedGapSize: lit.num(4) } },
   // the corners of the tile need the shape that uses them
   shapeCustomRectangle: {
@@ -225,6 +229,11 @@ const matrixParts: Cell[][][] = [
   [[t("Bikes"), t("France"), n(25)], [t("Bikes"), t("Canada"), n(35)], [t("Clothing"), t("France"), n(40)]],
   [[t("Bikes"), t("France"), t("Online"), n(15)], [t("Bikes"), t("France"), t("Store"), n(10)], [t("Bikes"), t("Canada"), t("Online"), n(25)], [t("Bikes"), t("Canada"), t("Store"), n(10)], [t("Clothing"), t("France"), t("Online"), n(30)], [t("Clothing"), t("France"), t("Store"), n(10)]],
 ];
+
+const EXTRA_SCENARIOS: Record<string, [Scenario, string[]][]> = {
+  donutChart: [[chart("donutChart", { Category: [Cat], Y: [Qty] }, [[t("Accessories"), ["blank", ""]], [t("Bikes"), ["blank", ""]]]), ["value"]]],
+  gauge: [[chart("gauge", { Y: [Qty] }, [[n(60)]]), ["axis"]]],
+};
 
 const SCENARIOS: Record<string, Scenario> = {
   clusteredColumnChart: chart("clusteredColumnChart", { Category: [Cat], Series: [Country], Y: [Qty] }, catRows),
@@ -488,10 +497,10 @@ function computeAll(): Coverage {
     const objs = Object.keys(visualObjects(id) ?? {}).filter((o) => !CONTAINER_OBJECTS.has(o) && o !== "actionButtonSection");
     const own = measure(sc, id, objs);
     if (TOTALS_TYPES.includes(id)) Object.assign(own, measure(totalsScenario(id), id, ["totals"]));
-    // a donut without any value: the centre shows the text of "Show blank as"
-    if (id === "donutChart") {
-      const blank = measure(chart(id, { Category: [Cat], Y: [Qty] }, [[t("Accessories"), ["blank", ""]], [t("Bikes"), ["blank", ""]]]), id, ["value"]);
-      own.value = [...new Set([...(own.value ?? []), ...(blank.value ?? [])])].sort();
+    // scenarios that show what the main one hides: a donut without any value (the centre shows "Show blank as"), a gauge without a target field (the target comes from Axis > Target)
+    for (const [extra, objects] of EXTRA_SCENARIOS[id] ?? []) {
+      const more = measure(extra, id, objects);
+      for (const o of objects) if (more[o]) own[o] = [...new Set([...(own[o] ?? []), ...more[o]])].sort();
     }
     if (SM_TYPES.includes(id)) Object.assign(own, measure(smScenario(id), id, ["smallMultiplesLayout", "subheader"]));
     if (Object.keys(own).length) result[id] = own;

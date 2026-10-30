@@ -56,6 +56,12 @@ export function withOpacity(color: string, opacity: number): string {
   return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${Math.round(opacity * 1000) / 1000})`;
 }
 
+/** The background of a data/category label (enableBackground, backgroundColor, backgroundTransparency) as ECharts label options. */
+export function labelBackground(f: FormatReader, theme: Theme, object: string): O {
+  if (!f.bool(object, "enableBackground", false)) return {};
+  return { backgroundColor: withOpacity(f.color(object, "backgroundColor") ?? theme.background, opacityOf(f.num(object, "backgroundTransparency", 0))), padding: [2, 4] };
+}
+
 /** A dash pattern written as "5 3" or "5,3" (lengths of dash and gap); null when it holds no usable pattern. */
 export function dashOf(text: string): number[] | null {
   const n = text.split(/[\s,]+/).filter(Boolean).map(Number);
