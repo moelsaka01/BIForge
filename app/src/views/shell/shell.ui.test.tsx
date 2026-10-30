@@ -101,6 +101,46 @@ describe("start screen", () => {
     expect(a.session.store.project).not.toBeNull();
   });
 
+  it("opens the project used last instead of the start screen when the start screen is off in Options", async () => {
+    const storage = new MemoryStorage();
+    storage.setItem(SETTINGS_KEY, JSON.stringify({ options: { "interface.showStartScreen": false }, recent: [{ path: "D:/x/Other.pbip", name: "Other", openedAt: 1 }, { path: PBIP, name: "Fixture", openedAt: Date.now() }] }));
+    const a = makeApp({ storage });
+    render(a.element);
+    await waitFor(() => expect(screen.getByTestId("ribbon")).toBeTruthy());
+    // Fixture (opened last), not Other
+    expect(a.session.store.project).not.toBeNull();
+  });
+
+  it("shows the start screen at startup by default", async () => {
+    const storage = new MemoryStorage();
+    storage.setItem(SETTINGS_KEY, JSON.stringify({ recent: [{ path: PBIP, name: "Fixture", openedAt: Date.now() }] }));
+    const a = makeApp({ storage });
+    render(a.element);
+    await new Promise((r) => setTimeout(r, 50));
+    expect(screen.getByTestId("start-screen")).toBeTruthy();
+    expect(a.session.store.project).toBeNull();
+  });
+
+  it("pins a recent project to the top of the list, keeps it across runs, and opens a row with Enter", async () => {
+    const storage = new MemoryStorage();
+    storage.setItem(SETTINGS_KEY, JSON.stringify({ recent: [{ path: PBIP, name: "Fixture", openedAt: Date.now() }, { path: "D:/x/Other.pbip", name: "Other", openedAt: Date.now() - 30 * 86400000 }] }));
+    const a = makeApp({ storage });
+    render(a.element);
+    const table = screen.getByRole("table", { name: "Recent projects" });
+    const names = () => within(table).getAllByRole("row").slice(1).map((r) => within(r).getAllByRole("button")[0].textContent);
+    expect(names()).toEqual(["Fixture", "Other"]);
+    fireEvent.click(within(table).getByRole("button", { name: "Pin Other" }));
+    expect(names()).toEqual(["📌 Other", "Fixture"]);
+    expect(within(table).getByRole("button", { name: "Unpin Other" }).getAttribute("aria-pressed")).toBe("true");
+    expect(JSON.parse(storage.getItem(SETTINGS_KEY)!).recent.find((r: { name: string }) => r.name === "Other").pinned).toBe(true);
+    fireEvent.click(within(table).getByRole("button", { name: "Unpin Other" }));
+    expect(names()).toEqual(["Fixture", "Other"]);
+    // Enter on a row opens the project
+    fireEvent.keyDown(within(table).getAllByRole("row")[1], { key: "Enter" });
+    await waitFor(() => expect(screen.getByTestId("ribbon")).toBeTruthy());
+    expect(a.session.store.project).not.toBeNull();
+  });
+
   it("a recent project that cannot be opened reports why, and can be removed from the list", async () => {
     const storage = new MemoryStorage();
     storage.setItem(SETTINGS_KEY, JSON.stringify({ recent: [{ path: "D:/gone/Gone.pbip", name: "Gone", openedAt: Date.now() }] }));

@@ -11,8 +11,9 @@ D | Card: Learn with sample data (own sample project)
 D | Collapsible Recommended section with tip carousel (original tips)
 D | Recent list: keyword filter, date filter, remove entry
 D | Missing recent project reports the error and can be removed
-N | Recent list: pin an entry, open with Enter, thumbnail
-N | Show the start screen on launch setting
+D | Recent list: pin an entry, open with Enter
+N | Recent list: thumbnail
+D | Show the start screen on launch setting
 ## 2. Title bar and window
 ### Title bar
 D | Quick-access Save, Undo, Redo

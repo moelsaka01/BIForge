@@ -27,6 +27,8 @@ export interface RecentProject {
   name: string;
   /** Epoch milliseconds of the last time it was opened or created here. */
   openedAt: number;
+  /** Pinned entries stay at the top of the list and are never pushed out by newer ones. */
+  pinned?: boolean;
 }
 
 export interface AppSettings {
@@ -94,6 +96,7 @@ export function sanitizeSettings(raw: unknown): AppSettings {
   const recent = Array.isArray(r.recent)
     ? r.recent
         .filter((x): x is RecentProject => !!x && typeof x.path === "string" && typeof x.name === "string" && typeof x.openedAt === "number")
+        .map((x) => (x.pinned === true ? x : { path: x.path, name: x.name, openedAt: x.openedAt }))
         .slice(0, MAX_RECENT_LIMIT)
     : [];
   return {
@@ -162,9 +165,20 @@ export class SettingsStore {
   }
 
   addRecent(path: string, name: string, now = Date.now()): void {
+    const was = this.snap.recent.find((r) => samePath(r.path, path));
     const rest = this.snap.recent.filter((r) => !samePath(r.path, path));
     const max = typeof this.snap.options["interface.recentCount"] === "number" ? Math.min(MAX_RECENT_LIMIT, Math.max(1, this.snap.options["interface.recentCount"] as number)) : MAX_RECENT;
-    this.commit({ ...this.snap, recent: [{ path, name, openedAt: now }, ...rest].slice(0, max) });
+    const entry: RecentProject = { path, name, openedAt: now, ...(was?.pinned ? { pinned: true } : {}) };
+    // pinned entries do not count against the limit
+    const all = [entry, ...rest];
+    const room = Math.max(0, max - all.filter((r) => r.pinned).length);
+    let free = room;
+    this.commit({ ...this.snap, recent: all.filter((r) => r.pinned || free-- > 0) });
+  }
+
+  pinRecent(path: string, pinned: boolean): void {
+    if (!this.snap.recent.some((r) => samePath(r.path, path) && !!r.pinned !== pinned)) return;
+    this.commit({ ...this.snap, recent: this.snap.recent.map((r) => (samePath(r.path, path) ? (pinned ? { ...r, pinned: true } : { path: r.path, name: r.name, openedAt: r.openedAt }) : r)) });
   }
 
   removeRecent(path: string): void {

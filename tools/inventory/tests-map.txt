@@ -9,6 +9,8 @@
 1|Card: Learn with sample data (own sample project) => app/src/core/session/sample.test.ts :: Learn with sample data
 1|Collapsible Recommended section with tip carousel (original tips) => app/src/views/shell/shell.ui.test.tsx :: Recommended carousel
 1|Recent list: keyword filter, date filter, remove entry => app/src/views/shell/shell.ui.test.tsx :: filters them by keyword ;; app/src/views/shell/shell.ui.test.tsx :: value: "week" ;; app/src/views/shell/shell.ui.test.tsx :: can be removed from the list
+1|Recent list: pin an entry, open with Enter => app/src/views/shell/shell.ui.test.tsx :: pins a recent project to the top of the list ;; app/src/core/shell/recentPins.test.ts :: pinned recent projects
+1|Show the start screen on launch setting => app/src/views/shell/shell.ui.test.tsx :: opens the project used last instead of the start screen
 1|Missing recent project reports the error and can be removed => app/src/views/shell/shell.ui.test.tsx :: cannot be opened reports why
 2|Quick-access Save, Undo, Redo => app/src/views/shell/shell.ui.test.tsx :: Save, Undo and Redo are commands
 2|Document title with saved/unsaved state => app/src/views/shell/shell.ui.test.tsx :: shows the project name and its saved state

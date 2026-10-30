@@ -165,6 +165,16 @@ export function registerShellCommands(r: CommandRegistry<Session>): void {
       s.shell.settings.removeRecent(path);
     },
   });
+  r.register({
+    id: "app.recent.pin",
+    label: "Pin or unpin a recent project",
+    category: "File",
+    run(s, args) {
+      const a = (args ?? {}) as { path?: string; pinned?: boolean };
+      if (!a.path) throw new Error("Missing project path.");
+      s.shell.settings.pinRecent(a.path, a.pinned !== false);
+    },
+  });
   r.register({ id: "app.options", label: "Options and settings", category: "App", run: (s, args) => s.shell.openDialog({ kind: "options", page: (args as { page?: string } | undefined)?.page }) });
   r.register({
     id: "app.option.set",

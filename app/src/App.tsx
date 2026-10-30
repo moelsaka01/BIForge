@@ -33,7 +33,15 @@ export function AppView({ rt, files = browserFiles, editorFactory = createMonaco
 
   // a biforge:// link or .biforge file the app was started with opens the "open shared report" confirmation
   useEffect(() => {
-    void registry.execute("package.startup");
+    void (async () => {
+      await registry.execute("package.startup");
+      // Options > Interface > start screen off: the project that was open last opens instead of the start screen
+      const now = session.shell.settings.getSnapshot();
+      const last = [...now.recent].sort((a, b) => b.openedAt - a.openedAt)[0];
+      if (now.options["interface.showStartScreen"] === false && last && !session.store.project) await registry.execute("file.open", { path: last.path });
+    })();
+    // only at startup
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [registry]);
 
   // a link or file opened while BIForge is running arrives from the second start (single instance) as an event

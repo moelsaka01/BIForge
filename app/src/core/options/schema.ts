@@ -50,6 +50,7 @@ export const OPTION_PAGES: OptionPage[] = [
       e("interface.shell", "Interface", "classic", [["classic", "Classic: multi-line ribbon, panes side by side on the right"], ["modern", "Modern: single-line ribbon, Data pane on the left, one pane switcher on the right"]], true),
       e("interface.theme", "Theme", "light", [["light", "Light"], ["dark", "Dark"], ["system", "Use system setting"]], true, "\"Use system setting\" follows the Windows light or dark mode and changes with it."),
       e("interface.ribbonMode", "Ribbon (this interface)", "multiline", [["multiline", "Multi-line"], ["singleline", "Single line"]], true),
+      b("interface.showStartScreen", "Show the start screen when BIForge opens (off: the project used last opens)", true, true),
       b("interface.showRecommended", "Show the Recommended section on the start screen", true, true),
       n("interface.recentCount", "Number of recent projects to remember", 20, 1, 50, true),
       n("interface.zoom", "Size of the interface (percent)", 100, 50, 200, true, "Scales the whole window, text and controls together."),

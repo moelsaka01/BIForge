@@ -147,7 +147,7 @@ Last updated: 2026-10-25 (see PROGRESS.md; the status table below is generated b
 <!-- inventory-status:begin -->
 | Inventory area | Items | Done-tested | Partial | Not started | Needs external software | Needs Desktop verification | Blocked |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Start screen | 12 | 9 | 1 | 2 | 0 | 0 | 0 |
+| Start screen | 13 | 11 | 1 | 1 | 0 | 0 | 0 |
 | Title bar and window | 13 | 11 | 0 | 2 | 0 | 0 | 0 |
 | File menu and backstage | 20 | 12 | 1 | 7 | 0 | 0 | 0 |
 | Report view ribbon: Home tab | 19 | 15 | 1 | 3 | 0 | 0 | 0 |
@@ -175,10 +175,10 @@ Last updated: 2026-10-25 (see PROGRESS.md; the status table below is generated b
 | Keyboard shortcuts | 37 | 29 | 1 | 7 | 0 | 0 | 0 |
 | Export, print and file formats | 15 | 5 | 1 | 9 | 0 | 0 | 0 |
 | Accessibility and platform | 12 | 3 | 0 | 9 | 0 | 0 | 0 |
-| Format pane cards per visual | 1264 | 913 | 159 | 192 | 0 | 0 | 0 |
+| Format pane cards per visual | 1264 | 937 | 135 | 192 | 0 | 0 | 0 |
 | DAX functions | 317 | 300 | 0 | 17 | 0 | 0 | 0 |
 | M standard library | 621 | 457 | 0 | 164 | 0 | 0 | 0 |
-| **Total** | **2973** | **2138** | **198** | **626** | **11** | **0** | **0** |
+| **Total** | **2974** | **2164** | **174** | **625** | **11** | **0** | **0** |
 <!-- inventory-status:end -->
 
 ## Online track (Publish & Share; plan in docs/ONLINE_PLAN.md)

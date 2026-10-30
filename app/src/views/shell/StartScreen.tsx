@@ -77,7 +77,9 @@ export function StartScreen({ variant }: { variant: ShellKind }) {
   const recent = useMemo(() => {
     const now = Date.now();
     const needle = q.trim().toLowerCase();
-    return settings.recent.filter((r) => {
+    // pinned entries first, each group in the order of the list
+    const ordered = [...settings.recent.filter((r) => r.pinned), ...settings.recent.filter((r) => !r.pinned)];
+    return ordered.filter((r) => {
       if (needle && !r.name.toLowerCase().includes(needle) && !r.path.toLowerCase().includes(needle)) return false;
       if (filter === "week") return now - r.openedAt <= 7 * DAY;
       if (filter === "older") return now - r.openedAt > 7 * DAY;
@@ -204,20 +206,24 @@ export function StartScreen({ variant }: { variant: ShellKind }) {
                 <th style={{ width: "26%" }}>Name</th>
                 <th>Location</th>
                 <th style={{ width: 190 }}>Opened</th>
-                <th style={{ width: 90 }} />
+                <th style={{ width: 130 }} />
               </tr>
             </thead>
             <tbody>
               {recent.map((r) => (
-                <tr key={r.path}>
+                <tr key={r.path} tabIndex={0} onKeyDown={(e) => e.key === "Enter" && e.target === e.currentTarget && void env.run("file.open", { path: r.path })}>
                   <td>
                     <button type="button" className="link-btn" title={`Open ${r.name}`} onClick={() => void env.run("file.open", { path: r.path })}>
+                      {r.pinned ? "📌 " : ""}
                       {r.name}
                     </button>
                   </td>
                   <td title={r.path}>{r.path}</td>
                   <td>{formatWhen(r.openedAt)}</td>
                   <td>
+                    <button type="button" className="link-btn" aria-label={`${r.pinned ? "Unpin" : "Pin"} ${r.name}`} aria-pressed={!!r.pinned} onClick={() => void env.run("app.recent.pin", { path: r.path, pinned: !r.pinned })}>
+                      {r.pinned ? "Unpin" : "Pin"}
+                    </button>{" "}
                     <button type="button" className="link-btn" aria-label={`Remove ${r.name} from the list`} onClick={() => void env.run("app.recent.remove", { path: r.path })}>
                       Remove
                     </button>
