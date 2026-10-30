@@ -131,7 +131,8 @@ export function dataFor(json, c) {
   // a blank value: the pairs of category and series with a small quantity have none; a card has nothing at all
   if (c.prop === "showBlankAs") measure(json, c.visualType === "cardVisual" || (c.visualType === "donutChart" && c.object === "value") ? "Empty" : "Sparse");
   // overlapping labels: large ones, so that neighbouring labels collide
-  if (c.prop === "optimizeLabelDisplay") setProps(json, "labels", { show: { expr: { Literal: { Value: "true" } } }, fontSize: numLit(28) });
+  // overlapping labels: large ones that are allowed to overflow their bars (otherwise the ones that do not fit are hidden before any overlap), so that neighbouring labels collide
+  if (c.prop === "optimizeLabelDisplay") setProps(json, "labels", { show: { expr: { Literal: { Value: "true" } } }, fontSize: numLit(40), labelOverflow: { expr: { Literal: { Value: "true" } } } });
   // the format string of the visual is used by the labels
   if (c.object === "general" && c.prop === "formatString") setProps(json, "labels", { show: TRUE, labelStyle: { expr: { Literal: { Value: "'Data'" } } } });
   // text wraps where it is wider than its box

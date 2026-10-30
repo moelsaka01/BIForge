@@ -322,6 +322,8 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
       // a label hangs on a symbol: with symbol "none" ECharts draws no label, so the symbol is there at size 0
       symbol: "circle",
       symbolSize: 0,
+      // on a 100 % chart the label hangs outside the plot (at the edge of the axis): the series must not clip it
+      clip: false,
       lineStyle: { opacity: 0 },
       tooltip: { show: false },
       z: 7,
