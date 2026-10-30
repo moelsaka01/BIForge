@@ -1,6 +1,7 @@
 // Properties the pixel comparison cannot see by their nature. Each is listed in the audit report with its reason; a "semantic"
 // property must still change the DOM (an attribute or heading level), the others are checked by unit tests of the behaviour.
 const RULES = [
+  [/\.qnaVisual\.inputBox\.hoverColor$/, "interaction", "the input box takes this colour only while the pointer is over it"],
   [/\.visualLink\./, "interaction", "a Ctrl+click action and its hover tooltip: nothing is drawn until the pointer is on the visual"],
   [/\.zoom\.(showLabels|showTooltip)$/, "interaction", "the slider's value readout shows only while a handle is dragged"],
   [/\.trend\.useHighlightValues$/, "interaction", "applies only while another visual cross-highlights this one"],

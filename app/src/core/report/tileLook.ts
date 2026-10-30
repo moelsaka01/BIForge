@@ -16,6 +16,8 @@ export interface TileLook {
   contentTransform: string | undefined;
   /** The Rotation card's angle of the whole visual (the visual frame applies it). */
   frameAngle: number;
+  /** Pixels the frame is drawn inside the visual on every side: the room an outer shadow or glow needs. */
+  inset: number;
   /** Which way the content grows past the frame, and whether it scrolls. */
   overflow: { direction: "horizontal" | "vertical"; scroll: boolean };
 }
@@ -35,6 +37,15 @@ function glow(f: FormatReader, object: "shadowCustom" | "glowCustom"): string | 
   const color = mix(f.color(object, "color") ?? (shadow ? "#000000" : "#ffd700"), opacityOf(f.num(object, "transparency", shadow ? 70 : 50)));
   const inset = f.str(object, "position", "Outer") === "Inner" ? "inset " : "";
   return `${inset}${x}px ${y}px ${f.num(object, "shadowBlur", shadow ? 4 : 8)}px ${f.num(object, shadow ? "shadowSpread" : "glowSpread", 0)}px ${color}`;
+}
+
+/** How far an outer shadow or glow reaches beyond the frame (blur, spread and offset): the frame leaves this room inside the visual so that it is not cut off. */
+function reach(f: FormatReader, object: "shadowCustom" | "glowCustom"): number {
+  if (!f.bool(object, "show", false) || f.str(object, "position", "Outer") === "Inner") return 0;
+  const shadow = object === "shadowCustom";
+  const preset = SHADOW_PRESETS[f.str(object, shadow ? "shadowPositionPreset" : "glowPositionPreset", "custom")];
+  const dist = preset ? preset.distance : f.num(object, shadow ? "shadowDistance" : "glowDistance", shadow ? 3 : 0);
+  return Math.max(0, f.num(object, "shadowBlur", shadow ? 4 : 8)) + Math.max(0, f.num(object, shadow ? "shadowSpread" : "glowSpread", 0)) + Math.abs(dist);
 }
 
 /** The corners of the Shape card: rounded (uniform or per corner) or snipped, as a border radius and a clip path. */
@@ -111,6 +122,7 @@ export function tileLook(f: FormatReader, slicer = false): TileLook {
     image,
     contentTransform: turn(rot.text - rot.shape),
     frameAngle: rot.frame,
+    inset: Math.min(48, Math.ceil(Math.max(reach(f, "shadowCustom"), reach(f, "glowCustom")))),
     overflow: { direction, scroll: f.num("overFlow", "overFlowStyle", 1) === 1 },
   };
 }

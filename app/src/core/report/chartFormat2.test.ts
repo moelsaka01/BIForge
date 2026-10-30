@@ -317,3 +317,25 @@ describe("axis titles", () => {
     expect(bars.bottom).toBeGreaterThan(build("clusteredBarChart", () => undefined).grid.bottom);
   });
 });
+
+describe("overlapping clustered bars", () => {
+  it("Reverse draws the first measure on top: the order counts every measure, not only the series", () => {
+    const two = (reverse: boolean) => {
+      const v = visualOf("clusteredColumnChart", { Category: [Cat], Y: [Qty, agg("Sales", "Quantity", 1)] });
+      setFormat(v.json, "layout", "clusteredGapOverlaps", lit.bool(true));
+      if (reverse) setFormat(v.json, "layout", "clusteredGapOverlapReverse", lit.bool(true));
+      const loaded: Extract<Loaded, { kind: "grouped" }> = {
+        kind: "grouped",
+        query: buildVisualQuery(v, model, { filters: [] })!,
+        rows: rows.map((r) => [...r, ["int", "7"] as [string, string]].map(([t, x]) => decodeCell({ t: t as never, v: x }))),
+        highlightRows: null,
+        totals: null,
+        truncated: false,
+        ms: 0,
+      };
+      return buildChart({ visual: v, loaded, theme: DEFAULT_THEME, selected: [] })!.option.series.map((s: { z: number }) => s.z);
+    };
+    expect(two(false)).toEqual([2, 3]);
+    expect(two(true)).toEqual([4, 3]);
+  });
+});

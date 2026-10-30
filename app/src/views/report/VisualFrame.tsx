@@ -370,7 +370,7 @@ export function VisualFrame(p: FrameProps) {
               // the fill, outline, shadow, glow and shape cards of the tile visuals
               const tile = tileLook(f, visual.visualType !== "cardVisual");
               return (
-                <div data-testid="tile-frame" style={{ width: "100%", height: "100%", ...tile.style }}>
+                <div data-testid="tile-frame" style={{ width: tile.inset ? `calc(100% - ${tile.inset * 2}px)` : "100%", height: tile.inset ? `calc(100% - ${tile.inset * 2}px)` : "100%", margin: tile.inset || undefined, ...tile.style }}>
                   {tile.image && <div data-testid="tile-image" style={tile.image} />}
                   <div style={{ position: "relative", width: "100%", height: "100%", transform: tile.contentTransform, overflow: tile.overflow.scroll ? (tile.overflow.direction === "horizontal" ? "auto hidden" : "hidden auto") : "hidden" }}>{content}</div>
                 </div>

@@ -341,6 +341,21 @@ describe("total labels of stacked charts", () => {
   });
 });
 
+describe("100 % chart total labels", () => {
+  it("make room above the bars (columns) or beside them (bars): the label hangs outside the axis", () => {
+    const rows = [[c("A"), c("France"), c(10)], [c("B"), c("France"), c(20)]];
+    const grid = (type: string, on: boolean) => {
+      const v = visualOf(type, { Category: [Cat], Series: [Country], Y: [Qty] });
+      fmt(v, "legend", "show", lit.bool(false));
+      if (on) fmt(v, "totals", "show", lit.bool(true));
+      return build(v, grouped(v, rows)).option.grid;
+    };
+    expect(grid("hundredPercentStackedColumnChart", true).top).toBeGreaterThan(grid("hundredPercentStackedColumnChart", false).top);
+    expect(grid("hundredPercentStackedBarChart", true).right).toBeGreaterThan(grid("hundredPercentStackedBarChart", false).right);
+    expect(grid("columnChart", true).top).toBe(grid("columnChart", false).top);
+  });
+});
+
 describe("100 % area labels", () => {
   it("are not clipped by the plot: the area reaches the top of the axis", () => {
     const rows = [[c("A"), c("France"), c(10)], [c("B"), c("France"), c(20)]];

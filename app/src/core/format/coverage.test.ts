@@ -160,11 +160,12 @@ const WITH: Record<string, Record<string, Record<string, Lit>>> = {
   // the picture of the plot area comes from the data address when the source says so
   plotArea: { imageData: { sourceType: lit.str("imageData") } },
   labels: { labelDisplayUnits: { labelPrecision: lit.num(2) }, labelPrecision: { labelDisplayUnits: lit.num(1000) } },
-  indicator: { indicatorPrecision: { indicatorDisplayUnits: lit.num(1000) } },
+  indicator: { indicatorPrecision: { indicatorDisplayUnits: lit.num(1000) }, iconSize: { showIcon: lit.bool(true) } },
   target: { labelPrecision: { labelDisplayUnits: lit.num(1000) } },
   value: { labelDisplayUnits: { labelPrecision: lit.num(2) }, labelPrecision: { labelDisplayUnits: lit.num(1000) } },
   // the callout area: individual paddings and corners need their switch
   cardCalloutArea: {
+    rectangleRoundedCurveCustomStyle: { rectangleRoundedCurveLeftTop: lit.num(20) },
     paddingTop: { paddingIndividual: lit.bool(true) }, paddingBottom: { paddingIndividual: lit.bool(true) }, paddingLeft: { paddingIndividual: lit.bool(true) }, paddingRight: { paddingIndividual: lit.bool(true) },
     rectangleRoundedCurveLeftTop: { rectangleRoundedCurveCustomStyle: lit.bool(true) }, rectangleRoundedCurveLeftBottom: { rectangleRoundedCurveCustomStyle: lit.bool(true) }, rectangleRoundedCurveRightTop: { rectangleRoundedCurveCustomStyle: lit.bool(true) }, rectangleRoundedCurveRightBottom: { rectangleRoundedCurveCustomStyle: lit.bool(true) },
   },

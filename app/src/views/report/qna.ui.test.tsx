@@ -61,3 +61,19 @@ describe("Q&A visual", () => {
     await waitFor(() => expect(getFormat(t.visual().json, "hiddenProperties", "savedUtterance")).toEqual(lit.str("total quantity by category")));
   });
 });
+
+describe("Q&A visual hover colour", () => {
+  it("a suggestion takes the input box's hover colour while the pointer is over it and gives it back after", async () => {
+    const t = setup();
+    await t.registry.execute("report.visual.add", { type: "qnaVisual" });
+    const v = t.visual().name;
+    await t.registry.execute("report.format.set", { page: "page1", visual: v, object: "inputBox", prop: "hoverColor", value: lit.str("#ff0000") });
+    render(<t.Host />);
+    const s = (await screen.findAllByRole("button", { name: /quantity|category|by/i }))[0] as HTMLElement;
+    const before = s.style.background;
+    fireEvent.mouseEnter(s);
+    expect(s.style.background).toMatch(/rgb\(255, 0, 0\)|#ff0000/);
+    fireEvent.mouseLeave(s);
+    expect(s.style.background).toBe(before === "" ? "transparent" : before);
+  });
+});

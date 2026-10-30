@@ -199,7 +199,10 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
       // the bars of a cluster overlap; reversed, the first series is drawn on top
       if (!stacked && f.bool("layout", "clusteredGapOverlaps", false)) {
         s.barGap = "-40%";
-        s.z = 2 + (f.bool("layout", "clusteredGapOverlapReverse", false) ? p.series.length - si : si);
+        // the bars of a cluster are the series of every column measure, in this order
+        const order = vi * p.series.length + si;
+        const bars = valueCols.filter((c) => c.role === "Y").length * p.series.length;
+        s.z = 2 + (f.bool("layout", "clusteredGapOverlapReverse", false) ? bars - order : order);
       }
     }
     if (isHighlight) {
@@ -478,6 +481,17 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
     else option.grid = { ...option.grid, bottom: (option.grid.bottom ?? 8) + zoom.room };
   }
   if (horizontal) option.yAxis = catAxis;
+  // a 100 % chart's total hangs outside the plot (the axis ends at 100): the plot leaves room for it on the side of the bars' ends
+  if (hundred && (stacked || ribbon) && f.bool("totals", "show", false)) {
+    const fontSize = Number(echartsText(readFont(f, "totals", { color: "color" }), labelDefaults(theme)).fontSize) || 12;
+    if (horizontal) option.grid = { ...option.grid, right: Math.max(option.grid.right ?? 12, 12 + fontSize * 3) };
+    else option.grid = { ...option.grid, top: Math.max(option.grid.top ?? 8, 8 + fontSize + 6) };
+  }
+  // the labels of a 100 % area hang above the top edge of the axis
+  if (hundred && areaOnly && f.bool("labels", "show", false)) {
+    const fontSize = Number(echartsText(readFont(f, "labels", { color: "color" }), labelDefaults(theme)).fontSize) || 12;
+    option.grid = { ...option.grid, top: Math.max(option.grid.top ?? 8, 8 + fontSize + 6) };
+  }
 
   return {
     option,

@@ -73,6 +73,7 @@ export function kpiState(json, state) {
   const ind = qs?.Indicator?.projections?.[0];
   if (!goal || !ind) return;
   if (state === "neutral") delete qs.Goal; // without a goal there is nothing to be good or bad against
+  else if (state === "good") return; // the sample indicator is above its goal
   else { goal.field = { Aggregation: { Expression: { Column: { Expression: { SourceRef: { Entity: "Product" } }, Property: "ListPrice" } }, Function: 0 } }; goal.queryRef = "Sum(Product.ListPrice)"; goal.nativeQueryRef = "Sum of ListPrice"; }
 }
 
@@ -97,7 +98,7 @@ export function dataFor(json, c) {
   // the text of a shape is turned only where there is a text
   if (c.visualType === "shape" && c.object === "rotation") setProps(json, "text", { show: TRUE, text: { expr: { Literal: { Value: "'Rotated text'" } } } });
   // Q&A shows its states only for a saved question: understood, not understood (error), understood with an assumption (warning)
-  if (c.visualType === "qnaVisual") setProps(json, "hiddenProperties", { savedUtterance: { expr: { Literal: { Value: "'" + (c.prop === "errorColor" ? "zz qq xx" : c.prop === "warningColor" ? "quantity by category" : "total quantity by category") + "'" } } } });
+  if (c.visualType === "qnaVisual" && c.object !== "suggestions" && c.prop !== "savedUtterance") setProps(json, "hiddenProperties", { savedUtterance: { expr: { Literal: { Value: "'" + (c.prop === "errorColor" ? "zz qq xx" : c.prop === "warningColor" ? "quantity by category" : "total quantity by category") + "'" } } } });
   // the outcome of the key influencers analysis is one of the values of the target
   if (c.visualType === "keyDriversVisual" && c.prop === "targetValue") setProps(json, "keyDrivers", { targetValue: { expr: { Literal: { Value: "'Store'" } } } });
   if (/ComboChart$/.test(c.visualType) && c.object === "layout" && /^clusteredGap/.test(c.prop)) secondColumn(json);
@@ -110,17 +111,22 @@ export function dataFor(json, c) {
     if (c.object === "labels") setProps(json, "labels", { valueCustomFormatString: { expr: { Literal: { Value: "'0\"        units\"'" } } } });
     else { const pr = json.visual?.query?.queryState?.Values?.projections?.[0]; if (pr) pr.displayName = "Total          quantity"; }
   }
+  // the corners of a tile show only where the tile has a fill (a transparent tile on the page has no visible edge)
+  if (c.object === "shapeCustomRectangle" && /^(cardVisual|advancedSlicerVisual|listSlicer)$/.test(c.visualType)) setProps(json, "fillCustom", { show: TRUE, fillColor: colorLit("#ffcc00") });
   // a gauge takes the target of the Axis card only where no field gives one
   if (c.visualType === "gauge" && c.object === "axis" && c.prop === "target") delete json.visual?.query?.queryState?.TargetValue;
-  if (c.visualType === "kpi" && c.object === "status") kpiState(json, c.prop === "neutralColor" ? "neutral" : "bad");
-  if (c.visualType === "cardVisual" && c.object === "accentBar") setProps(json, "accentBar", { show: TRUE });
+  if (c.visualType === "kpi" && c.object === "status") kpiState(json, c.prop === "neutralColor" ? "neutral" : c.prop === "goodColor" ? "good" : "bad");
+  if (c.visualType === "cardVisual" && c.object === "accentBar" && c.prop !== "show") setProps(json, "accentBar", { show: TRUE });
+  // the corners of an image show their own radii only where each corner has one; the uniform radius is the other way
+  if (c.visualType === "image" && c.object === "image" && c.prop === "cornerRadiusAdvanced") setProps(json, "image", { cornerRadius: numLit(0), cornerRadiusLeftTop: numLit(40), cornerRadiusRightBottom: numLit(40) });
   if (c.object === "subTotals" && /^columnSubtotals/.test(c.prop)) twoColumnLevels(json);
   // the label of a row subtotal shows on the subtotal row, which is under the group
   if (c.object === "subTotals" && c.prop === "rowSubtotalsLabel") setProps(json, "subTotals", { rowSubtotalsPosition: { expr: { Literal: { Value: "'Bottom'" } } } });
   if (/^category(Min|Max|Size)$/.test(c.prop) && c.object === "zoom") months(json);
   // a background shows its transparency only where it has a color of its own
   if (/^backgroundTransparency$/.test(c.prop) && /^(labels|totals|categoryLabels)$/.test(c.object)) setProps(json, c.object, { enableBackground: TRUE, backgroundColor: colorLit("#ffcc00") });
-  if (c.object === "categoryLabels" && /^(enableBackground|backgroundColor)$/.test(c.prop)) setProps(json, c.object, { show: TRUE, enableBackground: TRUE, backgroundColor: colorLit("#ffcc00") });
+  // the background of a category label shows its color once it is on (the switch needs a color of its own to be seen)
+  if (c.object === "categoryLabels" && c.prop === "enableBackground") setProps(json, c.object, { backgroundColor: colorLit("#ffcc00") });
   // a title wraps only where it is longer than the visual is wide
   if (c.prop === "titleWrap" && /^(title|subTitle)$/.test(c.object)) setProps(json, c.object, { show: TRUE, text: { expr: { Literal: { Value: "'" + LONG + "'" } } } });
   // text wraps only where it is wider than its column: narrow columns
@@ -130,6 +136,8 @@ export function dataFor(json, c) {
   if (c.prop === "showPositiveAndNegative" || c.prop === "decreaseFill") measure(json, "Variance");
   // a blank value: the pairs of category and series with a small quantity have none; a card has nothing at all
   if (c.prop === "showBlankAs") measure(json, c.visualType === "cardVisual" || (c.visualType === "donutChart" && c.object === "value") ? "Empty" : "Sparse");
+  // a donut with a blank total has no slices at all: the one measure without a category
+  if (c.visualType === "donutChart" && c.object === "value" && c.prop === "showBlankAs") delete json.visual?.query?.queryState?.Category;
   // overlapping labels: large ones, so that neighbouring labels collide
   // overlapping labels: large ones that are allowed to overflow their bars (otherwise the ones that do not fit are hidden before any overlap), so that neighbouring labels collide
   if (c.prop === "optimizeLabelDisplay") setProps(json, "labels", { show: { expr: { Literal: { Value: "true" } } }, fontSize: numLit(40), labelOverflow: { expr: { Literal: { Value: "true" } } } });

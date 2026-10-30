@@ -11,11 +11,20 @@ export function solidPng(r, g, b, size = 400) {
   const raw = Buffer.concat(Array.from({ length: size }, () => row));
   return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk("IHDR", head), chunk("IDAT", deflateSync(raw)), chunk("IEND", Buffer.alloc(0))]);
 }
+/** A wide two-tone picture (red | blue, 4 : 1): Fit, Stretch and Fill draw it differently in a square, which a solid square cannot show. */
+export function widePng(w = 400, h = 100) {
+  const head = Buffer.alloc(13);
+  head.writeUInt32BE(w, 0); head.writeUInt32BE(h, 4); head[8] = 8; head[9] = 2;
+  const row = Buffer.concat([Buffer.from([0]), Buffer.from(Array.from({ length: w }, (_, x) => (x < w / 2 ? [220, 30, 30] : [30, 30, 220])).flat())]);
+  const raw = Buffer.concat(Array.from({ length: h }, () => row));
+  return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk("IHDR", head), chunk("IDAT", deflateSync(raw)), chunk("IEND", Buffer.alloc(0))]);
+}
+export const WIDE = "data:image/png;base64," + widePng().toString("base64");
 export const RED = "data:image/png;base64," + solidPng(220, 30, 30).toString("base64");
 export const BLUE = "data:image/png;base64," + solidPng(30, 30, 220).toString("base64");
 
 const URL_PROPS = new Set(["url", "imageUrl", "sourceUrl"]);
-const DATA_PROPS = new Set(["imageData"]);
+const DATA_PROPS = new Set(["imageData", "field"]);
 const lit = (v) => ({ expr: { Literal: { Value: `'${v}'` } } });
 const isLit = (p) => p?.expr?.Literal !== undefined;
 
@@ -30,8 +39,9 @@ export function pictures(json, c) {
   for (const list of Object.values(json.visual?.objects ?? {})) {
     for (const e of list) {
       for (const [k, p] of Object.entries(e.properties ?? {})) {
-        if (isLit(p) && URL_PROPS.has(k)) e.properties[k] = lit(RED);
-        if (isLit(p) && DATA_PROPS.has(k)) e.properties[k] = lit(BLUE);
+        const fit = /fit$/i.test(c.prop) && c.object === "centerBackground";
+        if (isLit(p) && URL_PROPS.has(k)) e.properties[k] = lit(fit ? WIDE : RED);
+        if (isLit(p) && DATA_PROPS.has(k)) e.properties[k] = lit(fit ? WIDE : BLUE);
       }
     }
   }

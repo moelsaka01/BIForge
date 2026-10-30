@@ -427,13 +427,17 @@ export interface NewCardModel {
 const LINE_STYLES = ["solid", "dashed", "dotted"];
 
 /** Card (new) > Callout area: the box around the value. */
-function calloutArea(f: FormatReader, theme: Theme): CSSProperties {
+function calloutArea(f: FormatReader, theme: Theme, align: "left" | "center" | "right"): CSSProperties {
   if (!f.bool("cardCalloutArea", "show", false)) return {};
   const pad = (side: string) => f.num("cardCalloutArea", `padding${side}`, 0);
   const individual = f.bool("cardCalloutArea", "paddingIndividual", false);
   const u = f.num("cardCalloutArea", "paddingUniform", 4);
   const c = (prop: string) => `${Math.max(0, f.num("cardCalloutArea", prop, f.num("cardCalloutArea", "rectangleRoundedCurve", 0)))}px`;
   return {
+    // the box hugs the value, on the side the value is aligned to
+    width: "fit-content",
+    maxWidth: "100%",
+    alignSelf: align === "center" ? "center" : align === "right" ? "flex-end" : "flex-start",
     background: withOpacity(f.color("cardCalloutArea", "backgroundFillColor") ?? (theme.dark ? "#333333" : "#eeeeee"), 1 - f.num("cardCalloutArea", "backgroundTransparency", 0) / 100),
     padding: individual ? `${pad("Top")}px ${pad("Right")}px ${pad("Bottom")}px ${pad("Left")}px` : `${u}px`,
     borderRadius: f.bool("cardCalloutArea", "rectangleRoundedCurveCustomStyle", false) ? `${c("rectangleRoundedCurveLeftTop")} ${c("rectangleRoundedCurveRightTop")} ${c("rectangleRoundedCurveRightBottom")} ${c("rectangleRoundedCurveLeftBottom")}` : c("rectangleRoundedCurve"),
@@ -482,7 +486,7 @@ export function buildNewCard(visual: VisualModel, loaded: Extract<Loaded, { kind
     alignBaselines: f.bool("label", "alignBaselines", false),
     labelLevel: Number(/^Heading([2-6])$/.exec(f.str("label", "heading", "Normal"))?.[1]) || null,
     grid: f.bool("grid", "show", false) ? { border: `${f.num("grid", "width", 1)}px ${LINE_STYLES.includes(f.str("grid", "style", "solid")) ? f.str("grid", "style", "solid") : "solid"} ${withOpacity(f.color("grid", "color") ?? theme.muted, 1 - f.num("grid", "transparency", 0) / 100)}` } : null,
-    callout: calloutArea(f, theme),
+    callout: calloutArea(f, theme, alignOf("value")),
   };
 }
 

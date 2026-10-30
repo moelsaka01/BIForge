@@ -48,3 +48,15 @@ describe("tile look of Card (new), Slicer (new) and List slicer", () => {
     expect(turned.frameAngle).toBe(90);
   });
 });
+
+describe("room for an outer shadow or glow", () => {
+  it("the frame leaves the reach of an outer shadow or glow inside the visual; an inner one or none needs no room", () => {
+    expect(tileLook(reader("cardVisual", [])).inset).toBe(0);
+    const outer = tileLook(reader("cardVisual", [["shadowCustom", "show", lit.bool(true)]])).inset;
+    expect(outer).toBeGreaterThan(0);
+    expect(tileLook(reader("cardVisual", [["shadowCustom", "show", lit.bool(true)], ["shadowCustom", "position", lit.str("Inner")]])).inset).toBe(0);
+    const glow = tileLook(reader("cardVisual", [["glowCustom", "show", lit.bool(true)], ["glowCustom", "shadowBlur", lit.num(20)]])).inset;
+    expect(glow).toBeGreaterThan(outer);
+    expect(tileLook(reader("cardVisual", [["shadowCustom", "show", lit.bool(true)], ["shadowCustom", "shadowBlur", lit.num(500)]])).inset).toBe(48);
+  });
+});
