@@ -162,6 +162,21 @@ describe("ribbon definitions", () => {
     expect(hasThemes("design", modern)).toBe(true);
   });
 
+  it("the format painter is on the Home and Format tabs: usable with one visual selected, pressed while it holds a format", () => {
+    const tabs = ribbonFor("classic", "report");
+    const find = (id: string) => allControls(tabs).find((x) => x.control.id === id)!.control;
+    for (const id of ["formatPainter", "formatPainterTab"]) {
+      const c = find(id);
+      expect(c.command).toBe("report.formatPainter.pick");
+      expect(c.when!(ctx())).toBe(false);
+      expect(c.when!(ctx({ selectedCount: 1 }))).toBe(true);
+      expect(c.when!(ctx({ selectedCount: 2 }))).toBe(false);
+      expect(c.when!(ctx({ selectedCount: 2, formatPainter: true }))).toBe(true);
+      expect(c.checked!(ctx())).toBe(false);
+      expect(c.checked!(ctx({ formatPainter: true }))).toBe(true);
+    }
+  });
+
   it("contextual tabs appear only while a visual is selected", () => {
     const tabs = ribbonFor("classic", "report");
     expect(visibleTabs(tabs, ctx()).map((t) => t.id)).not.toContain("format");

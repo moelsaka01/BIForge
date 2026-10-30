@@ -34,6 +34,7 @@ import { defaultRole, roleDef, visualType } from "./visualTypes";
 import { writeTextbox } from "./staticVisuals";
 import { alignBoxes, distributeBoxes, type AlignMode, type Box, type DistributeAxis, type Moves } from "./arrange";
 import { modelInfo } from "./modelInfo";
+import { visualObjects } from "../format/capabilities";
 
 export class ReportError extends Error {
   constructor(message: string) {
@@ -930,3 +931,44 @@ export function removeBookmarksOf(p: Project, page: string): void {
 
 export { activePageName, parsePage, parseVisual };
 export type { VisualModel };
+
+// ---- format painter ----------------------------------------------------------------------------
+
+/** The formatting of a visual as the format painter carries it. */
+export interface FormatSample {
+  visualType: string;
+  /** The visual's own objects (data colors, axes, labels, ...) and the container objects (title, background, border, shadow, ...). */
+  objects: J;
+  container: J;
+}
+
+/** Objects the painter leaves alone: they hold content rather than looks (alt text and the like, the slicer's mode and selection). */
+const PAINTER_SKIPS = new Set(["general", "data", "selection", "keyDrivers", "analysis"]);
+
+export function pickFormat(p: Project, page: string, visual: string): FormatSample {
+  const v = visualJson(p, page, visual).visual;
+  if (!v) throw new ReportError("Select a visual (not a group) to copy its format.");
+  return { visualType: v.visualType, objects: structuredClone(v.objects ?? {}), container: structuredClone(v.visualContainerObjects ?? {}) };
+}
+
+/** Gives the visual the sample's formatting: everything for the same type, only the objects both types have for another type. Returns how many objects were copied. */
+export function applyFormat(p: Project, page: string, visual: string, sample: FormatSample): number {
+  const v = visualJson(p, page, visual).visual;
+  if (!v) throw new ReportError("The format can only be painted on a visual, not on a group.");
+  const same = v.visualType === sample.visualType;
+  const own = same ? null : visualObjects(v.visualType);
+  const objects: J = {};
+  for (const [name, entries] of Object.entries(sample.objects)) {
+    if (PAINTER_SKIPS.has(name)) continue;
+    if (!same && !own?.[name]) continue;
+    objects[name] = structuredClone(entries);
+  }
+  // what the visual had of its own content-related objects stays
+  for (const name of PAINTER_SKIPS) if (v.objects?.[name]) objects[name] = v.objects[name];
+  if (Object.keys(objects).length) v.objects = objects;
+  else delete v.objects;
+  const container = structuredClone(sample.container);
+  if (Object.keys(container).length) v.visualContainerObjects = container;
+  else delete v.visualContainerObjects;
+  return Object.keys(objects).length + Object.keys(container).length;
+}

@@ -36,6 +36,8 @@ export interface ViewSnapshot {
   canvas: string[];
   /** Visuals copied or cut in this window (a copy also goes to the system clipboard as JSON). */
   clipboard: unknown | null;
+  /** Format painter: the formatting picked up from a visual, waiting for the next visual that is selected. */
+  painter: { page: string; visual: string; sample: unknown } | null;
   /** The canvas shows the phone layout instead of the desktop page. */
   mobile: boolean;
   /** Script visuals run in this window: the result of the last run by visual (a script never runs by itself). */
@@ -50,7 +52,7 @@ export interface ScriptRun {
 }
 
 export class ReportRuntime {
-  private snap: ViewSnapshot = { page: null, selection: null, drill: {}, drillRole: {}, focus: null, asTable: [], drillthrough: null, collapsed: {}, epoch: 0, drillMode: null, editInteractions: null, paused: false, refreshTick: 0, formatFocus: null, canvas: [], clipboard: null, mobile: false };
+  private snap: ViewSnapshot = { page: null, selection: null, drill: {}, drillRole: {}, focus: null, asTable: [], drillthrough: null, collapsed: {}, epoch: 0, drillMode: null, editInteractions: null, paused: false, refreshTick: 0, formatFocus: null, canvas: [], clipboard: null, painter: null, mobile: false };
   private listeners = new Set<() => void>();
 
   getSnapshot = (): ViewSnapshot => this.snap;
@@ -120,6 +122,10 @@ export class ReportRuntime {
     const a = this.snap.canvas;
     if (a.length === names.length && a.every((n, i) => n === names[i])) return;
     this.set({ canvas: names });
+  }
+
+  setPainter(p: ViewSnapshot["painter"]): void {
+    this.set({ painter: p });
   }
 
   setClipboard(c: unknown | null): void {

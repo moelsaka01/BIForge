@@ -56,7 +56,7 @@ N | Recover unsaved files list (autorecovery folder)
 D | Paste
 D | Cut
 D | Copy
-N | Format painter
+D | Format painter
 ### Data
 D | Get data menu
 D | Excel workbook
@@ -176,7 +176,7 @@ D | Group / Ungroup
 D | Bring forward / Send backward (to front / to back)
 D | Selection pane
 D | Size and position
-N | Format painter
+D | Format painter
 D | Alt text
 ### Data/Drill tab (visual selected)
 D | Drill down / Drill up

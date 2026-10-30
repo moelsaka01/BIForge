@@ -140,6 +140,11 @@ export function ReportView(p: ReportViewProps) {
     if (keep.length !== selection.length) p.runtime.setCanvasSelection(keep);
   }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => p.onSelectVisual?.(page?.name ?? null, selected), [page?.name, selected]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Format painter: the next visual that is selected gets the format that was picked up
+  useEffect(() => {
+    if (!snap.painter || p.readOnly || !page || selection.length !== 1 || selection[0] === snap.painter.visual) return;
+    p.dispatch("report.formatPainter.apply", { page: page.name, visual: selection[0] });
+  }, [selection, snap.painter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const liveView: ViewState = useMemo(() => ({ selection: snap.selection, drill: snap.drill, drillthrough: snap.drillthrough?.filters ?? [], epoch: snap.epoch + p.dataEpoch, crossDefault: (p.canvas ?? DEFAULT_CANVAS).crossDefault }), [snap.selection, snap.drill, snap.drillthrough, snap.epoch, p.dataEpoch, p.canvas]);
   // Pause visuals: the visuals keep the view they had when paused (so they send no new queries) until Refresh visuals

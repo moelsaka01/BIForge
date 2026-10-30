@@ -55,6 +55,8 @@ export interface RibbonCtx {
   canvas: CanvasOptions;
   /** The canvas shows the phone layout. */
   mobileLayout: boolean;
+  /** The format painter holds a format and waits for a visual to paint. */
+  formatPainter?: boolean;
 }
 
 export type Args = Record<string, unknown> | ((c: RibbonCtx) => unknown);
@@ -153,7 +155,7 @@ const clipboard = (): RibbonGroup => ({
     cmd("paste", "Paste", "paste", "report.visuals.paste", { size: "large", when: (c) => c.view === "report" }),
     cmd("cut", "Cut", "cut", "report.visuals.cut", { size: "small", when: (c) => c.view === "report" && c.selectedCount > 0 }),
     cmd("copy", "Copy", "copy", "report.visuals.copy", { size: "small", when: (c) => c.view === "report" && c.selectedCount > 0 }),
-    todo("formatPainter", "Format painter", "formatPainter", { size: "small" }),
+    cmd("formatPainter", "Format painter", "formatPainter", "report.formatPainter.pick", { size: "small", when: (c) => c.view === "report" && (c.selectedCount === 1 || c.formatPainter === true), checked: (c) => c.formatPainter === true }),
   ],
 });
 
@@ -339,6 +341,11 @@ const formatTab = (): RibbonTab => ({
   contextual: true,
   when: hasVisual,
   groups: [
+    {
+      id: "painter",
+      label: "Clipboard",
+      controls: [cmd("formatPainterTab", "Format painter", "formatPainter", "report.formatPainter.pick", { size: "large", when: (c) => c.view === "report" && (c.selectedCount === 1 || c.formatPainter === true), checked: (c) => c.formatPainter === true })],
+    },
     {
       id: "interactions",
       label: "Interactions",

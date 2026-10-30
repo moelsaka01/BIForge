@@ -336,6 +336,24 @@ export function registerReportCommands(r: CommandRegistry<Session>): void {
     s.report.setCanvasSelection(result.names);
     if (result.missing.length) s.setMessage(`Pasted. These tables are not in this report's model, so the fields that use them are empty: ${result.missing.join(", ")}.`);
   });
+  reg("report.formatPainter.pick", "Format painter", (s, a) => {
+    // a second click on the button puts the brush down
+    if (s.report.getSnapshot().painter) return s.report.setPainter(null);
+    const t = targets(s, a);
+    if (t.visuals.length !== 1) throw new Error("Select one visual to copy its format from.");
+    const sample = ops.pickFormat(s.store.project!, t.page, t.visuals[0]);
+    s.report.setPainter({ page: t.page, visual: t.visuals[0], sample });
+    s.setMessage("Format copied. Select the visual to paint.");
+  });
+  reg("report.formatPainter.apply", "Paint format", (s, a) => {
+    const x = need<{ page: string; visual: string }>(a, ["page", "visual"]);
+    const painter = s.report.getSnapshot().painter;
+    if (!painter) throw new Error("Pick up a format with the format painter first.");
+    if (x.visual === painter.visual && x.page === painter.page) return;
+    edit(s, "Paint format", (p) => void ops.applyFormat(p, x.page, x.visual, painter.sample as ops.FormatSample));
+    s.report.setPainter(null);
+  });
+  reg("report.formatPainter.cancel", "Put the format painter down", (s) => s.report.setPainter(null));
   reg("report.visual.rename", "Rename visual", (s, a) => {
     const x = need<{ page: string; visual: string; name: string }>(a, ["page", "visual", "name"]);
     edit(s, "Rename visual", (p) => ops.renameVisual(p, x.page, x.visual, x.name));

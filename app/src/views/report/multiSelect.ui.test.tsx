@@ -9,6 +9,7 @@ import { FakeDialogs, FakeIO } from "../../core/testing/fakes";
 import { Session } from "../../core/session/session";
 import { fixtureProject } from "../../core/report/testFixture";
 import { listPageNames, parsePage } from "../../core/report/visualDoc";
+import { lit } from "../../core/report/fields";
 import { dragGroup } from "./PageCanvas";
 import { ReportView, plainDocks } from "./ReportView";
 
@@ -277,5 +278,21 @@ describe("keyboard: Tab through the visuals", () => {
     expect(seen[3]).toBe(seen[0]);
     fireEvent.keyDown(page, { key: "Tab", shiftKey: true });
     expect(sel()).toEqual([seen[2]]);
+  });
+});
+
+describe("format painter on the canvas", () => {
+  it("clicking a visual after picking up a format paints it, and the brush is put down", async () => {
+    const t = setup();
+    const a = await t.add(0, 0);
+    const b = await t.add(300, 0);
+    await t.run("report.format.set", { page: "page1", visual: a, object: "background", prop: "color", value: lit.str("#abcdef") });
+    render(<t.Host />);
+    t.click(a);
+    await waitFor(() => expect(t.session.report.getSnapshot().canvas).toEqual([a]));
+    await t.run("report.formatPainter.pick");
+    t.click(b);
+    await waitFor(() => expect(t.session.report.getSnapshot().painter).toBeNull());
+    expect(JSON.stringify(t.vs().find((v) => v.name === b)!.json.visual)).toContain("#abcdef");
   });
 });

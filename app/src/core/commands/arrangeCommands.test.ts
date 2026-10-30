@@ -5,6 +5,7 @@ import { Session } from "../session/session";
 import { fixtureProject } from "../report/testFixture";
 import { parsePage, listPageNames } from "../report/visualDoc";
 import { visualDisplayName } from "../report/reportOps";
+import { lit } from "../report/fields";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -174,5 +175,41 @@ describe("selection pane operations", () => {
     expect(order()).toEqual([b, a, c]); // already in front
     await t.run("report.visual.moveInOrder", { page: "page1", visual: c, dir: "down" });
     expect(order()).toEqual([b, c, a]);
+  });
+});
+
+describe("format painter", () => {
+  const style = async (t: ReturnType<typeof setup>, name: string, object: string, prop: string, value: unknown) => {
+    await t.run("report.format.set", { page: "page1", visual: name, object, prop, value });
+  };
+  it("picks up the format of one visual and paints it on the next visual, in one undo step", async () => {
+    const t = setup();
+    const a = await t.add(0, 0);
+    const b = await t.add(200, 0);
+    await style(t, a, "background", "color", lit.str("#123456"));
+    await style(t, a, "title", "text", lit.str("Hello"));
+    const look = (name: string) => JSON.stringify(parsePage(t.session.store.project!, "page1")!.visuals.find((v) => v.name === name)!.json.visual);
+    t.session.report.setCanvasSelection([a, b]);
+    expect(await t.fail("report.formatPainter.pick")).toMatch(/one visual/);
+    t.session.report.setCanvasSelection([a]);
+    await t.run("report.formatPainter.pick");
+    expect(t.session.report.getSnapshot().painter?.visual).toBe(a);
+    expect(look(b)).not.toContain("#123456");
+    await t.run("report.formatPainter.apply", { page: "page1", visual: b });
+    expect(look(b)).toContain("#123456");
+    expect(look(b)).toContain("Hello");
+    expect(t.session.report.getSnapshot().painter).toBeNull();
+    await t.run("edit.undo");
+    expect(look(b)).not.toContain("#123456");
+  });
+
+  it("the button toggles the brush off, and painting without a picked format says so", async () => {
+    const t = setup();
+    const a = await t.add(0, 0);
+    t.session.report.setCanvasSelection([a]);
+    await t.run("report.formatPainter.pick");
+    await t.run("report.formatPainter.pick");
+    expect(t.session.report.getSnapshot().painter).toBeNull();
+    expect(await t.fail("report.formatPainter.apply", { page: "page1", visual: a })).toMatch(/format painter first/);
   });
 });
