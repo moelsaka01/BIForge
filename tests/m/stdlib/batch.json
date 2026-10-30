@@ -238,5 +238,41 @@
   "m": "Diagnostics.LogFailure(\"x\", () => 9)",
   "expect": "9",
   "mode": "value"
+ },
+ {
+  "fn": "List.ChangeType",
+  "m": "List.Sum(List.ChangeType({1, 2, 3}, type {number}))",
+  "expect": "6",
+  "mode": "value"
+ },
+ {
+  "fn": "Record.ChangeType",
+  "m": "Record.Field(Record.ChangeType([a = 1, b = 2], type [a = number, b = number]), \"b\")",
+  "expect": "2",
+  "mode": "value"
+ },
+ {
+  "fn": "Table.ChangeType",
+  "m": "Table.RowCount(Table.ChangeType(#table({\"a\"}, {{1}, {2}}), type table [a = number]))",
+  "expect": "2",
+  "mode": "value"
+ },
+ {
+  "fn": "Number.Asin",
+  "m": "Number.Asin(1)",
+  "expect": "1.5707963267948966",
+  "mode": "cell"
+ },
+ {
+  "fn": "Number.Acos",
+  "m": "Number.Acos(0)",
+  "expect": "1.5707963267948966",
+  "mode": "cell"
+ },
+ {
+  "fn": "Number.Atan",
+  "m": "Number.Atan(1)",
+  "expect": "0.7853981633974483",
+  "mode": "cell"
  }
 ]

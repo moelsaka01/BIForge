@@ -9,6 +9,7 @@ pub const BATCH_FNS: &[&str] = &[
     "List.Percentile", "Value.RemoveMetadata", "Table.Keys", "Type.TableKeys", "Diagnostics.ActivityId", "Diagnostics.CorrelationId",
     "Diagnostics.LogValue", "List.Alternate", "List.FindText", "List.Normalize", "List.Random", "List.ParallelInvoke", "Value.Metadata",
     "Value.ReplaceMetadata", "Value.ReplaceType", "Value.Optimize", "Value.VersionIdentity", "Diagnostics.LogFailure",
+    "List.ChangeType", "Record.ChangeType", "Table.ChangeType",
 ];
 
 pub fn call(ev: &Ev, name: &str, a: &[Value]) -> Option<R<Value>> {
@@ -33,6 +34,8 @@ fn dispatch(ev: &Ev, name: &str, a: &[Value]) -> R<Value> {
         "Value.Metadata" => Ok(Value::Record(Vec::new())),
         "Value.ReplaceMetadata" | "Value.ReplaceType" | "Value.Optimize" => Ok(arg(a, 0, name)?.clone()),
         "Value.VersionIdentity" => Ok(Value::Null),
+        // ChangeType ascribes a type to a list, record or table without converting the values (the same as Value.ReplaceType here)
+        "List.ChangeType" | "Record.ChangeType" | "Table.ChangeType" => Ok(arg(a, 0, name)?.clone()),
         "Diagnostics.LogFailure" => ev.apply(arg(a, 1, name)?, Vec::new()),
         "List.ParallelInvoke" => match arg(a, 0, name)? {
             Value::List(fs) => fs.iter().map(|f| ev.apply(f, Vec::new())).collect::<R<Vec<_>>>().map(Value::List),
