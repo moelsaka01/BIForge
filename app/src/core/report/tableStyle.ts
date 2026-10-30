@@ -29,6 +29,9 @@ export interface TableStyle {
   subtotalsOnTop: boolean;
   /** Grid > outline: a frame around the whole table or matrix. */
   frame: CSSProperties;
+  /** Row / column grand total > apply to headers: the grand total's look also covers the header cell of the total column / the label of the total row. */
+  rowTotalHeader: boolean;
+  columnTotalHeader: boolean;
 }
 
 const ALIGN: Record<string, CSSProperties["textAlign"] | null> = { Auto: null, Left: "left", Center: "center", Right: "right" };
@@ -105,6 +108,8 @@ export function tableStyle(f: FormatReader, theme: Theme): TableStyle {
     columnTotal: { ...cellBase(colTotalFont, "columnTotal"), fontWeight: colTotalFont.bold ? 700 : 600, background: f.color("columnTotal", "backColor") ?? totalBg },
     subtotal: { ...cellBase(subFont, "subTotals"), fontWeight: subFont.bold ? 700 : 600, background: f.color("subTotals", "backColor") },
     columnWidth: width,
+    rowTotalHeader: f.bool("rowTotal", "applyToHeaders", f.bool("total", "applyToHeaders", true)),
+    columnTotalHeader: f.bool("columnTotal", "applyToHeaders", f.bool("total", "applyToHeaders", true)),
     frame: outline(f, "grid") ? { outline: outline(f, "grid"), outlineOffset: -f.num("grid", "outlineWeight", 0) } : {},
     rowSubtotals: f.bool("subTotals", "rowSubtotals", true),
     columnSubtotals: f.bool("subTotals", "columnSubtotals", true),

@@ -148,15 +148,15 @@ Last updated: 2026-10-25 (see PROGRESS.md; the status table below is generated b
 | Start screen | 12 | 9 | 1 | 2 | 0 | 0 | 0 |
 | Title bar and window | 13 | 11 | 0 | 2 | 0 | 0 | 0 |
 | File menu and backstage | 20 | 12 | 1 | 7 | 0 | 0 | 0 |
-| Report view ribbon: Home tab | 19 | 14 | 1 | 4 | 0 | 0 | 0 |
+| Report view ribbon: Home tab | 19 | 15 | 1 | 3 | 0 | 0 | 0 |
 | Report view ribbon: Insert tab | 19 | 9 | 4 | 6 | 0 | 0 | 0 |
 | Report view ribbon: Modeling tab | 22 | 17 | 0 | 5 | 0 | 0 | 0 |
 | Report view ribbon: View tab | 19 | 15 | 0 | 4 | 0 | 0 | 0 |
 | Report view ribbon: Optimize tab | 4 | 2 | 0 | 2 | 0 | 0 | 0 |
 | Report view ribbon: Help tab | 5 | 5 | 0 | 0 | 0 | 0 | 0 |
 | Report view ribbon: External Tools tab | 2 | 0 | 0 | 2 | 0 | 0 | 0 |
-| Report view contextual tabs | 35 | 25 | 5 | 5 | 0 | 0 | 0 |
-| Report canvas and page features | 53 | 39 | 3 | 11 | 0 | 0 | 0 |
+| Report view contextual tabs | 35 | 29 | 5 | 1 | 0 | 0 | 0 |
+| Report canvas and page features | 53 | 40 | 3 | 10 | 0 | 0 | 0 |
 | Visuals | 76 | 51 | 3 | 21 | 1 | 0 | 0 |
 | Table view | 17 | 15 | 1 | 1 | 0 | 0 | 0 |
 | Model view | 23 | 16 | 3 | 4 | 0 | 0 | 0 |
@@ -164,7 +164,7 @@ Last updated: 2026-10-25 (see PROGRESS.md; the status table below is generated b
 | TMDL view | 8 | 4 | 0 | 4 | 0 | 0 | 0 |
 | Modeling features | 48 | 25 | 2 | 21 | 0 | 0 | 0 |
 | DAX language | 15 | 10 | 0 | 5 | 0 | 0 | 0 |
-| Power Query editor: window and ribbon | 94 | 45 | 4 | 45 | 0 | 0 | 0 |
+| Power Query editor: window and ribbon | 94 | 50 | 4 | 40 | 0 | 0 | 0 |
 | M language | 12 | 5 | 0 | 7 | 0 | 0 | 0 |
 | Get data: connectors | 47 | 25 | 7 | 6 | 9 | 0 | 0 |
 | Options dialog: Global | 60 | 22 | 1 | 36 | 1 | 0 | 0 |
@@ -173,10 +173,10 @@ Last updated: 2026-10-25 (see PROGRESS.md; the status table below is generated b
 | Keyboard shortcuts | 37 | 29 | 1 | 7 | 0 | 0 | 0 |
 | Export, print and file formats | 15 | 5 | 1 | 9 | 0 | 0 | 0 |
 | Accessibility and platform | 12 | 3 | 0 | 9 | 0 | 0 | 0 |
-| Format pane cards per visual | 1264 | 893 | 177 | 194 | 0 | 0 | 0 |
+| Format pane cards per visual | 1264 | 910 | 162 | 192 | 0 | 0 | 0 |
 | DAX functions | 317 | 300 | 0 | 17 | 0 | 0 | 0 |
 | M standard library | 621 | 454 | 0 | 167 | 0 | 0 | 0 |
-| **Total** | **2973** | **2104** | **216** | **642** | **11** | **0** | **0** |
+| **Total** | **2973** | **2132** | **201** | **629** | **11** | **0** | **0** |
 <!-- inventory-status:end -->
 
 ## Online track (Publish & Share; plan in docs/ONLINE_PLAN.md)

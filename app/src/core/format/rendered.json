@@ -4289,6 +4289,7 @@
    "wordWrap"
   ],
   "columnTotal": [
+   "applyToHeaders",
    "backColor",
    "bold",
    "fontColor",
@@ -4324,6 +4325,7 @@
    "wordWrap"
   ],
   "rowTotal": [
+   "applyToHeaders",
    "backColor",
    "bold",
    "fontColor",
@@ -4347,6 +4349,7 @@
    "underline"
   ],
   "total": [
+   "applyToHeaders",
    "backColor",
    "bold",
    "fontColor",

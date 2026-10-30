@@ -5,6 +5,8 @@ import type { Loaded } from "./dataLoader";
 import { agg, column, lit, type Lit } from "./fields";
 import { litExpr, queryRefOf } from "./pbir";
 import { buildMatrixQuery, buildVisualQuery } from "./queryBuilder";
+import { FormatReader } from "./formatReader";
+import { tableStyle } from "./tableStyle";
 import { buildCard, buildKpi, buildNewCard, buildMatrix, buildMultiRowCard, buildTable } from "./tableModels";
 import { fixtureModel, visualOf } from "./testFixture";
 import { DEFAULT_THEME } from "./theme";
@@ -282,5 +284,22 @@ describe("table word wrap", () => {
     expect(style("values", true).rowHeight).toBe(48);
     expect(style("columnHeaders", true).headHeight).toBe(56);
     expect(style("columnHeaders", true).header.whiteSpace).toBe("normal");
+  });
+});
+
+describe("matrix totals apply to headers", () => {
+  it("row / column grand total > apply to headers (the general total as the fallback) switch the total look on the headers", () => {
+    const v = visualOf("pivotTable", { Rows: [Cat], Values: [Qty] });
+    const flags = () => {
+      const st = tableStyle(new FormatReader(v.json, DEFAULT_THEME, "pivotTable"), DEFAULT_THEME);
+      return [st.rowTotalHeader, st.columnTotalHeader];
+    };
+    expect(flags()).toEqual([true, true]);
+    setFormat(v.json, "total", "applyToHeaders", lit.bool(false));
+    expect(flags()).toEqual([false, false]);
+    setFormat(v.json, "rowTotal", "applyToHeaders", lit.bool(true));
+    expect(flags()).toEqual([true, false]);
+    setFormat(v.json, "columnTotal", "applyToHeaders", lit.bool(true));
+    expect(flags()).toEqual([true, true]);
   });
 });

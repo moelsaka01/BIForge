@@ -171,7 +171,7 @@ export function MatrixView(p: MatrixViewProps) {
                 </th>
               ))}
               {hi === 0 && showTotals && model.totalLabels.map((t) => (
-                <th key={t} rowSpan={model.headers.length || 1} style={th} scope="col">
+                <th key={t} rowSpan={model.headers.length || 1} style={{ ...th, ...(st.rowTotalHeader ? st.rowTotal : {}) }} scope="col">
                   {t}
                 </th>
               ))}
@@ -190,7 +190,7 @@ export function MatrixView(p: MatrixViewProps) {
             return (
               <tr key={r.key} data-row={r.key} style={{ background: isSel ? (theme.dark ? "#334b66" : "#d6e8fa") : undefined, fontWeight: r.isGrand || r.expandable || r.isSubtotal ? 600 : 400, opacity: selKeys.size && !isSel && pt ? 0.55 : 1 }}>
                 <td
-                  style={{ ...cellBase(theme), ...st.rowHeaderCell, ...(r.isGrand ? st.columnTotal : r.expandable || r.isSubtotal ? st.subtotal : {}), paddingLeft: 8 + r.depth * 16, ...rowH, cursor: pt ? "pointer" : "default", textAlign: "left" }}
+                  style={{ ...cellBase(theme), ...st.rowHeaderCell, ...(r.isGrand ? (st.columnTotalHeader ? st.columnTotal : {}) : r.expandable || r.isSubtotal ? st.subtotal : {}), paddingLeft: 8 + r.depth * 16, ...rowH, cursor: pt ? "pointer" : "default", textAlign: "left" }}
                   onClick={(e) => pt && p.onRow(pt, e.ctrlKey || e.metaKey || e.shiftKey)}
                 >
                   {r.expandable ? (
