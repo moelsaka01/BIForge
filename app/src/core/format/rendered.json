@@ -5233,7 +5233,8 @@
  },
  "image": {
   "general": [
-   "altText"
+   "altText",
+   "imageUrl"
   ],
   "image": [
    "altText",
@@ -5242,6 +5243,7 @@
    "backgroundTransparency",
    "blur",
    "contrast",
+   "cornerRadius",
    "cornerRadiusAdvanced",
    "cornerRadiusLeftBottom",
    "cornerRadiusLeftTop",
@@ -5255,8 +5257,12 @@
    "strokeColor",
    "strokePattern",
    "strokeShow",
+   "strokeTransparency",
    "strokeWidth",
    "transparency"
+  ],
+  "imageScaling": [
+   "imageScalingType"
   ]
  },
  "page": {

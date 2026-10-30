@@ -182,7 +182,7 @@ const WITH: Record<string, Record<string, Record<string, Lit>>> = {
   columnTotal: { outlineColor: { outlineWeight: lit.num(2) }, outlineStyle: { outlineWeight: lit.num(2) } },
   subTotals: { outlineColor: { outlineWeight: lit.num(2) }, outlineStyle: { outlineWeight: lit.num(2) } },
   card: { outlineColor: { outlineWeight: lit.num(2) }, outlineStyle: { outlineWeight: lit.num(2) } },
-  image: { imageData: { imageType: lit.str("imageData") } },
+  image: { imageData: { imageType: lit.str("imageData") }, cornerRadius: { cornerRadiusAdvanced: lit.bool(false) } },
   centerBackground: { fit: { imageType: lit.str("imageData"), imageData: lit.str(PNG_WIDE) }, imageData: { imageType: lit.str("imageData") }, imageType: { imageData: lit.str(PNG_1PX_GREEN) }, imageTransparency: { imageUrl: lit.str(PNG_1PX) } },
   mapControls: { zoomLevel: { autoZoom: lit.bool(false) } },
   // the background of a category label needs a color of its own to be seen; the marker border needs to be shown

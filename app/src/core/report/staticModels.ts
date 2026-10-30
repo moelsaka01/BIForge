@@ -15,14 +15,16 @@ export interface ImageModel {
 }
 
 export function imageModel(f: FormatReader, width: number, height: number): ImageModel {
-  const fit = f.str("image", "fit", "Normal");
+  // Image scaling > Scaling is the older home of the same choice: Image > Fit wins where both are set
+  const fit = f.has("image", "fit") ? f.str("image", "fit", "Normal") : f.str("imageScaling", "imageScalingType", "Normal");
   const stroke = f.bool("image", "strokeShow", false);
   const bgOn = f.bool("image", "backgroundEnabled", false);
   const corner = f.bool("image", "cornerRadiusAdvanced", false)
     ? `${f.num("image", "cornerRadiusLeftTop", 0)}px ${f.num("image", "cornerRadiusRightTop", 0)}px ${f.num("image", "cornerRadiusRightBottom", 0)}px ${f.num("image", "cornerRadiusLeftBottom", 0)}px`
     : f.num("image", "cornerRadius", 0);
   return {
-    src: f.str("image", "sourceUrl", ""),
+    // General > Image URL is where older reports kept the address
+    src: f.str("image", "sourceUrl", "") || f.str("general", "imageUrl", ""),
     alt: f.str("image", "altText", "") || f.str("general", "altText", ""),
     style: {
       width,
@@ -33,7 +35,7 @@ export function imageModel(f: FormatReader, width: number, height: number): Imag
       borderRadius: corner,
       opacity: opacityOf(f.num("image", "transparency", 0)),
       background: bgOn ? `color-mix(in srgb, ${f.color("image", "backgroundColor") ?? "#ffffff"} ${Math.round(opacityOf(f.num("image", "backgroundTransparency", 0)) * 100)}%, transparent)` : undefined,
-      border: stroke ? `${f.num("image", "strokeWidth", 1)}px ${f.str("image", "strokePattern", "solid")} ${f.color("image", "strokeColor") ?? "#888888"}` : undefined,
+      border: stroke ? `${f.num("image", "strokeWidth", 1)}px ${f.str("image", "strokePattern", "solid")} color-mix(in srgb, ${f.color("image", "strokeColor") ?? "#888888"} ${Math.round(opacityOf(f.num("image", "strokeTransparency", 0)) * 100)}%, transparent)` : undefined,
       filter: f.bool("image", "effects", false) ? `blur(${f.num("image", "blur", 0)}px) contrast(${100 + f.num("image", "contrast", 0)}%) saturate(${100 + f.num("image", "saturation", 0)}%) brightness(${100 + f.num("image", "exposure", 0)}%)` : undefined,
     },
   };
