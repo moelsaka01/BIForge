@@ -7,6 +7,7 @@
 // it with `UPDATE_RENDERED=1 npx vitest run src/core/format/coverage.test.ts` after adding renderer support.
 import { describe, expect, it } from "vitest";
 import rendered from "./rendered.json";
+import auditNotDrawn from "./auditNotDrawn.json";
 import { decodeCell, type Value } from "../report/cells";
 import { buildChart } from "../report/chartOptions";
 import { buildContainer } from "../report/containerModel";
