@@ -3562,6 +3562,7 @@
   ],
   "centerBackground": [
    "fillColor",
+   "fit",
    "imageData",
    "imageTransparency",
    "imageType",
@@ -3649,6 +3650,7 @@
    "labelDisplayUnits",
    "labelPrecision",
    "show",
+   "showBlankAs",
    "textWrap",
    "underline"
   ]

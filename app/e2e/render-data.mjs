@@ -121,7 +121,7 @@ export function dataFor(json, c) {
   if (c.object === "y1AxisReferenceLine" && c.prop === "position") for (const e of json.visual?.objects?.y1AxisReferenceLine ?? []) if (e.selector?.id === "constant") e.properties.value = numLit(60);
   if (c.prop === "showPositiveAndNegative" || c.prop === "decreaseFill") measure(json, "Variance");
   // a blank value: the pairs of category and series with a small quantity have none; a card has nothing at all
-  if (c.prop === "showBlankAs") measure(json, c.visualType === "cardVisual" ? "Empty" : "Sparse");
+  if (c.prop === "showBlankAs") measure(json, c.visualType === "cardVisual" || (c.visualType === "donutChart" && c.object === "value") ? "Empty" : "Sparse");
   // overlapping labels: large ones, so that neighbouring labels collide
   if (c.prop === "optimizeLabelDisplay") setProps(json, "labels", { show: { expr: { Literal: { Value: "true" } } }, fontSize: numLit(28) });
   // the format string of the visual is used by the labels

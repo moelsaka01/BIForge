@@ -13,7 +13,22 @@ export interface DonutCentre {
   discs: O[];
   /** The picture: a layer over the chart (an ECharts image element is not drawn by its SVG renderer here), `dy` pixels from the centre. */
   images: CentreImage[];
+  /** The disc's picture: a layer under the chart (a DOM element, so Fit, Stretch and Fill can be honoured). */
+  background?: CentreBackground;
 }
+
+export interface CentreBackground {
+  src: string;
+  /** Radius as a percent of half the smaller chart side. */
+  radiusPct: number;
+  fit: "contain" | "100% 100%" | "cover";
+  fill: string;
+  /** Opacity of the fill colour and of the picture. */
+  fillOpacity: number;
+  opacity: number;
+}
+
+const FIT: Record<string, CentreBackground["fit"]> = { Fit: "contain", Stretch: "100% 100%", Fill: "cover" };
 
 export interface CentreImage {
   src: string;
@@ -34,18 +49,20 @@ export function donutCentre(f: FormatReader, theme: Theme, total: number | null,
   const graphic: O[] = [];
   const discs: O[] = [];
   const images: CentreImage[] = [];
+  let background: CentreBackground | undefined;
   if (f.bool("centerBackground", "show", false)) {
     const src = srcOf(f, "centerBackground");
     const alpha = opacityOf(f.num("centerBackground", "transparency", 0));
     const r = Math.max(0, holePercent - f.num("centerBackground", "padding", 0) / 4); // about 4 px to the percent of a usual chart
-    discs.push({
+    if (src) background = { src, radiusPct: r, fit: FIT[f.str("centerBackground", "fit", "Fit")] ?? "contain", fill: f.color("centerBackground", "fillColor") ?? theme.background, fillOpacity: alpha, opacity: opacityOf(f.num("centerBackground", "imageTransparency", 0)) };
+    else discs.push({
       type: "pie",
       silent: true,
       z: 0,
       radius: [0, `${r}%`],
       center: ["50%", "50%"],
       label: { show: false },
-      data: [{ value: 1, itemStyle: { color: src ? { image: src, repeat: "no-repeat" } : (f.color("centerBackground", "fillColor") ?? theme.background), opacity: src ? opacityOf(f.num("centerBackground", "imageTransparency", 0)) : alpha } }],
+      data: [{ value: 1, itemStyle: { color: f.color("centerBackground", "fillColor") ?? theme.background, opacity: alpha } }],
     });
   }
   // the blocks from top to bottom: picture above, label above, value, label below, picture below
@@ -79,5 +96,5 @@ export function donutCentre(f: FormatReader, theme: Theme, total: number | null,
     y += b.h + b.gapAfter;
   }
   // one group, centred as a whole by its bounding box (an element with left/top ignores its own x and y)
-  return { graphic: graphic.length ? [{ type: "group", left: "center", top: "middle", children: graphic }] : [], discs, images };
+  return { graphic: graphic.length ? [{ type: "group", left: "center", top: "middle", children: graphic }] : [], discs, images, ...(background ? { background } : {}) };
 }

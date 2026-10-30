@@ -87,6 +87,8 @@ function testValues(prop: string, kind: Kind): Lit[] {
 /** Switches that make the other properties of an object matter (a card whose `show` is off draws nothing). */
 // a real picture (1 pixel), so that a real window can draw it
 const PNG_1PX = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC";
+// 8 x 2 pixels, red then blue: Fit, Stretch and Fill draw it differently in a square
+const PNG_WIDE = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAACCAIAAADq9gq6AAAAE0lEQVR4nGP4z8AAR0jM/wy4JACOsQ/x+rx0dwAAAABJRU5ErkJggg==";
 const PNG_1PX_GREEN = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGNgWMAAAAFEAKH5ZOq+AAAAAElFTkSuQmCC";
 const ENABLE: Record<string, Record<string, Lit>> = {
   // labelStyle matters for pies (a label with the value and the percentage), and is ignored elsewhere
@@ -158,7 +160,7 @@ const WITH: Record<string, Record<string, Record<string, Lit>>> = {
   labels: { labelDisplayUnits: { labelPrecision: lit.num(2) } },
   value: { labelDisplayUnits: { labelPrecision: lit.num(2) }, labelPrecision: { labelDisplayUnits: lit.num(1000) } },
   image: { imageData: { imageType: lit.str("imageData") } },
-  centerBackground: { imageData: { imageType: lit.str("imageData") }, imageType: { imageData: lit.str(PNG_1PX_GREEN) }, imageTransparency: { imageUrl: lit.str(PNG_1PX) } },
+  centerBackground: { fit: { imageType: lit.str("imageData"), imageData: lit.str(PNG_WIDE) }, imageData: { imageType: lit.str("imageData") }, imageType: { imageData: lit.str(PNG_1PX_GREEN) }, imageTransparency: { imageUrl: lit.str(PNG_1PX) } },
   mapControls: { zoomLevel: { autoZoom: lit.bool(false) } },
   layout: { clusteredGapOverlapReverse: { clusteredGapOverlaps: lit.bool(true) }, stackedGapExplodes: { stackedGapSize: lit.num(4) } },
   // the corners of the tile need the shape that uses them
@@ -486,6 +488,11 @@ function computeAll(): Coverage {
     const objs = Object.keys(visualObjects(id) ?? {}).filter((o) => !CONTAINER_OBJECTS.has(o) && o !== "actionButtonSection");
     const own = measure(sc, id, objs);
     if (TOTALS_TYPES.includes(id)) Object.assign(own, measure(totalsScenario(id), id, ["totals"]));
+    // a donut without any value: the centre shows the text of "Show blank as"
+    if (id === "donutChart") {
+      const blank = measure(chart(id, { Category: [Cat], Y: [Qty] }, [[t("Accessories"), ["blank", ""]], [t("Bikes"), ["blank", ""]]]), id, ["value"]);
+      own.value = [...new Set([...(own.value ?? []), ...(blank.value ?? [])])].sort();
+    }
     if (SM_TYPES.includes(id)) Object.assign(own, measure(smScenario(id), id, ["smallMultiplesLayout", "subheader"]));
     if (Object.keys(own).length) result[id] = own;
   }

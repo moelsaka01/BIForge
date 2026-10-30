@@ -136,6 +136,16 @@ export function ChartView(p: ChartViewProps) {
           style={{ position: "absolute", left: p.build.plotImage.margins.left, right: p.build.plotImage.margins.right, top: p.build.plotImage.margins.top, bottom: p.build.plotImage.margins.bottom, pointerEvents: "none", backgroundImage: `url("${p.build.plotImage.url.replace(/"/g, "%22")}")`, backgroundRepeat: "no-repeat", backgroundPosition: "center", backgroundSize: p.build.plotImage.size, opacity: p.build.plotImage.opacity }}
         />
       )}
+      {p.build.centreBackground && (() => {
+        const b = p.build.centreBackground;
+        const d = (Math.min(p.width, p.height) * b.radiusPct) / 100;
+        return (
+          <>
+            <div data-testid="centre-background" aria-hidden style={{ position: "absolute", left: "50%", top: "50%", width: d, height: d, marginLeft: -d / 2, marginTop: -d / 2, borderRadius: "50%", background: b.fill, opacity: b.fillOpacity, pointerEvents: "none" }} />
+            <div data-testid="centre-background-image" aria-hidden style={{ position: "absolute", left: "50%", top: "50%", width: d, height: d, marginLeft: -d / 2, marginTop: -d / 2, borderRadius: "50%", backgroundImage: `url("${b.src.replace(/"/g, "%22")}")`, backgroundRepeat: "no-repeat", backgroundPosition: "center", backgroundSize: b.fit, opacity: b.opacity, pointerEvents: "none" }} />
+          </>
+        );
+      })()}
       {p.build.centreImages?.map((im, i) => (
         <img key={i} data-testid="centre-image" src={im.src} alt={im.alt} style={{ position: "absolute", left: "50%", top: `calc(50% + ${im.dy - im.size / 2}px)`, width: im.size, height: im.size, marginLeft: -im.size / 2, objectFit: "contain", opacity: im.opacity, pointerEvents: "none" }} />
       ))}

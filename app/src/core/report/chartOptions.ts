@@ -9,7 +9,7 @@ import { FormatReader } from "./formatReader";
 import type { Loaded } from "./dataLoader";
 import type { SelectedPoint } from "./interactions";
 import { formatCompact, formatNumber } from "./numberFormat";
-import { donutCentre, type CentreImage } from "./donutCentre";
+import { donutCentre, type CentreBackground, type CentreImage } from "./donutCentre";
 import { attachMarks, axisBlock, plotImage, type PlotImage, CAP, dashOf, gridFor, labelBlock, labelDefaults, legendBlock, lineSeriesStyle, referenceLineMark, referenceLineShade, sliceItemStyle, valueText, zoomBlock, type LineSpec } from "./chartFormat";
 import { echartsText, opacityOf, readFont } from "../format/styles";
 import { seriesColor, type Theme } from "./theme";
@@ -38,6 +38,7 @@ export interface ChartBuild {
   option: O;
   /** Pictures in the hole of a donut chart, drawn over the chart by ChartView. */
   centreImages?: CentreImage[];
+  centreBackground?: CentreBackground;
   /** The data point behind a chart element, for selection, drilling and tooltips. */
   pointAt(seriesIndex: number, dataIndex: number): SelectedPoint | null;
   /** Number of data points drawn (0: nothing to show). */
@@ -765,7 +766,7 @@ function pie(inp: ChartInput): ChartBuild {
   const font = readFont(f, "labels", { color: "color" });
   const bg = f.str("labels", "background", "auto");
   const hole = (donut ? f.num("slices", "innerRadiusRatio", 50) : 0) * 0.72;
-  const centre = donut ? donutCentre(f, theme, values.length ? total : null, vcol?.format ?? null, hole) : null;
+  const centre = donut ? donutCentre(f, theme, values.some((v) => v !== null && v !== undefined) ? total : null, vcol?.format ?? null, hole) : null;
   const option: O = {
     animation: false,
     ...(centre ? { graphic: centre.graphic } : {}),
@@ -791,7 +792,7 @@ function pie(inp: ChartInput): ChartBuild {
       },
     ],
   };
-  return { option, count: data.length, ...(centre?.images.length ? { centreImages: centre.images } : {}), pointAt: (_s, di) => (p.categories[di] ? pointOfCategory(p, di, null) : null) };
+  return { option, count: data.length, ...(centre?.images.length ? { centreImages: centre.images } : {}), ...(centre?.background ? { centreBackground: centre.background } : {}), pointAt: (_s, di) => (p.categories[di] ? pointOfCategory(p, di, null) : null) };
 }
 
 function funnel(inp: ChartInput): ChartBuild {
