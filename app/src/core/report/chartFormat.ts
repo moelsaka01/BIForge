@@ -73,7 +73,7 @@ export const CAP: Record<string, string> = { none: "butt", round: "round", squar
 
 // ---- legend ---------------------------------------------------------------------------------------------
 
-const LEGEND_POS: Record<string, O> = {
+export const LEGEND_POS: Record<string, O> = {
   Top: { top: 0, left: 0, orient: "horizontal" },
   TopCenter: { top: 0, left: "center", orient: "horizontal" },
   TopRight: { top: 0, right: 0, orient: "horizontal" },

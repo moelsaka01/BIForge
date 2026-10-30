@@ -10,7 +10,7 @@ import type { Loaded } from "./dataLoader";
 import type { SelectedPoint } from "./interactions";
 import { formatCompact, formatNumber } from "./numberFormat";
 import { donutCentre, type CentreBackground, type CentreImage } from "./donutCentre";
-import { attachMarks, axisBlock, plotImage, type PlotImage, CAP, dashOf, gridFor, labelBlock, labelDefaults, legendBlock, lineSeriesStyle, referenceLineMark, referenceLineShade, sliceItemStyle, valueText, zoomBlock, type LineSpec } from "./chartFormat";
+import { attachMarks, axisBlock, plotImage, type PlotImage, CAP, dashOf, gridFor, labelBlock, labelDefaults, legendBlock, LEGEND_POS, lineSeriesStyle, referenceLineMark, referenceLineShade, sliceItemStyle, valueText, zoomBlock, type LineSpec } from "./chartFormat";
 import { echartsText, opacityOf, readFont } from "../format/styles";
 import { seriesColor, type Theme } from "./theme";
 import type { VisualModel } from "./visualDoc";
@@ -64,6 +64,39 @@ function pointColors(f: FormatReader, p: Pivot, valueCols: { field: FieldRef }[]
   const values = p.cells[src]?.[si] ?? [];
   const fn = colorFn(spec, values);
   return values.map((v) => fn(v));
+}
+/**
+ * The color bar of a gradient rule on the data colors (Legend > Show gradient legend): the colors of the rule from its lowest to its highest
+ * value, drawn at the legend position. A visual map that is bound to no series, so that the bars keep the colors of the rule.
+ */
+function gradientLegend(f: FormatReader, theme: Theme, p: Pivot, valueCols: { field: FieldRef }[], series: number): O | null {
+  const raw = f.raw("dataPoint", "fill");
+  const spec = raw ? condFormatFromPbir(raw) : null;
+  if (!spec || spec.kind !== "gradient" || !f.bool("legend", "showGradientLegend", true)) return null;
+  const idx = valueCols.findIndex((c) => c.field.kind !== "column" && fieldMatch(c.field, spec.input));
+  const nums = (p.cells[idx >= 0 ? idx : 0]?.[series] ?? []).filter((x): x is number => x !== null && Number.isFinite(x));
+  const lo = spec.min.value ?? (nums.length ? Math.min(...nums) : 0);
+  const hi = spec.max.value ?? (nums.length ? Math.max(...nums) : 0);
+  const pos = f.str("legend", "position", "Top");
+  const place = LEGEND_POS[pos] ?? LEGEND_POS.Top;
+  const horizontal = place.orient === "horizontal";
+  return {
+    type: "continuous",
+    show: f.bool("legend", "show", true),
+    min: lo,
+    max: Math.max(hi, lo + 1e-9),
+    calculable: false,
+    seriesIndex: [],
+    inRange: { color: [spec.min.color, ...(spec.mid ? [spec.mid.color] : []), spec.max.color] },
+    orient: place.orient,
+    itemWidth: horizontal ? 10 : 10,
+    itemHeight: horizontal ? 100 : 80,
+    textStyle: echartsText(readFont(f, "legend", { color: "labelColor" }), labelDefaults(theme)),
+    ...(place.top !== undefined ? { top: place.top } : {}),
+    ...(place.bottom !== undefined ? { bottom: place.bottom } : {}),
+    ...(place.left !== undefined ? { left: place.left } : {}),
+    ...(place.right !== undefined ? { right: place.right } : {}),
+  };
 }
 const fieldMatch = (a: FieldRef, b: FieldRef) => a.kind === b.kind && a.table === b.table && a.name === b.name && (a.kind !== "agg" || (b.kind === "agg" && a.fn === b.fn));
 
@@ -443,11 +476,13 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
   const y2Cols = columnsOf(q, "Y2", "value");
   const valAxes = combo && y2Cols.length ? [valAxis, { ...axisBlock({ f, theme, object: "valueAxis", prefix: "sec", kind: "value", fmt: y2Cols[0].format, titleDefault: y2Cols.map((c) => c.label).join(", "), horizontal }), splitLine: { show: false } }] : [valAxis];
 
+  const gradient = !hasSeries || p.series.length === 1 ? gradientLegend(f, theme, p, valueCols, 0) : null;
   const option: O = {
     animation: false,
     textStyle: { fontFamily: theme.textClasses.label.fontFace },
-    grid: roomForTitles(gridFor(f, f.bool("legend", "show", legendShown)), horizontal ? valAxes[0] : catAxis, horizontal ? catAxis : valAxes[0], horizontal ? undefined : valAxes[1]),
+    grid: roomForTitles(gridFor(f, f.bool("legend", "show", legendShown || !!gradient)), horizontal ? valAxes[0] : catAxis, horizontal ? catAxis : valAxes[0], horizontal ? undefined : valAxes[1]),
     legend: legendBlock(f, theme, legendShown),
+    ...(gradient ? { visualMap: gradient } : {}),
     tooltip: {
       trigger: "axis",
       axisPointer: { type: horizontal ? "shadow" : "line" },

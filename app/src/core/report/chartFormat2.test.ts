@@ -10,7 +10,8 @@ import { agg, column, lit } from "./fields";
 import { buildVisualQuery } from "./queryBuilder";
 import { fixtureModel, visualOf } from "./testFixture";
 import { DEFAULT_THEME } from "./theme";
-import { setFormat, type VisualModel } from "./visualDoc";
+import { condFormatToPbir } from "./condFormat";
+import { setFormat, setRawProp, type VisualModel } from "./visualDoc";
 
 const model = fixtureModel();
 const Cat = column("Product", "Category");
@@ -337,5 +338,18 @@ describe("overlapping clustered bars", () => {
     };
     expect(two(false)).toEqual([2, 3]);
     expect(two(true)).toEqual([4, 3]);
+  });
+});
+
+describe("gradient legend", () => {
+  const gradient = (v: VisualModel) => setRawProp(v.json, "dataPoint", "fill", condFormatToPbir({ kind: "gradient", input: Qty, min: { color: "#ff0000" }, mid: { color: "#00ff00" }, max: { color: "#0000ff" } }));
+  it("is a color bar from the lowest to the highest value of a gradient rule, at the legend position, unless Show gradient legend is off", () => {
+    const o = build("clusteredColumnChart", gradient);
+    expect(o.visualMap).toMatchObject({ type: "continuous", min: 20, max: 50, inRange: { color: ["#ff0000", "#00ff00", "#0000ff"] }, seriesIndex: [], orient: "horizontal", top: 0 });
+    const right = build("clusteredColumnChart", (v) => { gradient(v); setFormat(v.json, "legend", "position", lit.str("Right")); });
+    expect(right.visualMap).toMatchObject({ orient: "vertical", right: 0 });
+    expect(build("clusteredColumnChart", (v) => { gradient(v); setFormat(v.json, "legend", "showGradientLegend", lit.bool(false)); }).visualMap).toBeUndefined();
+    // no gradient rule, no bar
+    expect(build("clusteredColumnChart", () => undefined).visualMap).toBeUndefined();
   });
 });

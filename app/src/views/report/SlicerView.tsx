@@ -64,7 +64,7 @@ function summary(cond: Cond | null, items: { label: string; lit: Lit }[]): strin
 
 export function SlicerView(p: SlicerViewProps) {
   const { theme } = p;
-  const items = useMemo(() => p.loaded.values.map((v: Value) => ({ label: labelOf(v), lit: valueToLit(v) })), [p.loaded.values]);
+  const items = useMemo(() => p.loaded.values.map((v: Value) => ({ label: labelOf(v, p.look?.formatString || null), lit: valueToLit(v) })), [p.loaded.values, p.look?.formatString]);
   const [q, setQ] = useState("");
   const shown = q ? items.filter((i) => i.label.toLowerCase().includes(q.toLowerCase())) : items;
   const all = items.map((i) => i.lit);

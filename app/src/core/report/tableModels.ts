@@ -218,7 +218,12 @@ export function buildMatrix(visual: VisualModel, parts: Value[][][], q: BuiltMat
   const colPaths: Value[][] = C && colLeaf >= 0 ? (parts[colLeaf] ?? []).map((r) => colCols.map((c) => r[c.index])) : [[]];
 
   const valueCols = q.parts[partOf(R, C) >= 0 ? partOf(R, C) : rowLeaf]?.columns.filter((c) => c.kind === "value") ?? [];
-  const fmtOf = (vi: number) => valueCols[vi] ?? { format: null, field: q.values[vi] };
+  // general > Format string replaces the format of every value
+  const formatString = f.str("general", "formatString", "");
+  const fmtOf = (vi: number) => {
+    const pc = valueCols[vi] ?? { format: null, field: q.values[vi] };
+    return formatString ? { ...pc, format: formatString } : pc;
+  };
   const labelFor = (vi: number) => visual.roles.Values?.[vi]?.displayName ?? valueCols[vi]?.label ?? "";
 
   // styling by column of values (all numbers of that value across the leaf cells)

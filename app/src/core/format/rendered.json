@@ -240,6 +240,7 @@
    "labelColor",
    "position",
    "show",
+   "showGradientLegend",
    "showTitle",
    "titleText",
    "underline"
@@ -499,6 +500,7 @@
    "labelColor",
    "position",
    "show",
+   "showGradientLegend",
    "showTitle",
    "titleText",
    "underline"
@@ -760,6 +762,7 @@
    "labelColor",
    "position",
    "show",
+   "showGradientLegend",
    "showTitle",
    "titleText",
    "underline"
@@ -1022,6 +1025,7 @@
    "labelColor",
    "position",
    "show",
+   "showGradientLegend",
    "showTitle",
    "titleText",
    "underline"
@@ -1279,6 +1283,7 @@
    "labelColor",
    "position",
    "show",
+   "showGradientLegend",
    "showTitle",
    "titleText",
    "underline"
@@ -1533,6 +1538,7 @@
    "labelColor",
    "position",
    "show",
+   "showGradientLegend",
    "showTitle",
    "titleText",
    "underline"
@@ -3925,6 +3931,9 @@
   ]
  },
  "map": {
+  "general": [
+   "formatString"
+  ],
   "bubbles": [
    "bubbleSize",
    "markerRangeType"
@@ -4267,6 +4276,9 @@
   ]
  },
  "pivotTable": {
+  "general": [
+   "formatString"
+  ],
   "columnFormatting": [
    "backColor",
    "fontColor",
@@ -4691,6 +4703,9 @@
   ]
  },
  "decompositionTreeVisual": {
+  "general": [
+   "formatString"
+  ],
   "analysis": [
    "aiMode"
   ],
@@ -4754,6 +4769,7 @@
  },
  "slicer": {
   "general": [
+   "formatString",
    "orientation",
    "selfFilterEnabled"
   ],
@@ -4788,6 +4804,7 @@
  },
  "advancedSlicerVisual": {
   "general": [
+   "formatString",
    "selfFilterEnabled"
   ],
   "accentBar": [
@@ -4875,6 +4892,7 @@
  },
  "listSlicer": {
   "general": [
+   "formatString",
    "selfFilterEnabled"
   ],
   "accentBar": [
@@ -4958,6 +4976,11 @@
    "tabCutCornerSnipSizeRightTop",
    "tabCutCornerSnipSizeTop",
    "tileShape"
+  ]
+ },
+ "textSlicer": {
+  "general": [
+   "formatString"
   ]
  },
  "shape": {

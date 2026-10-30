@@ -28,6 +28,8 @@ export interface TreeStyle {
   label: CSSProperties;
   valueLabel: CSSProperties;
   /** Display units and decimals of the values. */
+  /** general > Format string: replaces the units and decimals of the values. */
+  formatString: string;
   units: DisplayUnits;
   precision: number;
   aiMode: "absolute" | "relative";
@@ -57,6 +59,7 @@ export function treeStyle(f: FormatReader, theme: Theme): TreeStyle {
     showSubtitles: f.bool("levelHeader", "showSubtitles", true),
     label: cssFont(readFont(f, "categoryLabels", { prefix: "categoryLabel", color: "categoryLabelFontColor" }), base),
     valueLabel: cssFont(readFont(f, "dataLabels", { prefix: "dataLabel", color: "dataLabelFontColor" }), base),
+    formatString: f.str("general", "formatString", ""),
     units: unitsOf(f, "dataLabels", "dataLabelDisplayUnits"),
     precision: f.has("dataLabels", "dataLabelPrecision") ? f.num("dataLabels", "dataLabelPrecision", 1) : 1,
     aiMode: f.str("analysis", "aiMode", "absolute") === "relative" ? "relative" : "absolute",

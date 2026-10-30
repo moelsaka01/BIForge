@@ -6,6 +6,10 @@ import type { Loaded } from "../../core/report/dataLoader";
 import { lit } from "../../core/report/fields";
 import type { Cond } from "../../core/report/filters";
 import { DEFAULT_THEME } from "../../core/report/theme";
+import { FormatReader } from "../../core/report/formatReader";
+import { readSlicer } from "../../core/report/slicerSettings";
+import { visualOf } from "../../core/report/testFixture";
+import { setFormat } from "../../core/report/visualDoc";
 import { SlicerView, toggleItem, type SlicerMode, type SlicerViewProps } from "./SlicerView";
 
 afterEach(cleanup);
@@ -171,5 +175,20 @@ describe("SlicerView tile mode", () => {
     expect(p.onChange).toHaveBeenCalledWith({ kind: "notIn", values: [] });
     rerender(<SlicerView {...p} singleSelect />);
     expect(screen.queryByRole("option", { name: "Select all" })).toBeNull();
+  });
+});
+
+describe("slicer values with a format string", () => {
+  it("writes the numbers of the list as General > Format string says", () => {
+    const loaded: Extract<Loaded, { kind: "slicer" }> = { ...slicerData([]), values: [decodeCell({ t: "int", v: "3" }), decodeCell({ t: "int", v: "12" })] };
+    const v = visualOf("slicer", {});
+    setFormat(v.json, "general", "formatString", lit.str("0.000"));
+    const look = readSlicer(new FormatReader(v.json, DEFAULT_THEME, "slicer"), false);
+    render(<SlicerView {...props({ loaded, look })} />);
+    expect(screen.getByText("3.000")).toBeTruthy();
+    expect(screen.getByText("12.000")).toBeTruthy();
+    cleanup();
+    render(<SlicerView {...props({ loaded })} />);
+    expect(screen.getByText("3")).toBeTruthy();
   });
 });

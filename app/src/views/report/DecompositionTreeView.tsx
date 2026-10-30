@@ -4,7 +4,7 @@ import { pickAutoSplit, readGroups, stepFilters, tableVisual, type AutoSplit, ty
 import { treeStyle } from "../../core/report/analysisStyle";
 import { fieldKey, fieldLabel, sameField, type FieldRef } from "../../core/report/fields";
 import { FormatReader } from "../../core/report/formatReader";
-import { formatCompact } from "../../core/report/numberFormat";
+import { formatCompact, formatNumber } from "../../core/report/numberFormat";
 import type { PageModel, VisualModel } from "../../core/report/visualDoc";
 import { useReport } from "./reportContext";
 
@@ -89,7 +89,7 @@ export function DecompositionTreeView({ page, visual, width, height }: { page: P
 
   if (!analyze) return <div role="status" style={{ padding: 12, fontSize: 12 }}>Add a measure to Analyze and fields to Explain by.</div>;
   if (error) return <div role="alert" style={{ padding: 12, fontSize: 12, color: "#c50f1f" }}>Cannot load this visual: {error}</div>;
-  const fmt = (n: number | null) => (n === null ? "(Blank)" : formatCompact(n, style.units, style.precision, root?.fmt ?? null));
+  const fmt = (n: number | null) => (n === null ? "(Blank)" : style.formatString ? formatNumber(n, style.formatString) : formatCompact(n, style.units, style.precision, root?.fmt ?? null));
   const free = (upTo: number) => explain.filter((e) => !levels.slice(0, upTo).some((l) => sameField(l.field, e)));
   const addSplit = (index: number, s: Split) => {
     setSpec((x) => [...x.slice(0, index), s]);

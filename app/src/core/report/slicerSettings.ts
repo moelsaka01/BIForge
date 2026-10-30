@@ -36,6 +36,8 @@ export interface SlicerSettings {
   singleSelect: boolean;
   selectAll: boolean;
   search: boolean;
+  /** general > Format string: how the numbers in the list are written (empty: as the field formats them). */
+  formatString: string;
   /** Header: shown when switched on, its text (empty: the field name) and font. */
   header: { show: boolean; text: string; font: Font; background?: string };
   /** The values: font and the row background. */
@@ -55,6 +57,7 @@ export function readSlicer(f: FormatReader, isDateOrNumeric: boolean, searchDefa
     singleSelect: f.bool("selection", "singleSelect", false) || f.str("data", "mode", "") === "Single",
     selectAll: f.bool("selection", "selectAllCheckboxEnabled", false),
     search: f.bool("general", "selfFilterEnabled", searchDefault),
+    formatString: f.str("general", "formatString", ""),
     header: { show: f.has("header", "show") && f.bool("header", "show", false), text: f.str("header", "text", ""), font: readFont(f, "header", { color: "fontColor", size: "textSize" }), background: f.color("header", "background") },
     items: { font: readFont(f, "items", { color: "fontColor", size: "textSize" }), background: f.color("items", "background"), padding: f.num("items", "padding", 0) },
   };

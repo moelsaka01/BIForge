@@ -14,6 +14,7 @@ import { buildContainer } from "../report/containerModel";
 import type { Loaded } from "../report/dataLoader";
 import { agg, column, lit, type Lit } from "../report/fields";
 import { FormatReader } from "../report/formatReader";
+import { condFormatToPbir } from "../report/condFormat";
 import { litExpr, queryRefOf } from "../report/pbir";
 import { buildMatrixQuery, buildVisualQuery } from "../report/queryBuilder";
 import { influencersStyle, treeStyle } from "../report/analysisStyle";
@@ -254,6 +255,11 @@ const EXTRA_SCENARIOS: Record<string, [Scenario, string[]][]> = {
   gauge: [[chart("gauge", { Y: [Qty] }, [[n(60)]]), ["axis"]]],
 };
 
+// a gradient legend belongs to a gradient rule, which the series of the main scenario rule out: one series only
+for (const id of ["barChart", "columnChart", "clusteredBarChart", "clusteredColumnChart", "hundredPercentStackedBarChart", "hundredPercentStackedColumnChart", "lineChart", "areaChart"]) {
+  (EXTRA_SCENARIOS[id] ??= []).push([chart(id, { Category: [Cat], Y: [Qty] }, [[t("Accessories"), n(30)], [t("Bikes"), n(50)], [t("Shoes"), n(20)]]), ["legend"]]);
+}
+
 const SCENARIOS: Record<string, Scenario> = {
   clusteredColumnChart: chart("clusteredColumnChart", { Category: [Cat], Series: [Country], Y: [Qty] }, catRows),
   clusteredBarChart: chart("clusteredBarChart", { Category: [Cat], Series: [Country], Y: [Qty] }, catRows),
@@ -380,6 +386,8 @@ const SAMPLE_ARGS: unknown[] = [
   { value: 1234567.891, name: "N", data: { raw: 1234567.891, value: 1234567.891 }, seriesName: "S", marker: "", dataIndex: 1 },
   [{ value: 5, name: "N", data: { raw: 5, value: 5 }, seriesName: "S", seriesIndex: 0, marker: "" }],
   [10, 20, 50, "L"], // a point of a scatter or bubble series: x, y, size, label
+  { data: [10, 20, 1234.5678, "L"], marker: "", seriesName: "S", name: "N", value: [10, 20, 1234.5678, "L"] }, // an item of a map layer: longitude, latitude, size, label
+  { data: { label: "L", value: 1234.5678 }, marker: "", name: "N", value: 1234.5678 }, // a region of a filled map
 ];
 
 /** A comparable text of a result: functions are replaced by what they return for sample arguments. */
@@ -434,6 +442,8 @@ function measure(scenarioOf: Scenario, visualType: string, objects: string[]): R
         for (const [k, val] of Object.entries(ENABLE[object] ?? {})) if (k !== skip) setProp(v, object, k, val, inst.selector);
         for (const [k, val] of inst.extra) if (k !== skip) setProp(v, object, k, val, inst.selector);
         for (const [o, k, val] of CROSS[object] ?? []) setProp(v, o, k, val, inst.selector);
+        // the gradient legend belongs to a gradient rule on the data colors
+        if (object === "legend") setRawProp(v.json, "dataPoint", "fill", condFormatToPbir({ kind: "gradient", input: Qty, min: { color: "#ff0000" }, max: { color: "#0000ff" } }));
       };
       for (const [prop, kind] of Object.entries(props)) {
         if (kind[0] === "x") continue;
