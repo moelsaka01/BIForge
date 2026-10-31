@@ -32,7 +32,8 @@ function shrinkDynamicLabels(model: any, si: number, axis: string): boolean {
   for (let di = 0; di < (data?.count() ?? 0); di++) {
     const bar = data.getItemGraphicEl(di);
     const dyn = data.getRawDataItem?.(di)?.dyn as { full: string; compact: string } | undefined;
-    const text = bar?.getTextContent?.();
+    // the label of a line's point hangs on the path inside its symbol group
+    const text = (bar?.getSymbolPath?.() ?? bar)?.getTextContent?.();
     if (!bar || !text || !dyn) continue;
     // measure the full text, whatever is shown now
     text.setStyle({ text: dyn.full });
@@ -47,8 +48,8 @@ function shrinkDynamicLabels(model: any, si: number, axis: string): boolean {
       changed = true;
       continue;
     }
-    const room = Math.abs((axis === "x" ? bar.shape?.width : bar.shape?.height) ?? Infinity);
-    const fits = (axis === "x" ? box.width : box.height) <= room;
+    // the label has to fit the bar in both directions: a column narrower than its label gives way as well as one that is too short
+    const fits = box.width <= Math.abs(bar.shape?.width ?? Infinity) && box.height <= Math.abs(bar.shape?.height ?? Infinity);
     text.setStyle({ text: fits ? dyn.full : dyn.compact });
     text.dirty();
     changed = true;

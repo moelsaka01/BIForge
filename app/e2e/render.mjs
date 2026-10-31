@@ -69,10 +69,14 @@ const MEASURES = [
   ["Variance", "SUM(Sales[Quantity]) - AVERAGEX(ALL(Product[Category]), CALCULATE(SUM(Sales[Quantity])))", "0b6f2a5e-1c3d-4e7a-9a11-5d2c8f3e7b01"],
   ["Sparse", "IF(SUM(Sales[Quantity]) > 60, SUM(Sales[Quantity]), BLANK())", "0b6f2a5e-1c3d-4e7a-9a11-5d2c8f3e7b02"],
   ["Empty", "BLANK()", "0b6f2a5e-1c3d-4e7a-9a11-5d2c8f3e7b03"],
+  // a measure that is zero everywhere: its total is zero, so a point has no percent of total
+  ["Zero", "SUM(Sales[Quantity]) * 0", "0b6f2a5e-1c3d-4e7a-9a11-5d2c8f3e7b04"],
 ];
+// a series column with a blank name (the online orders): Title > Show blank as
+const BLANK_COLUMN = ["", "\tcolumn StoreOnly = IF(Sales[Channel] = \"Online\", BLANK(), Sales[Channel])", "\t\tdataType: string", "\t\tlineageTag: 0b6f2a5e-1c3d-4e7a-9a11-5d2c8f3e7b05", "\t\tsummarizeBy: none"].join("\n") + "\n";
 const MEASURE_TEXT = MEASURES.map(([n, e, g]) => ["", `\tmeasure ${n} = ${e}`, `\t\tlineageTag: ${g}`].join("\n")).join("\n") + "\n";
 const salesTable = join(parent, "Rn", "Rn.SemanticModel", "definition", "tables", "Sales.tmdl");
-if (existsSync(salesTable) && !readFileSync(salesTable, "utf8").includes("measure Variance")) appendFileSync(salesTable, MEASURE_TEXT);
+if (existsSync(salesTable) && !readFileSync(salesTable, "utf8").includes("measure Variance")) appendFileSync(salesTable, MEASURE_TEXT + BLANK_COLUMN);
 const def = join(parent, "Rn", "Rn.Report", "definition");
 // a custom theme with a style preset named Zz (a yellow background), so that Style preset > name changes something
 {
@@ -146,6 +150,10 @@ const addPage = (id, json0, c) => {
 addPage("ctla", picked[0].base, picked[0]);
 addPage("ctlv0", picked[0].base, picked[0]);
 picked.forEach((c, i) => { addPage("c" + i + "a", c.base, c); c.variants.forEach((v, j) => addPage(`c${i}v${j}`, v, c)); });
+// a Tooltip page named Zz: Visual header tooltip > Page (section) names it
+mkdirSync(join(def, "pages", "Zz"), { recursive: true });
+writeFileSync(join(def, "pages", "Zz", "page.json"), JSON.stringify({ $schema: "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/page/1.0.0/schema.json", name: "Zz", displayName: "Zz", displayOption: "FitToPage", height: 240, width: 320, pageBinding: { name: "zzb", type: "Tooltip", referenceScope: "Default" } }, null, 2));
+pages.pageOrder.push("Zz");
 writeFileSync(join(def, "pages", "pages.json"), JSON.stringify(pages, null, 2));
 
 // 3. open it in the real window and compare

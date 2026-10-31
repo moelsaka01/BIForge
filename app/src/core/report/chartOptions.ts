@@ -259,7 +259,8 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
         text: textOf,
         parts: (pa: O) => {
           const raw = (pa.data?.raw ?? null) as number | null;
-          return { series: name, value: raw, percent: raw === null || measureTotal === 0 ? null : (Math.abs(raw) / measureTotal) * 100 };
+          // a blank series name stays blank here, so that Title > Show blank as can give it a text
+          return { series: hasSeries && !multiMeasure ? (p.series[si].label === BLANK_LABEL ? "" : p.series[si].label) : name, value: raw, percent: raw === null || measureTotal === 0 ? null : (Math.abs(raw) / measureTotal) * 100 };
         },
       }),
     };

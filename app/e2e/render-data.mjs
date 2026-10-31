@@ -104,6 +104,7 @@ function headerState(json, c) {
 
 export function dataFor(json, c) {
   headerState(json, c);
+  auditScenarios(json, c);
   // panel headers that are wider than the header: the subcategory names (long words), in a large font
   if (c.object === "subheader" && c.prop === "titleWrap") {
     const rows = json.visual?.query?.queryState?.Rows?.projections?.[0];
@@ -186,7 +187,7 @@ export function dataFor(json, c) {
   // the legend marker takes the line's color only where that differs from the series color
   if (c.prop === "matchLineColor") setProps(json, "lineStyles", { strokeColor: colorLit("#112233") });
   if (/recision$/.test(c.prop)) { decimals(json); millions(json, c); }
-  if (STACKED.test(c.visualType) && /^(labels|totals)$/.test(c.object) && c.prop !== "showSeries" && c.prop !== "showBlankAs" && c.prop !== "optimizeLabelDisplay" && c.prop !== "labelOverflow") singleSeries(json);
+  if (STACKED.test(c.visualType) && /^(labels|totals)$/.test(c.object) && c.prop !== "showSeries" && c.prop !== "showBlankAs" && c.prop !== "titleShowBlankAs" && c.prop !== "optimizeLabelDisplay" && c.prop !== "labelOverflow") singleSeries(json);
   if (STACKED.test(c.visualType) && c.object === "labels") shortLabels(json, c);
 }
 
@@ -194,4 +195,58 @@ export function dataFor(json, c) {
 export function shortLabels(json, c) {
   if (c.prop === "labelStyle") return;
   for (const e of json.visual?.objects?.labels ?? []) delete e.properties?.labelStyle;
+}
+
+const lit = (v) => ({ expr: { Literal: { Value: v } } });
+const labelsOf = (json) => json.visual?.objects?.labels ?? [];
+const dropLabelProps = (json, ...names) => { for (const e of labelsOf(json)) for (const n of names) delete e.properties[n]; };
+
+/** The series of the visual is the column with a blank name (the online orders), so that a blank series name exists. */
+function blankSeries(json) {
+  const qs = json.visual?.query?.queryState;
+  if (!qs) return;
+  const proj = { field: { Column: { Expression: { SourceRef: { Entity: "Sales" } }, Property: "StoreOnly" } }, queryRef: "Sales.StoreOnly", nativeQueryRef: "StoreOnly" };
+  if (qs.Series) qs.Series.projections = [proj];
+  else qs.Series = { projections: [proj] };
+}
+
+/** Scenarios of the properties that need a particular situation in the data (blank names, narrow bars, a second axis with negatives). */
+function auditScenarios(json, c) {
+  const type = c.visualType;
+  // the tooltip page of the header is used once the type says so
+  if (c.object === "visualHeaderTooltip" && c.prop === "section") setProps(json, "visualHeaderTooltip", { type: lit("'Canvas'") });
+  // Title > Show blank as: the title names the series, so a series with a blank name must exist (not the Custom title, which writes the value)
+  if (c.object === "labels" && c.prop === "titleShowBlankAs") {
+    dropLabelProps(json, "titleContentType");
+    blankSeries(json);
+    for (const e of labelsOf(json)) e.properties.labelOverflow = lit("true");
+  }
+  // Detail > Show blank as: a point has no percent of total where the total is zero
+  if (c.object === "labels" && c.prop === "detailShowBlankAs") {
+    dropLabelProps(json, "detailContentType");
+    measure(json, "Zero");
+    for (const e of labelsOf(json)) e.properties.labelOverflow = lit("true");
+  }
+  // Show dynamic labels: many narrow columns with a large font, so that the full label (title, value and detail) does not fit in a bar
+  if (c.object === "labels" && c.prop === "showDynamicLabels") {
+    months(json);
+    for (const e of labelsOf(json)) e.properties.fontSize = numLit(28);
+    for (const e of labelsOf(json)) e.properties.labelOverflow = lit("true");
+  }
+  // Label density / Show all / Show by default on the stacked types: the long label would be hidden in both, so it may overflow
+  if (c.object === "labels" && /^(labelDensity|showAll|showByDefault)$/.test(c.prop)) {
+    months(json);
+    for (const e of labelsOf(json)) e.properties.labelOverflow = lit("true");
+  }
+  // Scale to fit: the value axis is rescaled to the categories that remain in view of the zoom
+  if (c.object === "valueAxis" && c.prop === "scaleToFit") {
+    months(json);
+    // the zoom shows the last months, whose values are far below the largest ones (the months are sorted by value, largest first)
+    setProps(json, "zoom", { show: lit("true"), categoryMin: numLit(8), categoryMax: numLit(11) });
+  }
+  // Align zeros: the second axis holds a measure with negative values
+  if (/^line(Stacked|Clustered)ColumnComboChart$/.test(type) && c.object === "valueAxis" && c.prop === "alignZeros") {
+    const y2 = json.visual?.query?.queryState?.Y2?.projections;
+    if (y2?.[0]) { y2[0].field = { Measure: { Expression: { SourceRef: { Entity: "Sales" } }, Property: "Variance" } }; y2[0].queryRef = "Sales.Variance"; y2[0].nativeQueryRef = "Variance"; }
+  }
 }
