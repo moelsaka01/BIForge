@@ -601,6 +601,14 @@ function computeAll(): Coverage {
     if (Object.keys(own).length) result[id] = own;
   }
   result.page = measurePage();
+  // properties the real-window audit could not show (auditNotDrawn.json) are not counted as drawn, so their cards stay Partial
+  for (const g of auditNotDrawn as { props: string[] }[]) {
+    for (const key of g.props) {
+      const [type, object, prop] = key.split(".");
+      const list = result[type]?.[object];
+      if (list?.includes(prop)) result[type][object] = list.filter((p) => p !== prop);
+    }
+  }
   return result;
 }
 

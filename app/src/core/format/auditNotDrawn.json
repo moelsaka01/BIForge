@@ -53,5 +53,89 @@
       "listSlicer.shapeCustomRectangle.tabCutCornerSnipSizeLeftBottom",
       "listSlicer.shapeCustomRectangle.tabCutCornerSnipSizeRightBottom"
     ]
+  },
+  {
+    "class": "Open (not confirmed)",
+    "reason": "Title and Detail Show blank as: the audit scenario has no blank series name or blank percentage in a visible label, so no pixel difference shows in the real window. Unit tests cover the text.",
+    "props": [
+      "clusteredColumnChart.labels.detailShowBlankAs",
+      "clusteredColumnChart.labels.titleShowBlankAs",
+      "clusteredBarChart.labels.detailShowBlankAs",
+      "clusteredBarChart.labels.titleShowBlankAs",
+      "columnChart.labels.detailShowBlankAs",
+      "columnChart.labels.titleShowBlankAs",
+      "barChart.labels.detailShowBlankAs",
+      "barChart.labels.titleShowBlankAs",
+      "hundredPercentStackedColumnChart.labels.detailShowBlankAs",
+      "hundredPercentStackedColumnChart.labels.titleShowBlankAs",
+      "hundredPercentStackedBarChart.labels.detailShowBlankAs",
+      "hundredPercentStackedBarChart.labels.titleShowBlankAs",
+      "lineChart.labels.detailShowBlankAs",
+      "lineChart.labels.titleShowBlankAs",
+      "areaChart.labels.detailShowBlankAs",
+      "areaChart.labels.titleShowBlankAs",
+      "stackedAreaChart.labels.detailShowBlankAs",
+      "hundredPercentStackedAreaChart.labels.detailShowBlankAs",
+      "hundredPercentStackedAreaChart.labels.titleShowBlankAs",
+      "lineClusteredColumnComboChart.labels.detailShowBlankAs",
+      "lineClusteredColumnComboChart.labels.titleShowBlankAs",
+      "lineStackedColumnComboChart.labels.titleShowBlankAs"
+    ]
+  },
+  {
+    "class": "Open (not confirmed)",
+    "reason": "Show dynamic labels: the audit bars are wide enough for the full title / value / detail label, so the compact form never appears in the real window (unit test only).",
+    "props": [
+      "clusteredColumnChart.labels.showDynamicLabels",
+      "clusteredBarChart.labels.showDynamicLabels",
+      "columnChart.labels.showDynamicLabels",
+      "barChart.labels.showDynamicLabels",
+      "hundredPercentStackedColumnChart.labels.showDynamicLabels",
+      "hundredPercentStackedBarChart.labels.showDynamicLabels",
+      "lineChart.labels.showDynamicLabels",
+      "areaChart.labels.showDynamicLabels",
+      "stackedAreaChart.labels.showDynamicLabels",
+      "hundredPercentStackedAreaChart.labels.showDynamicLabels",
+      "lineStackedColumnComboChart.labels.showDynamicLabels"
+    ]
+  },
+  {
+    "class": "Open (not confirmed)",
+    "reason": "Show all / Label density / Show by default / Scale to fit / Align zeros: no pixel difference in the real window with the current audit data (needs more points, a zoomed axis or a second axis with negatives).",
+    "props": [
+      "clusteredColumnChart.valueAxis.scaleToFit",
+      "clusteredBarChart.valueAxis.scaleToFit",
+      "columnChart.labels.labelDensity",
+      "columnChart.labels.showAll",
+      "columnChart.labels.showByDefault",
+      "columnChart.valueAxis.scaleToFit",
+      "barChart.labels.labelDensity",
+      "barChart.labels.showAll",
+      "barChart.labels.showByDefault",
+      "barChart.valueAxis.scaleToFit",
+      "hundredPercentStackedColumnChart.labels.showAll",
+      "hundredPercentStackedColumnChart.valueAxis.scaleToFit",
+      "hundredPercentStackedBarChart.labels.labelDensity",
+      "hundredPercentStackedBarChart.labels.showAll",
+      "hundredPercentStackedBarChart.labels.showByDefault",
+      "hundredPercentStackedBarChart.valueAxis.scaleToFit",
+      "lineStackedColumnComboChart.valueAxis.alignZeros"
+    ]
+  },
+  {
+    "class": "Open (not confirmed)",
+    "reason": "100 % stacked area: the title part of the label changes the DOM only, no pixels, in the audit scenario.",
+    "props": [
+      "hundredPercentStackedAreaChart.labels.enableTitleDataLabel",
+      "hundredPercentStackedAreaChart.labels.titleContentType",
+      "hundredPercentStackedAreaChart.labels.titleCustomFormatString",
+      "hundredPercentStackedAreaChart.labels.titleFontFamily",
+      "hundredPercentStackedAreaChart.labels.titleFontSize",
+      "hundredPercentStackedAreaChart.labels.titleFormatString",
+      "hundredPercentStackedAreaChart.labels.titleLabelDisplayUnits",
+      "hundredPercentStackedAreaChart.labels.titleLabelPrecision",
+      "hundredPercentStackedAreaChart.labels.titleTransparency",
+      "hundredPercentStackedAreaChart.labels.titleUnderline"
+    ]
   }
 ]
