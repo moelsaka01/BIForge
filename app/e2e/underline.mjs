@@ -94,7 +94,9 @@ try {
   const added = withTotals.filter((x) => x.t === "319.6K").map((x) => x.t);
   check(added.length >= 2 && withoutTotals.filter((t) => t === "319.6K").length === 1, `Totals show adds total labels to the horizontal bars (${added.join(", ")})`);
   const totalX = withTotals.filter((x) => x.t === "319.6K").map((x) => x.x);
-  check(totalX.length > 0 && totalX.every((x) => x > 0), "the total labels sit inside the visible chart area");
+  // the chart area as the page sees it; the numbers are in the message because this check failed on the CI runner (not locally) from 2026-10-28 on
+  const area = await bar.evaluate((el) => { const r = el.getBoundingClientRect(); return { x: Math.round(r.x), w: Math.round(r.width) }; });
+  check(totalX.length > 0 && totalX.every((x) => x > area.x && x < area.x + area.w), `the total labels sit inside the visible chart area (chart x ${area.x}, width ${area.w}; labels x ${totalX.map(Math.round).join(", ")})`);
   await page.getByRole("switch", { name: "Underline", exact: true }).last().evaluate((el) => !el.checked && el.click());
   await page.waitForTimeout(1000);
   const ul2 = await barText();
