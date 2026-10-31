@@ -157,7 +157,14 @@ export interface AxisInput {
   showDefault?: boolean;
   gridDefault?: boolean;
   horizontal?: boolean;
+  /** The axis starts at zero whatever the data (bars, areas): the end of a range that is not rounded. */
+  includeZero?: boolean;
+  /** The size of the visual: gridlines with Auto scale are drawn thinner or thicker with it. */
+  size?: { width: number; height: number };
 }
+
+/** Stroke widths with "Auto scale" follow the size of the visual; 400 px on the shorter side is the reference (a reading, not checked against Desktop). */
+export const autoScaleFactor = (size?: { width: number; height: number }): number => (size ? Math.min(2, Math.max(0.4, Math.min(size.width, size.height) / 400)) : 1);
 
 export function axisBlock(a: AxisInput): O {
   const { f, theme, object, kind } = a;
@@ -193,7 +200,7 @@ export function axisBlock(a: AxisInput): O {
     // an axis along the bottom has its title close under the labels; one along the side stands clear of the wider labels (the categories of a bar chart widest)
     nameGap: (a.horizontal ? object === "valueAxis" : object === "categoryAxis") ? 28 : a.horizontal ? 72 : 44,
     nameTextStyle: echartsText(titleFont, { family: d.family, size: d.size, color: d.color }),
-    splitLine: { show: gridOn, lineStyle: { color: gridBase, opacity: baseAlpha * gridAlpha, width: f.num(object, "gridlineThickness", 1), type: gridStyle === "custom" && dash ? dash : (DASH[gridStyle] ?? "solid"), ...(f.has(object, "gridlineDashCap") ? { cap: CAP[f.str(object, "gridlineDashCap", "none")] ?? "butt" } : {}) } },
+    splitLine: { show: gridOn, lineStyle: { color: gridBase, opacity: baseAlpha * gridAlpha, width: f.num(object, "gridlineThickness", 1) * (f.bool(object, "gridlineAutoScale", false) ? autoScaleFactor(a.size) : 1), type: gridStyle === "custom" && dash ? dash : (DASH[gridStyle] ?? "solid"), ...(f.has(object, "gridlineDashCap") ? { cap: CAP[f.str(object, "gridlineDashCap", "none")] ?? "butt" } : {}) } },
   };
   if (kind === "category") {
     base.axisLabel = { ...base.axisLabel, hideOverlap: true, width: f.has(object, "preferredCategoryWidth") ? f.num(object, "preferredCategoryWidth", 90) : a.horizontal ? 110 : 90, overflow: "truncate" };
@@ -205,8 +212,10 @@ export function axisBlock(a: AxisInput): O {
   } else {
     base.type = log ? "log" : "value";
     base.inverse = invert;
-    base.min = lo ?? (a.hundred ? 0 : undefined);
-    base.max = hi ?? (a.hundred ? 100 : undefined);
+    // Round range off: the axis ends at the data (and at zero for bars), not at the next round number
+    const tight = !log && !a.hundred && !f.bool(object, k("roundRange"), true);
+    base.min = lo ?? (a.hundred ? 0 : tight ? (e: { min: number }) => (a.includeZero ? Math.min(0, e.min) : e.min) : undefined);
+    base.max = hi ?? (a.hundred ? 100 : tight ? (e: { max: number }) => (a.includeZero ? Math.max(0, e.max) : e.max) : undefined);
     if (opposite) base.position = a.horizontal ? "top" : "right";
     base.axisLabel.formatter = (v: number) => {
       return a.hundred ? `${v}%` : valueText(v, a.fmt ?? null, f, object, a.prefix ?? "");
@@ -473,7 +482,7 @@ export function zoomBlock(f: FormatReader, horizontal: boolean, secondary = fals
     const key = axis === "category" ? "category" : axis === "value" ? "value" : "valueSec";
     const lo = `${key}Min`;
     const hi = `${key}Max`;
-    const out: O = { type: "slider", [onX ? "xAxisIndex" : "yAxisIndex"]: axis === "valueSec" ? 1 : 0, showDetail: labels, brushSelect: false, filterMode: axis === "category" ? "filter" : "empty" };
+    const out: O = { type: "slider", [onX ? "xAxisIndex" : "yAxisIndex"]: axis === "valueSec" ? 1 : 0, showDetail: labels, brushSelect: false, filterMode: axis === "category" ? (f.bool("valueAxis", "scaleToFit", false) ? "filter" : "none") : "empty" };
     if (f.has("zoom", lo)) out.startValue = f.num("zoom", lo, 0);
     if (f.has("zoom", hi)) out.endValue = f.num("zoom", hi, 0);
     // a size is the share of the axis shown at the start, when no end is given

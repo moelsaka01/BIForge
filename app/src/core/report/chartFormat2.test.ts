@@ -359,7 +359,7 @@ describe("data labels: title, value and detail", () => {
     setFormat(v.json, "labels", "show", lit.bool(true));
     for (const [k, x] of Object.entries(extra)) setFormat(v.json, "labels", k, x);
   };
-  const text = (s: { label: { formatter: (p: unknown) => string } }, i: number) => s.label.formatter({ data: s.data?.[i], value: s.data?.[i]?.value });
+  const text = (s: { label: { formatter: (p: unknown) => string }; data?: { value?: unknown }[] }, i: number) => s.label.formatter({ data: s.data?.[i], value: s.data?.[i]?.value });
   it("shows the series name above the value and the share of the total below", () => {
     const o = build("clusteredColumnChart", (v) => on(v, { enableTitleDataLabel: lit.bool(true), enableDetailDataLabel: lit.bool(true) }));
     const s = o.series[0];

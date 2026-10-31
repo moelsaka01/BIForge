@@ -285,6 +285,12 @@ const smallChart = (type: string, roles: Record<string, ReturnType<typeof column
 });
 for (const id of Object.keys(SCENARIOS_FOR_SMALL)) (EXTRA_SCENARIOS[id] ??= []).push([smallChart(id, SCENARIOS_FOR_SMALL[id][0], SCENARIOS_FOR_SMALL[id][1]), ["general"]]);
 
+// Scale to fit acts on the value axis of a chart whose category zoom shows part of the categories (the hidden one is the largest)
+for (const id of ["barChart", "columnChart", "clusteredBarChart", "clusteredColumnChart", "lineChart", "areaChart"]) {
+  const base = chart(id, { Category: [Cat], Y: [Qty] }, [[t("Accessories"), n(30)], [t("Bikes"), n(20)], [t("Shoes"), n(90)]]);
+  (EXTRA_SCENARIOS[id] ??= []).push([{ ...base, make: () => { const v = base.make(); setFormat(v.json, "zoom", "show", lit.bool(true)); setFormat(v.json, "zoom", "categoryMax", lit.num(1)); return v; } }, ["valueAxis"]]);
+}
+
 // a gradient legend belongs to a gradient rule, which the series of the main scenario rule out: one series only
 for (const id of ["barChart", "columnChart", "clusteredBarChart", "clusteredColumnChart", "hundredPercentStackedBarChart", "hundredPercentStackedColumnChart", "lineChart", "areaChart"]) {
   (EXTRA_SCENARIOS[id] ??= []).push([chart(id, { Category: [Cat], Y: [Qty] }, [[t("Accessories"), n(30)], [t("Bikes"), n(50)], [t("Shoes"), n(20)]]), ["legend"]]);
@@ -581,7 +587,7 @@ function computeAll(): Coverage {
       const more = measure(extra, id, objects);
       for (const o of objects) if (more[o]) own[o] = [...new Set([...(own[o] ?? []), ...more[o]])].sort();
     }
-    if (SM_TYPES.includes(id)) Object.assign(own, measure(smScenario(id), id, ["smallMultiplesLayout", "subheader"]));
+    if (SM_TYPES.includes(id)) Object.assign(own, measure(smScenario(id), id, ["smallMultiplesLayout", "subheader", "valueAxis"]));
     if (Object.keys(own).length) result[id] = own;
   }
   result.page = measurePage();
