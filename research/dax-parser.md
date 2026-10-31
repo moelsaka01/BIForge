@@ -33,7 +33,7 @@ These are names the parser special-cases or validates itself (the rest arrive fr
 - **Aggregation and iterators:** SUM, SUMX, AVERAGE(A), AVERAGEX, COUNT(A/X/BLANK/ROWS), COUNTAX, DISTINCTCOUNT(NOBLANK), APPROXIMATEDISTINCTCOUNT, MIN/MAX(A/X), MEDIAN(X), PRODUCT(X), GEOMEAN(X), PERCENTILE.EXC/INC (X), STDEV.P/S (X), VAR.P/S (X), RANK.EQ, RANKX, CONCATENATEX, LINEST/LINESTX, XIRR, XNPV.
 - **Time intelligence:** DATEADD, DATEDIFF, DATESBETWEEN, DATESINPERIOD, DATESMTD/QTD/YTD, TOTALMTD/QTD/YTD, FIRSTDATE, LASTDATE, FIRSTNONBLANK(VALUE), LASTNONBLANK(VALUE), STARTOF/ENDOF month/quarter/year, OPENING/CLOSINGBALANCE month/quarter/year, NEXT/PREVIOUS day/month/quarter/year, PARALLELPERIOD, SAMEPERIODLASTYEAR, YEARFRAC, WEEKDAY, WEEKNUM, plus date-part names.
 - **Misc:** CONTAINS, CONVERT, EVALUATEANDLOG, NAMEOF, PATH, PATHITEM, PATHITEMREVERSE.
-Raw list is local only (`research/_raw/dax_allcaps_strings.txt`).
+Raw list is local only (`research/_raw/dax_allcaps_strings.txt`). **(Deleted 2026-10-31; see research/README.md.)**
 
 ## 6. Getting the authoritative catalog (plan)
 Use the black-box harness (`dax-harness-design.md`): against the live local engine run the engine's function-discovery queries (the discovery rowset for functions, and the DAX `INFO` functions family if available in this build) and record the output as `tests/dax/catalog/functions.json` (our own recorded data: names, category, parameter names/types/optional/repeatable, return type). Same for the keyword list. This also gives us the exact parameter-role information that the parser consumes.

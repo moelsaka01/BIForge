@@ -31,5 +31,5 @@ Note: Power BI loads an empty text field of a CSV as an empty string (not BLANK)
    Budget has no relationships.
 5. In the **Data** pane select the **Date** table, then **Table tools > Mark as date table**, choose the **Date** column, OK.
 6. Add no measures, columns or visuals (cases are run as DAX queries against this model).
-7. **File > Save as > Browse this device**, set **Save as type** to **Power BI project files (\*.pbip)**, and save as `C:\dev\BIForge\research\_raw\dax-fixture\DaxFixture.pbip` (create the folder). That folder is gitignored: Desktop writes its own theme and report files there, which must never be committed.
+7. **File > Save as > Browse this device**, set **Save as type** to **Power BI project files (\*.pbip)**, and save as `C:\dev\BIForge\research\_raw\dax-fixture\DaxFixture.pbip` (create the folder). (The report that was built there was deleted on 2026-10-31; the CSVs in this folder are our own generated data and stay.) That folder is gitignored: Desktop writes its own theme and report files there, which must never be committed.
 8. Close Desktop. When the recorder is ready I will ask you to reopen this file so its local engine can answer the recorded queries.

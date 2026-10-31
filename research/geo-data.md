@@ -5,7 +5,7 @@ Maps use no online tiles and no Microsoft or other map service.
 ## Source and license
 - Natural Earth (naturalearthdata.com), 110m admin 0 countries, 110m admin 1 states and provinces (only the 51 US features are in that file), 50m populated places (simple).
 - License: public domain. The Natural Earth terms of use say that no permission is needed and crediting is unnecessary; BIForge credits it anyway (`app/src/assets/geo/NATURAL-EARTH.md`). Checked 2026-10-17.
-- Raw downloads stay in `research/_raw/ne/` (gitignored). `tools/geo/build.mjs <folder>` makes `app/src/assets/geo/world.json` (about 280 KB): outlines rounded to two decimals, the names a report can use for each region (NAME, NAME_LONG, ABBREV, FORMAL_EN, NAME_ALT, BRK_NAME), ISO codes, a centroid (largest ring, shoelace formula), and 1251 places as `[name, lon, lat, country code, population, ascii name]`.
+- Raw downloads (Natural Earth, public domain) were kept in `research/_raw/ne/`; that folder was deleted on 2026-10-31. To rebuild `world.json`, download the Natural Earth files again from naturalearthdata.com into a new `research/_raw/ne/` (gitignored); the committed `world.json` is what the app uses. `tools/geo/build.mjs <folder>` makes `app/src/assets/geo/world.json` (about 280 KB): outlines rounded to two decimals, the names a report can use for each region (NAME, NAME_LONG, ABBREV, FORMAL_EN, NAME_ALT, BRK_NAME), ISO codes, a centroid (largest ring, shoelace formula), and 1251 places as `[name, lon, lat, country code, population, ascii name]`.
 - ADMIN and SOVEREIGNT are not used as names: for overseas territories they hold the sovereign's name ("France" for New Caledonia) and would shadow the real country.
 
 ## How a label is placed (`app/src/core/report/geo.ts`)

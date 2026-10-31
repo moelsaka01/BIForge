@@ -32,7 +32,7 @@ Control groups seen as ids: Arrange (align, bring forward, send backward, group)
 - **Format (contextual):** Align, BringForward, SendBackward, font/size/bold/italic/underline/colors, shape fill/outline, width/height, word wrap, alt text, reset to default.
 - **Help:** Documentation, Support, Community, Blog, Samples, TrainingVideos, GuidedLearning, About, SubmitAnIdea, ConsultingServices, PartnerShowcase.
 - **Other:** command search, Copilot entry point, OneDrive/SharePoint share items.
-The full raw id list is kept locally in `research/_raw/ribbon_keys.txt` (not committed).
+The full raw id list is kept locally in `research/_raw/ribbon_keys.txt` (not committed). **(Deleted 2026-10-31; see research/README.md.)**
 
 Scope note for BIForge: items tied to Microsoft cloud services (datahub, Dataverse, Publish, Copilot, Power Apps/Automate, sensitivity, share, store) are out of scope for v1.
 

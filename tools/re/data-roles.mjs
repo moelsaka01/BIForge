@@ -1,5 +1,5 @@
 // Our own helper: lists the data role names of the visual capability definitions in the bundles of an installed
-// Power BI Desktop. Raw output goes to research/_raw (gitignored); the role names (a file-format fact) are kept in
+// Power BI Desktop. Raw output goes to research/_raw (gitignored; the folder was deleted on 2026-10-31, the script creates it again if run); the role names (a file-format fact) are kept in
 // app/src/core/report/visualRoles.json, which the test visualRoles.test.ts compares with the app's visual catalog.
 //
 //   node tools/re/data-roles.mjs <minerva scripts dir> [out file]
@@ -38,5 +38,6 @@ for (const f of fs.readdirSync(dir).filter((n) => /\.js$/.test(n) && !/^desktopD
     lines.push(`${f}\t@${m.index}\t[${names.join(", ")}]\t${vt}`);
   }
 }
+fs.mkdirSync(path.dirname(out), { recursive: true });
 fs.writeFileSync(out, lines.join("\n"));
 console.log(lines.length, "definitions ->", out);

@@ -1,6 +1,6 @@
 # How docs/INVENTORY.md was built
 
-Written in our own words on 2026-10-16. Raw output is in `research/_raw/` (gitignored).
+Written in our own words on 2026-10-16. Raw output is in `research/_raw/` (gitignored). **(Deleted 2026-10-31; see research/README.md.)**
 
 - **Hand-written lists** (`tools/inventory/manual-*.txt`): start screen, title bar, backstage, every ribbon tab and group, panes, canvas, Table / Model / DAX query / TMDL views, modeling features, Power Query ribbon, Options pages, dialogs, shortcuts, export. Basis: `research/ui-ribbon-commands.md` (ribbon command ids), the reference screenshots (local), Microsoft's public documentation as remembered, and the product's script bundles for the dialog list. Items taken only from public documentation or memory, not from the product, are: the Options page and setting names, the global shortcut keys (Ctrl+N/O/S/P/Z/Y/C/X/V/A, F11, Ctrl+G, Ctrl+D). They should be checked against Desktop before their implementation is called done.
 - **Dialog inventory**: the file names of dialog chunks in `WebView2Resources/minerva/scripts` (about 55 names such as conditional formatting, data bars, export data, hotkey, theme, table view, sparklines, groups, report validator, quick save). Cloud dialogs (publish, sensitivity, OneLake, Fabric trial, invite) were left out.

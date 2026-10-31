@@ -33,7 +33,7 @@ Phases 7 to 13 form the parity roadmap (rewritten 2026-10-16), ordered by user i
 13. **Installer and release.** NSIS installer via the Tauri bundler, PBIP export/import verified against Microsoft samples, read-only PBIX import if feasible, README, docs/USER_GUIDE.md, tag v0.1.0 and GitHub release.
 
 ## Rules for every session
-- Start by reading CLAUDE.md, this plan, docs/COVERAGE.md and docs/PROGRESS.md. Do not reread research/_raw.
+- Start by reading CLAUDE.md, this plan, docs/COVERAGE.md and docs/PROGRESS.md. research/_raw was deleted on 2026-10-31 (see research/README.md for how to regenerate it).
 - Work only on the current phase. If blocked, record it and move to the next item in the phase.
 - Every feature needs an automated test (Rust unit/integration, Vitest, or Playwright/WebDriver UI test). No test = not Done.
 - No mocks, stubs or hardcoded data presented as working. Unfinished UI shows a visible "Not yet implemented" state and is listed in COVERAGE.md.
@@ -43,7 +43,7 @@ Phases 7 to 13 form the parity roadmap (rewritten 2026-10-16), ordered by user i
 - End of phase: run all tests, update COVERAGE.md and PROGRESS.md (what works, what's partial, what failed), commit with conventional messages, push, confirm CI green, report a short summary and stop.
 
 ## Phase 6: Start screen
-Described from Power BI Desktop 2.158 (reference screenshots are local only, in research/_raw/reference-screens/, gitignored; never commit them). Replicate the layout and workflow; use original icons, and our own wording wherever the original text is Microsoft branding.
+Described from Power BI Desktop 2.158 (the reference screenshots were local only and have been deleted; never commit such screenshots). Replicate the layout and workflow; use original icons, and our own wording wherever the original text is Microsoft branding.
 - Title bar: save, undo and redo icons; document title; a centered search box; settings, a light/dark theme toggle, window controls (no sign-in area).
 - Left navigation: Home and Open at the top; Options and settings, About at the bottom (no Sign in).
 - Main area: the heading "Select a data source or start with a blank report" with cards: Blank report, Excel workbook, SQL Server, Learn with sample data, Get data from other sources. A collapsible "Recommended" section with a carousel. The Recent list, with a keyword filter and a Filter dropdown.

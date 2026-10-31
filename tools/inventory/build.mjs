@@ -2,7 +2,8 @@
 // writes the status table between the markers in docs/COVERAGE.md.
 //   node tools/inventory/build.mjs
 // Derived inputs (names only, committed): visual-cards.json, dax-functions.tsv, m-names.txt.
-// visual-cards.json is regenerated from research/_raw/theme-visuals.txt when that file exists.
+// visual-cards.json is regenerated from research/_raw/theme-visuals.txt when that file exists. research/_raw was deleted on
+// 2026-10-31 (raw Microsoft material); without it the committed visual-cards.json is used. See research/README.md to regenerate.
 import fs from "node:fs";
 import path from "node:path";
 

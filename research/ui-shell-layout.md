@@ -1,6 +1,6 @@
 # Start screen and report-authoring window: structure notes (Power BI Desktop 2.158)
 
-Source: the owner's screenshots of the running app (kept locally in `research/_raw/reference-screens/`, never committed) and the earlier notes in `ui-modes.md` and `ui-ribbon-commands.md`. These notes describe structure and behavior in my own words. No Microsoft images, icons, fonts or strings are copied; BIForge uses Fluent UI open icons and its own wording.
+Source: the owner's screenshots of the running app (kept locally in `research/_raw/reference-screens/`, never committed) and the earlier notes in `ui-modes.md` and `ui-ribbon-commands.md`. These notes describe structure and behavior in my own words. No Microsoft images, icons, fonts or strings are copied; BIForge uses Fluent UI open icons and its own wording. **(Deleted 2026-10-31; see research/README.md.)**
 
 ## Window frame
 - Title bar (dark, about 26 px at 100% scale): save, undo (disabled with nothing to undo), redo, then the document name with its saved state and a drop-down; a wide search box in the middle that finds ribbon commands; on the right settings, a light/dark switch with a drop-down, a sign-in entry with an avatar, and the window buttons. The bar is also the drag handle.

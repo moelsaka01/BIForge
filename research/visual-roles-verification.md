@@ -1,6 +1,6 @@
 # Visual role names and other PBIR items, checked against the Desktop 2.159 bundles (2026-10-17)
 
-Method: `tools/re/data-roles.mjs` reads every `dataRoles:[...]` capability definition in the report bundles (raw output in `research/_raw/data-roles.txt`, ignored by git) and resolves constant references (`name:K.key`) by looking for `key:"Value"` in the same bundle. Only role names are kept: `app/src/core/report/visualRoles.json`, checked against the app's catalog by `visualRoles.test.ts`.
+Method: `tools/re/data-roles.mjs` reads every `dataRoles:[...]` capability definition in the report bundles (raw output in `research/_raw/data-roles.txt`, ignored by git) and resolves constant references (`name:K.key`) by looking for `key:"Value"` in the same bundle. Only role names are kept: `app/src/core/report/visualRoles.json`, checked against the app's catalog by `visualRoles.test.ts`. **(Deleted 2026-10-31; see research/README.md.)**
 
 ## Role names
 | BIForge visual | Result |

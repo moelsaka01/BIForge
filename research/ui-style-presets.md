@@ -1,6 +1,6 @@
 # Style presets (General tab > Style preset)
 
-Original notes written from reading Power BI Desktop 2.158's front-end bundle in place (raw output stays in `research/_raw/`, gitignored).
+Original notes written from reading Power BI Desktop 2.158's front-end bundle in place (raw output stays in `research/_raw/`, gitignored). **(Deleted 2026-10-31; see research/README.md.)**
 No Microsoft code or text is copied; the settings below are described, and the implementation is `app/src/core/report/stylePresets.ts`.
 
 ## What the bundle shows
