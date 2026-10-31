@@ -27,6 +27,7 @@ import { DEFAULT_THEME } from "../report/theme";
 import { setFormat, setRawProp, type VisualModel } from "../report/visualDoc";
 import { VISUAL_TYPES } from "../report/visualTypes";
 import { qnaLook, savedQuestion } from "../report/qnaLook";
+import { paginatedLook } from "../report/paginated";
 import { scriptSettings } from "../report/scriptVisual";
 import { buildNarrative } from "../report/narrative";
 import { loadGazetteer } from "../report/geo";
@@ -340,6 +341,7 @@ const SCENARIOS: Record<string, Scenario> = {
   cardVisual: { make: () => visualOf("cardVisual", { Data: [Qty, Price, Cost] }), render: (v) => buildNewCard(v, grouped(v, [[n(1234567), d(3.5), ["blank", ""]]]), DEFAULT_THEME) },
   aiNarratives: { make: () => visualOf("aiNarratives", { Values: [Cat, Qty] }), render: (v) => buildNarrative(v, grouped(v, [[t("Bikes"), n(60)], [t("Clothing"), n(40)]]), DEFAULT_THEME) },
   qnaVisual: { make: () => visualOf("qnaVisual", {}), render: (v) => [qnaLook(v, DEFAULT_THEME), savedQuestion(v)] },
+  rdlVisual: { make: () => visualOf("rdlVisual", {}), render: (v) => paginatedLook(v, DEFAULT_THEME) },
   scriptVisual: { make: () => visualOf("scriptVisual", { Values: [Cat, Qty] }), render: (v) => scriptSettings(v) },
   pythonVisual: { make: () => visualOf("pythonVisual", { Values: [Cat, Qty] }), render: (v) => scriptSettings(v) },
   multiRowCard: { make: () => visualOf("multiRowCard", { Values: [Cat, Qty] }), render: (v) => buildMultiRowCard(v, grouped(v, [[t("Bikes"), n(5)], [t("Clothing"), n(7)]]), DEFAULT_THEME) },

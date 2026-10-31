@@ -163,6 +163,22 @@ pub fn read_image_data_uri(path: String) -> Result<String, String> {
     Ok(format!("data:{mime};base64,{}", base64::engine::general_purpose::STANDARD.encode(bytes)))
 }
 
+/// Reads the report definition chosen for a Paginated report visual (.rdl, up to 10 MB) as text; a byte order mark is dropped.
+#[tauri::command]
+pub fn read_report_definition(path: String) -> Result<String, String> {
+    let ext = std::path::Path::new(&path).extension().and_then(|e| e.to_str()).unwrap_or("").to_ascii_lowercase();
+    if ext != "rdl" {
+        return Err("Choose an .rdl report definition.".into());
+    }
+    let meta = std::fs::metadata(&path).map_err(|e| format!("Cannot read {path}: {e}"))?;
+    if meta.len() > 10 * 1024 * 1024 {
+        return Err("The report definition is larger than 10 MB.".into());
+    }
+    let bytes = std::fs::read(&path).map_err(|e| format!("Cannot read {path}: {e}"))?;
+    let text = String::from_utf8(bytes).map_err(|_| "The report definition is not UTF-8 text.".to_string())?;
+    Ok(text.strip_prefix('﻿').unwrap_or(&text).to_string())
+}
+
 /// Runs a script visual with the user's own Python or R: the data of the visual goes in as `dataset`, a PNG data address comes back.
 /// Runs on a worker thread so that the window stays responsive while the script works.
 #[tauri::command]
@@ -206,6 +222,10 @@ mod image_tests {
         let txt = dir.join("a.txt");
         std::fs::write(&txt, "x").unwrap();
         assert!(read_image_data_uri(txt.to_string_lossy().into()).is_err());
+        let rdl = dir.join("a.rdl");
+        std::fs::write(&rdl, "﻿<Report/>").unwrap();
+        assert_eq!(read_report_definition(rdl.to_string_lossy().into()).unwrap(), "<Report/>");
+        assert!(read_report_definition(txt.to_string_lossy().into()).is_err());
         assert!(open_url("file:///c:/windows/system32/calc.exe".into()).is_err());
         assert!(open_url("https://example.com/a b".into()).is_err());
     }

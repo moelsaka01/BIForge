@@ -144,7 +144,7 @@ export function propDef(object: string, key: string, kind: Kind, ctx: CardContex
         ...base,
         type: "enum",
         numeric,
-        options: kind[1].map((v) => ({ value: String(v), label: optionLabel(key, v) })),
+        options: kind[1].map((v) => ({ value: String(v), label: object === "toolbar" && key === "position" ? (v === 1 ? "Bottom" : "Top") : optionLabel(key, v) })),
         ...(dflt !== undefined ? { default: String(dflt) } : {}),
         auto: "Automatic",
       };

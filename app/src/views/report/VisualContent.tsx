@@ -23,6 +23,7 @@ import { SlicerView, TextSlicerView } from "./SlicerView";
 import { QnaView } from "./QnaView";
 import { ScriptVisualView } from "./ScriptVisualView";
 import { DataTableView } from "./DataTableView";
+import { PaginatedView } from "./PaginatedView";
 import { drillKey, fieldsOfRole, type VisualStatus } from "../../core/report/headerButtons";
 import { BookmarkNavigatorView, ButtonView, ImageView, PageNavigatorView, ShapeView, TextboxView } from "./StaticVisuals";
 
@@ -145,6 +146,7 @@ export function VisualContent({ page, visual, width, height, runOnClick, onInfo 
   }
   if (!type) return <Notice>Unknown visual type "{visual.visualType}".</Notice>;
   if (type.family === "qna") return <QnaView page={page} visual={visual} width={width} height={height} render={(v, w, h) => <VisualContent page={page} visual={v} width={w} height={h} />} />;
+  if (type.family === "paginated") return <PaginatedView page={page} visual={visual} width={width} height={height} />;
   if (type.family === "decomposition") return <DecompositionTreeView page={page} visual={visual} width={width} height={height} />;
   if (type.family === "keyDrivers") return <KeyInfluencersView page={page} visual={visual} width={width} height={height} />;
   const bound = Object.values(visual.roles).some((l) => l.length > 0);

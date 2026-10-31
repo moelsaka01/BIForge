@@ -13,6 +13,7 @@ export const tauriIO: ProjectIO = storedIO({
   clearRecovery: (root) => invoke<void>("clear_recovery", { root }),
   writeSampleData: (root) => invoke<string[]>("write_sample_data", { root }),
   readImage: (path) => invoke<string>("read_image_data_uri", { path }),
+  readReportDefinition: (path) => invoke<string>("read_report_definition", { path }),
   openUrl: (url) => invoke<void>("open_url", { url }),
   runScriptVisual: (r) => invoke<string>("run_script_visual", { language: r.language, code: r.code, csv: r.csv, home: r.home || null, width: r.width, height: r.height, timeoutMinutes: r.timeoutMinutes ?? null }),
 });

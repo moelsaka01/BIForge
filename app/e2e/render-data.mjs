@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+const RDL_FIXTURE = readFileSync(new URL("./fixtures/products.rdl", import.meta.url), "utf8");
 // Data changes of the render audit: the sample data must exercise the property under test.
 const eachProjection = (json, fn) => { for (const w of Object.values(json.visual?.query?.queryState ?? {})) for (const p of w.projections ?? []) fn(p, w); };
 
@@ -212,6 +214,12 @@ function blankSeries(json) {
 
 /** Scenarios of the properties that need a particular situation in the data (blank names, narrow bars, a second axis with negatives). */
 function auditScenarios(json, c) {
+  if (c.visualType === "rdlVisual") {
+    // the report definition of the fixture is stored with the visual (reportInfo.rdl), as Insert > Paginated report does
+    setProps(json, "reportInfo", { rdl: lit("'" + RDL_FIXTURE.replace(/'/g, "''") + "'"), rdlName: lit("'products.rdl'") });
+    // a parameter mapping is read as text: a mapping that does not parse says so
+    if (c.object === "parameterMapping") setProps(json, "reportInfo", { rdl: lit("'" + RDL_FIXTURE.replace(/'/g, "''") + "'") });
+  }
   const type = c.visualType;
   // the tooltip page of the header is used once the type says so
   if (c.object === "visualHeaderTooltip" && c.prop === "section") setProps(json, "visualHeaderTooltip", { type: lit("'Canvas'") });

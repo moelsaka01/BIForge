@@ -82,6 +82,7 @@ fn main() {
             commands::tmdl_print,
             commands::test_pick,
             commands::read_image_data_uri,
+            commands::read_report_definition,
             commands::open_url,
             commands::run_script_visual,
             commands::tmdl_parse,

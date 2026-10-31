@@ -142,7 +142,13 @@ const addPage = (id, json0, c) => {
   const json = tweak(c, json0);
   tiny = c.object === "general" && /^responsive/.test(c.prop);
   mkdirSync(join(def, "pages", id), { recursive: true });
-  writeFileSync(join(def, "pages", id, "page.json"), JSON.stringify({ $schema: "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/page/1.0.0/schema.json", name: id, displayName: id, displayOption: "FitToPage", height: 720, width: 1280 }, null, 2));
+  const pageJson = { $schema: "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/page/1.0.0/schema.json", name: id, displayName: id, displayOption: "FitToPage", height: 720, width: 1280 };
+  // Auto filter: the paginated report takes the filters of its page; the page filters the products to the bikes
+  if (c.visualType === "rdlVisual" && c.object === "autoFilter") {
+    const col = { Column: { Expression: { SourceRef: { Source: "p" } }, Property: "Category" } };
+    pageJson.filterConfig = { filters: [{ name: "pf1", field: { Column: { Expression: { SourceRef: { Entity: "Product" } }, Property: "Category" } }, type: "Categorical", filter: { Version: 2, From: [{ Name: "p", Entity: "Product", Type: 0 }], Where: [{ Condition: { In: { Expressions: [col], Values: [[{ Literal: { Value: "'Bikes'" } }]] } } }] } }] };
+  }
+  writeFileSync(join(def, "pages", id, "page.json"), JSON.stringify(pageJson, null, 2));
   put(id, "probe", json);
   pages.pageOrder.push(id);
 };

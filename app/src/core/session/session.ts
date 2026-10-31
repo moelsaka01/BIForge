@@ -33,6 +33,8 @@ export interface ProjectIO {
   writeSampleData?(root: string): Promise<string[]>;
   /** Reads a picture file (png, jpg, gif, svg, webp, up to 5 MB) as a data: URI. */
   readImage?(path: string): Promise<string>;
+  /** Reads a report definition file (.rdl, up to 10 MB) as text. */
+  readReportDefinition?(path: string): Promise<string>;
   /** Opens an http(s) address in the user's browser. */
   openUrl?(url: string): Promise<void>;
   /** Runs a script visual with the user's own Python or R; resolves with the plot as a data: URI (png). */

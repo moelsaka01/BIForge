@@ -13,6 +13,7 @@ import * as ops from "../report/reportOps";
 import { applyThemeToProject, BUILTIN_THEMES, clearCustomTheme, parseThemeJson } from "../report/theme";
 import { activePageName, listPageNames, parsePage, type Position, type SortSpec } from "../report/visualDoc";
 import { VISUAL_TYPES } from "../report/visualTypes";
+import { parseRdl } from "../report/rdl";
 import { actionProblem, readAction, writeTextbox, type TextboxModel } from "../report/staticVisuals";
 import { listBookmarks } from "../report/bookmarks";
 
@@ -171,6 +172,21 @@ export function registerReportCommands(r: CommandRegistry<Session>): void {
       const page = ((a ?? {}) as { page?: string }).page ?? currentPage(s);
       const name = ops.addVisual(p, page, "image");
       setImageSource(p, page, name, uri);
+    });
+  });
+  // Paginated report visual: the .rdl is read once and stored with the visual (reportInfo.rdl); the model is read when it is drawn
+  reg("report.paginated.insert", "Insert paginated report", async (s, a) => {
+    const path = await s.dialogs.pickFile("Report definition", ["rdl"]);
+    if (!path) return;
+    if (!s.io.readReportDefinition) throw new Error("Choosing a report definition is not available here.");
+    const xml = await s.io.readReportDefinition(path);
+    parseRdl(xml); // refuses a file that is not a report definition before anything is added
+    const name = path.split(/[\\/]/).pop() ?? "report.rdl";
+    edit(s, "Insert paginated report", (p) => {
+      const page = ((a ?? {}) as { page?: string }).page ?? currentPage(s);
+      const visual = ops.addVisual(p, page, "rdlVisual");
+      ops.setVisualFormat(p, page, visual, "reportInfo", "rdl", lit.str(xml));
+      ops.setVisualFormat(p, page, visual, "reportInfo", "rdlName", lit.str(name));
     });
   });
   reg("report.image.choose", "Choose image", async (s, a) => {

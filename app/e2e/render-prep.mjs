@@ -3,6 +3,13 @@
 const probe = (page) => page.locator("[data-visual='probe']").first();
 
 export const PREP = {
+  // the Export menu is opened (its entries are what the export properties change); the data has to be read first
+  async rdlVisual(page) {
+    await probe(page).getByTestId("paginated-sheet").waitFor({ timeout: 8000 }).catch(() => {});
+    await probe(page).getByText("Loading…").waitFor({ state: "detached", timeout: 8000 }).catch(() => {});
+    const b = probe(page).getByRole("button", { name: "Export" });
+    if (await b.count()) { await b.click({ timeout: 4000 }).catch(() => {}); await page.waitForTimeout(300); }
+  },
   // two values of the tile slicer are clicked: a single-select slicer keeps the second only
   async advancedSlicerVisual(page) {
     const chips = probe(page).getByRole("option");

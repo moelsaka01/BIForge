@@ -205,6 +205,7 @@ const elementControls = (): RibbonControl[] => [
   cmd("image", "Image", "image", "report.image.insert", { size: "large" }),
   cmd("pageNavigator", "Page navigator", "bookmarks", "report.visual.add", { size: "large", args: { type: "pageNavigator" } }),
   cmd("bookmarkNavigator", "Bookmark navigator", "bookmarks", "report.visual.add", { size: "large", args: { type: "bookmarkNavigator" } }),
+  cmd("paginatedReport", "Paginated report", "newVisual", "report.paginated.insert", { size: "large" }),
 ];
 
 const insertGroup = (): RibbonGroup => ({

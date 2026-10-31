@@ -5111,6 +5111,28 @@
    "show"
   ]
  },
+ "rdlVisual": {
+  "autoFilter": [
+   "show"
+  ],
+  "export": [
+   "exportCSV",
+   "exportMHTML",
+   "exportPDF",
+   "exportXML",
+   "show"
+  ],
+  "parameterMapping": [
+   "mappings"
+  ],
+  "toolbar": [
+   "pageNavigation",
+   "paramButton",
+   "position",
+   "show",
+   "useFloatingToolbar"
+  ]
+ },
  "scriptVisual": {
   "script": [
    "provider",

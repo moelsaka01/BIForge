@@ -78,7 +78,7 @@ const num = areas.length;
   for (const [vis, cards] of Object.entries(visualCards)) {
     if (EXCLUDED_VISUALS.has(vis)) continue;
     const exists = implVisuals.has(alias[vis] ?? vis) || vis === "page"; // the page cards are measured by coverage.test.ts (measurePage)
-    const items = Object.entries(cards).filter(([c]) => c !== "*").map(([c, props]) => {
+    const items = Object.entries(cards).filter(([c]) => c !== "*").filter(([c, props]) => !(props.length > 0 && props.every((p) => CLOUD_ONLY.has(`${c}.${p}`)))).map(([c, props]) => {
       const st = exists ? cardStatus(alias[vis] ?? vis, c) : { s: "N", drawn: 0, total: props.length };
       return { s: st.s, t: exists && st.total ? `${c} (${st.drawn} of ${st.total} properties drawn)` : `${c} (${props.length} properties)` };
     });

@@ -11,7 +11,7 @@ export interface RoleDef {
   max: number;
 }
 
-export type VisualFamily = "decomposition" | "keyDrivers" | "cartesian" | "pie" | "scatter" | "table" | "matrix" | "card" | "kpi" | "gauge" | "treemap" | "funnel" | "waterfall" | "slicer" | "narrative" | "qna" | "script" | "map" | "textbox" | "shape" | "image" | "button" | "pageNavigator" | "bookmarkNavigator";
+export type VisualFamily = "decomposition" | "keyDrivers" | "cartesian" | "pie" | "scatter" | "table" | "matrix" | "card" | "kpi" | "gauge" | "treemap" | "funnel" | "waterfall" | "slicer" | "narrative" | "qna" | "script" | "map" | "textbox" | "shape" | "image" | "button" | "pageNavigator" | "bookmarkNavigator" | "paginated";
 
 export interface VisualTypeDef {
   id: string;
@@ -203,6 +203,8 @@ export const VISUAL_TYPES: VisualTypeDef[] = [
   // script visuals: the user's own Python or R draws a picture from the data of the visual
   { id: "scriptVisual", label: "R script visual", family: "script", roles: [{ name: "Values", label: "Values", accepts: "any", max: 20 }], size: { width: 420, height: 300 }, glyph: "R" },
   { id: "pythonVisual", label: "Python visual", family: "script", roles: [{ name: "Values", label: "Values", accepts: "any", max: 20 }], size: { width: 420, height: 300 }, glyph: "Py" },
+  // a report definition (.rdl) read from a file and drawn as pages over the model: no fields of its own (Insert > Paginated report)
+  { id: "rdlVisual", label: "Paginated report", family: "paginated", roles: [], size: { width: 520, height: 420 }, glyph: "📄" },
   { id: "qnaVisual", label: "Q&A", family: "qna", roles: [], size: { width: 420, height: 300 }, glyph: "?" },
   // the new slicers: same selection pipeline as the slicer (role Values, one filter on the visual); they differ in what they draw
   { id: "advancedSlicerVisual", label: "Slicer (new)", family: "slicer", roles: [{ name: "Values", label: "Field", accepts: "column", max: 1 }], size: { width: 240, height: 180 }, glyph: "▤" },
