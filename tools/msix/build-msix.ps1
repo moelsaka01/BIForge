@@ -1,11 +1,11 @@
 # MSIX spike: packs the release build into an MSIX and signs it with a throw-away test certificate.
 # Nothing is installed and no certificate is trusted by this script. Usage (from the repository root):
-#   powershell -File tools/msix/build-msix.ps1 [-Exe target/release/biforge-app.exe] [-Out target/msix] [-Version 0.1.1.0]
+#   powershell -File tools/msix/build-msix.ps1 [-Exe target/release/biforge-app.exe] [-Out target/msix] [-Version 0.2.0.0]
 # Result: <Out>/BIForge.msix (signed with the test certificate; the Store signs its own copy) and <Out>/test-cert.cer (public half).
 param(
   [string]$Exe = "target/release/biforge-app.exe",
   [string]$Out = "target/msix",
-  [string]$Version = "0.1.1.0",
+  [string]$Version = "0.2.0.0",
   [string]$Publisher = "CN=BIForge Test",
   [switch]$NoSign
 )

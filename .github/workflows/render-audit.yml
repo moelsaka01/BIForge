@@ -1,9 +1,8 @@
 name: render-audit
 # The full real-window render audit: every property counted as drawn is compared as pixels with and without it (about 4700 cases,
 # an hour or more), too slow for every push; ci.yml runs the sample (e2e/render.mjs) on each one.
+# The weekly schedule was switched off on 2026-10-31 (development is paused until 2027); run it by hand with workflow_dispatch.
 on:
-  schedule:
-    - cron: "0 3 * * 0"
   workflow_dispatch:
 jobs:
   audit:

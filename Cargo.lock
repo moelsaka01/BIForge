@@ -746,7 +746,7 @@ checksum = "d86b93f97252c47b41663388e6d155714a9d0c398b99f1005cbc5f978b29f445"
 
 [[package]]
 name = "biforge-app"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "base64 0.22.1",
  "biforge-cli",
@@ -775,7 +775,7 @@ dependencies = [
 
 [[package]]
 name = "biforge-cli"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "base64 0.22.1",
  "biforge-engine",
@@ -787,7 +787,7 @@ dependencies = [
 
 [[package]]
 name = "biforge-collab"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -796,7 +796,7 @@ dependencies = [
 
 [[package]]
 name = "biforge-dax"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "biforge-model",
  "chrono",
@@ -808,7 +808,7 @@ dependencies = [
 
 [[package]]
 name = "biforge-engine"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "biforge-dax",
  "biforge-m",
@@ -837,7 +837,7 @@ dependencies = [
 
 [[package]]
 name = "biforge-m"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -845,7 +845,7 @@ dependencies = [
 
 [[package]]
 name = "biforge-model"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "base64 0.22.1",
  "serde",
@@ -856,7 +856,7 @@ dependencies = [
 
 [[package]]
 name = "biforge-p2p"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "base64 0.22.1",
  "biforge-collab",
@@ -872,7 +872,7 @@ dependencies = [
 
 [[package]]
 name = "biforge-publish"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "age",
  "base64 0.22.1",
@@ -893,7 +893,7 @@ dependencies = [
 
 [[package]]
 name = "biforge-server"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "axum",
  "base64 0.22.1",

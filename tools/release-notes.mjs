@@ -41,7 +41,7 @@ for (const l of lines) {
 const kind = (s) => (/^Done-tested/.test(s) ? "done" : /^Partial/.test(s) ? "partial" : /^Not started/.test(s) ? "none" : /^Deferred/.test(s) ? "deferred" : /Not done|Not built|Limits/i.test(s) ? "gap" : "other");
 const by = { done: [], partial: [], none: [], deferred: [], gap: [], other: [] };
 for (const r of rows) by[kind(r.status)].push(r);
-const pct = (a, b) => (b ? Math.round((100 * a) / b) : 0);
+const pct = (a, b) => (b ? Math.round((1000 * a) / b) / 10 : 0);
 
 const out = [];
 out.push(`# BIForge ${version}`);
@@ -58,6 +58,20 @@ out.push("| Report | Model | Power Query |");
 out.push("| --- | --- | --- |");
 out.push(`| ![Report](${raw}/report-classic.png) | ![Model](${raw}/model-view.png) | ![Power Query](${raw}/power-query.png) |`);
 out.push("");
+if (version === "0.2.0") {
+  out.push("## New in 0.2.0 (since 0.1.1)");
+  out.push("- Charts: a large block of Format-pane properties now changes what is drawn and each is checked pixel by pixel in the real window: data label contents (title, value, detail), label density, dynamic labels, total labels of stacked charts, value-axis Round range / Scale to fit / Align zeros, constant, trend and auto-scale lines on more chart types, the donut centre and funnel percent bar, ribbon bands, small-multiple grid lines and layout, the gradient legend, underline of chart text, General > Responsive.");
+  out.push("- Visuals: Card (new), Slicer (new) and List slicer share one tile look (fill with picture, outline, shadow, glow, shape, rotation); card value format, caption wrap, KPI fonts and icons, table and matrix cell outlines and grid frame, matrix grand totals Apply to headers.");
+  out.push("- Report authoring: format painter, Spotlight, Include / Exclude data points, Sort axis in More options, Ctrl+P print of the report page, F2 rename, keyboard entry into a visual (Ctrl+Right, Esc, Alt+Shift+F10).");
+  out.push("- Paginated report visual: reads an .rdl file and draws its table as pages over the model, with a toolbar, parameters, and export to CSV, XML, MHTML, PDF, Excel and Word. Grouping, charts, subreports and images inside the .rdl are not drawn; there is no report server.");
+  out.push("- Power Query / M: type ascription (List/Record/Table.ChangeType), more List and Table functions, standard math and format steps, move columns, query properties.");
+  out.push("- DAX: TOPNSKIP, USERNAME / USERPRINCIPALNAME tested.");
+  out.push("- Start screen: pin recent projects, option to reopen the last project.");
+  out.push("- Fixed: a ribbon chart with a legend field but no value field threw an error that blanked the whole window; every visual now has its own error boundary, so a visual that fails shows a message in its frame and the rest of the report keeps working.");
+  out.push("");
+  out.push("**Honest limits of this release:** counts are the ones confirmed in the real window at the end of the last audit. Hover-only properties (visual tooltips, header buttons) could not be tested deterministically and are not counted as confirmed. Ten properties of the 100 % stacked area chart's title labels are not confirmed. Several Paginated report features are not drawn (see above). Development is paused until 2027.");
+  out.push("");
+}
 if (version === "0.1.1") {
   out.push("## New in 0.1.1");
   out.push("- DAX: window functions, financial functions (FV, PV, PMT, NPER, RATE, XNPV, XIRR), parent-child PATH functions, TOCSV, COLUMNSTATISTICS, LINEST/LINESTX, ISINSCOPE.");
@@ -83,7 +97,7 @@ out.push("- Optional components: the server (`biforge-server.exe`) and the comma
 out.push("- BIForge checks GitHub Releases for newer versions when it starts (About > switch off) and verifies each update with BIForge's update key before installing it.");
 out.push("");
 out.push("### Windows warns about this download (SmartScreen, Smart App Control)");
-out.push("Code signing: not yet available; see the README for SmartScreen guidance. The installers are **not code-signed**, so Windows may warn about them:");
+out.push("The installers are not code-signed; see the README for SmartScreen guidance. Windows may therefore warn about them:");
 out.push("- **SmartScreen** (\"Windows protected your PC\"): choose *More info*, then *Run anyway*. It improves as more people download the same file.");
 out.push("- **Smart App Control** (Windows 11, in *Enforcement* mode) blocks unsigned programs and offers no *Run anyway*. Either turn it off (Settings > Privacy & security > Windows Security > App & browser control > Smart App Control; it cannot be turned back on without resetting Windows) or wait for the signed release. Do not turn it off if you are unsure.");
 out.push("- Check that the file is the one BIForge published: `SHA256SUMS` lists every file's hash and `SHA256SUMS.sig` is its signature (Ed25519). `biforge-cli verify-release --public-key " + (keyFile && fs.existsSync(keyFile) ? fs.readFileSync(keyFile, "utf8").trim() : "<docs/release-public-key.txt>") + " --dir <folder with the downloads>`; GitHub's build attestation: `gh attestation verify <file> --repo moelsaka01/BIForge`.");

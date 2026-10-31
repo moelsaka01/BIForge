@@ -20,7 +20,9 @@ BIForge is an open-source Windows app for business intelligence. Import data, sh
 
 Everything that needs a cloud account is left out. Everything you need to share a report is built in, and it is free.
 
-> **Status: early software (v0.1.0).** Parts work and are tested; many do not exist yet. [docs/COVERAGE.md](docs/COVERAGE.md) lists every feature as Not started, Partial or Done-tested, and a feature counts as done only when an automated test passes.
+> **Status: early software (v0.2.0). Development is paused until 2027.** The weekly render audit is switched off.
+>
+> **Status details:** Parts work and are tested; many do not exist yet. [docs/COVERAGE.md](docs/COVERAGE.md) lists every feature as Not started, Partial or Done-tested, and a feature counts as done only when an automated test passes.
 
 ## See It, Then Build It: Reports in Minutes
 

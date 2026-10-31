@@ -738,3 +738,40 @@ Built: `core/report/rdl.ts` (reads the .rdl: page size and margins, the first Ta
 3. 100 % stacked area label parts (10 properties, Open).
 4. Paginated report: row groups with subtotals, report header / footer, PowerPoint and accessible PDF export, fonts and borders of the report's own text boxes.
 5. Interaction tests (visual links, zoom labels, stackedGapExplodes, lockAspect, useHighlightValues), line label leader lines, `node tools/inventory/undrawn.mjs`.
+
+## 2026-10-31 (final session of 2026: blank-window fix, legal cleanup, release v0.2.0)
+
+### Confirmed counts: 2189 / 172 / 601 of 2973 (+11 Needs external software) = 73.6 % Done-tested. The 75 % goal (2230) was NOT reached; the sprint stopped after Part 1.1.
+
+### Part 1: blank-window bug
+- **The visual link was not the cause.** Bisecting the old random sample in the real window: `tableEx.values.outlineWeight` followed by `ribbonChart.totals.color` blanked the window; with the link case removed it still did, and a link case followed by the ribbon case did not. Source-mapped stack: `chartOptions.ts:338`, `p.cells[0][si]` of a **ribbon chart with a Series field and no value field** (no cells), which threw inside React and, with no error boundary, left the whole window blank.
+- Fixed: the ribbon branch needs a value column (`ribbon && valueCols.length`), the two cell reads are guarded; test `analytics.test.ts` "a ribbon chart with a legend field but no value field builds without throwing" (it failed with the exact TypeError before the fix, passes after). New `VisualBoundary` (one error boundary per visual frame; a visual that throws shows "Cannot draw this visual: ..." and the rest of the report keeps working), test `visualBoundary.ui.test.tsx`. `e2e/render.mjs` logs `PAGEERROR` with RENDER_CONSOLE=1.
+- Real window: the pair that blanked now passes; the default render sample (20 random properties) passes with visualLink in the pool (its case is DOM-only, tolerated). The random pool still leaves visualLink out (interaction property).
+- Not done: the sprint (remaining undrawn items: `node tools/inventory/undrawn.mjs` still lists them; most of the top ones are "no visible effect" properties such as `dataPoint.showAllDataPoints`), hover determinism, the 10 open 100 % stacked area label properties.
+
+### Part 2: legal check of the full git history (all branches and tags: main, origin/main, tags cli-v0.1.0, server-v0.1.0, v0.1.0, v0.1.1; one local stash that was never pushed)
+- `git log --all -- research/_raw`: **nothing was ever committed under research/_raw.** No .dll/.exe/.msi/.msix/.ttf/.otf/.woff/.resx/.il/.cs, no decompiler output, no bundle extracts, no .pbix, no Microsoft screenshots or themes found by path and extension. Pickaxe for "ILSpy", "Decompiled": 0 hits. Largest blobs in history are our own marketing videos, our icon and our demo gif.
+- **What WAS committed that is Microsoft-related (you decide if it matters; history not rewritten):**
+  1. `tests/pbir-schemas/` (commit d9491a1, 2026-10-17): Microsoft's published PBIR JSON schemas **under their MIT license**, with the LICENSE file (copyright Microsoft Corporation) committed next to them. Used by `pbirSchema.test.ts`. Redistribution is allowed by that license.
+  2. `tests/dax/fixtures/Test 1.pbip`, `Test 1.Report/`, `Test 1.SemanticModel/` (commit feecbda, 2026-10-16): a tiny project that Desktop saved for our synthetic data: `definition.pbir`, `definition.pbism`, `report.json` (a `$schema` URL and the base theme **name** "CY24SU10", no theme file), page/pages/version json and TMDL of our own tables. They contain no Microsoft binary, theme file or screenshot, but they are Desktop-written files. Nothing in the code references them (searched). Delete them with a normal commit if you want them gone from the tree; they would stay in history.
+  3. `crates/model/tests/fixtures/sample/Retail.pbip` etc.: our own fixture, written by our code (a `.pbi/cache.abf` placeholder name appears in history; not checked beyond the path).
+  4. `docs/media/*.png`, `demo.gif`, `marketing/`: screenshots and a video of BIForge itself (checked by name, not by looking at every pixel).
+- The check was by path, extension and text pickaxe, not by opening every blob.
+- `research/_raw/` (29 MB: front-end bundle extracts, themeSchema, reference screenshots, the DAX fixture report, Natural Earth downloads) **deleted locally**. Tool scripts and docs that pointed to it now say so and how to regenerate it (research/README.md; data-roles.mjs creates its folder; build.mjs falls back to the committed visual-cards.json). tests/dax/fixtures CSVs and the research/ notes stay.
+
+### Part 3: release 0.2.0
+- Frontend suite: 138 files, 1257 passed, 2 skipped. `cargo test --workspace`: 46 result lines, 497 passed, 0 failed. Debug exe rebuilt, full `npm run e2e`: exit 0, 123 PASS lines, no FAIL. Inventory regenerated: 2189 / 172 / 601 (unchanged). render-keys.mjs was not needed: no new drawn property this session. target/ 12.18 GB (limit 15).
+- Version 0.2.0 in Cargo.toml (workspace: app, server, cli), tauri.conf.json, package.json and lock, msix script default. Release notes: `tools/release-notes.mjs` has a "New in 0.2.0" section and the exact sentence "The installers are not code-signed; see the README for SmartScreen guidance."
+- Weekly `render-audit` schedule removed from `.github/workflows/render-audit.yml` (manual `workflow_dispatch` stays); README says development is paused until 2027.
+
+### Local only (not in git, excluding target/ and node_modules)
+`marketing/linkedin-ad/capture/frames/` 419.7 MB, `app/src-tauri/windows/tools/` 172.2 MB (staged server and CLI for the installers, rebuilt by tools/stage-installer-tools.ps1), `app/e2e/_cases/` 24.6 MB (render audit output), `app/dist/` 16.8 MB, `marketing/linkedin-ad/out/music.wav` 4.5 MB, `out/stills/` 4.1 MB, `tests/dax/fixtures/.biforge/` 1.0 MB, `app/src-tauri/gen/` 0.3 MB, `.claude/`, `e2e-build.log`, `tools/pbir-validate/package-lock.json` (all under 0.1 MB); and one git stash (stash@{0}, "WIP on main: 1ac3cfe ... data label contents", old work already committed later).
+
+### Next steps for 2027 (exact)
+1. `node tools/target-size.mjs`; `export PATH="$HOME/.cargo/bin:$PATH"`; read CLAUDE.md, this entry, docs/COVERAGE.md.
+2. Decide about `tests/dax/fixtures/Test 1.*` and `tests/pbir-schemas/` (see legal check above).
+3. Hover determinism: run each `visualHeader.*` case in a fresh window (RENDER_BATCH=1) or dispatch pointer events on the frame; add state cases (section / type / showChartSpecificTooltips); then the hover-only properties can be confirmed.
+4. The 10 open 100 % stacked area title label properties (`auditNotDrawn.json`); line label leader lines; interaction tests (visual links, zoom labels, stackedGapExplodes, lockAspect, useHighlightValues); `node tools/inventory/undrawn.mjs`.
+5. Paginated report: row groups with subtotals, report header/footer, PowerPoint and accessible PDF export, fonts and borders.
+6. After `cargo test` always rebuild the exe (`npx tauri build --debug --no-bundle` in app/) before `npm run e2e`.
+7. To reach 75 % (2230 Done-tested) 41 more items are needed; recent rate was about 10 per hour.
