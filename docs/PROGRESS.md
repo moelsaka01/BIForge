@@ -765,7 +765,7 @@ Built: `core/report/rdl.ts` (reads the .rdl: page size and margins, the first Ta
 - Weekly `render-audit` schedule removed from `.github/workflows/render-audit.yml` (manual `workflow_dispatch` stays); README says development is paused until 2027.
 
 ### Local only (not in git, excluding target/ and node_modules)
-`marketing/linkedin-ad/capture/frames/` 419.7 MB, `app/src-tauri/windows/tools/` 172.2 MB (staged server and CLI for the installers, rebuilt by tools/stage-installer-tools.ps1), `app/e2e/_cases/` 24.6 MB (render audit output), `app/dist/` 16.8 MB, `marketing/linkedin-ad/out/music.wav` 4.5 MB, `out/stills/` 4.1 MB, `tests/dax/fixtures/.biforge/` 1.0 MB, `app/src-tauri/gen/` 0.3 MB, `.claude/`, `e2e-build.log`, `tools/pbir-validate/package-lock.json` (all under 0.1 MB); and one git stash (stash@{0}, "WIP on main: 1ac3cfe ... data label contents", old work already committed later).
+`marketing/linkedin-ad/capture/frames/` 419.7 MB, `app/src-tauri/windows/tools/` 172.2 MB (staged server and CLI for the installers, rebuilt by tools/stage-installer-tools.ps1), `app/e2e/_cases/` 24.6 MB (render audit output), `app/dist/` 16.8 MB, `marketing/linkedin-ad/out/music.wav` 4.5 MB, `out/stills/` 4.1 MB, `tests/dax/fixtures/.biforge/` 1.0 MB, `app/src-tauri/gen/` 0.3 MB, `.claude/`, `e2e-build.log`, `tools/pbir-validate/package-lock.json` (all under 0.1 MB); and one git stash (stash@{0}, "WIP on main: 1ac3cfe ... data label contents"; whether it is still needed was not checked).
 
 ### Next steps for 2027 (exact)
 1. `node tools/target-size.mjs`; `export PATH="$HOME/.cargo/bin:$PATH"`; read CLAUDE.md, this entry, docs/COVERAGE.md.
