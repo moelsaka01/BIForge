@@ -775,3 +775,7 @@ Built: `core/report/rdl.ts` (reads the .rdl: page size and margins, the first Ta
 5. Paginated report: row groups with subtotals, report header/footer, PowerPoint and accessible PDF export, fonts and borders.
 6. After `cargo test` always rebuild the exe (`npx tauri build --debug --no-bundle` in app/) before `npm run e2e`.
 7. To reach 75 % (2230 Done-tested) 41 more items are needed; recent rate was about 10 per hour.
+
+### Release result (added after the workflow finished)
+- **v0.2.0 published:** https://github.com/moelsaka01/BIForge/releases/tag/v0.2.0 (run 41223000475: build, MSI install test and release jobs all passed). Assets: BIForge_0.2.0_x64-setup.exe (+ .sig), BIForge_0.2.0_x64_en-US.msi, biforge-server.exe, biforge-cli.exe, SHA256SUMS (+ .sig), latest.json, winget-manifest.zip, demo.mp4. `biforge-cli verify-release` against docs/release-public-key.txt: signature and hashes correct for all six files.
+- CI on main had been red since 2026-10-28 at one real-window check (underline.mjs "total labels sit inside the visible chart area": it required label x > 0, which does not hold on the CI runner). The check now states its real condition (labels inside the chart rect) and prints the numbers; CI is green again from that commit.
