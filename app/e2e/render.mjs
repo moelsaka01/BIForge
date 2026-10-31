@@ -177,6 +177,7 @@ let unchanged = 0;
 const rows = [];
 try {
   const { page } = session;
+  if (process.env.RENDER_CONSOLE) page.on("pageerror", (e) => console.log("PAGEERROR", String(e.stack ?? e).slice(0, 1200)));
   if (process.env.RENDER_CONSOLE) page.on("console", (m) => { if (/error|warn/.test(m.type())) console.log("CONSOLE", m.type(), m.text().slice(0, 300)); });
   await page.getByRole("button", { name: /^Open/ }).first().click();
   await page.getByRole("tab", { name: "ctla", exact: true }).waitFor({ timeout: 60000 });

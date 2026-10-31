@@ -223,6 +223,11 @@ describe("ribbon layout", () => {
     expect(b.pointAt(0, 0)).toMatchObject({ values: expect.any(Array) });
     expect(b.count).toBe(2);
   });
+  it("a ribbon chart with a legend field but no value field builds without throwing (it blanked the whole window)", () => {
+    const v = visualOf("ribbonChart", { Category: [Cat], Series: [Country] });
+    const rows = [[c("Bikes"), c("France")], [c("Shoes"), c("Canada")]];
+    expect(() => build(v, grouped(v, rows))).not.toThrow();
+  });
   it("renderItem draws a column and a ribbon to the next column", () => {
     const v = visualOf("ribbonChart", { Category: [Cat], Series: [Country], Y: [Qty] });
     const rows = [[c("Bikes"), c("France"), c(50)], [c("Shoes"), c("France"), c(10)]];

@@ -331,11 +331,11 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
   };
   if (f.bool("layout", "seriesOrderReversed", false) && !ribbon && (stacked || !(lineOnly || areaOnly))) reverseOrder();
 
-  if (ribbon) {
+  if (ribbon && valueCols.length) {
     // one custom series per legend entry: a column slot per category and a ribbon to the next category
     seriesOut.length = 0;
     meta.length = 0;
-    const layout = ribbonLayout(p.series.map((_s, si) => p.cells[0][si]));
+    const layout = ribbonLayout(p.series.map((_s, si) => p.cells[0]?.[si] ?? []));
     const gap = Math.max(0, f.num("layout", "ribbonGapSize", 0));
     const bands = f.bool("ribbonBands", "show", true);
     const colGap = Math.max(0, f.num("layout", "stackedGapSize", 0));
@@ -361,7 +361,7 @@ function cartesianPanel(inp: ChartInput): ChartBuild {
         data: p.categories.map((_c, ci) => {
           const slot = layout[ci][si];
           const next = layout[ci + 1]?.[si];
-          return { value: [ci, slot.start, slot.end, next ? next.start : null, next ? next.end : null], raw: p.cells[0][si][ci], rank: slot.rank };
+          return { value: [ci, slot.start, slot.end, next ? next.start : null, next ? next.end : null], raw: p.cells[0]?.[si]?.[ci] ?? null, rank: slot.rank };
         }),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         renderItem: (params: O, api: any) => {
