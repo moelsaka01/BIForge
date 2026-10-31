@@ -679,3 +679,28 @@ Non-visual items (tests of the visible result): Power Query Standard math (add .
 2. Interaction-class properties (visualLink, zoom labels, stackedGapExplodes, lockAspect, useHighlightValues): not started.
 3. Line/area label leader lines and offsets (11 properties, 4 cards).
 4. Regenerate inventory, run cargo test --workspace and npm run e2e.
+
+## 2026-10-31 (sprint 4: confirmation of sprint 3, stopped after step 2)
+
+### Confirmed counts: 2160 / 179 / 624 (+11 Needs external software, total 2974)
+Last confirmed was 2165 / 174 / 624; sprint 3 reported 2181 / 158 / 624 before real-window confirmation. After the confirmation 2160 (-5 against 2165).
+- Rebuilt the debug exe, ran `render-keys.mjs` for the new label (title / value / detail, density, show all, show by default, dynamic) and value axis (round range, scale to fit, align zeros, gridline auto scale, shared axis) properties: 469 ok, 44 FAIL, 16 DOM-ONLY (2 of the FAIL are the donut "control" pixel noise).
+- **Not confirmed, now subtracted from rendered.json via `auditNotDrawn.json` (class "Open (not confirmed)", 60 properties):** title and detail Show blank as (11 + 11 cards; the audit has no blank series name / blank percentage in a visible label), Show dynamic labels (11; the audit bars always fit the full label), Show all / Label density / Show by default (bar and 100 % types), Scale to fit (6), Align zeros (combos), and the title part of the 100 % stacked area label (10, DOM only). Their cards are Partial again. The unit tests for them still pass; they need audit scenarios (more points, a zoomed axis, narrow bars, blank series), NOT new renderer code.
+- **Bug found in the gate:** `coverage.test.ts` imported `auditNotDrawn.json` but never used it, so classified properties were counted as drawn. `computeAll` now subtracts them (this also removed older classified ones: 73 entries in rendered.json in total).
+- An attempt to fix the audit data (enable title/detail, months, zoom, Variance) made previously passing cases fail and was reverted: the audit data for these properties must be built case by case.
+
+### Test runs
+- Frontend suite: 133 files, 1235 passed, 2 skipped (run before the gate change; coverage.test.ts rerun after it: passes). `cargo test --workspace`: 49 result lines, 497 passed, 0 failed. `npm run e2e` (debug exe rebuilt with `tauri build --debug --no-bundle` after cargo test, which strips the embedded frontend): exit 0; render.mjs 20 random Done-tested properties compared, 2 looked the same (clusteredBarChart.visualLink.enabledTooltip: hover only; areaChart.valueAxis.titleFontSize), within the tolerance of the check but to look at.
+
+### Hover run (216 cases: clustered bar / bar / 100 % bar / column / clustered column, tooltip + header + header tooltip)
+- Not stable. At RENDER_BATCH=40: 170 ok; at 8: 185 ok, 24 FAIL, 7 DOM-ONLY, and the failing set differs between runs (clusteredColumnChart.visualTooltip was 19 of 21 at batch 8 and 2 of 21 failing with 17 DOM-ONLY at batch 40). Consistent failures: visualHeaderTooltip.section (needs a Tooltip page in the sample), visualTooltip.section, showChartSpecificTooltips, type, header buttons that need state (drill, role selector, warning, information, personalize in viewing mode).
+- **Hover-only properties therefore stay unconfirmed by definition of done 5** (they remain counted as before; treat as open). Use batch 8 or smaller; the timing of the hover step in render-hover.mjs needs a wait for the tooltip / header to settle.
+
+### Not done (stopped here)
+Steps 3 to 5 of the brief: click and interaction tests (visual links, zoom labels, stackedGapExplodes, lockAspect, useHighlightValues), line label leader lines, the next undrawn clusters, the Paginated report visual. The Tooltip page in the sample and showPersonalizeVisualButton in viewing mode are not done either.
+
+### Next steps (exact)
+1. Make the hover step deterministic (wait for the tooltip / header element before the screenshot), then re-run the 216 cases at batch 8 until two runs agree; add a Tooltip page to the sample for visualHeaderTooltip.section.
+2. Audit scenarios for the 60 unconfirmed properties (render-data.mjs), one group at a time with `node e2e/render-keys.mjs '<pattern>'`; remove an entry from auditNotDrawn.json only when its case passes.
+3. Interaction tests (visual links, zoom labels, stackedGapExplodes, lockAspect, useHighlightValues); line label leader lines; then `node tools/inventory/undrawn.mjs`.
+4. After `cargo test`, always rebuild the exe before `npm run e2e`.
