@@ -38,11 +38,11 @@ try {
   await page.waitForTimeout(4000);
 
   await page.getByRole("tab", { name: "Insert", exact: true }).click();
-  await page.getByRole("button", { name: "Paginated report", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Paginated report", exact: true }).click();
   const view = page.locator("[data-testid=paginated]").first();
   await view.waitFor();
   const sheet = view.getByTestId("paginated-sheet");
-  await sheet.getByText("Ridge Mountain Bike").waitFor();
+  await sheet.getByText("Beam Light Set").waitFor({ timeout: 15000 }).catch(async () => { console.log("SHEET TEXT:", await view.innerText()); throw new Error("the first row (sorted by product name) is not on the sheet"); });
   check((await sheet.getByRole("columnheader").allTextContents()).join("|") === "Product name|Category|List price", "the table's header row is the report's (Product name, Category, List price)");
   check((await sheet.getByRole("row").count()) === 8, "the first page holds 7 rows (a 70 mm page) and the header row");
   check((await view.getByTestId("paginated-page-number").textContent()) === "Page 1 of 2", "the toolbar says Page 1 of 2");

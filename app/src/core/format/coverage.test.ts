@@ -626,7 +626,8 @@ describe("rendered coverage", () => {
     const SKIP = /^(scriptVisual|pythonVisual|qnaVisual|aiNarratives|keyDriversVisual|decompositionTreeVisual|map|filledMap|shapeMap|page)$/;
     let seed = 20261029;
     const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 2 ** 32);
-    const pool = CASES.filter((c) => !SKIP.test(c.visualType) && !MUST.some(([a, b, d]) => a === c.visualType && b === c.object && d === c.prop));
+    // visualLink (the Action card) is an interaction property: the audit classes it as such, and a link to another page can leave the sample window blank
+    const pool = CASES.filter((c) => !SKIP.test(c.visualType) && c.object !== "visualLink" && !MUST.some(([a, b, d]) => a === c.visualType && b === c.object && d === c.prop));
     for (let i = pool.length - 1; i > 0; i--) {
       const j = Math.floor(rnd() * (i + 1));
       [pool[i], pool[j]] = [pool[j], pool[i]];

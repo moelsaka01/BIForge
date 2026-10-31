@@ -151,7 +151,7 @@ Last updated: 2026-10-25 (see PROGRESS.md; the status table below is generated b
 | Title bar and window | 13 | 11 | 0 | 2 | 0 | 0 | 0 |
 | File menu and backstage | 20 | 12 | 1 | 7 | 0 | 0 | 0 |
 | Report view ribbon: Home tab | 19 | 15 | 1 | 3 | 0 | 0 | 0 |
-| Report view ribbon: Insert tab | 19 | 9 | 4 | 6 | 0 | 0 | 0 |
+| Report view ribbon: Insert tab | 19 | 9 | 5 | 5 | 0 | 0 | 0 |
 | Report view ribbon: Modeling tab | 22 | 17 | 0 | 5 | 0 | 0 | 0 |
 | Report view ribbon: View tab | 19 | 15 | 0 | 4 | 0 | 0 | 0 |
 | Report view ribbon: Optimize tab | 4 | 2 | 0 | 2 | 0 | 0 | 0 |
@@ -159,7 +159,7 @@ Last updated: 2026-10-25 (see PROGRESS.md; the status table below is generated b
 | Report view ribbon: External Tools tab | 2 | 0 | 0 | 2 | 0 | 0 | 0 |
 | Report view contextual tabs | 35 | 29 | 5 | 1 | 0 | 0 | 0 |
 | Report canvas and page features | 53 | 40 | 3 | 10 | 0 | 0 | 0 |
-| Visuals | 76 | 51 | 3 | 21 | 1 | 0 | 0 |
+| Visuals | 76 | 51 | 4 | 20 | 1 | 0 | 0 |
 | Table view | 17 | 15 | 1 | 1 | 0 | 0 | 0 |
 | Model view | 23 | 16 | 3 | 4 | 0 | 0 | 0 |
 | DAX query view | 15 | 10 | 1 | 4 | 0 | 0 | 0 |
@@ -178,7 +178,7 @@ Last updated: 2026-10-25 (see PROGRESS.md; the status table below is generated b
 | Format pane cards per visual | 1263 | 962 | 131 | 170 | 0 | 0 | 0 |
 | DAX functions | 317 | 300 | 0 | 17 | 0 | 0 | 0 |
 | M standard library | 621 | 457 | 0 | 164 | 0 | 0 | 0 |
-| **Total** | **2973** | **2189** | **170** | **603** | **11** | **0** | **0** |
+| **Total** | **2973** | **2189** | **172** | **601** | **11** | **0** | **0** |
 <!-- inventory-status:end -->
 
 ## Online track (Publish & Share; plan in docs/ONLINE_PLAN.md)

@@ -248,6 +248,7 @@ try {
 } catch (e) {
   failures++;
   console.log("ERROR", e.message);
+  try { const shot = join(work, "error.png"); await session.page.screenshot({ path: shot }); console.log("SCREENSHOT", shot, "TEXT", (await session.page.locator("body").innerText()).slice(0, 400).replace(/s+/g, " ")); } catch { /* no window */ }
   console.log(rows.join("\n"));
 } finally { try { process.kill(session.child.pid); } catch { /* gone */ } }
 process.exit(failures ? 1 : 0);

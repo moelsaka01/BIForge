@@ -91,7 +91,7 @@ D | Decomposition tree
 N | Find anomalies
 N | Forecast
 N | Sparklines
-N | Paginated report visual (local .rdl)
+P | Paginated report visual (local .rdl): the first table, report parameters, pages, toolbar and six export formats are drawn; groups, charts, subreports and expressions are listed as not drawn
 ### Elements
 D | Text box
 P | Buttons gallery (back, information, help, Q&A, bookmark, page navigation, blank, reset, previous, next, clear all slicers, apply all slicers)

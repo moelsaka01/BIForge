@@ -41,7 +41,7 @@ P | Q&A
 P | Smart narrative
 P | R script visual (needs local R)
 D | Python script visual (needs local Python)
-N | Paginated report visual (local .rdl)
+P | Paginated report visual (local .rdl): the first table, report parameters, pages, toolbar and six export formats are drawn; groups, charts, subreports and expressions are listed as not drawn
 N | Custom visual import from file (.pbiviz)
 D | Small multiples on supported visuals
 N | Sparklines in table and matrix

@@ -115,7 +115,7 @@ export function PaginatedView({ page, visual, width, height }: { page: PageModel
       aria-label="Report toolbar"
       data-testid="paginated-toolbar"
       data-floating={tb.floating ? "true" : undefined}
-      style={{ display: "flex", alignItems: "center", gap: 6, padding: "3px 6px", fontSize: 12, background: tb.floating ? "rgba(255,255,255,0.94)" : "#f3f2f1", borderBottom: tb.position === "Top" && !tb.floating ? "1px solid #e1dfdd" : undefined, borderTop: tb.position === "Bottom" && !tb.floating ? "1px solid #e1dfdd" : undefined, ...(tb.floating ? { position: "absolute", left: 8, right: 8, [tb.position === "Top" ? "top" : "bottom"]: 6, borderRadius: 4, boxShadow: "0 2px 8px rgba(0,0,0,0.25)", zIndex: 2 } : { flex: "none" }) }}
+      style={{ display: "flex", alignItems: "center", gap: 6, /* a toolbar at the top starts under the visual header strip (20 px), which covers the top of a selected or hovered visual */ padding: tb.position === "Top" ? "22px 6px 3px" : "3px 6px", fontSize: 12, background: tb.floating ? "rgba(255,255,255,0.94)" : "#f3f2f1", borderBottom: tb.position === "Top" && !tb.floating ? "1px solid #e1dfdd" : undefined, borderTop: tb.position === "Bottom" && !tb.floating ? "1px solid #e1dfdd" : undefined, ...(tb.floating ? { position: "absolute", left: 8, right: 8, [tb.position === "Top" ? "top" : "bottom"]: 2, borderRadius: 4, boxShadow: "0 2px 8px rgba(0,0,0,0.25)", zIndex: 2 } : { flex: "none" }) }}
     >
       {tb.pageNavigation && (
         <>
@@ -135,15 +135,13 @@ export function PaginatedView({ page, visual, width, height }: { page: PageModel
           Parameters
         </button>
       )}
-      <span style={{ flex: 1 }} />
-      {note && <span role="status">{note}</span>}
       {look.exportShown && (
         <span style={{ position: "relative" }}>
           <button type="button" style={btn} aria-haspopup="menu" aria-expanded={exportOpen} onClick={() => setExportOpen(!exportOpen)}>
             Export
           </button>
           {exportOpen && (
-            <div role="menu" data-testid="paginated-export-menu" style={{ position: "absolute", right: 0, [tb.position === "Bottom" ? "bottom" : "top"]: 26, background: "#fff", border: "1px solid #c8c6c4", borderRadius: 3, boxShadow: "0 2px 8px rgba(0,0,0,0.2)", zIndex: 3, minWidth: 190, padding: 2, color: "#201f1e" }}>
+            <div role="menu" data-testid="paginated-export-menu" style={{ position: "absolute", left: 0, [tb.position === "Bottom" ? "bottom" : "top"]: 26, background: "#fff", border: "1px solid #c8c6c4", borderRadius: 3, boxShadow: "0 2px 8px rgba(0,0,0,0.2)", zIndex: 3, minWidth: 190, padding: 2, color: "#201f1e" }}>
               {look.exports.map((x) => (
                 <button key={x.id} type="button" role="menuitem" style={{ ...btn, display: "block", width: "100%", textAlign: "left", border: "none" }} onClick={() => doExport(x.id)}>
                   {x.label}
@@ -155,6 +153,9 @@ export function PaginatedView({ page, visual, width, height }: { page: PageModel
           )}
         </span>
       )}
+      {/* the visual header (icons over the top right corner of a visual) is kept clear */}
+      <span style={{ flex: 1 }} />
+      {note && <span role="status">{note}</span>}
     </div>
   );
 
@@ -194,7 +195,7 @@ export function PaginatedView({ page, visual, width, height }: { page: PageModel
   const cell = { padding: `0 ${1.2 * k}px`, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } as const;
   const problems = [...(look.mappingError ? [look.mappingError] : []), ...(mapped?.problems ?? []), ...rdl.notes];
   const sheet = (
-    <div style={{ flex: 1, minHeight: 0, overflow: "auto", background: "#e1dfdd", padding: 8, paddingTop: tb.show && tb.floating && tb.position === "Top" ? 40 : 8, paddingBottom: tb.show && tb.floating && tb.position === "Bottom" ? 40 : 8 }}>
+    <div style={{ flex: 1, minHeight: 0, overflow: "auto", background: "#e1dfdd", padding: 8, paddingTop: tb.show && tb.floating && tb.position === "Top" ? 64 : 8, paddingBottom: tb.show && tb.floating && tb.position === "Bottom" ? 40 : 8 }}>
       <div data-testid="paginated-sheet" style={{ width: rdl.page.width * k, minHeight: rdl.page.height * k, margin: "0 auto", background: "#fff", color: "#201f1e", boxShadow: "0 1px 6px rgba(0,0,0,0.3)", boxSizing: "border-box", padding: `${rdl.page.marginTop * k}px ${rdl.page.marginRight * k}px ${rdl.page.marginBottom * k}px ${rdl.page.marginLeft * k}px`, fontSize: Math.max(8, 3.4 * k) }}>
         {data?.error ? (
           <div role="alert" style={{ color: "#c50f1f" }}>
