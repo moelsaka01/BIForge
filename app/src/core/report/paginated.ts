@@ -10,16 +10,18 @@ import { parseVisual, projectionJson, type VisualModel } from "./visualDoc";
 import type { RdlColumn, RdlParameter, RdlReport } from "./rdl";
 import type { Theme } from "./theme";
 
-export type ExportId = "CSV" | "XML" | "MHTML" | "PDF";
+export type ExportId = "CSV" | "XML" | "MHTML" | "PDF" | "Excel" | "Word";
 
-/** The export formats BIForge writes; the others of the Export card (Excel, Word, PowerPoint, accessible PDF) are not written yet. */
+/** The export formats BIForge writes; the others of the Export card (PowerPoint, accessible PDF) are not written yet. */
 export const EXPORT_FORMATS: { id: ExportId; prop: string; label: string; ext: string; mime: string }[] = [
   { id: "CSV", prop: "exportCSV", label: "CSV (comma delimited)", ext: "csv", mime: "text/csv" },
   { id: "XML", prop: "exportXML", label: "XML", ext: "xml", mime: "application/xml" },
   { id: "MHTML", prop: "exportMHTML", label: "MHTML (web archive)", ext: "mhtml", mime: "message/rfc822" },
   { id: "PDF", prop: "exportPDF", label: "PDF (print)", ext: "pdf", mime: "application/pdf" },
+  { id: "Excel", prop: "exportExcel", label: "Excel workbook", ext: "xlsx", mime: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
+  { id: "Word", prop: "exportWord", label: "Word document", ext: "docx", mime: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" },
 ];
-export const EXPORTS_NOT_WRITTEN = ["Excel", "Word", "PowerPoint", "Accessible PDF"];
+export const EXPORTS_NOT_WRITTEN = ["PowerPoint", "Accessible PDF"];
 
 export interface PaginatedLook {
   toolbar: { show: boolean; position: "Top" | "Bottom"; floating: boolean; pageNavigation: boolean; parameters: boolean };

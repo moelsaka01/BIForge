@@ -33,13 +33,13 @@ describe("paginated report format", () => {
   it("has the toolbar, every export format and the auto filter on by default", () => {
     const look = paginatedLook(visualWith({}), DEFAULT_THEME);
     expect(look.toolbar).toEqual({ show: true, position: "Top", floating: false, pageNavigation: true, parameters: true });
-    expect(look.exports.map((e) => e.id)).toEqual(["CSV", "XML", "MHTML", "PDF"]);
+    expect(look.exports.map((e) => e.id)).toEqual(["CSV", "XML", "MHTML", "PDF", "Excel", "Word"]);
     expect(look.exportShown && look.autoFilter).toBe(true);
   });
   it("reads the settings of the cards and the parameter mapping", () => {
     const look = paginatedLook(visualWith({ toolbar: { position: 1, useFloatingToolbar: true, pageNavigation: false }, export: { exportXML: false, show: false }, autoFilter: { show: false }, parameterMapping: { mappings: '{"Cat":"Product[Category]"}' }, reportInfo: { rdl: "<Report/>", rdlName: "a.rdl" } }), DEFAULT_THEME);
     expect(look.toolbar).toMatchObject({ position: "Bottom", floating: true, pageNavigation: false });
-    expect(look.exports.map((e) => e.id)).toEqual(["CSV", "MHTML", "PDF"]);
+    expect(look.exports.map((e) => e.id)).toEqual(["CSV", "MHTML", "PDF", "Excel", "Word"]);
     expect(look.exportShown).toBe(false);
     expect(look.autoFilter).toBe(false);
     expect(look.mappings).toEqual({ Cat: "Product[Category]" });

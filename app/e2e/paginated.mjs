@@ -54,7 +54,7 @@ try {
   check((await sheet.getByRole("row").count()) === 4 && (await sheet.innerText()).includes("Harbor Road Bike") && !(await sheet.innerText()).includes("Orbit Helmet"), "the Category parameter keeps the 3 bikes");
   await view.getByRole("button", { name: "Export" }).click();
   const items = await view.getByRole("menuitem").allTextContents();
-  check(items.join("|") === "CSV (comma delimited)|XML|MHTML (web archive)|PDF (print)", "the Export menu lists the four formats BIForge writes");
+  check(items.join("|") === "CSV (comma delimited)|XML|MHTML (web archive)|PDF (print)|Excel workbook|Word document", "the Export menu lists the six formats BIForge writes");
   // the export hands the file over as a download: the app does not save it silently, so the click must not fail
   await view.getByRole("menuitem", { name: /CSV/ }).click();
   await view.getByText("Exported CSV").waitFor();

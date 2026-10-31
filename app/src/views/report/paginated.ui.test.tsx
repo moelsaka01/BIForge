@@ -114,8 +114,8 @@ describe("Paginated report visual", () => {
     await screen.findByText("Ridge Mountain Bike");
     fireEvent.click(screen.getByRole("button", { name: "Export" }));
     const menu = screen.getByTestId("paginated-export-menu");
-    expect(within(menu).getAllByRole("menuitem").map((m) => m.textContent)).toEqual(["CSV (comma delimited)", "XML", "MHTML (web archive)", "PDF (print)"]);
-    expect(menu.textContent).toContain("Not available yet: Excel, Word, PowerPoint, Accessible PDF.");
+    expect(within(menu).getAllByRole("menuitem").map((m) => m.textContent)).toEqual(["CSV (comma delimited)", "XML", "MHTML (web archive)", "PDF (print)", "Excel workbook", "Word document"]);
+    expect(menu.textContent).toContain("Not available yet: PowerPoint, Accessible PDF.");
     fireEvent.click(within(menu).getByRole("menuitem", { name: /CSV/ }));
     expect(save).toHaveBeenCalledTimes(1);
     expect(save.mock.calls[0][0]).toBe("Product list.csv");

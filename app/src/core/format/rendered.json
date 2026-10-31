@@ -5117,8 +5117,10 @@
   ],
   "export": [
    "exportCSV",
+   "exportExcel",
    "exportMHTML",
    "exportPDF",
+   "exportWord",
    "exportXML",
    "show"
   ],

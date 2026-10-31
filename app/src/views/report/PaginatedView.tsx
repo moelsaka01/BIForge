@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { labelOf } from "../../core/report/chartData";
 import { exportFileName } from "../../core/report/exportData";
-import { defaultValues, EXPORTS_NOT_WRITTEN, mapTable, mhtml, pagesHtml, paginate, paginatedLook, parameterColumn, parameterFilters, queryVisual, rowsPerPage, tableCsv, tableXml, type ExportId, type TableText } from "../../core/report/paginated";
+import { tableDocx, tableXlsx } from "../../core/report/officeFiles";
+import { defaultValues, EXPORT_FORMATS, EXPORTS_NOT_WRITTEN, mapTable, mhtml, pagesHtml, paginate, paginatedLook, parameterColumn, parameterFilters, queryVisual, rowsPerPage, tableCsv, tableXml, type ExportId, type TableText } from "../../core/report/paginated";
 import { parseRdl, type RdlReport } from "../../core/report/rdl";
 import type { PageModel, VisualModel } from "../../core/report/visualDoc";
 import { browserFiles } from "../shell/files";
@@ -100,6 +101,8 @@ export function PaginatedView({ page, visual, width, height }: { page: PageModel
     if (id === "CSV") browserFiles.save(`${base}.csv`, tableCsv(text), "text/csv");
     else if (id === "XML") browserFiles.save(`${base}.xml`, tableXml(text), "application/xml");
     else if (id === "MHTML") browserFiles.save(`${base}.mhtml`, mhtml(pagesHtml(text, rdl, perPage), text.title), "message/rfc822");
+    else if (id === "Excel") browserFiles.saveBlob?.(`${base}.xlsx`, new Blob([tableXlsx(text)], { type: EXPORT_FORMATS.find((x) => x.id === id)!.mime }));
+    else if (id === "Word") browserFiles.saveBlob?.(`${base}.docx`, new Blob([tableDocx(text)], { type: EXPORT_FORMATS.find((x) => x.id === id)!.mime }));
     else printHtml(pagesHtml(text, rdl, perPage));
     setNote(`Exported ${id}`);
     setTimeout(() => setNote(""), 3000);
